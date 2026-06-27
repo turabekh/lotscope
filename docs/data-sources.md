@@ -21,6 +21,14 @@ Base endpoint: `https://phl.carto.com/api/v2/sql`
 - SQL is **case-sensitive** → use `ILIKE` for text matching.
 - Always parametrize / construct SQL safely; never string-interpolate untrusted input.
 
+**Field mappings (verify against the live API).** The OPA loader maps
+`opa_properties_public` columns — `parcel_number`, `location`, `zip_code`,
+`owner_1`, `mailing_address_1`, `category_code_description`, `zoning`,
+`market_value`, `taxable_land`, `taxable_building`, `total_area`, `frontage`,
+`depth` — onto the `parcel` table. These names are plausible but must be
+confirmed against the current schema; the transform is defensive and tolerates
+missing or renamed fields. Update this table as each loader's mapping is verified.
+
 ## GIS — ArcGIS Hub
 
 Base: `https://data-phl.opendata.arcgis.com`
