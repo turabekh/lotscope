@@ -26,3 +26,5 @@ class ParcelDetail(BaseModel):
     is_city_owned: bool | None
     source: str | None
     last_synced_at: datetime | None
+    longitude: float | None = None
+    latitude: float | None = None

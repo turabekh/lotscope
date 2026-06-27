@@ -19,6 +19,8 @@ export interface ParcelDetail {
   is_city_owned: boolean | null
   source: string | null
   last_synced_at: string | null
+  longitude: number | null
+  latitude: number | null
 }
 
 export interface RiskFlag {
