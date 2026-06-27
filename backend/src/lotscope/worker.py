@@ -7,6 +7,7 @@ from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.ingestion.jobs import INGEST_JOBS
+from lotscope.verdict.jobs import recompute_all_verdicts
 
 _logger = get_logger("worker")
 
@@ -37,9 +38,18 @@ async def ingest_all(ctx: dict[str, Any]) -> int:
     return total
 
 
+async def recompute_verdicts(ctx: dict[str, Any]) -> int:
+    count = await recompute_all_verdicts(ctx["session_factory"])
+    _logger.info("recomputed_verdicts", count=count)
+    return count
+
+
 class WorkerSettings:
-    functions: ClassVar = [ingest_dataset, ingest_all]
+    functions: ClassVar = [ingest_dataset, ingest_all, recompute_verdicts]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
-    cron_jobs: ClassVar = [cron(ingest_all, hour=4, minute=0)]
+    cron_jobs: ClassVar = [
+        cron(ingest_all, hour=4, minute=0),
+        cron(recompute_verdicts, hour=5, minute=0),
+    ]

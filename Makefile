@@ -2,7 +2,7 @@ COMPOSE := docker compose
 BACKEND := backend
 INFRA := db redis martin
 
-.PHONY: help up up-app down logs dev sync migrate revision seed test test-unit test-integration lint fmt typecheck check ingest e2e
+.PHONY: help up up-app down logs dev sync migrate revision seed recompute-verdicts test test-unit test-integration lint fmt typecheck check ingest e2e
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -33,6 +33,9 @@ revision: ## Create a migration (use: make revision m="message")
 
 seed: ## Seed reference data (Title 14 zoning standards)
 	cd $(BACKEND) && uv run python -m lotscope.zoning.seed
+
+recompute-verdicts: ## Recompute the Parcel Verdict for every parcel
+	cd $(BACKEND) && uv run python -m lotscope.verdict.jobs
 
 test: ## Run the full test suite (unit + integration; needs Docker)
 	cd $(BACKEND) && uv run pytest
