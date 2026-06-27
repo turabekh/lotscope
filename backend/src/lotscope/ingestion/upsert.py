@@ -21,6 +21,15 @@ def batch_by_bind_limit(
         yield rows[start : start + size]
 
 
+def dedupe_on_conflict_key(
+    rows: Sequence[dict[str, Any]], keys: Sequence[str]
+) -> list[dict[str, Any]]:
+    collapsed: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for row in rows:
+        collapsed[tuple(row[key] for key in keys)] = row
+    return list(collapsed.values())
+
+
 async def upsert(
     session: AsyncSession,
     model: type[Base],
@@ -31,6 +40,7 @@ async def upsert(
 ) -> int:
     if not rows:
         return 0
+    rows = dedupe_on_conflict_key(rows, index_elements)
     keys = set(index_elements)
     columns = (
         update_columns

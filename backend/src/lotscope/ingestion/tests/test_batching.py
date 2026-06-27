@@ -1,4 +1,4 @@
-from lotscope.ingestion.upsert import batch_by_bind_limit
+from lotscope.ingestion.upsert import batch_by_bind_limit, dedupe_on_conflict_key
 
 
 def test_empty_rows_yield_nothing() -> None:
@@ -23,3 +23,16 @@ def test_wide_rows_never_exceed_asyncpg_limit() -> None:
     rows = [dict.fromkeys((f"c{i}" for i in range(14)), 0) for _ in range(5000)]
     for batch in batch_by_bind_limit(rows):
         assert len(batch) * 14 < 32767
+
+
+def test_dedupe_keeps_last_per_conflict_key() -> None:
+    rows = [
+        {"parcel_number": "1", "document_id": "D", "sale_price": 100},
+        {"parcel_number": "1", "document_id": "D", "sale_price": 200},
+        {"parcel_number": "2", "document_id": "D", "sale_price": 300},
+    ]
+    deduped = dedupe_on_conflict_key(rows, ["parcel_number", "document_id"])
+    assert len(deduped) == 2
+    by_key = {(r["parcel_number"], r["document_id"]): r["sale_price"] for r in deduped}
+    assert by_key[("1", "D")] == 200
+    assert by_key[("2", "D")] == 300
