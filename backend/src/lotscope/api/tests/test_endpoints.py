@@ -157,6 +157,14 @@ async def test_ask_endpoint(db_session: AsyncSession) -> None:
     assert body["is_informational"] is True
 
 
+async def test_cors_allows_configured_origin() -> None:
+    app = create_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/health", headers={"Origin": "http://localhost:5173"})
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+
 async def test_layers_endpoint() -> None:
     app = create_app()
 

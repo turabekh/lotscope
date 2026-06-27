@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     http_max_retries: int = 3
     http_backoff_seconds: float = 0.5
 
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8080"]
+
     @property
     def is_production(self) -> bool:
         return self.app_env is AppEnv.PRODUCTION
