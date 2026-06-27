@@ -31,3 +31,19 @@ async def upsert(
     )
     await session.execute(statement)
     return len(rows)
+
+
+async def insert_ignore(
+    session: AsyncSession,
+    model: type[Base],
+    rows: Sequence[dict[str, Any]],
+    *,
+    index_elements: Sequence[str],
+) -> int:
+    if not rows:
+        return 0
+    statement = insert(model).values(list(rows)).on_conflict_do_nothing(
+        index_elements=list(index_elements)
+    )
+    await session.execute(statement)
+    return len(rows)
