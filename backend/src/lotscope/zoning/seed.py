@@ -10,42 +10,141 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.zoning.models import ZoningStandard
 
-TITLE_14_VERSION = "title14-provisional-2024"
-TITLE_14_SOURCE = "Philadelphia Code Title 14 (provisional values — verify against official text)"
+TITLE_14_VERSION = "title14-quickguide-2026-02"
+TITLE_14_SOURCE = (
+    "Philadelphia Zoning Code Base Districts Quick Guide "
+    "(Dept. of Planning & Development, Feb 2026): "
+    "Table 14-701-1/-2 dimensional standards, Table 14-602-1 use tables"
+)
 
-_RESIDENTIAL = ["single_family"]
+_PROVISIONAL_VERSION = "title14-provisional-2024"
+_PROVISIONAL_SOURCE = (
+    "Provisional estimate — not yet transcribed from the official Title 14 tables; verify"
+)
+
+_SINGLE_FAMILY = ["single_family"]
+_TWO_FAMILY = ["single_family", "two_family"]
 _MULTI_FAMILY = ["single_family", "two_family", "multi_family"]
 _MIXED_USE = ["commercial", "multi_family"]
 
 TITLE_14_STANDARDS: list[dict[str, Any]] = [
     {
+        "code": "RSD-1",
+        "permitted_uses": _SINGLE_FAMILY,
+        "min_lot_area_sqft": 10000,
+        "min_lot_width_ft": 75,
+        "max_height_ft": 38,
+        "max_units": 1,
+        "max_occupancy_pct": 35,
+        "front_setback_ft": 35,
+        "rear_setback_ft": 30,
+        "side_setback_ft": 15,
+    },
+    {
+        "code": "RSD-2",
+        "permitted_uses": _SINGLE_FAMILY,
+        "min_lot_area_sqft": 7800,
+        "min_lot_width_ft": 65,
+        "max_height_ft": 38,
+        "max_units": 1,
+        "max_occupancy_pct": 35,
+        "front_setback_ft": 35,
+        "rear_setback_ft": 30,
+        "side_setback_ft": 10,
+    },
+    {
+        "code": "RSD-3",
+        "permitted_uses": _SINGLE_FAMILY,
+        "min_lot_area_sqft": 5000,
+        "min_lot_width_ft": 50,
+        "max_height_ft": 38,
+        "max_units": 1,
+        "max_occupancy_pct": 30,
+        "front_setback_ft": 25,
+        "rear_setback_ft": 25,
+        "side_setback_ft": 7,
+    },
+    {
+        "code": "RSA-1",
+        "permitted_uses": _SINGLE_FAMILY,
+        "min_lot_area_sqft": 5000,
+        "min_lot_width_ft": 50,
+        "max_height_ft": 38,
+        "max_units": 1,
+        "max_occupancy_pct": 30,
+        "front_setback_ft": 25,
+        "rear_setback_ft": 25,
+        "side_setback_ft": 7,
+    },
+    {
+        "code": "RSA-2",
+        "permitted_uses": _SINGLE_FAMILY,
+        "min_lot_area_sqft": 3150,
+        "min_lot_width_ft": 35,
+        "max_height_ft": 38,
+        "max_units": 1,
+        "max_occupancy_pct": 40,
+        "front_setback_ft": 15,
+        "rear_setback_ft": 20,
+        "side_setback_ft": 6,
+    },
+    {
+        "code": "RSA-3",
+        "permitted_uses": _SINGLE_FAMILY,
+        "min_lot_area_sqft": 2250,
+        "min_lot_width_ft": 25,
+        "max_height_ft": 38,
+        "max_units": 1,
+        "max_occupancy_pct": 50,
+        "front_setback_ft": 8,
+        "rear_setback_ft": 15,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "RSA-4",
+        "permitted_uses": _SINGLE_FAMILY,
+        "min_lot_area_sqft": 1620,
+        "min_lot_width_ft": 18,
+        "max_height_ft": 38,
+        "max_units": 1,
+        "max_occupancy_pct": 50,
+        "front_setback_ft": 15,
+        "rear_setback_ft": 20,
+        "side_setback_ft": 6,
+    },
+    {
         "code": "RSA-5",
-        "permitted_uses": _RESIDENTIAL,
+        "permitted_uses": _SINGLE_FAMILY,
         "min_lot_area_sqft": 1440,
         "min_lot_width_ft": 16,
         "max_height_ft": 38,
         "max_units": 1,
+        "max_occupancy_pct": 75,
+        "rear_setback_ft": 9,
+        "side_setback_ft": 5,
     },
     {
-        "code": "RSA-3",
-        "permitted_uses": _RESIDENTIAL,
-        "min_lot_area_sqft": 2160,
-        "min_lot_width_ft": 18,
+        "code": "RTA-1",
+        "permitted_uses": _TWO_FAMILY,
+        "min_lot_area_sqft": 2250,
+        "min_lot_width_ft": 25,
         "max_height_ft": 38,
-        "max_units": 1,
+        "max_units": 2,
+        "max_occupancy_pct": 50,
+        "front_setback_ft": 8,
+        "rear_setback_ft": 15,
+        "side_setback_ft": 8,
     },
     {
-        "code": "RSA-2",
-        "permitted_uses": _RESIDENTIAL,
-        "min_lot_area_sqft": 2880,
-        "max_height_ft": 38,
-        "max_units": 1,
-    },
-    {
-        "code": "RSA-1",
-        "permitted_uses": _RESIDENTIAL,
-        "max_height_ft": 38,
-        "max_units": 1,
+        "code": "RTA-2",
+        "permitted_uses": _TWO_FAMILY,
+        "min_lot_area_sqft": 1080,
+        "min_lot_width_ft": 16,
+        "max_height_ft": 35,
+        "max_units": 2,
+        "max_occupancy_pct": 75,
+        "rear_setback_ft": 7,
+        "side_setback_ft": 5,
     },
     {
         "code": "RM-1",
@@ -53,30 +152,43 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
         "min_lot_area_sqft": 1440,
         "min_lot_width_ft": 16,
         "max_height_ft": 38,
+        "max_occupancy_pct": 75,
+        "rear_setback_ft": 9,
+        "side_setback_ft": 5,
     },
     {
         "code": "RM-2",
         "permitted_uses": _MULTI_FAMILY,
         "max_height_ft": 38,
+        "code_version": _PROVISIONAL_VERSION,
+        "source": _PROVISIONAL_SOURCE,
     },
     {
         "code": "CMX-1",
         "permitted_uses": _MIXED_USE,
         "max_height_ft": 38,
+        "code_version": _PROVISIONAL_VERSION,
+        "source": _PROVISIONAL_SOURCE,
     },
     {
         "code": "CMX-2",
         "permitted_uses": _MIXED_USE,
         "max_height_ft": 38,
+        "code_version": _PROVISIONAL_VERSION,
+        "source": _PROVISIONAL_SOURCE,
     },
     {
         "code": "CMX-2.5",
         "permitted_uses": _MIXED_USE,
         "max_height_ft": 55,
+        "code_version": _PROVISIONAL_VERSION,
+        "source": _PROVISIONAL_SOURCE,
     },
     {
         "code": "CMX-3",
         "permitted_uses": _MIXED_USE,
+        "code_version": _PROVISIONAL_VERSION,
+        "source": _PROVISIONAL_SOURCE,
     },
 ]
 
@@ -97,8 +209,8 @@ _UPDATE_COLUMNS = ("source", "permitted_uses", *_DIMENSIONAL_FIELDS)
 def _row(entry: dict[str, Any]) -> dict[str, Any]:
     row: dict[str, Any] = {
         "code": entry["code"],
-        "code_version": TITLE_14_VERSION,
-        "source": TITLE_14_SOURCE,
+        "code_version": entry.get("code_version", TITLE_14_VERSION),
+        "source": entry.get("source", TITLE_14_SOURCE),
         "permitted_uses": entry["permitted_uses"],
     }
     for field_name in _DIMENSIONAL_FIELDS:
