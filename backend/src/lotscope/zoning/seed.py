@@ -25,7 +25,12 @@ _PROVISIONAL_SOURCE = (
 _SINGLE_FAMILY = ["single_family"]
 _TWO_FAMILY = ["single_family", "two_family"]
 _MULTI_FAMILY = ["single_family", "two_family", "multi_family"]
-_MIXED_USE = ["commercial", "multi_family"]
+_RES_COMMERCIAL = ["single_family", "two_family", "multi_family", "commercial"]
+_TWO_MULTI_COMMERCIAL = ["two_family", "multi_family", "commercial"]
+_MULTI_COMMERCIAL = ["multi_family", "commercial"]
+_COMMERCIAL = ["commercial"]
+_INDUSTRIAL = ["commercial", "industrial"]
+_IND_MIXED = ["multi_family", "commercial", "industrial"]
 
 TITLE_14_STANDARDS: list[dict[str, Any]] = [
     {
@@ -157,36 +162,129 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
         "side_setback_ft": 5,
     },
     {
-        "code": "RM-2",
-        "permitted_uses": _MULTI_FAMILY,
+        "code": "RMX-1",
+        "permitted_uses": _RES_COMMERCIAL,
+        "max_occupancy_pct": 50,
+    },
+    {
+        "code": "RMX-2",
+        "permitted_uses": _RES_COMMERCIAL,
+        "max_occupancy_pct": 75,
+    },
+    {
+        "code": "RMX-3",
+        "permitted_uses": _RES_COMMERCIAL,
+        "max_occupancy_pct": 90,
+        "front_setback_ft": 25,
+        "rear_setback_ft": 25,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "CA-1",
+        "permitted_uses": _COMMERCIAL,
+        "min_lot_area_sqft": 5000,
         "max_height_ft": 38,
-        "code_version": _PROVISIONAL_VERSION,
-        "source": _PROVISIONAL_SOURCE,
+        "max_occupancy_pct": 60,
+        "rear_setback_ft": 5,
+        "side_setback_ft": 5,
+    },
+    {
+        "code": "CA-2",
+        "permitted_uses": _COMMERCIAL,
+        "min_lot_area_sqft": 15000,
+        "max_height_ft": 38,
+        "max_occupancy_pct": 100,
     },
     {
         "code": "CMX-1",
-        "permitted_uses": _MIXED_USE,
-        "max_height_ft": 38,
-        "code_version": _PROVISIONAL_VERSION,
-        "source": _PROVISIONAL_SOURCE,
+        "permitted_uses": _RES_COMMERCIAL,
     },
     {
         "code": "CMX-2",
-        "permitted_uses": _MIXED_USE,
+        "permitted_uses": _RES_COMMERCIAL,
         "max_height_ft": 38,
-        "code_version": _PROVISIONAL_VERSION,
-        "source": _PROVISIONAL_SOURCE,
+        "max_occupancy_pct": 75,
+        "rear_setback_ft": 9,
+        "side_setback_ft": 5,
     },
     {
         "code": "CMX-2.5",
-        "permitted_uses": _MIXED_USE,
+        "permitted_uses": _RES_COMMERCIAL,
         "max_height_ft": 55,
-        "code_version": _PROVISIONAL_VERSION,
-        "source": _PROVISIONAL_SOURCE,
+        "max_occupancy_pct": 75,
+        "rear_setback_ft": 9,
+        "side_setback_ft": 5,
     },
     {
         "code": "CMX-3",
-        "permitted_uses": _MIXED_USE,
+        "permitted_uses": _TWO_MULTI_COMMERCIAL,
+        "max_occupancy_pct": 75,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "CMX-4",
+        "permitted_uses": _MULTI_COMMERCIAL,
+        "max_occupancy_pct": 90,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "CMX-5",
+        "permitted_uses": _MULTI_COMMERCIAL,
+        "max_occupancy_pct": 90,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "IRMX",
+        "permitted_uses": _IND_MIXED,
+        "max_height_ft": 60,
+        "max_occupancy_pct": 75,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 0,
+        "side_setback_ft": 0,
+    },
+    {
+        "code": "ICMX",
+        "permitted_uses": _INDUSTRIAL,
+        "max_height_ft": 60,
+        "max_occupancy_pct": 100,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 8,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "I-1",
+        "permitted_uses": _INDUSTRIAL,
+        "max_occupancy_pct": 100,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 8,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "I-2",
+        "permitted_uses": _INDUSTRIAL,
+        "max_occupancy_pct": 100,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 8,
+        "side_setback_ft": 6,
+    },
+    {
+        "code": "I-3",
+        "permitted_uses": _INDUSTRIAL,
+        "max_occupancy_pct": 100,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 8,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "I-P",
+        "permitted_uses": _INDUSTRIAL,
+        "max_occupancy_pct": 100,
+        "front_setback_ft": 0,
+    },
+    {
+        "code": "RM-2",
+        "permitted_uses": _MULTI_FAMILY,
+        "max_height_ft": 38,
         "code_version": _PROVISIONAL_VERSION,
         "source": _PROVISIONAL_SOURCE,
     },
