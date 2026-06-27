@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.arcgis import ArcGisClient, ArcGisFeature
+from lotscope.ingestion.parsing import first_present
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.zoning.models import ZoningDistrict
@@ -16,24 +17,17 @@ ZONING_LAYER_URL = (
 )
 
 
-def _first(props: dict[str, Any], *keys: str) -> Any:
-    for key in keys:
-        if props.get(key) not in (None, ""):
-            return props[key]
-    return None
-
-
 def to_zoning_row(feature: ArcGisFeature) -> dict[str, Any] | None:
     props = feature.properties
-    external_id = _first(props, "OBJECTID", "objectid")
-    code = _first(props, "CODE", "code", "LONG_CODE", "long_code")
+    external_id = first_present(props, "OBJECTID", "objectid")
+    code = first_present(props, "CODE", "code", "LONG_CODE", "long_code")
     if feature.geometry is None or external_id is None or code is None:
         return None
     geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
     return {
         "external_id": str(external_id),
         "code": str(code),
-        "long_code": _first(props, "LONG_CODE", "long_code"),
+        "long_code": first_present(props, "LONG_CODE", "long_code"),
         "geom_4326": geom_4326,
         "geom_2272": func.ST_Transform(geom_4326, 2272),
         "source": ZONING_DATASET,
