@@ -1,6 +1,29 @@
 from datetime import date
 
-from lotscope.valuation.avm import Comp, estimate_land_value, price_per_sqft
+import pytest
+
+from lotscope.valuation.avm import Comp, estimate_land_value, land_use_class, price_per_sqft
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        ("RSA5", "residential"),
+        ("RM-1", "residential"),
+        ("RMX-3", "residential"),
+        ("CMX2", "commercial"),
+        ("CA-1", "commercial"),
+        ("I-2", "industrial"),
+        ("ICMX", "industrial"),
+        ("IRMX", "industrial"),
+        ("SP-INS", "special"),
+        ("", None),
+        (None, None),
+        ("ZZ9", None),
+    ],
+)
+def test_land_use_class(code: str | None, expected: str | None) -> None:
+    assert land_use_class(code) == expected
 
 
 def _comp(rate: float, distance: float = 100.0) -> Comp:

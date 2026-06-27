@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.valuation.avm import Comp, estimate_land_value, price_per_sqft
+from lotscope.valuation.avm import Comp, estimate_land_value, land_use_class, price_per_sqft
 from lotscope.valuation.schemas import CompResult, ValuationResult
 
 DEFAULT_RADIUS_FT = 1500.0
@@ -13,7 +13,7 @@ DEFAULT_MIN_PRICE = 1000.0
 DEFAULT_LIMIT = 25
 
 _SUBJECT_SQL = text(
-    "SELECT lot_area_sqft, (geom_2272 IS NOT NULL) AS has_geometry "
+    "SELECT lot_area_sqft, base_zoning_code, (geom_2272 IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _COMPS_SQL = text(
@@ -33,6 +33,10 @@ _COMPS_SQL = text(
     "  AND s.sale_price >= :min_price "
     "  AND s.sale_date >= :since "
     "  AND (NOT :vacant_only OR cp.is_vacant IS TRUE) "
+    "  AND ((:use_class)::text IS NULL OR CASE left(upper(cp.base_zoning_code), 1) "
+    "         WHEN 'R' THEN 'residential' WHEN 'C' THEN 'commercial' "
+    "         WHEN 'I' THEN 'industrial' WHEN 'S' THEN 'special' ELSE NULL END "
+    "       = (:use_class)::text) "
     "  AND ST_DWithin(cp.geom_2272, subject.pt, :radius_ft) "
     "ORDER BY distance_ft "
     "LIMIT :limit"
@@ -53,6 +57,7 @@ async def find_comps(
     limit: int = DEFAULT_LIMIT,
     vacant_only: bool = True,
     since: date | None = None,
+    use_class: str | None = None,
 ) -> list[Comp]:
     cutoff = since if since is not None else date.today() - timedelta(days=365 * years)
     rows = await session.execute(
@@ -64,6 +69,7 @@ async def find_comps(
             "vacant_only": vacant_only,
             "radius_ft": radius_ft,
             "limit": limit,
+            "use_class": use_class,
         },
     )
     comps: list[Comp] = []
@@ -91,12 +97,14 @@ async def value_parcel(
     years: int = DEFAULT_YEARS,
     vacant_only: bool = True,
     since: date | None = None,
+    segment_by_use_class: bool = True,
 ) -> ValuationResult | None:
     subject = (await session.execute(_SUBJECT_SQL, {"parcel_number": parcel_number})).one_or_none()
     if subject is None:
         return None
     computed_at = datetime.now(UTC)
 
+    use_class = land_use_class(subject.base_zoning_code) if segment_by_use_class else None
     comps: list[Comp] = []
     if subject.has_geometry:
         comps = await find_comps(
@@ -106,6 +114,7 @@ async def value_parcel(
             years=years,
             vacant_only=vacant_only,
             since=since,
+            use_class=use_class,
         )
 
     estimate = estimate_land_value(_as_float(subject.lot_area_sqft), comps)
@@ -136,6 +145,7 @@ async def value_parcel(
                 "comp_count": len(comps),
                 "radius_ft": radius_ft,
                 "years": years,
+                "use_class": use_class,
             }
         ],
         computed_at=computed_at,

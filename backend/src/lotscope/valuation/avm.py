@@ -33,6 +33,20 @@ class ValuationEstimate:
     reasons: list[str]
 
 
+_USE_CLASS_BY_PREFIX = {
+    "R": "residential",
+    "C": "commercial",
+    "I": "industrial",
+    "S": "special",
+}
+
+
+def land_use_class(base_zoning_code: str | None) -> str | None:
+    if not base_zoning_code:
+        return None
+    return _USE_CLASS_BY_PREFIX.get(base_zoning_code.strip().upper()[:1])
+
+
 def price_per_sqft(sale_price: float, lot_area_sqft: float | None) -> float | None:
     if lot_area_sqft is None or lot_area_sqft <= 0:
         return None

@@ -11,13 +11,15 @@ pytestmark = pytest.mark.integration
 _SINCE = date(2000, 1, 1)
 
 
-async def _add_subject(session: AsyncSession, parcel_number: str, area: float) -> None:
+async def _add_subject(
+    session: AsyncSession, parcel_number: str, area: float, *, zoning: str | None = None
+) -> None:
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, lot_area_sqft, geom_2272) VALUES "
-            "(:pn, :area, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, base_zoning_code, geom_2272) VALUES "
+            "(:pn, :area, :zoning, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
         ),
-        {"pn": parcel_number, "area": area},
+        {"pn": parcel_number, "area": area, "zoning": zoning},
     )
 
 
@@ -29,16 +31,17 @@ async def _add_comp(
     area: float,
     price: float,
     vacant: bool = True,
+    zoning: str | None = None,
 ) -> None:
     geom = (
         f"POLYGON(({offset_ft} 0,{offset_ft} 5,{offset_ft + 5} 5,{offset_ft + 5} 0,{offset_ft} 0))"
     )
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, geom_2272) "
-            "VALUES (:pn, :area, :vacant, ST_GeomFromText(:geom, 2272))"
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, base_zoning_code, "
+            "geom_2272) VALUES (:pn, :area, :vacant, :zoning, ST_GeomFromText(:geom, 2272))"
         ),
-        {"pn": parcel_number, "area": area, "vacant": vacant, "geom": geom},
+        {"pn": parcel_number, "area": area, "vacant": vacant, "zoning": zoning, "geom": geom},
     )
     await session.execute(
         text(
@@ -77,6 +80,31 @@ async def test_value_parcel_excludes_far_and_non_vacant_comps(db_session: AsyncS
     assert result is not None
     assert result.comp_count == 1
     assert result.comps[0].parcel_number == "000000010"
+
+
+async def test_value_parcel_segments_comps_by_use_class(db_session: AsyncSession) -> None:
+    await _add_subject(db_session, "000000001", 2000, zoning="RSA5")
+    await _add_comp(db_session, "000000010", offset_ft=50, area=1000, price=100000, zoning="RSA5")
+    await _add_comp(db_session, "000000011", offset_ft=60, area=1000, price=20000000, zoning="CMX3")
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+    assert result is not None
+    assert result.comp_count == 1
+    assert result.comps[0].parcel_number == "000000010"
+    assert result.estimate == 200000.0
+    assert result.sources[0]["use_class"] == "residential"
+
+
+async def test_value_parcel_can_disable_use_class_segmentation(db_session: AsyncSession) -> None:
+    await _add_subject(db_session, "000000001", 2000, zoning="RSA5")
+    await _add_comp(db_session, "000000010", offset_ft=50, area=1000, price=100000, zoning="RSA5")
+    await _add_comp(db_session, "000000011", offset_ft=60, area=1000, price=20000000, zoning="CMX3")
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE, segment_by_use_class=False)
+    assert result is not None
+    assert result.comp_count == 2
 
 
 async def test_value_parcel_without_comps_is_unknown(db_session: AsyncSession) -> None:
