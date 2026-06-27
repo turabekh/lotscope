@@ -1,7 +1,7 @@
 from datetime import date
 
 from geoalchemy2 import Geometry, WKBElement
-from sqlalchemy import Boolean, Date, Numeric, String, Text
+from sqlalchemy import Boolean, Date, Index, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -10,6 +10,20 @@ from lotscope.core.mixins import IngestionMixin, TimestampMixin
 
 class Parcel(Base, TimestampMixin, IngestionMixin):
     __tablename__ = "parcel"
+    __table_args__ = (
+        Index(
+            "ix_parcel_address_trgm",
+            "address",
+            postgresql_using="gin",
+            postgresql_ops={"address": "gin_trgm_ops"},
+        ),
+        Index(
+            "ix_parcel_owner_trgm",
+            "owner",
+            postgresql_using="gin",
+            postgresql_ops={"owner": "gin_trgm_ops"},
+        ),
+    )
 
     parcel_number: Mapped[str] = mapped_column(String(20), primary_key=True)
     pwd_parcel_id: Mapped[str | None] = mapped_column(String(40), index=True)
