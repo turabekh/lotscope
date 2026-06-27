@@ -53,6 +53,14 @@ function addParcelLayers(instance: maplibregl.Map): void {
     paint: { 'fill-color': '#f9a825', 'fill-opacity': 0.45 },
   })
   instance.addLayer({
+    id: 'parcel-selected-fill',
+    type: 'fill',
+    source: 'parcels',
+    'source-layer': 'parcels',
+    paint: { 'fill-color': '#c62828', 'fill-opacity': 0.35 },
+    filter: ['==', ['get', 'parcel_number'], ''],
+  })
+  instance.addLayer({
     id: 'parcel-selected',
     type: 'line',
     source: 'parcels',
@@ -89,11 +97,13 @@ onMounted(() => {
 
 watch(detail, (selected) => {
   if (!map || !map.getLayer('parcel-selected')) return
-  map.setFilter('parcel-selected', [
+  const filter: maplibregl.FilterSpecification = [
     '==',
     ['get', 'parcel_number'],
     selected?.parcel_number ?? '',
-  ])
+  ]
+  map.setFilter('parcel-selected', filter)
+  map.setFilter('parcel-selected-fill', filter)
   if (selected && selected.longitude !== null && selected.latitude !== null) {
     map.flyTo({ center: [selected.longitude, selected.latitude], zoom: 17, duration: 900 })
   }
