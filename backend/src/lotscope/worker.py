@@ -44,12 +44,24 @@ async def recompute_verdicts(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def recompute_vacant_verdicts(ctx: dict[str, Any]) -> int:
+    count = await recompute_all_verdicts(ctx["session_factory"], vacant_only=True)
+    _logger.info("recomputed_vacant_verdicts", count=count)
+    return count
+
+
 class WorkerSettings:
-    functions: ClassVar = [ingest_dataset, ingest_all, recompute_verdicts]
+    functions: ClassVar = [
+        ingest_dataset,
+        ingest_all,
+        recompute_verdicts,
+        recompute_vacant_verdicts,
+    ]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     cron_jobs: ClassVar = [
         cron(ingest_all, hour=4, minute=0),
-        cron(recompute_verdicts, hour=5, minute=0),
+        cron(recompute_vacant_verdicts, hour=7, minute=0),
+        cron(recompute_verdicts, weekday="sun", hour=5, minute=0),
     ]
