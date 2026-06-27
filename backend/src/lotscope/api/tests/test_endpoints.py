@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from typing import Any
 
 import httpx
 import pytest
@@ -6,8 +7,10 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.ai.models import EMBEDDING_DIMENSIONS
+from lotscope.ai.retrieval import add_document
 from lotscope.api.app import create_app
-from lotscope.api.deps import get_app_settings, get_session
+from lotscope.api.deps import get_app_settings, get_embedder, get_generator, get_session
 from lotscope.core.config import Settings
 from lotscope.zoning.seed import seed_zoning_standards
 
@@ -109,6 +112,49 @@ async def test_comps_endpoint_validates_radius(db_session: AsyncSession) -> None
 
     assert resp.status_code == 422
     assert resp.json()["error"] == "ValidationError"
+
+
+class _FakeEmbedder:
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        return [[1.0] + [0.0] * (EMBEDDING_DIMENSIONS - 1)]
+
+
+class _FakeGenerator:
+    async def generate(self, *, system: str, user: str, schema: Any) -> dict[str, Any]:
+        return {
+            "answer": "Yes, by-right.",
+            "citations": [{"source": "Title 14", "section": "14-701"}],
+            "confidence": "high",
+        }
+
+
+@pytest.mark.integration
+async def test_ask_endpoint(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+    )
+    await add_document(
+        db_session,
+        source="title14",
+        section="14-701",
+        content="RSA-5 minimum lot area is 1,440 sqft.",
+        embedding=[1.0] + [0.0] * (EMBEDDING_DIMENSIONS - 1),
+    )
+    await db_session.flush()
+
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_embedder] = _FakeEmbedder
+    app.dependency_overrides[get_generator] = _FakeGenerator
+
+    async with _client(app) as client:
+        resp = await client.post(
+            "/parcels/000000001/ask", json={"question": "Can I build a house?"}
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["citations"][0]["section"] == "14-701"
+    assert body["is_informational"] is True
 
 
 async def test_layers_endpoint() -> None:

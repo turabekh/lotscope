@@ -5,6 +5,8 @@ from fastapi import Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from lotscope.ai.client import AnthropicGenerator, StructuredGenerator
+from lotscope.ai.embeddings import Embedder, VoyageEmbedder
 from lotscope.core.config import Settings
 
 
@@ -24,3 +26,11 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
 
 def get_redis(request: Request) -> Redis:
     return cast(Redis, request.app.state.redis)
+
+
+def get_embedder(request: Request) -> Embedder:
+    return VoyageEmbedder(get_app_settings(request))
+
+
+def get_generator(request: Request) -> StructuredGenerator:
+    return AnthropicGenerator(get_app_settings(request))
