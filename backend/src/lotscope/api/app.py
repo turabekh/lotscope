@@ -6,6 +6,7 @@ from redis.asyncio import Redis
 
 from lotscope.api.errors import register_exception_handlers
 from lotscope.api.health import router as health_router
+from lotscope.api.search import router as search_router
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="LotScope PHL API", version="0.1.0", lifespan=lifespan)
     register_exception_handlers(app)
     app.include_router(health_router)
+    app.include_router(search_router)
     return app
 
 
