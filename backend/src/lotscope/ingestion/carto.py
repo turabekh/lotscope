@@ -55,9 +55,7 @@ class CartoClient:
         self._url = settings.carto_sql_url
         self._max_retries = settings.http_max_retries
         self._backoff = settings.http_backoff_seconds
-        self._client = httpx.AsyncClient(
-            transport=transport, timeout=settings.http_timeout_seconds
-        )
+        self._client = httpx.AsyncClient(transport=transport, timeout=settings.http_timeout_seconds)
 
     async def __aenter__(self) -> Self:
         return self

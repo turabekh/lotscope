@@ -43,9 +43,7 @@ async def load_flood(
 ) -> int:
     total = 0
     async for features in arcgis.paginate(layer_url, where=where, page_size=page_size):
-        rows = [
-            row for row in (to_flood_row(feature) for feature in features) if row is not None
-        ]
+        rows = [row for row in (to_flood_row(feature) for feature in features) if row is not None]
         if rows:
             await upsert(
                 session,
@@ -55,7 +53,5 @@ async def load_flood(
                 update_columns=["zone", "geom_4326", "geom_2272", "source"],
             )
             total += len(rows)
-    await record_freshness(
-        session, FLOOD_DATASET, status="success", success=True, row_count=total
-    )
+    await record_freshness(session, FLOOD_DATASET, status="success", success=True, row_count=total)
     return total

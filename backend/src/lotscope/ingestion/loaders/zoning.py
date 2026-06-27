@@ -44,9 +44,7 @@ async def load_zoning_districts(
 ) -> int:
     total = 0
     async for features in arcgis.paginate(layer_url, where=where, page_size=page_size):
-        rows = [
-            row for row in (to_zoning_row(feature) for feature in features) if row is not None
-        ]
+        rows = [row for row in (to_zoning_row(feature) for feature in features) if row is not None]
         if rows:
             await upsert(
                 session,
@@ -56,7 +54,5 @@ async def load_zoning_districts(
                 update_columns=["code", "long_code", "geom_4326", "geom_2272", "source"],
             )
             total += len(rows)
-    await record_freshness(
-        session, ZONING_DATASET, status="success", success=True, row_count=total
-    )
+    await record_freshness(session, ZONING_DATASET, status="success", success=True, row_count=total)
     return total

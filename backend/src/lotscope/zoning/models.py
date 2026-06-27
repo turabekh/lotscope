@@ -12,9 +12,7 @@ from lotscope.core.mixins import IngestionMixin, TimestampMixin
 
 class ZoningDistrict(Base, TimestampMixin, IngestionMixin):
     __tablename__ = "zoning_district"
-    __table_args__ = (
-        UniqueConstraint("external_id", name="uq_zoning_district_external"),
-    )
+    __table_args__ = (UniqueConstraint("external_id", name="uq_zoning_district_external"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     external_id: Mapped[str | None] = mapped_column(String(60), index=True)

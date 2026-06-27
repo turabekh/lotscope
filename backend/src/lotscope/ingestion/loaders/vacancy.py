@@ -42,9 +42,7 @@ async def load_vacancy(
 ) -> int:
     total = 0
     async for features in arcgis.paginate(layer_url, where=where, page_size=page_size):
-        rows = [
-            row for row in (to_vacancy_row(feature) for feature in features) if row is not None
-        ]
+        rows = [row for row in (to_vacancy_row(feature) for feature in features) if row is not None]
         if rows:
             await upsert(
                 session,

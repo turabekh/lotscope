@@ -71,7 +71,5 @@ async def load_tax(
         await insert_ignore(session, Parcel, parcel_stubs, index_elements=["parcel_number"])
         await upsert(session, TaxStatus, rows, index_elements=["parcel_number"])
         total += len(rows)
-    await record_freshness(
-        session, TAX_DATASET, status="success", success=True, row_count=total
-    )
+    await record_freshness(session, TAX_DATASET, status="success", success=True, row_count=total)
     return total

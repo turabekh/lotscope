@@ -43,9 +43,7 @@ class _RowsHandler:
 
 
 def _settings() -> Settings:
-    return Settings(
-        _env_file=None, carto_sql_url="http://carto.test/sql", http_backoff_seconds=0.0
-    )
+    return Settings(_env_file=None, carto_sql_url="http://carto.test/sql", http_backoff_seconds=0.0)
 
 
 @pytest.mark.integration

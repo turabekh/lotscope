@@ -89,7 +89,5 @@ async def load_opa(
         if rows:
             await upsert(session, Parcel, rows, index_elements=["parcel_number"])
             total += len(rows)
-    await record_freshness(
-        session, OPA_DATASET, status="success", success=True, row_count=total
-    )
+    await record_freshness(session, OPA_DATASET, status="success", success=True, row_count=total)
     return total

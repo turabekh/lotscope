@@ -20,9 +20,11 @@ async def upsert(
         return 0
     keys = set(index_elements)
     statement = insert(model).values(list(rows))
-    columns = update_columns if update_columns is not None else [
-        column for column in rows[0] if column not in keys
-    ]
+    columns = (
+        update_columns
+        if update_columns is not None
+        else [column for column in rows[0] if column not in keys]
+    )
     assignments: dict[str, Any] = {column: statement.excluded[column] for column in columns}
     if "updated_at" in model.__table__.columns:
         assignments["updated_at"] = func.now()
@@ -42,8 +44,8 @@ async def insert_ignore(
 ) -> int:
     if not rows:
         return 0
-    statement = insert(model).values(list(rows)).on_conflict_do_nothing(
-        index_elements=list(index_elements)
+    statement = (
+        insert(model).values(list(rows)).on_conflict_do_nothing(index_elements=list(index_elements))
     )
     await session.execute(statement)
     return len(rows)

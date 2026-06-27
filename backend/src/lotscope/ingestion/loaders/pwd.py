@@ -69,7 +69,5 @@ async def load_pwd(
                 update_columns=["pwd_parcel_id", "geom_4326", "geom_2272", "source"],
             )
             total += len(rows)
-    await record_freshness(
-        session, PWD_DATASET, status="success", success=True, row_count=total
-    )
+    await record_freshness(session, PWD_DATASET, status="success", success=True, row_count=total)
     return total

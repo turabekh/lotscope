@@ -79,11 +79,7 @@ async def load_rtt(
             for parcel_number in {sale["parcel_number"] for sale in sales}
         ]
         await insert_ignore(session, Parcel, parcel_stubs, index_elements=["parcel_number"])
-        await upsert(
-            session, Sale, sales, index_elements=["parcel_number", "document_id"]
-        )
+        await upsert(session, Sale, sales, index_elements=["parcel_number", "document_id"])
         total += len(sales)
-    await record_freshness(
-        session, RTT_DATASET, status="success", success=True, row_count=total
-    )
+    await record_freshness(session, RTT_DATASET, status="success", success=True, row_count=total)
     return total

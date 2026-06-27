@@ -28,9 +28,7 @@ async def test_upsert_is_idempotent_on_conflict(db_session: AsyncSession) -> Non
     )
     await db_session.flush()
 
-    owner = await db_session.scalar(
-        select(Parcel.owner).where(Parcel.parcel_number == "100")
-    )
+    owner = await db_session.scalar(select(Parcel.owner).where(Parcel.parcel_number == "100"))
     count = await db_session.scalar(select(func.count()).select_from(Parcel))
     assert owner == "Owner B"
     assert count == 1
@@ -64,9 +62,7 @@ async def test_upsert_only_updates_provided_columns(db_session: AsyncSession) ->
 async def test_record_freshness_tracks_success(db_session: AsyncSession) -> None:
     await record_freshness(db_session, "opa", status="running")
     await db_session.flush()
-    await record_freshness(
-        db_session, "opa", status="success", success=True, row_count=42
-    )
+    await record_freshness(db_session, "opa", status="success", success=True, row_count=42)
     await db_session.flush()
 
     record = await db_session.get(DatasetFreshness, "opa")
