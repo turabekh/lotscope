@@ -1,10 +1,10 @@
-from datetime import date
 from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.carto import CartoClient
+from lotscope.ingestion.parsing import parse_iso_date
 from lotscope.ingestion.reconciliation import normalize_account
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
@@ -33,15 +33,6 @@ class RttRecord(BaseModel):
     grantors: str | None = None
     grantees: str | None = None
     total_consideration: float | None = None
-
-
-def parse_iso_date(raw: str | None) -> date | None:
-    if not raw:
-        return None
-    try:
-        return date.fromisoformat(str(raw)[:10])
-    except ValueError:
-        return None
 
 
 def to_sale_row(record: RttRecord) -> dict[str, Any] | None:

@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.config import Settings
 from lotscope.ingestion.carto import CartoClient
-from lotscope.ingestion.loaders.rtt import RttRecord, parse_iso_date, to_sale_row
+from lotscope.ingestion.loaders.rtt import RttRecord, to_sale_row
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.ingestion.parsing import parse_iso_date
 from lotscope.valuation.models import Sale
 
 
@@ -57,9 +58,7 @@ class _RowsHandler:
 
 
 def _settings() -> Settings:
-    return Settings(
-        _env_file=None, carto_sql_url="http://carto.test/sql", http_backoff_seconds=0.0
-    )
+    return Settings(_env_file=None, carto_sql_url="http://carto.test/sql", http_backoff_seconds=0.0)
 
 
 def _rtt_row(cartodb_id: int, document_id: str, price: float) -> dict[str, Any]:
