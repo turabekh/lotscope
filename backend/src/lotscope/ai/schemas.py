@@ -26,5 +26,6 @@ class ParcelAnswer(BaseModel):
         description="Confidence in the answer given the provided context."
     )
     is_informational: Literal[True] = Field(
-        description="Always true: this is informational, not legal or financial advice."
+        default=True,
+        description="Always true: this is informational, not legal or financial advice.",
     )
