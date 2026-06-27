@@ -10,6 +10,7 @@ from lotscope.zoning.buildability import (
     ParcelDimensions,
     assess_buildability,
 )
+from lotscope.zoning.codes import normalize_zoning_code
 from lotscope.zoning.schemas import BuildabilityResult, DistrictResolution
 
 _PARCEL_SQL = text(
@@ -26,7 +27,8 @@ _STANDARD_SQL = text(
     "SELECT code, code_version, permitted_uses, min_lot_area_sqft, min_lot_width_ft, "
     "max_height_ft, max_units, max_occupancy_pct, front_setback_ft, rear_setback_ft, "
     "side_setback_ft "
-    "FROM zoning_standard WHERE code = :code ORDER BY code_version DESC LIMIT 1"
+    "FROM zoning_standard WHERE upper(replace(replace(code, '-', ''), ' ', '')) = :code "
+    "ORDER BY code_version DESC LIMIT 1"
 )
 
 
@@ -51,7 +53,9 @@ async def resolve_district(
 
 
 async def _get_standard(session: AsyncSession, code: str) -> DistrictStandard | None:
-    row = (await session.execute(_STANDARD_SQL, {"code": code})).one_or_none()
+    row = (
+        await session.execute(_STANDARD_SQL, {"code": normalize_zoning_code(code)})
+    ).one_or_none()
     if row is None:
         return None
     return DistrictStandard(
