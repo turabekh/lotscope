@@ -1,14 +1,18 @@
+import contextlib
+import hashlib
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.schemas import ParcelAnswer
 from lotscope.ai.service import ask_the_parcel
-from lotscope.api.deps import get_embedder, get_generator, get_session
+from lotscope.api.deps import get_embedder, get_generator, get_redis, get_session
 from lotscope.core.errors import NotFoundError
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
@@ -20,6 +24,14 @@ from lotscope.verdict.service import compute_verdict, get_verdict
 router = APIRouter(prefix="/parcels", tags=["parcels"])
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+_ASK_CACHE_TTL_SECONDS = 86_400
+
+
+def _ask_cache_key(parcel_number: str, question: str) -> str:
+    normalized = " ".join(question.lower().split())
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return f"ask:{parcel_number}:{digest}"
 
 
 class AskRequest(BaseModel):
@@ -73,10 +85,21 @@ async def ask_parcel(
     session: SessionDep,
     embedder: Annotated[Embedder, Depends(get_embedder)],
     generator: Annotated[StructuredGenerator, Depends(get_generator)],
+    redis: Annotated[Redis, Depends(get_redis)],
 ) -> ParcelAnswer:
+    cache_key = _ask_cache_key(parcel_number, body.question)
+    try:
+        cached = await redis.get(cache_key)
+    except RedisError:
+        cached = None
+    if cached is not None:
+        return ParcelAnswer.model_validate_json(cached)
+
     answer = await ask_the_parcel(
         session, parcel_number, body.question, embedder=embedder, generator=generator
     )
     if answer is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    with contextlib.suppress(RedisError):
+        await redis.set(cache_key, answer.model_dump_json(), ex=_ASK_CACHE_TTL_SECONDS)
     return answer

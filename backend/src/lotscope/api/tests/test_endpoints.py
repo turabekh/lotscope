@@ -10,9 +10,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
 from lotscope.ai.retrieval import add_document
 from lotscope.api.app import create_app
-from lotscope.api.deps import get_app_settings, get_embedder, get_generator, get_session
+from lotscope.api.deps import (
+    get_app_settings,
+    get_embedder,
+    get_generator,
+    get_redis,
+    get_session,
+)
 from lotscope.core.config import Settings
 from lotscope.zoning.seed import seed_zoning_standards
+
+
+class _FakeRedis:
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
+    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+        self.store[key] = value
 
 
 def _app_with_session(session: AsyncSession) -> FastAPI:
@@ -120,7 +137,11 @@ class _FakeEmbedder:
 
 
 class _FakeGenerator:
+    def __init__(self) -> None:
+        self.calls = 0
+
     async def generate(self, *, system: str, user: str, schema: Any) -> dict[str, Any]:
+        self.calls += 1
         return {
             "answer": "Yes, by-right.",
             "citations": [{"source": "Title 14", "section": "14-701"}],
@@ -143,18 +164,28 @@ async def test_ask_endpoint(db_session: AsyncSession) -> None:
     await db_session.flush()
 
     app = _app_with_session(db_session)
+    generator = _FakeGenerator()
+    fake_redis = _FakeRedis()
     app.dependency_overrides[get_embedder] = _FakeEmbedder
-    app.dependency_overrides[get_generator] = _FakeGenerator
+    app.dependency_overrides[get_generator] = lambda: generator
+    app.dependency_overrides[get_redis] = lambda: fake_redis
 
     async with _client(app) as client:
         resp = await client.post(
             "/parcels/000000001/ask", json={"question": "Can I build a house?"}
+        )
+        # repeat the same question — should be served from cache, not recomputed
+        repeat = await client.post(
+            "/parcels/000000001/ask", json={"question": "Can I  build a HOUSE?"}
         )
 
     assert resp.status_code == 200
     body = resp.json()
     assert body["citations"][0]["section"] == "14-701"
     assert body["is_informational"] is True
+    assert repeat.status_code == 200
+    assert repeat.json() == body
+    assert generator.calls == 1
 
 
 async def test_cors_allows_configured_origin() -> None:
