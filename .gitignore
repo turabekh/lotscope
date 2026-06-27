@@ -71,7 +71,12 @@ pnpm-debug.log*
 # Test fixtures belong under */tests/ and are intentionally not ignored.
 # ─────────────────────────────────────────────────────────────
 /data/
-/backend/data/
+/backend/data/*
+# ...but keep the documented sample corpus and its README in git
+!/backend/data/title14/
+/backend/data/title14/*
+!/backend/data/title14/README.md
+!/backend/data/title14/sections.sample.jsonl
 tmp/
 scratch/
 *.dump

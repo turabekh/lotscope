@@ -64,6 +64,16 @@ are encoded, and fields not yet confirmed are left NULL so the engine degrades
 honestly rather than asserting false precision. **Verify every value against
 the official Title 14 text before production use** and re-run the seed to update.
 
+## Title 14 RAG corpus
+
+The "Ask the Parcel" feature grounds answers in `document` rows under
+`source = "title14"`, loaded by `lotscope.ai.corpus` (`make ingest-title14`)
+from a JSONL of `{section, title, text}` records — chunked, embedded with
+Voyage, and replaced on each run. A provisional sample ships at
+`backend/data/title14/sections.sample.jsonl`; the real Title 14 section text is
+a data task you supply at `backend/data/title14/sections.jsonl`. See that
+directory's README for the format. Requires `VOYAGE_API_KEY`.
+
 ## Recorded documents
 
 DOR records system for deed / plat images — the OCR + RAG layer for restriction and easement extraction.
