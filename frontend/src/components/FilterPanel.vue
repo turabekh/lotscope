@@ -69,6 +69,10 @@ const open = ref(true)
           <div v-if="colorMode !== 'vacancy'" class="text-caption text-grey-6 q-mt-xs">
             Scored vacant lots only
           </div>
+          <div class="text-caption text-grey-6 q-mt-xs row items-center">
+            <q-icon name="place" size="14px" class="q-mr-xs" />Pins mark vacant lots, shaded red→green
+            by opportunity
+          </div>
 
           <q-separator class="q-my-sm" />
 

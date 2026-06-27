@@ -111,21 +111,47 @@ function applyFillPaint(): void {
   map.setPaintProperty('parcels-fill', 'fill-opacity', fillOpacity())
 }
 
-function dotImage(diameter: number, fill: string): ImageData {
+const OPPORTUNITY_PINS: { id: string; color: string }[] = [
+  { id: 'pin-none', color: '#9e9e9e' },
+  { id: 'pin-low', color: '#e53935' },
+  { id: 'pin-mid', color: '#fb8c00' },
+  { id: 'pin-high', color: '#7cb342' },
+  { id: 'pin-top', color: '#2e7d32' },
+]
+
+function pinImage(head: number, color: string): ImageData {
+  const pad = 4
+  const radius = head / 2
+  const width = head + pad * 2
+  const cx = width / 2
+  const cy = radius + pad
+  const tipY = cy + radius * 2
+  const height = Math.ceil(tipY + pad)
   const canvas = document.createElement('canvas')
-  canvas.width = diameter
-  canvas.height = diameter
+  canvas.width = width
+  canvas.height = height
   const ctx = canvas.getContext('2d')
-  if (ctx === null) return new ImageData(diameter, diameter)
-  const radius = diameter / 2
+  if (ctx === null) return new ImageData(width, height)
+
+  const drawShape = (r: number, tip: number, fill: string): void => {
+    ctx.beginPath()
+    ctx.moveTo(cx - r * 0.86, cy + r * 0.5)
+    ctx.lineTo(cx, tip)
+    ctx.lineTo(cx + r * 0.86, cy + r * 0.5)
+    ctx.closePath()
+    ctx.moveTo(cx + r, cy)
+    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.fillStyle = fill
+    ctx.fill()
+  }
+
+  drawShape(radius, tipY, '#ffffff')
+  drawShape(radius - 2.5, tipY - 3, color)
   ctx.beginPath()
-  ctx.arc(radius, radius, radius - 4, 0, Math.PI * 2)
-  ctx.fillStyle = fill
+  ctx.arc(cx, cy, radius * 0.38, 0, Math.PI * 2)
+  ctx.fillStyle = '#ffffff'
   ctx.fill()
-  ctx.lineWidth = 3
-  ctx.strokeStyle = '#ffffff'
-  ctx.stroke()
-  return ctx.getImageData(0, 0, diameter, diameter)
+  return ctx.getImageData(0, 0, width, height)
 }
 
 function escapeHtml(value: string): string {
@@ -195,8 +221,10 @@ function selectFromEvent(event: MapLayerMouseEvent): void {
 }
 
 function addParcelLayers(instance: maplibregl.Map): void {
-  if (!instance.hasImage('lot-dot-vacant')) {
-    instance.addImage('lot-dot-vacant', dotImage(36, '#f9a825'), { pixelRatio: 2 })
+  for (const pin of OPPORTUNITY_PINS) {
+    if (!instance.hasImage(pin.id)) {
+      instance.addImage(pin.id, pinImage(34, pin.color), { pixelRatio: 2 })
+    }
   }
   instance.addSource('parcels', {
     type: 'vector',
@@ -254,10 +282,22 @@ function addParcelLayers(instance: maplibregl.Map): void {
     minzoom: 12,
     filter: markerFilter(),
     layout: {
-      'icon-image': 'lot-dot-vacant',
+      'icon-image': [
+        'step',
+        ['coalesce', ['get', 'opportunity_score'], -1],
+        'pin-none',
+        0,
+        'pin-low',
+        45,
+        'pin-mid',
+        65,
+        'pin-high',
+        80,
+        'pin-top',
+      ],
+      'icon-anchor': 'bottom',
       'icon-allow-overlap': false,
-      'icon-ignore-placement': false,
-      'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.32, 16, 0.62, 19, 0.95],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.45, 16, 0.8, 19, 1.1],
     },
   })
 
