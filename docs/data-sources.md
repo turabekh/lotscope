@@ -29,6 +29,13 @@ Base endpoint: `https://phl.carto.com/api/v2/sql`
 confirmed against the current schema; the transform is defensive and tolerates
 missing or renamed fields. Update this table as each loader's mapping is verified.
 
+The PWD loader reads `pwd_parcels` (`cartodb_id`, `brt_number`, `parcel_id`,
+and `the_geom` as GeoJSON), reconciles `brt_number` to the canonical parcel
+key, and writes geometry into `parcel`: `geom_4326` via `ST_GeomFromGeoJSON`
+and `geom_2272` via `ST_Transform` in our own PostGIS (so the projection does
+not depend on Carto). Chunking keys on `cartodb_id`, the Carto system primary
+key, which is monotonic and present on every Carto table.
+
 ## GIS — ArcGIS Hub
 
 Base: `https://data-phl.opendata.arcgis.com`
