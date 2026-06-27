@@ -1,14 +1,31 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import ParcelPanel from '@/components/ParcelPanel.vue'
+import SearchBox from '@/components/SearchBox.vue'
+import { useParcelStore } from '@/stores/parcel'
+
+const store = useParcelStore()
+
+function onSelect(parcelNumber: string): void {
+  void store.select(parcelNumber)
+}
+</script>
 
 <template>
-  <q-layout view="hHh lpR fFf">
+  <q-layout view="hHh Lpr fFf">
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
         <q-toolbar-title>LotScope PHL</q-toolbar-title>
       </q-toolbar>
     </q-header>
+    <q-drawer :width="400" show-if-above bordered side="left">
+      <div class="q-pa-md">
+        <SearchBox @select="onSelect" />
+      </div>
+      <q-separator />
+      <ParcelPanel />
+    </q-drawer>
     <q-page-container>
-      <q-page class="q-pa-md">Philadelphia vacant-land intelligence.</q-page>
+      <q-page class="flex flex-center text-grey">Map view comes next.</q-page>
     </q-page-container>
   </q-layout>
 </template>
