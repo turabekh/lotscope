@@ -91,6 +91,9 @@ asyncio_mode = "auto"
 testpaths = ["src/lotscope"]
 pythonpath = ["src"]
 addopts = "-ra"
+markers = [
+    "integration: requires Docker (PostGIS testcontainer)",
+]
 
 [tool.coverage.run]
 branch = true
