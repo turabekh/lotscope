@@ -12,9 +12,14 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const suggestions = [
-  'Can I build a duplex here?',
-  'What is the height limit?',
+  'What can I build by right?',
   'How many units can I build by right?',
+  'What is the height limit?',
+  'What is the minimum lot size for this district?',
+  'What are the setback requirements?',
+  'Can I build multi-family housing here?',
+  'Does this lot need a variance or special exception?',
+  'What uses does this zoning district allow?',
 ]
 
 watch(

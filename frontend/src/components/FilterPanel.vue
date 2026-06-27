@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { useQuasar } from 'quasar'
 import { ref } from 'vue'
 
 import { COLOR_MODE_OPTIONS, USE_CLASS_OPTIONS, useFiltersStore } from '@/stores/filters'
 
 const store = useFiltersStore()
 const { vacantOnly, useClasses, colorMode, activeCount } = storeToRefs(store)
-const open = ref(true)
+const $q = useQuasar()
+const open = ref(!$q.screen.lt.sm)
 </script>
 
 <template>
@@ -110,6 +112,7 @@ const open = ref(true)
   left: 12px;
   z-index: 5;
   width: 290px;
+  max-width: calc(100vw - 24px);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
