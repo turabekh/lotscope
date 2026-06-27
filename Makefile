@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin
 
-.PHONY: help up up-app down logs dev sync migrate revision seed recompute-verdicts test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed recompute-verdicts test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -20,7 +20,10 @@ down: ## Stop all services
 logs: ## Tail service logs
 	$(COMPOSE) logs -f
 
-dev: ## Run the api with autoreload
+dev: ## Run the api and the frontend dev server together
+	$(MAKE) -j2 dev-api web-dev
+
+dev-api: ## Run the api with autoreload
 	cd $(BACKEND) && uv run uvicorn lotscope.api.app:app --reload --host 0.0.0.0 --port 8000
 
 sync: ## Install backend dependencies

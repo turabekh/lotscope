@@ -58,6 +58,16 @@ services:
       redis:
         condition: service_healthy
 
+  web:
+    build:
+      context: ./frontend
+    profiles: ["app"]
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+      - martin
+
   worker:
     build:
       context: ./backend

@@ -4,3 +4,8 @@ dist/
 *.local
 *.tsbuildinfo
 .DS_Store
+
+# emitted compiler output must never live next to sources
+src/**/*.js
+src/**/*.vue.js
+src/**/*.d.ts

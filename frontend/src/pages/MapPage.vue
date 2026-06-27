@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MapView from '@/components/MapView.vue'
 import ParcelPanel from '@/components/ParcelPanel.vue'
 import SearchBox from '@/components/SearchBox.vue'
 import { useParcelStore } from '@/stores/parcel'
@@ -25,7 +26,9 @@ function onSelect(parcelNumber: string): void {
       <ParcelPanel />
     </q-drawer>
     <q-page-container>
-      <q-page class="flex flex-center text-grey">Map view comes next.</q-page>
+      <q-page class="column">
+        <MapView class="col" @select="onSelect" />
+      </q-page>
     </q-page-container>
   </q-layout>
 </template>
