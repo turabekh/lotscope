@@ -67,26 +67,26 @@ async def load_title14_documents(
     source: str = TITLE_14_SOURCE,
 ) -> int:
     await session.execute(_DELETE_SOURCE, {"source": source})
-    total = 0
+    items: list[tuple[Title14Record, int, str]] = []
     for record in records:
-        chunks = chunk_text(record.text)
-        if not chunks:
-            continue
-        vectors = await embedder.embed(chunks)
-        for index, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True)):
-            await session.execute(
-                _INSERT,
-                {
-                    "source": source,
-                    "section": record.section,
-                    "title": record.title,
-                    "content": chunk,
-                    "metadata": json.dumps({"chunk_index": index}),
-                    "embedding": to_vector_literal(vector),
-                },
-            )
-            total += 1
-    return total
+        for index, chunk in enumerate(chunk_text(record.text)):
+            items.append((record, index, chunk))
+    if not items:
+        return 0
+    vectors = await embedder.embed([chunk for _, _, chunk in items])
+    for (record, index, chunk), vector in zip(items, vectors, strict=True):
+        await session.execute(
+            _INSERT,
+            {
+                "source": source,
+                "section": record.section,
+                "title": record.title,
+                "content": chunk,
+                "metadata": json.dumps({"chunk_index": index}),
+                "embedding": to_vector_literal(vector),
+            },
+        )
+    return len(items)
 
 
 async def _run(path: Path) -> None:

@@ -21,8 +21,20 @@ replaces the source entirely, so it is idempotent).
 - `sections.sample.jsonl` — a tiny **provisional** sample so the pipeline is
   demonstrable. Its content is summarized and **must not** be treated as the
   authoritative code.
-- `sections.jsonl` — the real corpus you provide (the default path the loader
-  reads). Populate it with the actual Title 14 section text, then run
-  `make ingest-title14`. Override the path with `make ingest-title14 FILE=...`.
+- `sections.jsonl` — the corpus the loader reads by default. It currently covers
+  the residential base districts (RSD, RSA, RTA, RM-1), transcribed from the
+  **Philadelphia Zoning Code Base Districts Quick Guide (Dept. of Planning &
+  Development, February 2026)** — Tables 14-701-1/-2 (dimensional standards) and
+  14-602-1 (use tables). Override the path with `make ingest-title14 FILE=...`.
 
-Requires `VOYAGE_API_KEY` in `backend/.env`.
+## Source
+
+Authoritative tables: Philadelphia Zoning Code Base Districts Quick Guide,
+February 2026 (`phila.gov`). The full Title 14 text lives at American Legal
+Publishing (`codelibrary.amlegal.com/codes/philadelphia`) but is bot-protected.
+The same source backs the `zoning_standard` table seeded by `lotscope.zoning.seed`.
+Commercial (CMX), industrial (I), mixed (RMX), and special-purpose (SP) districts
+are not yet transcribed; parcels in those districts degrade to "no standard
+loaded" rather than guessing.
+
+Requires `VOYAGE_API_KEY` (set in the repo-root `.env`).
