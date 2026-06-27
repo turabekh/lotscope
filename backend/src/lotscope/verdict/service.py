@@ -66,6 +66,13 @@ def _to_result(
     )
 
 
+async def get_verdict(session: AsyncSession, parcel_number: str) -> VerdictResult | None:
+    row = await session.get(ParcelVerdict, parcel_number)
+    if row is None:
+        return None
+    return VerdictResult.model_validate(row)
+
+
 async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictResult | None:
     parcel = (await session.execute(_PARCEL_SQL, {"parcel_number": parcel_number})).one_or_none()
     if parcel is None:

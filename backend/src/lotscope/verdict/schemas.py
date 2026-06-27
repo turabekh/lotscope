@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class VerdictResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     parcel_number: str
     verdict_version: str
     buildability_score: float | None
