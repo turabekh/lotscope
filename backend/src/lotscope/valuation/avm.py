@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
-from statistics import mean, median, pstdev
+from statistics import mean, median, pstdev, quantiles
 from typing import Literal
 
 Confidence = Literal["high", "medium", "low"]
@@ -9,6 +9,8 @@ _HIGH_MIN_COMPS = 5
 _HIGH_MAX_CV = 0.25
 _MEDIUM_MIN_COMPS = 3
 _MEDIUM_MAX_CV = 0.5
+_MIN_COMPS_FOR_TRIM = 4
+_IQR_FENCE = 1.5
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,21 @@ def price_per_sqft(sale_price: float, lot_area_sqft: float | None) -> float | No
     return sale_price / lot_area_sqft
 
 
+def trim_outlier_rates(rates: list[float]) -> tuple[list[float], int]:
+    if len(rates) < _MIN_COMPS_FOR_TRIM:
+        return rates, 0
+    q1, _, q3 = quantiles(rates, n=4, method="inclusive")
+    iqr = q3 - q1
+    if iqr <= 0:
+        return rates, 0
+    lower = q1 - _IQR_FENCE * iqr
+    upper = q3 + _IQR_FENCE * iqr
+    kept = [rate for rate in rates if lower <= rate <= upper]
+    if len(kept) < _MEDIUM_MIN_COMPS:
+        return rates, 0
+    return kept, len(rates) - len(kept)
+
+
 def _confidence(usable_comps: int, cv: float | None) -> Confidence:
     if cv is None:
         return "low"
@@ -86,19 +103,24 @@ def estimate_land_value(subject_area_sqft: float | None, comps: list[Comp]) -> V
             len(comps), "No comparable land sales with a usable price per square foot were found."
         )
 
-    median_rate = median(rates)
-    average_rate = mean(rates)
-    cv = pstdev(rates) / average_rate if len(rates) > 1 and average_rate else 0.0
+    usable_rates, trimmed = trim_outlier_rates(rates)
+    median_rate = median(usable_rates)
+    average_rate = mean(usable_rates)
+    cv = pstdev(usable_rates) / average_rate if len(usable_rates) > 1 and average_rate else 0.0
     estimate = round(median_rate * subject_area_sqft)
-    low = round(min(rates) * subject_area_sqft)
-    high = round(max(rates) * subject_area_sqft)
-    confidence = _confidence(len(rates), cv)
+    low = round(min(usable_rates) * subject_area_sqft)
+    high = round(max(usable_rates) * subject_area_sqft)
+    confidence = _confidence(len(usable_rates), cv)
 
     reasons = [
-        f"Estimate from {len(rates)} comparable land sale(s); median "
+        f"Estimate from {len(usable_rates)} comparable land sale(s); median "
         f"${median_rate:,.0f}/sqft applied to {subject_area_sqft:,.0f} sqft.",
         f"Price dispersion (coefficient of variation) ~{cv:.2f}.",
     ]
+    if trimmed:
+        reasons.append(
+            f"Excluded {trimmed} price-per-sqft outlier(s) beyond the interquartile fence."
+        )
     return ValuationEstimate(
         estimate=float(estimate),
         low=float(low),
