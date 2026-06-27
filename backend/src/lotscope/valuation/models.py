@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Index, Numeric, String
+from sqlalchemy import Date, ForeignKey, Index, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -9,7 +9,10 @@ from lotscope.core.mixins import IngestionMixin, TimestampMixin
 
 class Sale(Base, TimestampMixin, IngestionMixin):
     __tablename__ = "sale"
-    __table_args__ = (Index("ix_sale_parcel_date", "parcel_number", "sale_date"),)
+    __table_args__ = (
+        Index("ix_sale_parcel_date", "parcel_number", "sale_date"),
+        UniqueConstraint("parcel_number", "document_id", name="uq_sale_parcel_document"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     parcel_number: Mapped[str] = mapped_column(
