@@ -62,5 +62,8 @@ jobs:
       - name: Sync dependencies
         run: uv sync --frozen
 
+      - name: Build test database image (PostGIS + pgvector)
+        run: docker build -t lotscope/postgres:test ../docker/postgres
+
       - name: Integration tests
         run: uv run pytest -m integration

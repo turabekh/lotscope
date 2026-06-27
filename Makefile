@@ -2,7 +2,7 @@ COMPOSE := docker compose
 BACKEND := backend
 INFRA := db redis martin
 
-.PHONY: help up up-app down logs dev sync migrate revision seed recompute-verdicts test test-unit test-integration lint fmt typecheck check ingest e2e
+.PHONY: help up up-app down logs dev sync migrate revision seed recompute-verdicts test-image test test-unit test-integration lint fmt typecheck check ingest e2e
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -37,13 +37,16 @@ seed: ## Seed reference data (Title 14 zoning standards)
 recompute-verdicts: ## Recompute the Parcel Verdict for every parcel
 	cd $(BACKEND) && uv run python -m lotscope.verdict.jobs
 
-test: ## Run the full test suite (unit + integration; needs Docker)
+test-image: ## Build the PostGIS + pgvector image used by integration tests
+	docker build -t lotscope/postgres:test docker/postgres
+
+test: test-image ## Run the full test suite (unit + integration; needs Docker)
 	cd $(BACKEND) && uv run pytest
 
 test-unit: ## Run unit tests only (no Docker)
 	cd $(BACKEND) && uv run pytest -m "not integration"
 
-test-integration: ## Run integration tests only (requires Docker)
+test-integration: test-image ## Run integration tests only (requires Docker)
 	cd $(BACKEND) && uv run pytest -m integration
 
 lint: ## Lint

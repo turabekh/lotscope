@@ -16,6 +16,8 @@ from sqlalchemy.ext.asyncio import (
 
 from lotscope.core.config import get_settings
 
+_TEST_DB_IMAGE = "lotscope/postgres:test"
+
 
 def _start_postgis() -> Iterator[str]:
     try:
@@ -25,7 +27,7 @@ def _start_postgis() -> Iterator[str]:
 
     try:
         container = PostgresContainer(
-            "postgis/postgis:16-3.4",
+            _TEST_DB_IMAGE,
             username="lotscope",
             password="lotscope",
             dbname="lotscope",
