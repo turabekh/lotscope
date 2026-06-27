@@ -49,6 +49,24 @@ Dependency direction is inward toward `core/`. A module may depend on `core/` an
 - **Redis** — cache + ARQ job broker.
 - **S3** (prod) — recorded documents and imagery feeding the OCR/RAG pipeline.
 
+## Map tiles
+
+Vector tiles are served by **Martin** directly from PostGIS. Martin connects via
+`DATABASE_URL` and auto-publishes the MVT **function sources** defined in a
+migration:
+
+- `parcels_mvt(z, x, y)` → layer `parcels` (parcel_number, address, is_vacant, base_zoning_code).
+- `vacant_lots_mvt(z, x, y)` → layer `vacant_lots` (vacant parcels only).
+
+Each function clips `parcel.geom_4326` (filtered through its GiST index via the
+tile envelope), reprojects to Web Mercator, and emits MVT with `ST_AsMVT`.
+Endpoints: `/{function}/{z}/{x}/{y}` (e.g. `/parcels_mvt/12/1196/1539`), with
+TileJSON at `/{function}` and a source listing at `/catalog`. The frontend
+(MapLibre) consumes these directly; the API does not proxy tiles.
+
+Martin introspects the schema at startup, so run migrations before it (or
+restart Martin after a migration that changes the tile functions).
+
 ## Cross-cutting principles
 
 - **Provenance everywhere.** Every derived datum records its source(s) and a computed-at timestamp.
