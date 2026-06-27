@@ -28,7 +28,7 @@ The full product specification is in [`docs/LotScope-PHL-Full-PRD.md.pdf`](docs/
 |---|---|
 | Backend | Python 3.12+, FastAPI (async), Pydantic v2 |
 | Data | PostgreSQL 16 + PostGIS 3.4 + pgvector, SQLAlchemy 2.0 (async) + GeoAlchemy2, Alembic |
-| Search | Elasticsearch |
+| Search | PostgreSQL `pg_trgm` + full-text (see ADR-0005) |
 | Jobs / cache | Redis + ARQ |
 | Tiles | Martin (vector tiles from PostGIS) |
 | AI | Anthropic Claude API + pgvector RAG |
@@ -63,7 +63,7 @@ The full product specification is in [`docs/LotScope-PHL-Full-PRD.md.pdf`](docs/
 │       ├── risk/               # liens, title, L&I, flood, land bank flags
 │       ├── verdict/            # composes engines -> Parcel Verdict
 │       ├── ingestion/          # ETL: carto/arcgis clients, loaders, reconciliation
-│       ├── search/             # Elasticsearch indexing + query
+│       ├── search/             # Postgres trigram/full-text search
 │       ├── ai/                 # Claude client, prompts, RAG, structured outputs
 │       └── api/                # FastAPI routers (thin)
 └── frontend/
@@ -91,7 +91,7 @@ cd lotscope-phl
 cp .env.example .env
 # Fill in values — at minimum ANTHROPIC_API_KEY and the datastore URLs.
 
-# 2. Start infrastructure (Postgres+PostGIS+pgvector, Redis, Elasticsearch, Martin)
+# 2. Start infrastructure (Postgres+PostGIS+pgvector, Redis, Martin)
 make up
 
 # 3. Backend
@@ -124,7 +124,6 @@ Copy `.env.example` to `.env` and set:
 | `APP_ENV` | `local` / `staging` / `production` |
 | `DATABASE_URL` | `postgresql+asyncpg://user:pass@db:5432/lotscope` |
 | `REDIS_URL` | `redis://redis:6379/0` |
-| `ELASTICSEARCH_URL` | `http://elasticsearch:9200` |
 | `MARTIN_URL` | Tile server base URL |
 | `ANTHROPIC_API_KEY` | Claude API key (required for the AI layer) |
 | `ANTHROPIC_MODEL` | Default model id for general tasks |

@@ -24,7 +24,6 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://lotscope:lotscope@localhost:5432/lotscope"
     redis_url: str = "redis://localhost:6379/0"
-    elasticsearch_url: str = "http://localhost:9200"
     martin_url: str = "http://localhost:3000"
 
     anthropic_api_key: str | None = None

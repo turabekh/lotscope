@@ -21,7 +21,7 @@ LotScope PHL is a **modular monolith**: one deployable backend composed of indep
       └───────┬──────┘ └──────┬──────┘ └──────┬──────┘       │
               │               │               │              │
    ┌──────────▼───────────────▼───────────────▼──────────────▼─┐
-   │ PostgreSQL 16 + PostGIS + pgvector  │ Elasticsearch │ Redis │
+   │ PostgreSQL 16 + PostGIS + pgvector (+ pg_trgm)  │   Redis   │
    └────────────────────────────────────────────────────────────┘
               ▲
         ┌─────┴──────┐
@@ -45,7 +45,7 @@ Dependency direction is inward toward `core/`. A module may depend on `core/` an
 ## Datastores
 
 - **PostgreSQL 16 + PostGIS 3.4 + pgvector** — single primary datastore. Analysis geometry in **EPSG:2272** (feet); tile geometry in **EPSG:4326**. GiST indexes on all geometry. pgvector holds RAG embeddings.
-- **Elasticsearch** — address / owner / parcel search.
+- **PostgreSQL `pg_trgm`/full-text** — address / owner / parcel search (ADR-0005); no separate search service.
 - **Redis** — cache + ARQ job broker.
 - **S3** (prod) — recorded documents and imagery feeding the OCR/RAG pipeline.
 
@@ -58,4 +58,4 @@ Dependency direction is inward toward `core/`. A module may depend on `core/` an
 
 ## Local development
 
-`make up` starts infrastructure (Postgres, Redis, Elasticsearch, Martin). `make dev` runs the API locally against it. See [`adr/0002-scaffold-stack-and-local-infra.md`](adr/0002-scaffold-stack-and-local-infra.md) for the concrete image and topology choices.
+`make up` starts infrastructure (Postgres, Redis, Martin). `make dev` runs the API locally against it. See [`adr/0002-scaffold-stack-and-local-infra.md`](adr/0002-scaffold-stack-and-local-infra.md) for the concrete image and topology choices.

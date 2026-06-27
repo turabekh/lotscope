@@ -1,13 +1,13 @@
 COMPOSE := docker compose
 BACKEND := backend
-INFRA := db redis elasticsearch martin
+INFRA := db redis martin
 
 .PHONY: help up up-app down logs dev sync migrate revision test test-unit test-integration lint fmt typecheck check ingest e2e
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-up: ## Start local infrastructure (db, redis, elasticsearch, martin)
+up: ## Start local infrastructure (db, redis, martin)
 	$(COMPOSE) up -d $(INFRA)
 
 up-app: ## Build and start the full stack including the api container

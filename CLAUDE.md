@@ -33,7 +33,7 @@ A single screen that tells anyone — investor, builder, agent, or owner — wha
 - **FastAPI** (async), **Pydantic v2** for all schemas/validation, **Pydantic Settings** for config.
 - **SQLAlchemy 2.0** (async, typed `Mapped[]` style) + **GeoAlchemy2** for PostGIS. **Alembic** for migrations.
 - **PostgreSQL 16 + PostGIS 3.4 + pgvector** (single primary datastore; pgvector for RAG embeddings).
-- **Elasticsearch** (address/owner/parcel search).
+- **Search via PostgreSQL `pg_trgm` + full-text** (address/owner/parcel search). Elasticsearch was dropped for this phase as overkill at single-city scale — see `docs/adr/0005-postgres-search-instead-of-elasticsearch.md`. The `search` module stays behind a service interface so a dedicated engine can return later if scale demands it.
 - **Redis** (cache + job broker). **ARQ** for async background jobs and scheduled ingestion. (If you ever need heavy workflow orchestration, propose it via ADR first — do not pull in Airflow casually.)
 - **Anthropic Claude API** for the AI layer (model choice per task — see §9).
 - **Martin** (vector tile server reading directly from PostGIS).
@@ -48,7 +48,7 @@ A single screen that tells anyone — investor, builder, agent, or owner — wha
 - Tests: **pytest** + **pytest-asyncio** + **coverage** (backend, PostGIS via **testcontainers**); **Vitest** + **Vue Test Utils** (frontend); **Playwright** (e2e).
 
 **Infra / dev**
-- **Docker + docker-compose** for local (services: `db`, `redis`, `elasticsearch`, `martin`, `api`, `worker`, `web`).
+- **Docker + docker-compose** for local (services: `db`, `redis`, `martin`, `api`, `worker`, `web`).
 - **GitHub Actions** CI (lint, type-check, test on every PR). **AWS** for prod.
 
 If you believe a different tool is genuinely better for a task, raise it in discussion with reasoning; do not swap stack components unilaterally.
@@ -79,7 +79,7 @@ If you believe a different tool is genuinely better for a task, raise it in disc
 │       ├── risk/              # liens, title, L&I, flood, land bank flags
 │       ├── verdict/           # composes the above -> Parcel Verdict
 │       ├── ingestion/         # ETL: carto client, arcgis client, loaders, reconciliation
-│       ├── search/            # Elasticsearch indexing + query
+│       ├── search/            # Postgres trigram/full-text search
 │       ├── ai/                # Claude client, prompts, RAG, structured outputs
 │       └── api/               # FastAPI routers (thin; compose services)
 └── frontend/
@@ -211,7 +211,7 @@ Build in this order. Each step ends with: passing tests, passing lint/type-check
 1. **Scaffold & infra.** Repo layout, `uv` project, docker-compose (db+postgis+pgvector, redis, es, martin), `core/` (settings, db session, logging, errors), base FastAPI app, pre-commit, CI. Health-check endpoint.
 2. **Data model & migrations.** Tables: `parcel`, `zoning_district`, `zoning_standard`, `sale`, `tax_status`, `li_event`, `parcel_verdict`. Alembic baseline. Geometry in EPSG:2272 (analysis) + 4326 (tiles); GiST indexes on all geometry.
 3. **Ingestion.** Carto SQL client with **mandatory chunking** (paginate by parcel-number ranges; never full-table dump). ArcGIS Hub client. Loaders for OPA, PWD parcels, RTT transfers, tax delinquency, L&I, Vacant Indicators, Zoning Base Districts, FEMA flood. **Parcel-key reconciliation** (OPA ↔ PWD ↔ RTT) as a tested, first-class concern. Idempotent upserts + freshness tracking.
-4. **Search.** Index parcels into Elasticsearch; address/owner/parcel queries.
+4. **Search.** Postgres `pg_trgm`/full-text indexes on parcels; address/owner/parcel queries (ADR-0005).
 5. **Tiles.** Martin config over PostGIS; serve vacant-lot + parcel layers in 4326.
 6. **Domain engines.** `zoning` (district resolution + Title 14 standards table + buildability/by-right), then `valuation` (RTT comps + confidence-scored AVM), then `risk` (liens, L&I, Land Bank, flood, title flags).
 7. **Verdict engine.** Compose engines into `parcel_verdict` (batch recompute + on-demand). Record provenance + computed-at on every field.
