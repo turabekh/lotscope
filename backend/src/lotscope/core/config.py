@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
     arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
 
+    rtt_min_sale_date: str = "2021-01-01"
+    li_min_event_date: str = "2023-01-01"
+
     http_timeout_seconds: float = 30.0
     http_max_retries: int = 3
     http_backoff_seconds: float = 0.5
