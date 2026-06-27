@@ -77,6 +77,9 @@ pnpm-debug.log*
 /backend/data/title14/*
 !/backend/data/title14/README.md
 !/backend/data/title14/sections.sample.jsonl
+!/backend/data/demo/
+/backend/data/demo/*
+!/backend/data/demo/demo.sql
 tmp/
 scratch/
 *.dump

@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed recompute-verdicts ingest-title14 test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed recompute-verdicts ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -43,6 +43,10 @@ recompute-verdicts: ## Recompute the Parcel Verdict for every parcel
 
 ingest-title14: ## Embed the Title 14 corpus (use: make ingest-title14 FILE=data/title14/sections.jsonl)
 	cd $(BACKEND) && uv run python -m lotscope.ai.corpus $(FILE)
+
+demo: ## Load a small synthetic demo dataset and compute its verdicts (local preview)
+	$(COMPOSE) exec -T db psql -U lotscope -d lotscope < $(BACKEND)/data/demo/demo.sql
+	$(MAKE) recompute-verdicts
 
 test-image: ## Build the PostGIS + pgvector image used by integration tests
 	docker build -t lotscope/postgres:test docker/postgres
