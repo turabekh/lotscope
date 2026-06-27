@@ -37,11 +37,9 @@ function onSelect(parcelNumber: string): void {
     </q-drawer>
 
     <q-page-container>
-      <q-page class="column">
-        <div class="col relative-position">
-          <MapView class="absolute-full" @select="onSelect" />
-          <FilterPanel />
-        </div>
+      <q-page class="relative-position">
+        <MapView class="absolute-full" @select="onSelect" />
+        <FilterPanel />
       </q-page>
     </q-page-container>
   </q-layout>

@@ -16,9 +16,18 @@ export const USE_CLASS_OPTIONS: UseClassOption[] = [
   { value: 'S', label: 'Special', color: '#2e7d32' },
 ]
 
+export type ColorMode = 'vacancy' | 'opportunity' | 'risk'
+
+export const COLOR_MODE_OPTIONS: { value: ColorMode; label: string; icon: string }[] = [
+  { value: 'vacancy', label: 'Vacancy', icon: 'grass' },
+  { value: 'opportunity', label: 'Opportunity', icon: 'trending_up' },
+  { value: 'risk', label: 'Risk', icon: 'warning_amber' },
+]
+
 export const useFiltersStore = defineStore('filters', () => {
   const vacantOnly = ref(false)
   const useClasses = ref<UseClass[]>([])
+  const colorMode = ref<ColorMode>('vacancy')
 
   function toggleClass(value: UseClass): void {
     useClasses.value = useClasses.value.includes(value)
@@ -29,11 +38,12 @@ export const useFiltersStore = defineStore('filters', () => {
   function reset(): void {
     vacantOnly.value = false
     useClasses.value = []
+    colorMode.value = 'vacancy'
   }
 
   const activeCount = computed(
     () => (vacantOnly.value ? 1 : 0) + (useClasses.value.length > 0 ? 1 : 0),
   )
 
-  return { vacantOnly, useClasses, toggleClass, reset, activeCount }
+  return { vacantOnly, useClasses, colorMode, toggleClass, reset, activeCount }
 })

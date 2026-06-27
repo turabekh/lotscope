@@ -19,7 +19,7 @@ const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 
 const { detail } = storeToRefs(useParcelStore())
 const filters = useFiltersStore()
-const { vacantOnly, useClasses } = storeToRefs(filters)
+const { vacantOnly, useClasses, colorMode } = storeToRefs(filters)
 let map: maplibregl.Map | undefined
 const popup = new maplibregl.Popup({
   closeButton: false,
@@ -65,6 +65,52 @@ function markerFilter(): FilterSpecification {
   return ['all', ...conditions]
 }
 
+function fillColor(): ExpressionSpecification {
+  if (colorMode.value === 'opportunity') {
+    return [
+      'interpolate',
+      ['linear'],
+      ['coalesce', ['get', 'opportunity_score'], 0],
+      0,
+      '#c62828',
+      45,
+      '#f9a825',
+      65,
+      '#9ccc65',
+      100,
+      '#2e7d32',
+    ]
+  }
+  if (colorMode.value === 'risk') {
+    return [
+      'interpolate',
+      ['linear'],
+      ['coalesce', ['get', 'risk_score'], 0],
+      0,
+      '#2e7d32',
+      25,
+      '#9ccc65',
+      50,
+      '#f9a825',
+      100,
+      '#c62828',
+    ]
+  }
+  return ['case', ['==', ['get', 'is_vacant'], true], '#f9a825', '#1565c0']
+}
+
+function fillOpacity(): ExpressionSpecification {
+  if (colorMode.value === 'opportunity') return ['case', ['has', 'opportunity_score'], 0.72, 0]
+  if (colorMode.value === 'risk') return ['case', ['has', 'risk_score'], 0.72, 0]
+  return ['case', ['==', ['get', 'is_vacant'], true], 0.55, 0.16]
+}
+
+function applyFillPaint(): void {
+  if (!map?.getLayer('parcels-fill')) return
+  map.setPaintProperty('parcels-fill', 'fill-color', fillColor())
+  map.setPaintProperty('parcels-fill', 'fill-opacity', fillOpacity())
+}
+
 function dotImage(diameter: number, fill: string): ImageData {
   const canvas = document.createElement('canvas')
   canvas.width = diameter
@@ -94,10 +140,16 @@ function popupHtml(properties: Record<string, unknown>): string {
   const zoning = escapeHtml(String(properties.base_zoning_code ?? '—'))
   const vacant = properties.is_vacant === true || properties.is_vacant === 'true'
   const vacantTag = vacant ? '<span class="lp-vac">VACANT</span>' : ''
+  const opportunity = properties.opportunity_score
+  const scoreRow =
+    typeof opportunity === 'number'
+      ? `<div class="lp-score">Opportunity <b>${Math.round(opportunity)}</b>` +
+        `<span class="lp-risk">· Risk ${Math.round(Number(properties.risk_score ?? 0))}</span></div>`
+      : ''
   return (
     `<div class="lot-pop"><div class="lp-addr">${address}</div>` +
     `<div class="lp-meta"><span class="lp-zone">${zoning}</span>${vacantTag}</div>` +
-    `<div class="lp-hint">Click for the full verdict</div></div>`
+    `${scoreRow}<div class="lp-hint">Click for the full verdict</div></div>`
   )
 }
 
@@ -189,6 +241,7 @@ function addParcelLayers(instance: maplibregl.Map): void {
   })
 
   instance.setFilter('parcels-fill', parcelFilter())
+  applyFillPaint()
 
   for (const layer of ['parcels-fill', 'vacant-markers']) {
     instance.on('click', layer, selectFromEvent)
@@ -216,6 +269,8 @@ watch([vacantOnly, useClasses], () => {
   map.setFilter('parcels-fill', parcelFilter())
   map.setFilter('vacant-markers', markerFilter())
 })
+
+watch(colorMode, applyFillPaint)
 
 watch(detail, (selected) => {
   if (!map || !map.getLayer('parcel-selected')) return
@@ -282,6 +337,15 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
+}
+.lot-pop .lp-score {
+  font-size: 12px;
+  color: #37474f;
+  margin-top: 4px;
+}
+.lot-pop .lp-score .lp-risk {
+  color: #90a4ae;
+  margin-left: 4px;
 }
 .lot-pop .lp-hint {
   font-size: 11px;
