@@ -1,5 +1,6 @@
 from datetime import date
 
+from geoalchemy2 import Geometry, WKBElement
 from sqlalchemy import (
     Boolean,
     Date,
@@ -52,3 +53,19 @@ class LiEvent(Base, TimestampMixin, IngestionMixin):
     description: Mapped[str | None] = mapped_column(Text)
     is_unsafe: Mapped[bool | None] = mapped_column(Boolean)
     is_imminently_dangerous: Mapped[bool | None] = mapped_column(Boolean)
+
+
+class FloodZone(Base, TimestampMixin, IngestionMixin):
+    __tablename__ = "flood_zone"
+    __table_args__ = (UniqueConstraint("external_id", name="uq_flood_zone_external"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    external_id: Mapped[str | None] = mapped_column(String(60), index=True)
+    zone: Mapped[str | None] = mapped_column(String(60), index=True)
+
+    geom_2272: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=2272, spatial_index=True)
+    )
+    geom_4326: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True)
+    )
