@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import AsyncIterator, Sequence
 from types import TracebackType
 from typing import Any, Self
@@ -8,8 +7,7 @@ from pydantic import BaseModel, Field
 
 from lotscope.core.config import Settings
 from lotscope.ingestion.errors import CartoError
-
-_RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+from lotscope.ingestion.http import request_with_retry
 
 
 def quote_literal(value: str | int | float) -> str:
@@ -76,24 +74,13 @@ class CartoClient:
         await self._client.aclose()
 
     async def query(self, sql: str) -> list[dict[str, Any]]:
-        last_error: Exception | None = None
-        for attempt in range(self._max_retries + 1):
-            try:
-                response = await self._client.post(self._url, data={"q": sql})
-                response.raise_for_status()
-            except httpx.HTTPStatusError as status_error:
-                last_error = status_error
-                if status_error.response.status_code not in _RETRYABLE_STATUS:
-                    raise CartoError(
-                        f"Carto returned {status_error.response.status_code}"
-                    ) from status_error
-            except httpx.HTTPError as transport_error:
-                last_error = transport_error
-            else:
-                return CartoResponse.model_validate(response.json()).rows
-            if attempt < self._max_retries:
-                await asyncio.sleep(self._backoff * (2**attempt))
-        raise CartoError("Carto request failed after retries") from last_error
+        response = await request_with_retry(
+            lambda: self._client.post(self._url, data={"q": sql}),
+            max_retries=self._max_retries,
+            backoff=self._backoff,
+            error=CartoError,
+        )
+        return CartoResponse.model_validate(response.json()).rows
 
     async def paginate_by_key(
         self,
