@@ -1,3 +1,4 @@
+from lotscope.accounts.models import User
 from lotscope.ai.models import Document
 from lotscope.core.db import Base
 from lotscope.ingestion.models import DatasetFreshness
@@ -18,6 +19,7 @@ __all__ = [
     "ParcelVerdict",
     "Sale",
     "TaxStatus",
+    "User",
     "ZoningDistrict",
     "ZoningStandard",
     "metadata",

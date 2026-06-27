@@ -20,3 +20,11 @@ class UpstreamError(LotScopeError):
 
 class ConfigurationError(LotScopeError):
     default_message = "The application is misconfigured."
+
+
+class AuthError(LotScopeError):
+    default_message = "Authentication failed."
+
+
+class ForbiddenError(LotScopeError):
+    default_message = "You do not have permission to perform this action."

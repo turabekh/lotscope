@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     app_env: AppEnv = AppEnv.LOCAL
     log_level: str = "INFO"
     secret_key: str = "change-me-in-env"
+    access_token_expire_minutes: int = 60
 
     database_url: str = "postgresql+asyncpg://lotscope:lotscope@localhost:5432/lotscope"
     redis_url: str = "redis://localhost:6379/0"
