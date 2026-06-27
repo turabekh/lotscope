@@ -14,20 +14,20 @@ PWD_DATASET = "pwd_parcels"
 PWD_KEY_COLUMN = "cartodb_id"
 PWD_COLUMNS = (
     "cartodb_id",
-    "brt_number",
+    "brt_id",
     "parcel_id",
     "ST_AsGeoJSON(the_geom) AS geom_geojson",
 )
 
 
 class PwdRecord(BaseModel):
-    brt_number: str | int | None = None
+    brt_id: str | int | None = None
     parcel_id: str | int | None = None
     geom_geojson: str | None = None
 
 
 def to_parcel_geometry_row(record: PwdRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.brt_number)
+    parcel_number = normalize_account(record.brt_id)
     if parcel_number is None or not record.geom_geojson:
         return None
     geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(record.geom_geojson), 4326)

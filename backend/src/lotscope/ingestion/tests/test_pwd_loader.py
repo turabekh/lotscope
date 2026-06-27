@@ -18,7 +18,7 @@ _POLYGON = (
 
 def test_to_parcel_geometry_row_maps_key_and_geometry() -> None:
     row = to_parcel_geometry_row(
-        PwdRecord(brt_number="1234567", parcel_id="pwd-9", geom_geojson=_POLYGON)
+        PwdRecord(brt_id="1234567", parcel_id="pwd-9", geom_geojson=_POLYGON)
     )
     assert row is not None
     assert row["parcel_number"] == "001234567"
@@ -29,8 +29,8 @@ def test_to_parcel_geometry_row_maps_key_and_geometry() -> None:
 
 
 def test_to_parcel_geometry_row_skips_without_key_or_geometry() -> None:
-    assert to_parcel_geometry_row(PwdRecord(brt_number=None, geom_geojson=_POLYGON)) is None
-    assert to_parcel_geometry_row(PwdRecord(brt_number="1234567", geom_geojson=None)) is None
+    assert to_parcel_geometry_row(PwdRecord(brt_id=None, geom_geojson=_POLYGON)) is None
+    assert to_parcel_geometry_row(PwdRecord(brt_id="1234567", geom_geojson=None)) is None
 
 
 class _RowsHandler:
@@ -53,7 +53,7 @@ async def test_load_pwd_writes_dual_srid_geometry(db_session: AsyncSession) -> N
     from lotscope.ingestion.loaders.pwd import load_pwd
 
     handler = _RowsHandler(
-        [[{"cartodb_id": 1, "brt_number": "1234567", "parcel_id": "p9", "geom_geojson": _POLYGON}]]
+        [[{"cartodb_id": 1, "brt_id": "1234567", "parcel_id": "p9", "geom_geojson": _POLYGON}]]
     )
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
         total = await load_pwd(db_session, carto, page_size=500)
@@ -89,7 +89,7 @@ async def test_load_pwd_composes_with_existing_parcel(db_session: AsyncSession) 
     await db_session.flush()
 
     handler = _RowsHandler(
-        [[{"cartodb_id": 1, "brt_number": "1234567", "parcel_id": "p9", "geom_geojson": _POLYGON}]]
+        [[{"cartodb_id": 1, "brt_id": "1234567", "parcel_id": "p9", "geom_geojson": _POLYGON}]]
     )
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
         await load_pwd(db_session, carto, page_size=500)

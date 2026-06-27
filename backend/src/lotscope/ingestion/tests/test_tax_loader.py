@@ -13,7 +13,7 @@ from lotscope.ingestion.models import DatasetFreshness
 
 def test_to_tax_row_flags_delinquency() -> None:
     row = to_tax_row(
-        TaxRecord(parcel_number="1234567", total_due=5000.0, principal=4000.0, num_years_owed=3)
+        TaxRecord(opa_number="1234567", total_due=5000.0, principal_due=4000.0, num_years_owed=3)
     )
     assert row is not None
     assert row["parcel_number"] == "001234567"
@@ -22,13 +22,13 @@ def test_to_tax_row_flags_delinquency() -> None:
 
 
 def test_to_tax_row_not_delinquent_when_nothing_due() -> None:
-    row = to_tax_row(TaxRecord(parcel_number="1234567", total_due=0.0))
+    row = to_tax_row(TaxRecord(opa_number="1234567", total_due=0.0))
     assert row is not None
     assert row["is_delinquent"] is False
 
 
 def test_to_tax_row_skips_unkeyable() -> None:
-    assert to_tax_row(TaxRecord(parcel_number=None)) is None
+    assert to_tax_row(TaxRecord(opa_number=None)) is None
 
 
 class _RowsHandler:
@@ -51,7 +51,7 @@ async def test_load_tax_upserts_status_and_stubs_parcel(db_session: AsyncSession
     from lotscope.ingestion.loaders.tax import load_tax
 
     handler = _RowsHandler(
-        [[{"cartodb_id": 1, "parcel_number": "1234567", "total_due": 9000.0, "num_years_owed": 2}]]
+        [[{"cartodb_id": 1, "opa_number": "1234567", "total_due": 9000.0, "num_years_owed": 2}]]
     )
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
         total = await load_tax(db_session, carto, page_size=500)
@@ -79,7 +79,7 @@ async def test_load_tax_upserts_status_and_stubs_parcel(db_session: AsyncSession
 async def test_load_tax_is_idempotent(db_session: AsyncSession) -> None:
     from lotscope.ingestion.loaders.tax import load_tax
 
-    pages = [[{"cartodb_id": 1, "parcel_number": "1234567", "total_due": 100.0}]]
+    pages = [[{"cartodb_id": 1, "opa_number": "1234567", "total_due": 100.0}]]
     for _ in range(2):
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:

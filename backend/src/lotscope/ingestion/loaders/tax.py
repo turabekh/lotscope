@@ -14,28 +14,28 @@ TAX_DATASET = "real_estate_tax_delinquencies"
 TAX_KEY_COLUMN = "cartodb_id"
 TAX_COLUMNS = (
     "cartodb_id",
-    "parcel_number",
+    "opa_number",
     "total_due",
-    "principal",
+    "principal_due",
     "num_years_owed",
 )
 
 
 class TaxRecord(BaseModel):
-    parcel_number: str | int | None = None
+    opa_number: str | int | None = None
     total_due: float | None = None
-    principal: float | None = None
+    principal_due: float | None = None
     num_years_owed: int | None = None
 
 
 def to_tax_row(record: TaxRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.parcel_number)
+    parcel_number = normalize_account(record.opa_number)
     if parcel_number is None:
         return None
     return {
         "parcel_number": parcel_number,
         "total_due": record.total_due,
-        "principal_due": record.principal,
+        "principal_due": record.principal_due,
         "years_owed": record.num_years_owed,
         "is_delinquent": (record.total_due or 0) > 0,
         "source": TAX_DATASET,
