@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-6"
 
+    carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
+    arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
+
+    http_timeout_seconds: float = 30.0
+    http_max_retries: int = 3
+    http_backoff_seconds: float = 0.5
+
     @property
     def is_production(self) -> bool:
         return self.app_env is AppEnv.PRODUCTION
