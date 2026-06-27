@@ -54,6 +54,16 @@ Base: `https://data-phl.opendata.arcgis.com`
 
 City-owned property and Land Bank / PHDC inventory — flags publicly-owned lots and disposition status. Current authoritative source to be located and pinned during ingestion.
 
+## Title 14 zoning standards (reference data)
+
+The `zoning_standard` table is populated by an idempotent seed
+(`lotscope.zoning.seed`, run via `make seed`), not an API. The shipped values
+are **provisional** (`code_version = title14-provisional-2024`): the district
+taxonomy and well-established figures (e.g. RSA-5 = 1,440 sq ft / 16 ft / 38 ft)
+are encoded, and fields not yet confirmed are left NULL so the engine degrades
+honestly rather than asserting false precision. **Verify every value against
+the official Title 14 text before production use** and re-run the seed to update.
+
 ## Recorded documents
 
 DOR records system for deed / plat images — the OCR + RAG layer for restriction and easement extraction.
