@@ -51,8 +51,8 @@ typecheck: ## Type-check
 
 check: lint typecheck test-unit ## Run lint, type-check, and unit tests (fast pre-commit gate)
 
-ingest: ## Run data ingestion pipelines (added in the ingestion slice)
-	@echo "ingest is not implemented yet (see CLAUDE.md build order step 3)" && exit 1
+ingest: ## Run data ingestion (all datasets, or: make ingest DATASETS="opa pwd")
+	cd $(BACKEND) && uv run python -m lotscope.ingestion.cli $(DATASETS)
 
 e2e: ## Run end-to-end tests (added with the frontend slice)
 	@echo "e2e is not implemented yet (see CLAUDE.md build order step 10)" && exit 1

@@ -75,6 +75,24 @@ services:
       redis:
         condition: service_healthy
 
+  worker:
+    build:
+      context: ./backend
+    profiles: ["app"]
+    command: ["arq", "lotscope.worker.WorkerSettings"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
+      REDIS_URL: redis://redis:6379/0
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      MARTIN_URL: http://martin:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   db_data:
   redis_data:

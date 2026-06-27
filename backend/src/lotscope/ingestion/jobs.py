@@ -1,0 +1,101 @@
+from collections.abc import Awaitable, Callable
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from lotscope.core.config import Settings
+from lotscope.ingestion.arcgis import ArcGisClient
+from lotscope.ingestion.carto import CartoClient
+from lotscope.ingestion.loaders import flood, li, opa, pwd, rtt, tax, vacancy, zoning
+from lotscope.ingestion.runner import run_loader
+
+SessionFactory = async_sessionmaker[AsyncSession]
+Job = Callable[[SessionFactory, Settings], Awaitable[int]]
+CartoLoader = Callable[[AsyncSession, CartoClient], Awaitable[int]]
+ArcGisLoader = Callable[[AsyncSession, ArcGisClient], Awaitable[int]]
+
+
+async def _run_carto(
+    session_factory: SessionFactory, settings: Settings, *, loader: CartoLoader, dataset: str
+) -> int:
+    async with CartoClient(settings) as carto:
+        return await run_loader(
+            session_factory, lambda session: loader(session, carto), dataset=dataset
+        )
+
+
+async def _run_arcgis(
+    session_factory: SessionFactory, settings: Settings, *, loader: ArcGisLoader, dataset: str
+) -> int:
+    async with ArcGisClient(settings) as arcgis:
+        return await run_loader(
+            session_factory, lambda session: loader(session, arcgis), dataset=dataset
+        )
+
+
+async def ingest_opa(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(session_factory, settings, loader=opa.load_opa, dataset=opa.OPA_DATASET)
+
+
+async def ingest_pwd(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(session_factory, settings, loader=pwd.load_pwd, dataset=pwd.PWD_DATASET)
+
+
+async def ingest_rtt(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(session_factory, settings, loader=rtt.load_rtt, dataset=rtt.RTT_DATASET)
+
+
+async def ingest_tax(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(session_factory, settings, loader=tax.load_tax, dataset=tax.TAX_DATASET)
+
+
+async def ingest_li_violations(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(
+        session_factory, settings, loader=li.load_li_violations, dataset=li.LI_VIOLATIONS_DATASET
+    )
+
+
+async def ingest_li_permits(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(
+        session_factory, settings, loader=li.load_li_permits, dataset=li.LI_PERMITS_DATASET
+    )
+
+
+async def ingest_li_demolitions(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(
+        session_factory, settings, loader=li.load_li_demolitions, dataset=li.LI_DEMOLITIONS_DATASET
+    )
+
+
+async def ingest_zoning(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=zoning.load_zoning_districts,
+        dataset=zoning.ZONING_DATASET,
+    )
+
+
+async def ingest_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory, settings, loader=vacancy.load_vacancy, dataset=vacancy.VACANCY_DATASET
+    )
+
+
+async def ingest_flood(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory, settings, loader=flood.load_flood, dataset=flood.FLOOD_DATASET
+    )
+
+
+INGEST_JOBS: dict[str, Job] = {
+    "opa": ingest_opa,
+    "pwd": ingest_pwd,
+    "rtt": ingest_rtt,
+    "tax": ingest_tax,
+    "li_violations": ingest_li_violations,
+    "li_permits": ingest_li_permits,
+    "li_demolitions": ingest_li_demolitions,
+    "zoning": ingest_zoning,
+    "vacancy": ingest_vacancy,
+    "flood": ingest_flood,
+}
