@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatCurrency, formatRange } from '@/lib/format'
+import {
+  formatCurrency,
+  formatPercent,
+  formatRange,
+  scoreColor,
+  scoreLabel,
+  severityColor,
+} from '@/lib/format'
 
 describe('formatCurrency', () => {
   it('formats numbers as whole-dollar USD', () => {
@@ -20,5 +27,34 @@ describe('formatRange', () => {
 
   it('renders a dash when incomplete', () => {
     expect(formatRange(null, 220000)).toBe('—')
+  })
+})
+
+describe('formatPercent', () => {
+  it('renders a 0-1 fraction as a percentage', () => {
+    expect(formatPercent(0.6)).toBe('60%')
+    expect(formatPercent(null)).toBe('—')
+  })
+})
+
+describe('scoreColor and scoreLabel', () => {
+  it('maps opportunity score to colour bands', () => {
+    expect(scoreColor(80)).toBe('positive')
+    expect(scoreColor(50)).toBe('amber-8')
+    expect(scoreColor(20)).toBe('negative')
+    expect(scoreColor(null)).toBe('grey')
+  })
+
+  it('labels the score bands', () => {
+    expect(scoreLabel(80)).toBe('Opportunity')
+    expect(scoreLabel(20)).toBe('Caution')
+  })
+})
+
+describe('severityColor', () => {
+  it('maps risk severities and falls back', () => {
+    expect(severityColor('high')).toBe('negative')
+    expect(severityColor('medium')).toBe('warning')
+    expect(severityColor('unknown')).toBe('grey-7')
   })
 })

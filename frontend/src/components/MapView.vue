@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import maplibregl, { type StyleSpecification } from 'maplibre-gl'
+import maplibregl, {
+  type ExpressionSpecification,
+  type FilterSpecification,
+  type StyleSpecification,
+} from 'maplibre-gl'
 import { storeToRefs } from 'pinia'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { useFiltersStore } from '@/stores/filters'
 import { useParcelStore } from '@/stores/parcel'
 
 const emit = defineEmits<{ select: [parcelNumber: string] }>()
@@ -12,6 +17,8 @@ const martinUrl = import.meta.env.VITE_MARTIN_URL ?? 'http://localhost:3000'
 const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 
 const { detail } = storeToRefs(useParcelStore())
+const filters = useFiltersStore()
+const { vacantOnly, useClasses } = storeToRefs(filters)
 let map: maplibregl.Map | undefined
 
 const baseStyle: StyleSpecification = {
@@ -27,6 +34,22 @@ const baseStyle: StyleSpecification = {
   layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
 }
 
+function parcelFilter(): FilterSpecification | null {
+  const conditions: ExpressionSpecification[] = []
+  if (vacantOnly.value) {
+    conditions.push(['==', ['get', 'is_vacant'], true])
+  }
+  if (useClasses.value.length > 0 && useClasses.value.length < 4) {
+    conditions.push([
+      'in',
+      ['upcase', ['slice', ['coalesce', ['get', 'base_zoning_code'], ''], 0, 1]],
+      ['literal', useClasses.value],
+    ])
+  }
+  if (conditions.length === 0) return null
+  return ['all', ...conditions]
+}
+
 function addParcelLayers(instance: maplibregl.Map): void {
   instance.addSource('parcels', {
     type: 'vector',
@@ -38,26 +61,25 @@ function addParcelLayers(instance: maplibregl.Map): void {
     type: 'fill',
     source: 'parcels',
     'source-layer': 'parcels',
-    paint: { 'fill-color': '#1565c0', 'fill-opacity': 0.12, 'fill-outline-color': '#1565c0' },
-  })
-  instance.addSource('vacant', {
-    type: 'vector',
-    tiles: [`${martinUrl}/vacant_lots_mvt/{z}/{x}/{y}`],
-    minzoom: 12,
+    paint: {
+      'fill-color': ['case', ['==', ['get', 'is_vacant'], true], '#f9a825', '#1565c0'],
+      'fill-opacity': ['case', ['==', ['get', 'is_vacant'], true], 0.5, 0.18],
+    },
   })
   instance.addLayer({
-    id: 'vacant-fill',
-    type: 'fill',
-    source: 'vacant',
-    'source-layer': 'vacant_lots',
-    paint: { 'fill-color': '#f9a825', 'fill-opacity': 0.45 },
+    id: 'parcels-outline',
+    type: 'line',
+    source: 'parcels',
+    'source-layer': 'parcels',
+    minzoom: 15,
+    paint: { 'line-color': '#90a4ae', 'line-width': 0.6 },
   })
   instance.addLayer({
     id: 'parcel-selected-fill',
     type: 'fill',
     source: 'parcels',
     'source-layer': 'parcels',
-    paint: { 'fill-color': '#c62828', 'fill-opacity': 0.35 },
+    paint: { 'fill-color': '#c62828', 'fill-opacity': 0.4 },
     filter: ['==', ['get', 'parcel_number'], ''],
   })
   instance.addLayer({
@@ -65,9 +87,11 @@ function addParcelLayers(instance: maplibregl.Map): void {
     type: 'line',
     source: 'parcels',
     'source-layer': 'parcels',
-    paint: { 'line-color': '#c62828', 'line-width': 3 },
+    paint: { 'line-color': '#b71c1c', 'line-width': 3 },
     filter: ['==', ['get', 'parcel_number'], ''],
   })
+
+  instance.setFilter('parcels-fill', parcelFilter())
 
   instance.on('click', 'parcels-fill', (event) => {
     const parcelNumber = event.features?.[0]?.properties?.parcel_number
@@ -95,9 +119,13 @@ onMounted(() => {
   })
 })
 
+watch([vacantOnly, useClasses], () => {
+  if (map?.getLayer('parcels-fill')) map.setFilter('parcels-fill', parcelFilter())
+})
+
 watch(detail, (selected) => {
   if (!map || !map.getLayer('parcel-selected')) return
-  const filter: maplibregl.FilterSpecification = [
+  const filter: FilterSpecification = [
     '==',
     ['get', 'parcel_number'],
     selected?.parcel_number ?? '',

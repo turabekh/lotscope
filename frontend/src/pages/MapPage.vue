@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FilterPanel from '@/components/FilterPanel.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelPanel from '@/components/ParcelPanel.vue'
 import SearchBox from '@/components/SearchBox.vue'
@@ -15,19 +16,32 @@ function onSelect(parcelNumber: string): void {
   <q-layout view="hHh Lpr fFf">
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
-        <q-toolbar-title>LotScope PHL</q-toolbar-title>
+        <q-icon name="location_city" size="26px" class="q-mr-sm" />
+        <q-toolbar-title>
+          LotScope <span class="text-weight-light">PHL</span>
+        </q-toolbar-title>
+        <q-chip dense outline color="white" text-color="white" class="gt-xs">
+          Philadelphia parcel intelligence
+        </q-chip>
       </q-toolbar>
     </q-header>
-    <q-drawer :width="400" show-if-above bordered side="left">
-      <div class="q-pa-md">
-        <SearchBox @select="onSelect" />
+
+    <q-drawer :width="430" show-if-above bordered side="left">
+      <div class="column no-wrap fit">
+        <div class="q-pa-sm bg-grey-1">
+          <SearchBox @select="onSelect" />
+        </div>
+        <q-separator />
+        <ParcelPanel class="col" />
       </div>
-      <q-separator />
-      <ParcelPanel />
     </q-drawer>
+
     <q-page-container>
       <q-page class="column">
-        <MapView class="col" @select="onSelect" />
+        <div class="col relative-position">
+          <MapView class="fit" @select="onSelect" />
+          <FilterPanel />
+        </div>
       </q-page>
     </q-page-container>
   </q-layout>
