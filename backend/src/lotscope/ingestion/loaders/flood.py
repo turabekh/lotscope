@@ -13,7 +13,7 @@ from lotscope.risk.models import FloodZone
 FLOOD_DATASET = "fema_flood"
 FLOOD_LAYER_URL = (
     "https://services.arcgis.com/fLeGjb7u4uXqeF9q/arcgis/rest/services/"
-    "FEMA_Flood_Hazard_Areas/FeatureServer/0/query"
+    "fema_floodplain_2023/FeatureServer/0/query"
 )
 
 
