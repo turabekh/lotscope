@@ -1,13 +1,21 @@
 from collections.abc import AsyncIterator
-from typing import cast
+from typing import Annotated, cast
 
-from fastapi import Request
+import jwt
+from fastapi import Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from lotscope.accounts.models import User
+from lotscope.accounts.security import decode_access_token
+from lotscope.accounts.service import get_user_by_id
 from lotscope.ai.client import AnthropicGenerator, StructuredGenerator
 from lotscope.ai.embeddings import Embedder, VoyageEmbedder
 from lotscope.core.config import Settings
+from lotscope.core.errors import AuthError, ForbiddenError
+
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_app_settings(request: Request) -> Settings:
@@ -34,3 +42,29 @@ def get_embedder(request: Request) -> Embedder:
 
 def get_generator(request: Request) -> StructuredGenerator:
     return AnthropicGenerator(get_app_settings(request))
+
+
+async def get_current_user(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
+) -> User:
+    if credentials is None:
+        raise AuthError("Not authenticated.")
+    try:
+        payload = decode_access_token(settings, credentials.credentials)
+    except jwt.PyJWTError as error:
+        raise AuthError("Invalid or expired token.") from error
+    subject = payload.get("sub")
+    if not isinstance(subject, str) or not subject.isdigit():
+        raise AuthError("Invalid token subject.")
+    user = await get_user_by_id(session, int(subject))
+    if user is None or not user.is_active:
+        raise AuthError("Account not found or inactive.")
+    return user
+
+
+async def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if user.role != "admin":
+        raise ForbiddenError("Administrator access is required.")
+    return user

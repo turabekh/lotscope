@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from lotscope.core.errors import (
+    AuthError,
+    ForbiddenError,
     LotScopeError,
     NotFoundError,
     UpstreamError,
@@ -19,6 +21,8 @@ class ErrorResponse(BaseModel):
 _STATUS_BY_EXCEPTION: dict[type[LotScopeError], int] = {
     NotFoundError: 404,
     ValidationError: 422,
+    AuthError: 401,
+    ForbiddenError: 403,
     UpstreamError: 502,
 }
 
