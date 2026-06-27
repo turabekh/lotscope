@@ -37,10 +37,19 @@ function onSelect(parcelNumber: string): void {
     </q-drawer>
 
     <q-page-container>
-      <q-page class="relative-position">
-        <MapView class="absolute-full" @select="onSelect" />
+      <q-page class="map-page">
+        <MapView @select="onSelect" />
         <FilterPanel />
       </q-page>
     </q-page-container>
   </q-layout>
 </template>
+
+<style scoped>
+.map-page {
+  position: relative;
+  height: calc(100vh - 50px);
+  height: calc(100dvh - 50px);
+  overflow: hidden;
+}
+</style>

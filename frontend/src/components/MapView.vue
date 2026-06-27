@@ -135,21 +135,42 @@ function escapeHtml(value: string): string {
   )
 }
 
+function compactMoney(value: unknown): string {
+  if (typeof value !== 'number') return '—'
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `$${Math.round(value / 1_000)}k`
+  return `$${value}`
+}
+
 function popupHtml(properties: Record<string, unknown>): string {
   const address = escapeHtml(String(properties.address ?? properties.parcel_number ?? 'Parcel'))
   const zoning = escapeHtml(String(properties.base_zoning_code ?? '—'))
   const vacant = properties.is_vacant === true || properties.is_vacant === 'true'
   const vacantTag = vacant ? '<span class="lp-vac">VACANT</span>' : ''
   const opportunity = properties.opportunity_score
-  const scoreRow =
-    typeof opportunity === 'number'
-      ? `<div class="lp-score">Opportunity <b>${Math.round(opportunity)}</b>` +
-        `<span class="lp-risk">· Risk ${Math.round(Number(properties.risk_score ?? 0))}</span></div>`
-      : ''
+  let rows = ''
+  if (typeof opportunity === 'number') {
+    rows += `<div class="lp-score">Opportunity <b>${Math.round(opportunity)}</b>`
+    rows += `<span class="lp-risk">· Risk ${Math.round(Number(properties.risk_score ?? 0))}</span></div>`
+    const units = properties.by_right_units
+    const byRight =
+      typeof units === 'number'
+        ? `${units} unit${units === 1 ? '' : 's'} by-right`
+        : properties.can_build_by_right === false
+          ? 'Not by-right'
+          : ''
+    const value =
+      typeof properties.value_low === 'number'
+        ? `${compactMoney(properties.value_low)}–${compactMoney(properties.value_high)}`
+        : ''
+    if (byRight || value) {
+      rows += `<div class="lp-extra">${[byRight, value].filter(Boolean).join(' · ')}</div>`
+    }
+  }
   return (
     `<div class="lot-pop"><div class="lp-addr">${address}</div>` +
     `<div class="lp-meta"><span class="lp-zone">${zoning}</span>${vacantTag}</div>` +
-    `${scoreRow}<div class="lp-hint">Click for the full verdict</div></div>`
+    `${rows}<div class="lp-hint">Click for the full verdict</div></div>`
   )
 }
 
@@ -298,8 +319,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .map-root {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   min-height: 300px;
 }
 </style>
@@ -346,6 +367,11 @@ onBeforeUnmount(() => {
 .lot-pop .lp-score .lp-risk {
   color: #90a4ae;
   margin-left: 4px;
+}
+.lot-pop .lp-extra {
+  font-size: 12px;
+  color: #455a64;
+  margin-top: 2px;
 }
 .lot-pop .lp-hint {
   font-size: 11px;
