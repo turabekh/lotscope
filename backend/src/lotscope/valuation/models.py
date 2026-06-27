@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Index, Numeric, String, UniqueConstraint
+from sqlalchemy import Date, ForeignKey, Index, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -24,5 +24,5 @@ class Sale(Base, TimestampMixin, IngestionMixin):
     sale_date: Mapped[date | None] = mapped_column(Date)
     sale_price: Mapped[float | None] = mapped_column(Numeric(14, 2))
 
-    grantor: Mapped[str | None] = mapped_column(String(255))
-    grantee: Mapped[str | None] = mapped_column(String(255))
+    grantor: Mapped[str | None] = mapped_column(Text)
+    grantee: Mapped[str | None] = mapped_column(Text)
