@@ -1,3 +1,4 @@
+from lotscope.ai.models import Document
 from lotscope.core.db import Base
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.parcels.models import Parcel
@@ -10,6 +11,7 @@ metadata = Base.metadata
 
 __all__ = [
     "DatasetFreshness",
+    "Document",
     "FloodZone",
     "LiEvent",
     "Parcel",

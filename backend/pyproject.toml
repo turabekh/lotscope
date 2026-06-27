@@ -18,6 +18,7 @@ dependencies = [
     "structlog>=24.4.0",
     "httpx>=0.28.0",
     "anthropic>=0.40.0",
+    "pgvector>=0.4.2",
 ]
 
 [project.optional-dependencies]
@@ -83,7 +84,7 @@ mypy_path = "src"
 packages = ["lotscope"]
 
 [[tool.mypy.overrides]]
-module = ["geoalchemy2.*", "testcontainers.*", "arq.*"]
+module = ["geoalchemy2.*", "testcontainers.*", "arq.*", "pgvector.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

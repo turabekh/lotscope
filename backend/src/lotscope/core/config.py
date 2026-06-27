@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-6"
 
+    voyage_api_key: str | None = None
+    voyage_url: str = "https://api.voyageai.com/v1/embeddings"
+    embedding_model: str = "voyage-3"
+    embedding_dimensions: int = 1024
+
     carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
     arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
 
