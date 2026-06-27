@@ -17,11 +17,6 @@ TITLE_14_SOURCE = (
     "Table 14-701-1/-2 dimensional standards, Table 14-602-1 use tables"
 )
 
-_PROVISIONAL_VERSION = "title14-provisional-2024"
-_PROVISIONAL_SOURCE = (
-    "Provisional estimate — not yet transcribed from the official Title 14 tables; verify"
-)
-
 _SINGLE_FAMILY = ["single_family"]
 _TWO_FAMILY = ["single_family", "two_family"]
 _MULTI_FAMILY = ["single_family", "two_family", "multi_family"]
@@ -31,6 +26,11 @@ _MULTI_COMMERCIAL = ["multi_family", "commercial"]
 _COMMERCIAL = ["commercial"]
 _INDUSTRIAL = ["commercial", "industrial"]
 _IND_MIXED = ["multi_family", "commercial", "industrial"]
+_SP_INSTITUTIONAL = ["institutional", "civic", "commercial"]
+_SP_PARKS = ["parks", "recreation"]
+_SP_ENTERTAINMENT = ["entertainment", "commercial", "multi_family"]
+_SP_STADIUM = ["stadium", "commercial"]
+_SP_AIRPORT = ["airport", "commercial", "industrial"]
 
 TITLE_14_STANDARDS: list[dict[str, Any]] = [
     {
@@ -282,11 +282,73 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
         "front_setback_ft": 0,
     },
     {
+        "code": "RSA-6",
+        "permitted_uses": _SINGLE_FAMILY,
+        "min_lot_area_sqft": 700,
+        "min_lot_width_ft": 14,
+        "max_height_ft": 25,
+        "max_units": 1,
+        "max_occupancy_pct": 80,
+        "rear_setback_ft": 7,
+        "side_setback_ft": 5,
+    },
+    {
         "code": "RM-2",
         "permitted_uses": _MULTI_FAMILY,
-        "max_height_ft": 38,
-        "code_version": _PROVISIONAL_VERSION,
-        "source": _PROVISIONAL_SOURCE,
+        "min_lot_area_sqft": 15000,
+        "min_lot_width_ft": 50,
+    },
+    {
+        "code": "RM-3",
+        "permitted_uses": _MULTI_FAMILY,
+        "min_lot_area_sqft": 10000,
+        "min_lot_width_ft": 50,
+        "max_occupancy_pct": 50,
+        "front_setback_ft": 20,
+        "rear_setback_ft": 20,
+    },
+    {
+        "code": "RM-4",
+        "permitted_uses": _MULTI_FAMILY,
+        "min_lot_area_sqft": 2500,
+        "min_lot_width_ft": 20,
+        "max_occupancy_pct": 75,
+        "rear_setback_ft": 5,
+        "side_setback_ft": 5,
+    },
+    {
+        "code": "SP-INS",
+        "permitted_uses": _SP_INSTITUTIONAL,
+        "max_occupancy_pct": 70,
+    },
+    {
+        "code": "SP-CIV",
+        "permitted_uses": _SP_INSTITUTIONAL,
+        "max_occupancy_pct": 80,
+        "side_setback_ft": 8,
+    },
+    {
+        "code": "SP-PO-A",
+        "permitted_uses": _SP_PARKS,
+    },
+    {
+        "code": "SP-PO-P",
+        "permitted_uses": _SP_PARKS,
+    },
+    {
+        "code": "SP-ENT",
+        "permitted_uses": _SP_ENTERTAINMENT,
+        "max_height_ft": 300,
+    },
+    {
+        "code": "SP-STA",
+        "permitted_uses": _SP_STADIUM,
+    },
+    {
+        "code": "SP-AIR",
+        "permitted_uses": _SP_AIRPORT,
+        "max_occupancy_pct": 70,
+        "side_setback_ft": 6,
     },
 ]
 
