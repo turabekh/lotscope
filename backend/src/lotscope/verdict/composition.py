@@ -73,7 +73,9 @@ def _summary(
 ) -> str:
     parts: list[str] = []
     if buildability is not None and buildability.district_code:
-        if buildability.can_build_by_right:
+        if buildability.requires_master_plan:
+            status = "master plan required"
+        elif buildability.can_build_by_right:
             status = "buildable by-right"
         elif buildability.needs_variance:
             status = "variance likely"

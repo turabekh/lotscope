@@ -24,6 +24,7 @@ class BuildabilityResult(BaseModel):
     buildable_area_sqft: float | None
     buildability_score: float
     confidence: Literal["high", "medium", "low"]
+    requires_master_plan: bool = False
     reasons: list[str]
     sources: list[dict[str, Any]]
     computed_at: datetime

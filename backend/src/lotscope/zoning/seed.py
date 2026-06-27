@@ -318,34 +318,41 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
     },
     {
         "code": "SP-INS",
+        "requires_master_plan": True,
         "permitted_uses": _SP_INSTITUTIONAL,
         "max_occupancy_pct": 70,
     },
     {
         "code": "SP-CIV",
+        "requires_master_plan": True,
         "permitted_uses": _SP_INSTITUTIONAL,
         "max_occupancy_pct": 80,
         "side_setback_ft": 8,
     },
     {
         "code": "SP-PO-A",
+        "requires_master_plan": True,
         "permitted_uses": _SP_PARKS,
     },
     {
         "code": "SP-PO-P",
+        "requires_master_plan": True,
         "permitted_uses": _SP_PARKS,
     },
     {
         "code": "SP-ENT",
+        "requires_master_plan": True,
         "permitted_uses": _SP_ENTERTAINMENT,
         "max_height_ft": 300,
     },
     {
         "code": "SP-STA",
+        "requires_master_plan": True,
         "permitted_uses": _SP_STADIUM,
     },
     {
         "code": "SP-AIR",
+        "requires_master_plan": True,
         "permitted_uses": _SP_AIRPORT,
         "max_occupancy_pct": 70,
         "side_setback_ft": 6,
@@ -363,7 +370,7 @@ _DIMENSIONAL_FIELDS = (
     "side_setback_ft",
     "min_parking_spaces",
 )
-_UPDATE_COLUMNS = ("source", "permitted_uses", *_DIMENSIONAL_FIELDS)
+_UPDATE_COLUMNS = ("source", "permitted_uses", "requires_master_plan", *_DIMENSIONAL_FIELDS)
 
 
 def _row(entry: dict[str, Any]) -> dict[str, Any]:
@@ -372,6 +379,7 @@ def _row(entry: dict[str, Any]) -> dict[str, Any]:
         "code_version": entry.get("code_version", TITLE_14_VERSION),
         "source": entry.get("source", TITLE_14_SOURCE),
         "permitted_uses": entry["permitted_uses"],
+        "requires_master_plan": entry.get("requires_master_plan", False),
     }
     for field_name in _DIMENSIONAL_FIELDS:
         row[field_name] = entry.get(field_name)

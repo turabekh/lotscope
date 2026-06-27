@@ -93,3 +93,22 @@ def test_no_permitted_uses_blocks_by_right() -> None:
 def test_partial_dimensions_give_medium_confidence() -> None:
     result = assess_buildability(ParcelDimensions(lot_area_sqft=1600), _rsa5())
     assert result.confidence == "medium"
+
+
+def test_master_plan_district_is_not_by_right() -> None:
+    standard = _rsa5(
+        code="SP-INS",
+        permitted_uses=["institutional"],
+        min_lot_area_sqft=None,
+        min_lot_width_ft=None,
+        max_units=None,
+        requires_master_plan=True,
+    )
+    result = assess_buildability(
+        ParcelDimensions(lot_area_sqft=200000, lot_width_ft=300, depth_ft=400), standard
+    )
+    assert result.requires_master_plan is True
+    assert result.can_build_by_right is False
+    assert result.by_right_units is None
+    assert any("master plan" in reason.lower() for reason in result.reasons)
+    assert result.buildability_score == 25.0

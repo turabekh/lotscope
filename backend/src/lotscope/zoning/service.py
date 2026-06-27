@@ -26,7 +26,7 @@ _SPATIAL_DISTRICT_SQL = text(
 _STANDARD_SQL = text(
     "SELECT code, code_version, permitted_uses, min_lot_area_sqft, min_lot_width_ft, "
     "max_height_ft, max_units, max_occupancy_pct, front_setback_ft, rear_setback_ft, "
-    "side_setback_ft "
+    "side_setback_ft, requires_master_plan "
     "FROM zoning_standard WHERE upper(replace(replace(code, '-', ''), ' ', '')) = :code "
     "ORDER BY code_version DESC LIMIT 1"
 )
@@ -70,6 +70,7 @@ async def _get_standard(session: AsyncSession, code: str) -> DistrictStandard | 
         front_setback_ft=_as_float(row.front_setback_ft),
         rear_setback_ft=_as_float(row.rear_setback_ft),
         side_setback_ft=_as_float(row.side_setback_ft),
+        requires_master_plan=row.requires_master_plan,
     )
 
 
@@ -145,6 +146,7 @@ def _build_result(
         buildable_area_sqft=buildability.buildable_area_sqft,
         buildability_score=buildability.buildability_score,
         confidence=buildability.confidence,
+        requires_master_plan=buildability.requires_master_plan,
         reasons=buildability.reasons,
         sources=sources,
         computed_at=computed_at,

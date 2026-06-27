@@ -24,6 +24,7 @@ class DistrictStandard:
     front_setback_ft: float | None = None
     rear_setback_ft: float | None = None
     side_setback_ft: float | None = None
+    requires_master_plan: bool = False
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class Buildability:
     buildability_score: float
     confidence: Confidence
     reasons: list[str]
+    requires_master_plan: bool = False
 
 
 def _check_conformance(
@@ -123,7 +125,10 @@ def _score(
     has_permitted_uses: bool,
     buildable_area: float | None,
     by_right_units: int | None,
+    requires_master_plan: bool,
 ) -> float:
+    if requires_master_plan:
+        return 25.0 if has_permitted_uses else 10.0
     score = 0.0
     if conforming is True:
         score += 50.0
@@ -157,12 +162,20 @@ def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> B
             "need a variance or special exception."
         )
 
-    can_build_by_right = conforming is True and has_permitted_uses
-
-    if standard.max_units is not None:
+    if standard.requires_master_plan:
         reasons.append(
-            f"District {standard.code} permits up to {standard.max_units} unit(s) by-right."
+            f"District {standard.code} is a special-purpose district; development is not "
+            "permitted by-right and requires an approved master plan or equivalent review."
         )
+        can_build_by_right = False
+        by_right_units = None
+    else:
+        can_build_by_right = conforming is True and has_permitted_uses
+        by_right_units = standard.max_units
+        if standard.max_units is not None:
+            reasons.append(
+                f"District {standard.code} permits up to {standard.max_units} unit(s) by-right."
+            )
 
     return Buildability(
         district_code=standard.code,
@@ -170,12 +183,17 @@ def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> B
         conforming=conforming,
         can_build_by_right=can_build_by_right,
         needs_variance=needs_variance,
-        by_right_units=standard.max_units,
+        by_right_units=by_right_units,
         max_height_ft=standard.max_height_ft,
         buildable_area_sqft=buildable_area,
         buildability_score=_score(
-            conforming, has_permitted_uses, buildable_area, standard.max_units
+            conforming,
+            has_permitted_uses,
+            buildable_area,
+            by_right_units,
+            standard.requires_master_plan,
         ),
         confidence=_confidence(dims),
         reasons=reasons,
+        requires_master_plan=standard.requires_master_plan,
     )

@@ -97,6 +97,23 @@ def test_summary_reads_naturally() -> None:
     assert "no major risk flags" in verdict.summary
 
 
+def test_summary_flags_master_plan_for_special_purpose() -> None:
+    verdict = compose_verdict(
+        _buildability(
+            district_code="SP-INS",
+            requires_master_plan=True,
+            can_build_by_right=False,
+            by_right_units=None,
+        ),
+        None,
+        _risk(),
+        assessed_market_value=None,
+    )
+    assert "SP-INS: master plan required" in verdict.summary
+    assert "buildable by-right" not in verdict.summary
+    assert verdict.can_build_by_right is False
+
+
 def test_missing_dimensions_are_none() -> None:
     verdict = compose_verdict(None, None, None, assessed_market_value=None)
     assert verdict.buildability_score is None
