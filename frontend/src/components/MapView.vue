@@ -111,12 +111,53 @@ function applyFillPaint(): void {
   map.setPaintProperty('parcels-fill', 'fill-opacity', fillOpacity())
 }
 
-const OPPORTUNITY_PINS: { id: string; color: string }[] = [
+function markerIcon(): ExpressionSpecification | string {
+  if (colorMode.value === 'risk') {
+    return [
+      'step',
+      ['coalesce', ['get', 'risk_score'], -1],
+      'pin-none',
+      0,
+      'pin-top',
+      25,
+      'pin-high',
+      50,
+      'pin-mid',
+      75,
+      'pin-low',
+    ]
+  }
+  if (colorMode.value === 'opportunity') {
+    return [
+      'step',
+      ['coalesce', ['get', 'opportunity_score'], -1],
+      'pin-none',
+      0,
+      'pin-low',
+      45,
+      'pin-mid',
+      65,
+      'pin-high',
+      80,
+      'pin-top',
+    ]
+  }
+  return 'pin-vacant'
+}
+
+function applyMarkerIcon(): void {
+  if (map?.getLayer('vacant-markers')) {
+    map.setLayoutProperty('vacant-markers', 'icon-image', markerIcon())
+  }
+}
+
+const MARKER_PINS: { id: string; color: string }[] = [
   { id: 'pin-none', color: '#9e9e9e' },
   { id: 'pin-low', color: '#e53935' },
   { id: 'pin-mid', color: '#fb8c00' },
   { id: 'pin-high', color: '#7cb342' },
   { id: 'pin-top', color: '#2e7d32' },
+  { id: 'pin-vacant', color: '#f9a825' },
 ]
 
 function pinImage(head: number, color: string): ImageData {
@@ -221,7 +262,7 @@ function selectFromEvent(event: MapLayerMouseEvent): void {
 }
 
 function addParcelLayers(instance: maplibregl.Map): void {
-  for (const pin of OPPORTUNITY_PINS) {
+  for (const pin of MARKER_PINS) {
     if (!instance.hasImage(pin.id)) {
       instance.addImage(pin.id, pinImage(34, pin.color), { pixelRatio: 2 })
     }
@@ -282,19 +323,7 @@ function addParcelLayers(instance: maplibregl.Map): void {
     minzoom: 12,
     filter: markerFilter(),
     layout: {
-      'icon-image': [
-        'step',
-        ['coalesce', ['get', 'opportunity_score'], -1],
-        'pin-none',
-        0,
-        'pin-low',
-        45,
-        'pin-mid',
-        65,
-        'pin-high',
-        80,
-        'pin-top',
-      ],
+      'icon-image': markerIcon(),
       'icon-anchor': 'bottom',
       'icon-allow-overlap': false,
       'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.45, 16, 0.8, 19, 1.1],
@@ -331,7 +360,10 @@ watch([vacantOnly, useClasses], () => {
   map.setFilter('vacant-markers', markerFilter())
 })
 
-watch(colorMode, applyFillPaint)
+watch(colorMode, () => {
+  applyFillPaint()
+  applyMarkerIcon()
+})
 
 watch(detail, (selected) => {
   if (!map || !map.getLayer('parcel-selected')) return
