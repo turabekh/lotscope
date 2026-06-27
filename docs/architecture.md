@@ -49,6 +49,22 @@ Dependency direction is inward toward `core/`. A module may depend on `core/` an
 - **Redis** — cache + ARQ job broker.
 - **S3** (prod) — recorded documents and imagery feeding the OCR/RAG pipeline.
 
+## HTTP API
+
+The FastAPI app is thin glue (§10) — routers compose services, no business
+logic. Endpoints so far:
+
+- `GET /health`, `GET /health/ready` — liveness and DB/Redis readiness.
+- `GET /search?q=` — trigram parcel search (address/owner/parcel#).
+- `GET /parcels/{id}` — parcel detail.
+- `GET /parcels/{id}/verdict` — the stored Parcel Verdict (404 until computed).
+- `POST /parcels/{id}/verdict/refresh` — compute/recompute and persist the verdict.
+- `GET /parcels/{id}/comps` — comparable land sales + valuation.
+- `GET /layers` — map layer metadata and Martin tile-URL templates.
+
+Domain errors (`LotScopeError` subclasses) and request-validation errors map to
+a single `ErrorResponse` schema (`{error, detail}`) with appropriate status codes.
+
 ## Map tiles
 
 Vector tiles are served by **Martin** directly from PostGIS. Martin connects via
