@@ -1,8 +1,9 @@
 COMPOSE := docker compose
 BACKEND := backend
+FRONTEND := frontend
 INFRA := db redis martin
 
-.PHONY: help up up-app down logs dev sync migrate revision seed recompute-verdicts test-image test test-unit test-integration lint fmt typecheck check ingest e2e
+.PHONY: help up up-app down logs dev sync migrate revision seed recompute-verdicts test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -49,16 +50,37 @@ test-unit: ## Run unit tests only (no Docker)
 test-integration: test-image ## Run integration tests only (requires Docker)
 	cd $(BACKEND) && uv run pytest -m integration
 
-lint: ## Lint
+lint: ## Lint (backend + frontend)
 	cd $(BACKEND) && uv run ruff check .
+	cd $(FRONTEND) && pnpm lint
 
-fmt: ## Format and autofix
+fmt: ## Format and autofix (backend + frontend)
 	cd $(BACKEND) && uv run ruff format . && uv run ruff check --fix .
+	cd $(FRONTEND) && pnpm format
 
-typecheck: ## Type-check
+typecheck: ## Type-check (backend + frontend)
 	cd $(BACKEND) && uv run mypy
+	cd $(FRONTEND) && pnpm typecheck
 
-check: lint typecheck test-unit ## Run lint, type-check, and unit tests (fast pre-commit gate)
+check: lint typecheck test-unit web-test ## Run lint, type-check, and unit tests (fast pre-commit gate)
+
+web-install: ## Install frontend dependencies
+	cd $(FRONTEND) && pnpm install
+
+web-dev: ## Run the frontend dev server
+	cd $(FRONTEND) && pnpm dev
+
+web-build: ## Build the frontend
+	cd $(FRONTEND) && pnpm build
+
+web-test: ## Run frontend unit tests
+	cd $(FRONTEND) && pnpm test
+
+web-lint: ## Lint the frontend
+	cd $(FRONTEND) && pnpm lint
+
+web-typecheck: ## Type-check the frontend
+	cd $(FRONTEND) && pnpm typecheck
 
 ingest: ## Run data ingestion (all datasets, or: make ingest DATASETS="opa pwd")
 	cd $(BACKEND) && uv run python -m lotscope.ingestion.cli $(DATASETS)
