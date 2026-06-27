@@ -7,7 +7,12 @@ import pytest_asyncio
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncEngine,
+    AsyncSession,
+    create_async_engine,
+)
 
 from lotscope.core.config import get_settings
 
@@ -65,6 +70,21 @@ async def db_connection(migrated_database: str) -> AsyncIterator[AsyncConnection
     try:
         yield connection
     finally:
+        await transaction.rollback()
+        await connection.close()
+        await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def db_session(migrated_database: str) -> AsyncIterator[AsyncSession]:
+    engine: AsyncEngine = create_async_engine(migrated_database)
+    connection = await engine.connect()
+    transaction = await connection.begin()
+    session = AsyncSession(bind=connection, expire_on_commit=False)
+    try:
+        yield session
+    finally:
+        await session.close()
         await transaction.rollback()
         await connection.close()
         await engine.dispose()
