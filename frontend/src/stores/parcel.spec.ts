@@ -38,15 +38,17 @@ describe('parcel store', () => {
     expect(store.error).toBeNull()
   })
 
-  it('tolerates a missing verdict (404)', async () => {
+  it('computes the verdict on demand when none is precomputed (404)', async () => {
     vi.mocked(api.getParcel).mockResolvedValue(parcel)
     vi.mocked(api.getVerdict).mockRejectedValue(new ApiError(404, 'no verdict'))
+    vi.mocked(api.refreshVerdict).mockResolvedValue(verdict)
 
     const store = useParcelStore()
     await store.select('001')
 
-    expect(store.detail?.parcel_number).toBe('001')
-    expect(store.verdict).toBeNull()
+    expect(api.refreshVerdict).toHaveBeenCalledWith('001')
+    expect(store.verdict?.summary).toBe('RSA-5')
+    expect(store.error).toBeNull()
   })
 
   it('records an error when the parcel fails to load', async () => {

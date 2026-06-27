@@ -29,7 +29,9 @@ export const useParcelStore = defineStore('parcel', () => {
     try {
       return await api.getVerdict(parcelNumber)
     } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 404) return null
+      if (cause instanceof ApiError && cause.status === 404) {
+        return await api.refreshVerdict(parcelNumber)
+      }
       throw cause
     }
   }
