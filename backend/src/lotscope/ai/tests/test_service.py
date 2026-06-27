@@ -68,6 +68,49 @@ async def test_ask_the_parcel_grounds_and_cites(db_session: AsyncSession) -> Non
     assert "RSA-5 minimum lot area" in generator.captured_user
 
 
+async def test_ask_the_parcel_pins_parcel_district_over_nearer_neighbor(
+    db_session: AsyncSession,
+) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000002', 'CMX-2')")
+    )
+    await add_document(
+        db_session,
+        source="title14",
+        section="§ 14-701 (CMX-2.5)",
+        content="CMX-2.5 max height 55 ft",
+        embedding=_embedding(1.0, 0.0),
+    )
+    await add_document(
+        db_session,
+        source="title14",
+        section="§ 14-701 (CMX-2)",
+        content="CMX-2 max height 38 ft",
+        embedding=_embedding(0.0, 1.0),
+    )
+    await db_session.flush()
+
+    generator = _FakeGenerator(
+        {
+            "answer": "Up to 38 ft.",
+            "citations": [{"source": "Title 14", "section": "§ 14-701 (CMX-2)"}],
+            "confidence": "medium",
+        }
+    )
+    answer = await ask_the_parcel(
+        db_session,
+        "000000002",
+        "How tall can I build?",
+        embedder=_FakeEmbedder(),
+        generator=generator,
+    )
+
+    assert answer is not None
+    prompt = generator.captured_user
+    assert prompt is not None
+    assert prompt.index("CMX-2 max height 38 ft") < prompt.index("CMX-2.5 max height 55 ft")
+
+
 async def test_ask_the_parcel_rejects_uncited_answer(db_session: AsyncSession) -> None:
     await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000001')"))
     await db_session.flush()

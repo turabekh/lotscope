@@ -2,7 +2,12 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
-from lotscope.ai.retrieval import add_document, embed_and_search, vector_search
+from lotscope.ai.retrieval import (
+    add_document,
+    embed_and_search,
+    fetch_district_documents,
+    vector_search,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -55,3 +60,50 @@ async def test_embed_and_search_uses_embedder(db_session: AsyncSession) -> None:
         db_session, _FakeEmbedder(_embedding(0.0, 1.0)), "anything", limit=1
     )
     assert results[0].section == "C"
+
+
+async def _seed_district_documents(session: AsyncSession) -> None:
+    await add_document(
+        session,
+        source="title14",
+        section="§ 14-701 (CMX-2)",
+        content="cmx2",
+        embedding=_embedding(0.1),
+    )
+    await add_document(
+        session,
+        source="title14",
+        section="§ 14-701 (CMX-2.5)",
+        content="cmx25",
+        embedding=_embedding(0.2),
+    )
+    await add_document(
+        session,
+        source="title14",
+        section="§ 14-701 (RSA-5)",
+        content="rsa5",
+        embedding=_embedding(0.3),
+    )
+    await session.flush()
+
+
+async def test_fetch_district_documents_matches_exact_code(db_session: AsyncSession) -> None:
+    await _seed_district_documents(db_session)
+
+    cmx2 = await fetch_district_documents(db_session, "CMX2", source="title14")
+    assert [doc.section for doc in cmx2] == ["§ 14-701 (CMX-2)"]
+
+
+async def test_fetch_district_documents_is_hyphen_and_case_insensitive(
+    db_session: AsyncSession,
+) -> None:
+    await _seed_district_documents(db_session)
+
+    result = await fetch_district_documents(db_session, "cmx-2.5", source="title14")
+    assert [doc.section for doc in result] == ["§ 14-701 (CMX-2.5)"]
+
+
+async def test_fetch_district_documents_no_match_returns_empty(db_session: AsyncSession) -> None:
+    await _seed_district_documents(db_session)
+
+    assert await fetch_district_documents(db_session, "I-2", source="title14") == []

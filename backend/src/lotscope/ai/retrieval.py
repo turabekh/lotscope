@@ -19,6 +19,17 @@ _SEARCH_SQL = text(
     "ORDER BY distance ASC "
     "LIMIT :limit"
 )
+_DISTRICT_SQL = text(
+    "SELECT id, source, section, title, content, 0.0 AS distance "
+    "FROM document "
+    "WHERE embedding IS NOT NULL AND ((:source)::text IS NULL OR source = (:source)::text) "
+    "AND upper(regexp_replace(coalesce(substring(section from "
+    r"'\(([^)]+)\)'"
+    "), ''), '[^A-Za-z0-9.]', '', 'g')) "
+    "= upper(regexp_replace(:district, '[^A-Za-z0-9.]', '', 'g')) "
+    "ORDER BY id ASC "
+    "LIMIT :limit"
+)
 
 
 def to_vector_literal(embedding: Sequence[float]) -> str:
@@ -83,3 +94,26 @@ async def embed_and_search(
 ) -> list[RetrievedDocument]:
     vectors = await embedder.embed([query])
     return await vector_search(session, vectors[0], limit=limit, source=source)
+
+
+async def fetch_district_documents(
+    session: AsyncSession,
+    district_code: str,
+    *,
+    limit: int = 2,
+    source: str | None = None,
+) -> list[RetrievedDocument]:
+    rows = await session.execute(
+        _DISTRICT_SQL, {"district": district_code, "source": source, "limit": limit}
+    )
+    return [
+        RetrievedDocument(
+            id=row.id,
+            source=row.source,
+            section=row.section,
+            title=row.title,
+            content=row.content,
+            distance=float(row.distance),
+        )
+        for row in rows
+    ]

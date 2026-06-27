@@ -5,7 +5,7 @@ from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.errors import GenerationError, UngroundedAnswerError
 from lotscope.ai.prompts import SYSTEM_PROMPT, build_user_prompt
-from lotscope.ai.retrieval import embed_and_search
+from lotscope.ai.retrieval import embed_and_search, fetch_district_documents
 from lotscope.ai.schemas import ParcelAnswer
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
@@ -47,6 +47,15 @@ async def ask_the_parcel(
     documents = await embed_and_search(
         session, embedder, question, limit=document_limit, source=TITLE_14_SOURCE
     )
+    if detail.base_zoning_code:
+        pinned = await fetch_district_documents(
+            session, detail.base_zoning_code, source=TITLE_14_SOURCE
+        )
+        if pinned:
+            seen = {document.id for document in pinned}
+            documents = (pinned + [d for d in documents if d.id not in seen])[
+                : max(document_limit, len(pinned))
+            ]
     user_prompt = build_user_prompt(question, _parcel_facts(detail, verdict), documents)
 
     raw = await generator.generate(system=SYSTEM_PROMPT, user=user_prompt, schema=ParcelAnswer)
