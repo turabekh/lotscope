@@ -1,6 +1,16 @@
 from datetime import date
 
-from sqlalchemy import Boolean, Date, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -26,12 +36,16 @@ class TaxStatus(Base, TimestampMixin, IngestionMixin):
 
 class LiEvent(Base, TimestampMixin, IngestionMixin):
     __tablename__ = "li_event"
-    __table_args__ = (Index("ix_li_event_parcel_date", "parcel_number", "event_date"),)
+    __table_args__ = (
+        Index("ix_li_event_parcel_date", "parcel_number", "event_date"),
+        UniqueConstraint("event_type", "external_id", name="uq_li_event_type_external"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     parcel_number: Mapped[str] = mapped_column(
         String(20), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
     )
+    external_id: Mapped[str | None] = mapped_column(String(60), index=True)
     event_type: Mapped[str | None] = mapped_column(String(60), index=True)
     status: Mapped[str | None] = mapped_column(String(60))
     event_date: Mapped[date | None] = mapped_column(Date)
