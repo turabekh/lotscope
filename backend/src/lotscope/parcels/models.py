@@ -1,0 +1,48 @@
+from datetime import date
+
+from geoalchemy2 import Geometry, WKBElement
+from sqlalchemy import Boolean, Date, Numeric, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from lotscope.core.db import Base
+from lotscope.core.mixins import IngestionMixin, TimestampMixin
+
+
+class Parcel(Base, TimestampMixin, IngestionMixin):
+    __tablename__ = "parcel"
+
+    parcel_number: Mapped[str] = mapped_column(String(20), primary_key=True)
+    pwd_parcel_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    brt_number: Mapped[str | None] = mapped_column(String(40), index=True)
+
+    address: Mapped[str | None] = mapped_column(String(255))
+    zip_code: Mapped[str | None] = mapped_column(String(10))
+    owner: Mapped[str | None] = mapped_column(String(255))
+    mailing_address: Mapped[str | None] = mapped_column(String(255))
+
+    land_use: Mapped[str | None] = mapped_column(String(120))
+    category: Mapped[str | None] = mapped_column(String(120))
+    base_zoning_code: Mapped[str | None] = mapped_column(String(20), index=True)
+
+    market_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    land_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    improvement_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    assessment_year: Mapped[int | None]
+
+    lot_area_sqft: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    frontage_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    depth_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
+
+    is_vacant: Mapped[bool | None] = mapped_column(Boolean)
+    vacancy_confidence: Mapped[float | None] = mapped_column(Numeric(5, 4))
+    is_city_owned: Mapped[bool | None] = mapped_column(Boolean)
+
+    recorded_at: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    geom_2272: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=2272, spatial_index=True)
+    )
+    geom_4326: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True)
+    )
