@@ -22,6 +22,7 @@ dependencies = [
     "pwdlib[argon2]>=0.3.0",
     "pyjwt>=2.13.0",
     "stripe>=11.0.0",
+    "pywebpush>=2.3.0",
 ]
 
 [project.optional-dependencies]
@@ -87,7 +88,14 @@ mypy_path = "src"
 packages = ["lotscope"]
 
 [[tool.mypy.overrides]]
-module = ["geoalchemy2.*", "testcontainers.*", "arq.*", "pgvector.*"]
+module = [
+    "geoalchemy2.*",
+    "testcontainers.*",
+    "arq.*",
+    "pgvector.*",
+    "py_vapid.*",
+    "pywebpush.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

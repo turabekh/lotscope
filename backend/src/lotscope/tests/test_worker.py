@@ -17,6 +17,7 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "recompute_distress",
         "send_daily_digests",
         "send_weekly_digests",
+        "send_push_notifications",
     }
 
 

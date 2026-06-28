@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     api_base_url: str = "http://localhost:8000"
     company_postal_address: str = "LotScope PHL, Philadelphia, PA"
 
+    vapid_private_key: str | None = None
+    vapid_public_key: str | None = None
+    vapid_subject: str = "mailto:alerts@lotscope.app"
+
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
     stripe_price_pro_monthly: str | None = None

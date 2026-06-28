@@ -44,6 +44,9 @@ recompute-verdicts: ## Recompute the Parcel Verdict for every parcel
 recompute-distress: ## Recompute the motivated-seller distress index for every parcel
 	cd $(BACKEND) && uv run python -m lotscope.distress.jobs
 
+vapid-keys: ## Generate a VAPID keypair for web push (copy into .env)
+	cd $(BACKEND) && uv run python -m lotscope.notifications.vapid_keys
+
 ingest-title14: ## Embed the Title 14 corpus (use: make ingest-title14 FILE=data/title14/sections.jsonl)
 	cd $(BACKEND) && uv run python -m lotscope.ai.corpus $(FILE)
 

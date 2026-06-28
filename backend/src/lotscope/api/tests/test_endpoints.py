@@ -388,6 +388,36 @@ async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
+async def test_push_subscribe_and_vapid_key(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'm@example.com', 'x', 'user', 'free', true)"
+        )
+    )
+    await db_session.flush()
+
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
+
+    async with _client(app) as client:
+        key = await client.get("/push/vapid-public-key")
+        sub = await client.post(
+            "/push/subscribe",
+            json={"endpoint": "https://push/x", "keys": {"p256dh": "k", "auth": "a"}},
+        )
+        unsub = await client.post("/push/unsubscribe", json={"endpoint": "https://push/x"})
+
+    assert key.status_code == 200
+    assert key.json() == {"public_key": None}
+    assert sub.status_code == 204
+    assert unsub.status_code == 204
+    remaining = await db_session.scalar(text("SELECT count(*) FROM push_subscription"))
+    assert remaining == 0
+
+
+@pytest.mark.integration
 async def test_digest_preference_and_unsubscribe(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(

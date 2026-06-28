@@ -1,4 +1,5 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.accounts.models import User
@@ -14,6 +15,8 @@ from lotscope.notifications.digest import (
     render_digest_text,
 )
 from lotscope.notifications.email import EmailSender
+from lotscope.notifications.models import PushSubscription
+from lotscope.notifications.push import PushExpiredError, PushSender, PushSubscriptionInfo
 from lotscope.watchlist.schemas import WatchlistItem
 from lotscope.watchlist.service import acknowledge, list_saved
 
@@ -96,4 +99,85 @@ async def send_digests(
                 logger.exception("digest_send_failed", user_id=user.id)
 
     logger.info("digests_sent", frequency=frequency, count=sent)
+    return sent
+
+
+async def save_push_subscription(
+    session: AsyncSession, user_id: int, *, endpoint: str, p256dh: str, auth: str
+) -> None:
+    statement = insert(PushSubscription).values(
+        user_id=user_id, endpoint=endpoint, p256dh=p256dh, auth=auth
+    )
+    statement = statement.on_conflict_do_update(
+        index_elements=["endpoint"],
+        set_={"user_id": user_id, "p256dh": p256dh, "auth": auth},
+    )
+    await session.execute(statement)
+
+
+async def remove_push_subscription(session: AsyncSession, user_id: int, endpoint: str) -> None:
+    await session.execute(
+        delete(PushSubscription).where(
+            PushSubscription.user_id == user_id, PushSubscription.endpoint == endpoint
+        )
+    )
+
+
+async def send_user_push(
+    session: AsyncSession, sender: PushSender, settings: Settings, user: User
+) -> int:
+    alerted = [item for item in await list_saved(session, user.id) if item.has_alerts]
+    if not alerted:
+        return 0
+    subscriptions = list(
+        (await session.execute(select(PushSubscription).where(PushSubscription.user_id == user.id)))
+        .scalars()
+        .all()
+    )
+    if not subscriptions:
+        return 0
+    lots = len(alerted)
+    title = "LotScope — watchlist updates"
+    body = f"{lots} watched lot{'' if lots == 1 else 's'} changed. Open to review."
+    url = f"{settings.app_base_url.rstrip('/')}/watchlist"
+    sent = 0
+    for subscription in subscriptions:
+        info = PushSubscriptionInfo(
+            endpoint=subscription.endpoint, p256dh=subscription.p256dh, auth=subscription.auth
+        )
+        try:
+            await sender.send(info, title=title, body=body, url=url)
+            sent += 1
+        except PushExpiredError:
+            await session.delete(subscription)
+    return sent
+
+
+async def send_push_alerts(
+    session_factory: async_sessionmaker[AsyncSession],
+    sender: PushSender | None,
+    settings: Settings,
+) -> int:
+    logger = get_logger("notifications")
+    if sender is None:
+        logger.info("push_skipped_unconfigured")
+        return 0
+    async with session_factory() as session:
+        user_ids = list(
+            (await session.execute(select(PushSubscription.user_id).distinct())).scalars().all()
+        )
+
+    sent = 0
+    for user_id in user_ids:
+        async with session_factory() as session:
+            user = await session.get(User, user_id)
+            if user is None or not user.is_active:
+                continue
+            try:
+                sent += await send_user_push(session, sender, settings, user)
+                await session.commit()
+            except Exception:
+                logger.exception("push_send_failed", user_id=user_id)
+
+    logger.info("push_alerts_sent", count=sent)
     return sent
