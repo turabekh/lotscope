@@ -353,6 +353,38 @@ async def test_leads_endpoint_ranks_and_caps_by_tier(db_session: AsyncSession) -
     assert body["leads"][0]["score"] == 80
 
 
+@pytest.mark.integration
+async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'member@example.com', 'x', 'user', 'free', true)"
+        )
+    )
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, address) VALUES ('000000001', '1 Main St')")
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        added = await client.post(
+            "/watchlist", json={"parcel_number": "000000001", "tags": ["flip"]}
+        )
+        listed = await client.get("/watchlist")
+        state = await client.get("/watchlist/000000001")
+        removed = await client.delete("/watchlist/000000001")
+        after = await client.get("/watchlist")
+
+    assert added.status_code == 201
+    assert listed.json()["used"] == 1
+    assert listed.json()["limit"] == 25
+    assert listed.json()["items"][0]["address"] == "1 Main St"
+    assert state.json() == {"saved": True}
+    assert removed.status_code == 204
+    assert after.json()["used"] == 0
+
+
 async def test_basemap_session_unconfigured_returns_503() -> None:
     app = create_app()
     app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
