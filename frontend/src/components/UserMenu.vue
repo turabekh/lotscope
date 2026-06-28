@@ -13,6 +13,7 @@ const initial = computed(() => (user.value?.email ?? '?').charAt(0).toUpperCase(
 
 function signOut(): void {
   store.logout()
+  void router.push('/')
 }
 
 function goAccount(): void {

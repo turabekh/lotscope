@@ -132,9 +132,14 @@ export interface RegisterPayload {
   full_name?: string | null
 }
 
-export interface Usage {
-  tier: string
+export interface UsageMetric {
   limit: number | null
   used: number
   remaining: number | null
+}
+
+export interface Usage {
+  tier: string
+  ask: UsageMetric
+  parcel_views: UsageMetric
 }

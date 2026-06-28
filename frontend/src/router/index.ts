@@ -10,7 +10,8 @@ declare module 'vue-router' {
 }
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', name: 'map', component: () => import('@/pages/MapPage.vue') },
+  { path: '/', name: 'home', component: () => import('@/pages/LandingPage.vue') },
+  { path: '/app', name: 'map', component: () => import('@/pages/MapPage.vue'), meta: { requiresAuth: true } },
   {
     path: '/login',
     name: 'login',

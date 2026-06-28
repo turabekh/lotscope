@@ -27,7 +27,7 @@ async function submit(): Promise<void> {
         full_name: fullName.value.trim() || null,
       })
     }
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/app'
     await router.push(redirect)
   } catch {
     // error surfaced via store.error

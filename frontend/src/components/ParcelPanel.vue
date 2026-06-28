@@ -7,7 +7,7 @@ import VerdictPanel from '@/components/VerdictPanel.vue'
 import { useParcelStore } from '@/stores/parcel'
 
 const store = useParcelStore()
-const { detail, verdict, loading, error } = storeToRefs(store)
+const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
 </script>
 
 <template>
@@ -65,6 +65,28 @@ const { detail, verdict, loading, error } = storeToRefs(store)
         <AskBox :parcel-number="detail.parcel_number" />
       </div>
     </template>
+
+    <div v-else-if="error && !loading" class="empty-state">
+      <q-icon
+        :name="errorStatus === 429 ? 'lock_clock' : 'error_outline'"
+        size="52px"
+        :color="errorStatus === 429 ? 'amber-7' : 'grey-5'"
+      />
+      <div class="text-subtitle1 text-grey-8 q-mt-md">
+        {{ errorStatus === 429 ? 'Daily parcel limit reached' : 'Could not load parcel' }}
+      </div>
+      <div class="text-body2 text-grey-7 q-mt-xs">{{ error }}</div>
+      <q-btn
+        v-if="errorStatus === 429"
+        class="q-mt-md"
+        unelevated
+        no-caps
+        color="primary"
+        icon="workspace_premium"
+        label="View account & plans"
+        :to="{ name: 'account' }"
+      />
+    </div>
 
     <div v-else-if="!loading" class="empty-state">
       <q-icon name="travel_explore" size="56px" color="grey-4" />

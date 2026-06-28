@@ -9,17 +9,25 @@ export const useParcelStore = defineStore('parcel', () => {
   const verdict = ref<VerdictResult | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const errorStatus = ref<number | null>(null)
 
   async function select(parcelNumber: string): Promise<void> {
     loading.value = true
     error.value = null
+    errorStatus.value = null
     verdict.value = null
     try {
       detail.value = await api.getParcel(parcelNumber)
       verdict.value = await loadVerdict(parcelNumber)
     } catch (cause) {
       detail.value = null
-      error.value = cause instanceof Error ? cause.message : 'Failed to load parcel.'
+      if (cause instanceof ApiError) {
+        error.value = cause.message
+        errorStatus.value = cause.status
+      } else {
+        error.value = 'Failed to load parcel.'
+        errorStatus.value = null
+      }
     } finally {
       loading.value = false
     }
@@ -45,7 +53,8 @@ export const useParcelStore = defineStore('parcel', () => {
     detail.value = null
     verdict.value = null
     error.value = null
+    errorStatus.value = null
   }
 
-  return { detail, verdict, loading, error, select, refreshVerdict, clear }
+  return { detail, verdict, loading, error, errorStatus, select, refreshVerdict, clear }
 })

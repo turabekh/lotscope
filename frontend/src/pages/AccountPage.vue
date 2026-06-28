@@ -13,10 +13,23 @@ onMounted(() => {
   void store.fetchUsage()
 })
 
-const usageRatio = computed(() => {
-  if (!usage.value || usage.value.limit === null || usage.value.limit === 0) return 0
-  return Math.min(1, usage.value.used / usage.value.limit)
+const metrics = computed(() => {
+  if (!usage.value) return []
+  return [
+    { key: 'views', label: 'Parcels viewed today', icon: 'map', ...usage.value.parcel_views },
+    { key: 'ask', label: 'AI questions today', icon: 'forum', ...usage.value.ask },
+  ]
 })
+
+function ratio(used: number, limit: number | null): number {
+  if (limit === null || limit === 0) return 0
+  return Math.min(1, used / limit)
+}
+
+function barColor(used: number, limit: number | null): string {
+  const r = ratio(used, limit)
+  return r >= 1 ? 'negative' : r >= 0.8 ? 'warning' : 'primary'
+}
 
 async function signOut(): Promise<void> {
   store.logout()
@@ -52,32 +65,35 @@ async function signOut(): Promise<void> {
 
           <q-separator />
 
-          <q-card-section>
-            <div class="text-overline text-grey-7">AI questions today</div>
-            <template v-if="usage">
-              <div class="row items-baseline">
-                <div class="text-h5 text-weight-bold">{{ usage.used }}</div>
-                <div class="text-subtitle1 text-grey-7 q-ml-xs">
-                  / {{ usage.limit === null ? 'unlimited' : usage.limit }}
-                </div>
+          <q-card-section v-if="usage" class="q-gutter-md">
+            <div v-for="m in metrics" :key="m.key">
+              <div class="row items-center">
+                <q-icon :name="m.icon" size="18px" color="grey-7" class="q-mr-xs" />
+                <div class="text-overline text-grey-7">{{ m.label }}</div>
                 <q-space />
-                <div v-if="usage.remaining !== null" class="text-body2 text-grey-7">
-                  {{ usage.remaining }} left today
+                <div v-if="m.remaining !== null" class="text-caption text-grey-7">
+                  {{ m.remaining }} left
+                </div>
+              </div>
+              <div class="row items-baseline">
+                <div class="text-h6 text-weight-bold">{{ m.used }}</div>
+                <div class="text-subtitle2 text-grey-7 q-ml-xs">
+                  / {{ m.limit === null ? 'unlimited' : m.limit }}
                 </div>
               </div>
               <q-linear-progress
-                v-if="usage.limit !== null"
-                :value="usageRatio"
-                size="10px"
+                v-if="m.limit !== null"
+                :value="ratio(m.used, m.limit)"
+                size="9px"
                 rounded
-                class="q-mt-sm"
-                :color="usageRatio >= 1 ? 'negative' : usageRatio >= 0.8 ? 'warning' : 'primary'"
+                class="q-mt-xs"
+                :color="barColor(m.used, m.limit)"
                 track-color="grey-3"
               />
-              <div class="text-caption text-grey-6 q-mt-xs">Resets daily.</div>
-            </template>
-            <div v-else class="text-body2 text-grey-6">Loading usage…</div>
+            </div>
+            <div class="text-caption text-grey-6">Limits reset daily.</div>
           </q-card-section>
+          <q-card-section v-else class="text-body2 text-grey-6">Loading usage…</q-card-section>
 
           <q-separator />
 
