@@ -479,6 +479,40 @@ async def test_webhook_activates_pro_tier(db_session: AsyncSession) -> None:
     assert user.stripe_subscription_id == "sub_1"
 
 
+@pytest.mark.integration
+async def test_envelope_endpoint_returns_extrudable_footprint(db_session: AsyncSession) -> None:
+    await seed_zoning_standards(db_session)
+    await db_session.execute(
+        text(
+            "INSERT INTO zoning_district (code, geom_2272) VALUES ('RSA-5', "
+            "ST_GeomFromText('POLYGON((-500 -500,-500 500,500 500,500 -500,-500 -500))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
+            "base_zoning_code, geom_2272) VALUES ('000000001', 6000, 60, 100, 'RSA-5', "
+            "ST_GeomFromText('POLYGON((0 0,0 100,60 100,60 0,0 0))', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/parcels/000000001/envelope")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["available"] is True
+    assert body["district_code"] == "RSA-5"
+    assert body["max_height_ft"] is not None
+    assert body["estimated_floors"] is not None
+    assert body["lot_footprint"]["type"] == "Polygon"
+    assert body["buildable_footprint"]["type"] == "Polygon"
+    assert body["buildable_area_sqft"] <= 6000
+    assert any(source["source"] == "zoning_standard" for source in body["sources"])
+
+
 async def test_webhook_requires_signature(db_session: AsyncSession) -> None:
     app = _app_with_session(db_session)
     app.dependency_overrides[get_app_settings] = _billing_settings

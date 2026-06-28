@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 from typing import Any
 
@@ -11,7 +12,8 @@ from lotscope.zoning.buildability import (
     assess_buildability,
 )
 from lotscope.zoning.codes import normalize_zoning_code
-from lotscope.zoning.schemas import BuildabilityResult, DistrictResolution
+from lotscope.zoning.envelope import estimate_floors, representative_inset_ft
+from lotscope.zoning.schemas import BuildabilityResult, DistrictResolution, EnvelopeResult
 
 _PARCEL_SQL = text(
     "SELECT lot_area_sqft, frontage_ft, depth_ft, base_zoning_code, "
@@ -23,6 +25,15 @@ _SPATIAL_DISTRICT_SQL = text(
     "JOIN zoning_district zd ON ST_Contains(zd.geom_2272, ST_Centroid(p.geom_2272)) "
     "WHERE p.parcel_number = :parcel_number LIMIT 1"
 )
+_FOOTPRINT_SQL = text(
+    "SELECT ST_AsGeoJSON(ST_Transform(geom_2272, 4326), 6) AS lot_geojson, "
+    "ST_AsGeoJSON(ST_Transform(ST_Buffer(geom_2272, -CAST(:inset AS double precision)), 4326), 6) "
+    "AS buildable_geojson, "
+    "ST_Area(ST_Buffer(geom_2272, -CAST(:inset AS double precision))) AS buildable_area, "
+    "ST_Area(geom_2272) AS lot_area "
+    "FROM parcel WHERE parcel_number = :parcel_number AND geom_2272 IS NOT NULL"
+)
+_MIN_BUILDABLE_RATIO = 0.05
 _STANDARD_SQL = text(
     "SELECT code, code_version, permitted_uses, min_lot_area_sqft, min_lot_width_ft, "
     "max_height_ft, max_units, max_occupancy_pct, front_setback_ft, rear_setback_ft, "
@@ -148,6 +159,151 @@ def _build_result(
         confidence=buildability.confidence,
         requires_master_plan=buildability.requires_master_plan,
         reasons=buildability.reasons,
+        sources=sources,
+        computed_at=computed_at,
+    )
+
+
+def _envelope_unavailable(
+    parcel_number: str,
+    computed_at: datetime,
+    district_code: str | None,
+    cited_section: str | None,
+    reason: str,
+    *,
+    lot_footprint: dict[str, Any] | None = None,
+    sources: list[dict[str, Any]] | None = None,
+) -> EnvelopeResult:
+    return EnvelopeResult(
+        parcel_number=parcel_number,
+        available=False,
+        district_code=district_code,
+        cited_section=cited_section,
+        max_height_ft=None,
+        estimated_floors=None,
+        applied_setback_ft=None,
+        buildable_area_sqft=None,
+        lot_footprint=lot_footprint,
+        buildable_footprint=lot_footprint,
+        reasons=[reason],
+        sources=sources or [],
+        computed_at=computed_at,
+    )
+
+
+async def compute_envelope(session: AsyncSession, parcel_number: str) -> EnvelopeResult | None:
+    parcel = (await session.execute(_PARCEL_SQL, {"parcel_number": parcel_number})).one_or_none()
+    if parcel is None:
+        return None
+    computed_at = datetime.now(UTC)
+    if not parcel.has_geometry:
+        return _envelope_unavailable(
+            parcel_number,
+            computed_at,
+            None,
+            None,
+            "No footprint geometry is available for this parcel.",
+        )
+
+    resolution = await resolve_district(
+        session,
+        parcel_number,
+        base_zoning_code=parcel.base_zoning_code,
+        has_geometry=parcel.has_geometry,
+    )
+    standard = await _get_standard(session, resolution.code) if resolution is not None else None
+    inset = (
+        representative_inset_ft(
+            standard.front_setback_ft, standard.side_setback_ft, standard.rear_setback_ft
+        )
+        if standard is not None
+        else 0.0
+    )
+
+    row = (
+        await session.execute(_FOOTPRINT_SQL, {"parcel_number": parcel_number, "inset": inset})
+    ).one_or_none()
+    if row is None or row.lot_geojson is None:
+        return _envelope_unavailable(
+            parcel_number,
+            computed_at,
+            resolution.code if resolution else None,
+            None,
+            "No footprint geometry is available for this parcel.",
+        )
+
+    lot_footprint = json.loads(row.lot_geojson)
+    lot_area = _as_float(row.lot_area)
+    buildable_area = _as_float(row.buildable_area)
+    reasons: list[str] = []
+
+    too_small = (
+        inset > 0
+        and lot_area is not None
+        and (buildable_area is None or buildable_area < _MIN_BUILDABLE_RATIO * lot_area)
+    )
+    if too_small:
+        buildable_footprint = lot_footprint
+        applied_setback = 0.0
+        buildable_area = lot_area
+        reasons.append("Lot is too small to apply setbacks cleanly; showing the full footprint.")
+    else:
+        buildable_footprint = (
+            json.loads(row.buildable_geojson) if row.buildable_geojson else lot_footprint
+        )
+        applied_setback = inset
+
+    sources: list[dict[str, Any]] = [{"source": "pwd_parcel", "field": "geom_2272"}]
+    if resolution is not None:
+        sources.append({"source": "zoning_district", "method": resolution.method})
+
+    if standard is None:
+        district_code = resolution.code if resolution else None
+        reason = (
+            f"No Title 14 standards are loaded for district {district_code}."
+            if district_code
+            else "Zoning district could not be resolved for this parcel."
+        )
+        result = _envelope_unavailable(
+            parcel_number,
+            computed_at,
+            district_code,
+            None,
+            reason,
+            lot_footprint=lot_footprint,
+            sources=sources,
+        )
+        return result
+
+    sources.append(
+        {"source": "zoning_standard", "code": standard.code, "version": standard.code_version}
+    )
+    cited_section = f"{standard.code} (Title 14, {standard.code_version})"
+    if standard.max_height_ft is None:
+        reasons.append(f"No by-right height standard is recorded for district {standard.code}.")
+    if applied_setback > 0:
+        front = standard.front_setback_ft or 0
+        side = standard.side_setback_ft or 0
+        rear = standard.rear_setback_ft or 0
+        reasons.append(
+            f"Footprint inset by an average setback of {applied_setback:.1f} ft "
+            f"(front {front:.0f}, side {side:.0f}, rear {rear:.0f}). "
+            "Approximate massing for guidance only."
+        )
+
+    floors = estimate_floors(standard.max_height_ft)
+    return EnvelopeResult(
+        parcel_number=parcel_number,
+        available=standard.max_height_ft is not None,
+        district_code=standard.code,
+        cited_section=cited_section,
+        max_height_ft=standard.max_height_ft,
+        estimated_floors=floors,
+        applied_setback_ft=applied_setback,
+        buildable_area_sqft=round(buildable_area, 1) if buildable_area is not None else None,
+        lot_footprint=lot_footprint,
+        buildable_footprint=buildable_footprint,
+        reasons=reasons,
         sources=sources,
         computed_at=computed_at,
     )

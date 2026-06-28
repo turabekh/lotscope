@@ -33,6 +33,8 @@ from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.verdict.service import compute_verdict, get_verdict
+from lotscope.zoning.schemas import EnvelopeResult
+from lotscope.zoning.service import compute_envelope
 
 router = APIRouter(prefix="/parcels", tags=["parcels"])
 
@@ -97,6 +99,16 @@ async def refresh_parcel_verdict(
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     await session.commit()
     return verdict
+
+
+@router.get("/{parcel_number}/envelope", response_model=EnvelopeResult)
+async def parcel_envelope(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> EnvelopeResult:
+    envelope = await compute_envelope(session, parcel_number)
+    if envelope is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return envelope
 
 
 @router.get("/{parcel_number}/comps", response_model=ValuationResult)

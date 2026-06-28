@@ -11,6 +11,22 @@ class DistrictResolution(BaseModel):
     method: ResolutionMethod
 
 
+class EnvelopeResult(BaseModel):
+    parcel_number: str
+    available: bool
+    district_code: str | None
+    cited_section: str | None
+    max_height_ft: float | None
+    estimated_floors: int | None
+    applied_setback_ft: float | None
+    buildable_area_sqft: float | None
+    lot_footprint: dict[str, Any] | None
+    buildable_footprint: dict[str, Any] | None
+    reasons: list[str]
+    sources: list[dict[str, Any]]
+    computed_at: datetime
+
+
 class BuildabilityResult(BaseModel):
     parcel_number: str
     district_code: str | None
