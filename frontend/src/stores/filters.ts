@@ -36,7 +36,7 @@ export const useFiltersStore = defineStore('filters', () => {
   const vacantOnly = ref(false)
   const useClasses = ref<UseClass[]>([])
   const colorMode = ref<ColorMode>('vacancy')
-  const show3d = ref(false)
+  const show3d = ref(true)
   const basemap = ref<Basemap>('satellite')
 
   function toggleClass(value: UseClass): void {

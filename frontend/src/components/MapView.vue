@@ -232,13 +232,23 @@ const MARKER_PINS: { id: string; color: string }[] = [
   { id: 'pin-vacant', color: '#f9a825' },
 ]
 
+function lightenColor(hex: string, amount: number): string {
+  const value = parseInt(hex.slice(1), 16)
+  const r = (value >> 16) & 255
+  const g = (value >> 8) & 255
+  const b = value & 255
+  const mix = (channel: number): number => Math.round(channel + (255 - channel) * amount)
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`
+}
+
 function pinImage(head: number, color: string): ImageData {
-  const pad = 4
   const radius = head / 2
+  const stroke = Math.max(2.5, head * 0.085)
+  const pad = Math.ceil(stroke + 6)
   const width = head + pad * 2
   const cx = width / 2
   const cy = radius + pad
-  const tipY = cy + radius * 2
+  const tipY = cy + radius * 1.95
   const height = Math.ceil(tipY + pad)
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -246,24 +256,44 @@ function pinImage(head: number, color: string): ImageData {
   const ctx = canvas.getContext('2d')
   if (ctx === null) return new ImageData(width, height)
 
-  const drawShape = (r: number, tip: number, fill: string): void => {
-    ctx.beginPath()
-    ctx.moveTo(cx - r * 0.86, cy + r * 0.5)
-    ctx.lineTo(cx, tip)
-    ctx.lineTo(cx + r * 0.86, cy + r * 0.5)
-    ctx.closePath()
-    ctx.moveTo(cx + r, cy)
-    ctx.arc(cx, cy, r, 0, Math.PI * 2)
-    ctx.fillStyle = fill
-    ctx.fill()
-  }
+  const balloon = new Path2D()
+  const alpha = Math.acos(radius / (tipY - cy))
+  const a1 = Math.PI / 2 + alpha
+  const a2 = Math.PI / 2 - alpha
+  balloon.moveTo(cx + radius * Math.cos(a1), cy + radius * Math.sin(a1))
+  balloon.arc(cx, cy, radius, a1, a2 + Math.PI * 2, false)
+  balloon.lineTo(cx, tipY)
+  balloon.closePath()
 
-  drawShape(radius, tipY, '#ffffff')
-  drawShape(radius - 2.5, tipY - 3, color)
+  ctx.save()
+  ctx.filter = 'blur(2.5px)'
   ctx.beginPath()
-  ctx.arc(cx, cy, radius * 0.38, 0, Math.PI * 2)
+  ctx.ellipse(cx, tipY - 1, radius * 0.55, radius * 0.22, 0, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.35)'
+  ctx.fill()
+  ctx.restore()
+
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = stroke
+  ctx.strokeStyle = '#ffffff'
+  ctx.stroke(balloon)
+
+  const gradient = ctx.createLinearGradient(cx, cy - radius, cx, tipY)
+  gradient.addColorStop(0, lightenColor(color, 0.34))
+  gradient.addColorStop(1, color)
+  ctx.fillStyle = gradient
+  ctx.fill(balloon)
+
+  ctx.beginPath()
+  ctx.ellipse(cx - radius * 0.26, cy - radius * 0.34, radius * 0.46, radius * 0.3, -0.5, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.32)'
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius * 0.34, 0, Math.PI * 2)
   ctx.fillStyle = '#ffffff'
   ctx.fill()
+
   return ctx.getImageData(0, 0, width, height)
 }
 
@@ -374,7 +404,7 @@ function applyPitch(): void {
 function addParcelLayers(instance: maplibregl.Map): void {
   for (const pin of MARKER_PINS) {
     if (!instance.hasImage(pin.id)) {
-      instance.addImage(pin.id, pinImage(34, pin.color), { pixelRatio: 2 })
+      instance.addImage(pin.id, pinImage(44, pin.color), { pixelRatio: 2 })
     }
   }
   instance.addSource('parcels', {
@@ -436,7 +466,8 @@ function addParcelLayers(instance: maplibregl.Map): void {
       'icon-image': markerIcon(),
       'icon-anchor': 'bottom',
       'icon-allow-overlap': false,
-      'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.45, 16, 0.8, 19, 1.1],
+      'icon-ignore-placement': false,
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.5, 16, 0.85, 19, 1.15],
     },
   })
 
@@ -525,7 +556,13 @@ watch(detail, (selected) => {
   map.setFilter('parcel-selected', filter)
   map.setFilter('parcel-selected-fill', filter)
   if (selected && selected.longitude !== null && selected.latitude !== null) {
-    map.flyTo({ center: [selected.longitude, selected.latitude], zoom: 17, duration: 900 })
+    map.flyTo({
+      center: [selected.longitude, selected.latitude],
+      zoom: 18.5,
+      pitch: show3d.value ? 55 : map.getPitch(),
+      duration: 1000,
+      essential: true,
+    })
   }
 })
 
