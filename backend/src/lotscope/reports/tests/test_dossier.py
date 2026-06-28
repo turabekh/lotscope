@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from lotscope.assemblage.schemas import AdjacentLot, AssemblageResult, AssemblageSummary
+from lotscope.checklist.schemas import ChecklistItem, ChecklistSummary, ParcelChecklist
 from lotscope.distress.schemas import DistressFactor, DistressResult
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.reports.dossier import dossier_filename, render_dossier_pdf
@@ -110,6 +111,33 @@ def test_full_dossier_renders_all_sections() -> None:
         sources=[],
         computed_at=_NOW,
     )
+    checklist = ParcelChecklist(
+        parcel_number="000000001",
+        items=[
+            ChecklistItem(
+                code="zoning",
+                category="Zoning & buildability",
+                status="warn",
+                detail="A variance is likely required.",
+                source="zoning",
+            ),
+            ChecklistItem(
+                code="liens_taxes",
+                category="Liens & taxes",
+                status="fail",
+                detail="$31,000 owed.",
+                source="tax_status",
+            ),
+            ChecklistItem(
+                code="flood",
+                category="Flood & environmental",
+                status="pass",
+                detail="Not in a mapped flood zone.",
+            ),
+        ],
+        summary=ChecklistSummary(passed=1, warnings=1, failures=1, info=0, ready=False),
+        computed_at=_NOW,
+    )
     pdf = render_dossier_pdf(
         detail=_detail(
             address="1 Main St", owner="OWNER A", base_zoning_code="RSD-3", is_vacant=True
@@ -117,6 +145,7 @@ def test_full_dossier_renders_all_sections() -> None:
         verdict=verdict,
         assemblage=assemblage,
         distress=distress,
+        checklist=checklist,
         generated_at=_NOW,
         disclaimer="Informational only.",
     )

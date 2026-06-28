@@ -4,6 +4,7 @@ from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
 from lotscope.assemblage.schemas import AssemblageResult
+from lotscope.checklist.schemas import ParcelChecklist
 from lotscope.distress.schemas import DistressResult
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.verdict.schemas import VerdictResult
@@ -18,6 +19,13 @@ _SEVERITY = {
     "low": (120, 144, 156),
     "info": (2, 119, 189),
 }
+_STATUS_COLOR = {
+    "pass": (46, 125, 50),
+    "warn": (239, 108, 0),
+    "fail": (198, 40, 40),
+    "info": (120, 144, 156),
+}
+_STATUS_LABEL = {"pass": "OK", "warn": "CHECK", "fail": "ISSUE", "info": "INFO"}
 
 _REPLACEMENTS = {
     "\u2014": "-",
@@ -95,6 +103,7 @@ def render_dossier_pdf(
     verdict: VerdictResult | None,
     assemblage: AssemblageResult | None,
     distress: DistressResult | None,
+    checklist: ParcelChecklist | None = None,
     generated_at: datetime,
     disclaimer: str,
 ) -> bytes:
@@ -182,6 +191,37 @@ def render_dossier_pdf(
             pdf.set_text_color(*_MUTED)
             pdf.set_font("Helvetica", "", 9)
             pdf.cell(0, 5, "No major risk flags.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    if checklist is not None and checklist.items:
+        _section(pdf, "Due-diligence checklist")
+        summary = checklist.summary
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*_MUTED)
+        pdf.cell(
+            0,
+            5,
+            _s(
+                f"{summary.passed} clear, {summary.warnings} to check, "
+                f"{summary.failures} issue(s)."
+            ),
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
+        pdf.ln(1)
+        for item in checklist.items:
+            color = _STATUS_COLOR.get(item.status, _MUTED)
+            pdf.set_fill_color(*color)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font("Helvetica", "B", 7)
+            pdf.cell(16, 4.5, _s(_STATUS_LABEL.get(item.status, "")), align="C", fill=True)
+            pdf.cell(2, 4.5, "")
+            pdf.set_text_color(*_INK)
+            pdf.set_font("Helvetica", "B", 8.5)
+            pdf.cell(0, 4.5, _s(item.category), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.set_x(34)
+            pdf.set_text_color(*_MUTED)
+            pdf.set_font("Helvetica", "", 8)
+            pdf.multi_cell(0, 4, _s(item.detail))
 
     _section(pdf, "Property")
     _kv(pdf, "Owner", detail.owner or "-")
