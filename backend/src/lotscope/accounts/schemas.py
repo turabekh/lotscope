@@ -34,8 +34,13 @@ class TokenResponse(BaseModel):
     token_type: Literal["bearer"] = "bearer"
 
 
-class UsageResponse(BaseModel):
-    tier: str
+class UsageMetric(BaseModel):
     limit: int | None
     used: int
     remaining: int | None
+
+
+class UsageResponse(BaseModel):
+    tier: str
+    ask: UsageMetric
+    parcel_views: UsageMetric

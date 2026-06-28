@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.usage import ask_usage_key
+from lotscope.accounts.usage import ask_usage_key, parcel_view_key
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
 from lotscope.ai.retrieval import add_document
 from lotscope.api.app import create_app
@@ -56,6 +56,22 @@ class _FakeRedis:
     async def expire(self, key: str, ttl: int) -> bool:
         return True
 
+    async def sadd(self, key: str, member: str) -> int:
+        current = self.store.get(key)
+        members = current if isinstance(current, set) else set()
+        before = len(members)
+        members.add(member)
+        self.store[key] = members
+        return len(members) - before
+
+    async def scard(self, key: str) -> int:
+        current = self.store.get(key)
+        return len(current) if isinstance(current, set) else 0
+
+    async def sismember(self, key: str, member: str) -> bool:
+        current = self.store.get(key)
+        return isinstance(current, set) and member in current
+
 
 def _app_with_session(session: AsyncSession) -> FastAPI:
     app = create_app()
@@ -69,6 +85,14 @@ def _app_with_session(session: AsyncSession) -> FastAPI:
 
 def _client(app: FastAPI) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+
+
+def _authed_app(session: AsyncSession) -> tuple[FastAPI, "_FakeRedis"]:
+    app = _app_with_session(session)
+    redis = _FakeRedis()
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_redis] = lambda: redis
+    return app, redis
 
 
 async def _setup_verdict_parcel(session: AsyncSession) -> None:
@@ -103,7 +127,8 @@ async def test_parcel_detail_endpoint(db_session: AsyncSession) -> None:
     )
     await db_session.flush()
 
-    async with _client(_app_with_session(db_session)) as client:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
         ok = await client.get("/parcels/000000001")
         missing = await client.get("/parcels/999999999")
 
@@ -116,7 +141,7 @@ async def test_parcel_detail_endpoint(db_session: AsyncSession) -> None:
 @pytest.mark.integration
 async def test_verdict_refresh_then_read(db_session: AsyncSession) -> None:
     await _setup_verdict_parcel(db_session)
-    app = _app_with_session(db_session)
+    app, _ = _authed_app(db_session)
 
     async with _client(app) as client:
         before = await client.get("/parcels/000000001/verdict")
@@ -140,7 +165,8 @@ async def test_comps_endpoint(db_session: AsyncSession) -> None:
     )
     await db_session.flush()
 
-    async with _client(_app_with_session(db_session)) as client:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
         resp = await client.get("/parcels/000000001/comps")
 
     assert resp.status_code == 200
@@ -149,7 +175,8 @@ async def test_comps_endpoint(db_session: AsyncSession) -> None:
 
 @pytest.mark.integration
 async def test_comps_endpoint_validates_radius(db_session: AsyncSession) -> None:
-    async with _client(_app_with_session(db_session)) as client:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
         resp = await client.get("/parcels/000000001/comps", params={"radius_ft": -1})
 
     assert resp.status_code == 422
@@ -262,12 +289,36 @@ async def test_usage_endpoint_reports_tier_and_remaining(db_session: AsyncSessio
     app.dependency_overrides[get_redis] = lambda: fake_redis
     app.dependency_overrides[get_current_user] = _fake_user
 
+    fake_redis.store[parcel_view_key(1, today)] = {"a", "b"}
+
     async with _client(app) as client:
         resp = await client.get("/auth/usage")
 
     assert resp.status_code == 200
     body = resp.json()
-    assert body == {"tier": "free", "limit": 10, "used": 3, "remaining": 7}
+    assert body["tier"] == "free"
+    assert body["ask"] == {"limit": 10, "used": 3, "remaining": 7}
+    assert body["parcel_views"] == {"limit": 4, "used": 2, "remaining": 2}
+
+
+@pytest.mark.integration
+async def test_parcel_detail_enforces_free_view_quota(db_session: AsyncSession) -> None:
+    for index in range(5):
+        await db_session.execute(
+            text(f"INSERT INTO parcel (parcel_number, owner) VALUES ('00000000{index}', 'O')")
+        )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        statuses = [
+            (await client.get(f"/parcels/00000000{index}")).status_code for index in range(5)
+        ]
+        repeat = await client.get("/parcels/000000000")
+
+    assert statuses[:4] == [200, 200, 200, 200]
+    assert statuses[4] == 429  # fifth distinct parcel exceeds the free limit of 4
+    assert repeat.status_code == 200  # re-opening an already-viewed parcel is free
 
 
 async def test_cors_allows_configured_origin() -> None:
