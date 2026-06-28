@@ -25,6 +25,38 @@ const { vacantOnly, useClasses, colorMode, show3d, basemap } = storeToRefs(filte
 const FEET_TO_METERS = 0.3048
 const OSM_TILES = ['https://tile.openstreetmap.org/{z}/{x}/{y}.png']
 const OSM_ATTRIBUTION = '© OpenStreetMap contributors'
+const attributionText = ref(OSM_ATTRIBUTION)
+let attributionTimer: ReturnType<typeof setTimeout> | undefined
+
+async function updateAttribution(): Promise<void> {
+  if (!map) return
+  if (basemap.value === 'osm') {
+    attributionText.value = OSM_ATTRIBUTION
+    return
+  }
+  const bounds = map.getBounds()
+  try {
+    const result = await api.getBasemapAttribution(
+      basemap.value,
+      {
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      },
+      Math.round(map.getZoom()),
+    )
+    attributionText.value = result.attribution
+  } catch {
+    attributionText.value = 'Map data © Google'
+  }
+}
+
+function scheduleAttributionUpdate(): void {
+  if (basemap.value === 'osm') return
+  if (attributionTimer) clearTimeout(attributionTimer)
+  attributionTimer = setTimeout(() => void updateAttribution(), 400)
+}
 
 const envelopeCaption = computed(() => {
   const env = envelope.value
@@ -61,13 +93,11 @@ const baseStyle: StyleSpecification = {
 async function applyBasemap(id: 'satellite' | 'roadmap' | 'osm'): Promise<void> {
   if (!map) return
   let tiles = OSM_TILES
-  let attribution = OSM_ATTRIBUTION
   let tileSize = 256
   if (id === 'satellite' || id === 'roadmap') {
     try {
       const session = await api.getBasemapSession(id)
       tiles = [session.tile_url]
-      attribution = session.attribution
       tileSize = session.tile_size
     } catch {
       if (basemap.value !== 'osm') basemap.value = 'osm'
@@ -77,9 +107,10 @@ async function applyBasemap(id: 'satellite' | 'roadmap' | 'osm'): Promise<void> 
   if (!map) return
   if (map.getLayer('basemap-layer')) map.removeLayer('basemap-layer')
   if (map.getSource('basemap')) map.removeSource('basemap')
-  map.addSource('basemap', { type: 'raster', tiles, tileSize, attribution })
+  map.addSource('basemap', { type: 'raster', tiles, tileSize })
   const below = map.getLayer('parcels-fill') ? 'parcels-fill' : undefined
   map.addLayer({ id: 'basemap-layer', type: 'raster', source: 'basemap' }, below)
+  void updateAttribution()
 }
 
 function classCondition(): ExpressionSpecification | null {
@@ -445,6 +476,7 @@ onMounted(() => {
     style: baseStyle,
     center: PHILADELPHIA,
     zoom: 13,
+    attributionControl: false,
   })
   map.addControl(new maplibregl.NavigationControl(), 'top-right')
   map.on('load', () => {
@@ -452,6 +484,7 @@ onMounted(() => {
     addParcelLayers(map)
     void applyBasemap(basemap.value)
   })
+  map.on('moveend', scheduleAttributionUpdate)
 })
 
 watch(basemap, (id) => {
@@ -497,6 +530,7 @@ watch(detail, (selected) => {
 })
 
 onBeforeUnmount(() => {
+  if (attributionTimer) clearTimeout(attributionTimer)
   popup.remove()
   map?.remove()
 })
@@ -509,6 +543,7 @@ onBeforeUnmount(() => {
     <span>{{ envelopeCaption }}</span>
     <span class="ec-note">approx · informational</span>
   </div>
+  <div class="map-attribution">{{ attributionText }}</div>
 </template>
 
 <style scoped>
@@ -540,6 +575,22 @@ onBeforeUnmount(() => {
   font-size: 11px;
   opacity: 0.8;
   margin-left: 4px;
+}
+.map-attribution {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: 4;
+  max-width: 70vw;
+  padding: 1px 6px;
+  border-radius: 4px 0 0 0;
+  background: rgba(255, 255, 255, 0.75);
+  color: #455a64;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>
 

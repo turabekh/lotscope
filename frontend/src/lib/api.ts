@@ -82,6 +82,16 @@ export const api = {
   getBasemapSession(mapType: 'satellite' | 'roadmap'): Promise<BasemapSession> {
     return request(`/maps/basemap-session?map_type=${mapType}`)
   },
+  getBasemapAttribution(
+    mapType: 'satellite' | 'roadmap',
+    bounds: { north: number; south: number; east: number; west: number },
+    zoom: number,
+  ): Promise<{ attribution: string }> {
+    const query =
+      `map_type=${mapType}&zoom=${zoom}` +
+      `&north=${bounds.north}&south=${bounds.south}&east=${bounds.east}&west=${bounds.west}`
+    return request(`/maps/attribution?${query}`)
+  },
   login(email: string, password: string): Promise<TokenResponse> {
     return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
   },
