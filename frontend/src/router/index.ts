@@ -50,6 +50,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/PipelinePage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/compare',
+    name: 'compare',
+    component: () => import('@/pages/ComparePage.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 export const router = createRouter({

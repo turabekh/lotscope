@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.deal.service import build_deal
 from lotscope.risk.service import assess_parcel_risk
 from lotscope.valuation.service import value_parcel
-from lotscope.verdict.composition import ComposedVerdict, compose_verdict
+from lotscope.verdict.composition import VERDICT_VERSION, ComposedVerdict, compose_verdict
 from lotscope.verdict.models import ParcelVerdict
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.zoning.service import assess_parcel as assess_zoning
@@ -110,6 +110,15 @@ async def get_verdict(session: AsyncSession, parcel_number: str) -> VerdictResul
     if row is None:
         return None
     return VerdictResult.model_validate(row)
+
+
+async def get_or_compute_current_verdict(
+    session: AsyncSession, parcel_number: str
+) -> VerdictResult | None:
+    verdict = await get_verdict(session, parcel_number)
+    if verdict is not None and verdict.verdict_version == VERDICT_VERSION:
+        return verdict
+    return await compute_verdict(session, parcel_number)
 
 
 async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictResult | None:

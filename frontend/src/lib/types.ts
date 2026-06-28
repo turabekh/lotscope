@@ -23,6 +23,15 @@ export interface ParcelDetail {
   latitude: number | null
 }
 
+export interface ParcelCompareItem {
+  detail: ParcelDetail
+  verdict: VerdictResult | null
+}
+
+export interface ParcelCompareResponse {
+  items: ParcelCompareItem[]
+}
+
 export interface RiskFlag {
   code: string
   severity: 'high' | 'medium' | 'low' | 'info'

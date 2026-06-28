@@ -7,6 +7,7 @@ import type {
   DealResult,
   DealStage,
   DistressResult,
+  ParcelCompareResponse,
   EnvelopeResult,
   LayersResponse,
   LeadsResponse,
@@ -84,6 +85,12 @@ export const api = {
   },
   getDistress(parcelNumber: string): Promise<DistressResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/distress`)
+  },
+  compareParcels(parcelNumbers: string[]): Promise<ParcelCompareResponse> {
+    const query = parcelNumbers
+      .map((parcelNumber) => `parcels=${encodeURIComponent(parcelNumber)}`)
+      .join('&')
+    return request(`/parcels/compare?${query}`)
   },
   getDeal(
     parcelNumber: string,

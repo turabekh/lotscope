@@ -10,6 +10,7 @@ import DistressPanel from '@/components/DistressPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { ApiError, api } from '@/lib/api'
+import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
 import { useParcelStore } from '@/stores/parcel'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -18,6 +19,7 @@ const store = useParcelStore()
 const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
 const watchlist = useWatchlistStore()
 const pipeline = usePipelineStore()
+const compare = useCompareStore()
 const $q = useQuasar()
 const saving = ref(false)
 const addingDeal = ref(false)
@@ -63,6 +65,28 @@ async function addToPipeline(): Promise<void> {
 const isSaved = computed(() =>
   detail.value ? watchlist.isSaved(detail.value.parcel_number) : false,
 )
+
+const inCompare = computed(() =>
+  detail.value ? compare.has(detail.value.parcel_number) : false,
+)
+
+function toggleCompare(): void {
+  if (detail.value === null) return
+  if (inCompare.value) {
+    compare.remove(detail.value.parcel_number)
+    $q.notify({ message: 'Removed from compare', color: 'grey-8', icon: 'compare_arrows' })
+    return
+  }
+  if (compare.add(detail.value.parcel_number)) {
+    $q.notify({ message: 'Added to compare', color: 'positive', icon: 'compare_arrows' })
+  } else {
+    $q.notify({
+      message: `Compare holds up to ${MAX_COMPARE} lots`,
+      color: 'warning',
+      icon: 'info',
+    })
+  }
+}
 
 onMounted(() => {
   void watchlist.ensureLoaded()
@@ -179,6 +203,15 @@ async function toggleSave(): Promise<void> {
             label="PDF dossier"
             :loading="downloadingDossier"
             @click="downloadDossier"
+          />
+          <q-btn
+            :outline="!inCompare"
+            :unelevated="inCompare"
+            no-caps
+            :color="inCompare ? 'primary' : 'grey-8'"
+            icon="compare_arrows"
+            :label="inCompare ? 'In compare' : 'Compare'"
+            @click="toggleCompare"
           />
         </div>
 

@@ -28,6 +28,8 @@ from lotscope.api.deps import (
 )
 from lotscope.assemblage.schemas import AssemblageResult
 from lotscope.assemblage.service import compute_assemblage
+from lotscope.compare.schemas import ParcelCompareResponse
+from lotscope.compare.service import MAX_COMPARE_PARCELS, compare_parcels
 from lotscope.core.errors import NotFoundError, QuotaExceededError
 from lotscope.deal.schemas import DealResult
 from lotscope.deal.service import analyze_parcel_deal
@@ -61,6 +63,15 @@ def _ask_cache_key(parcel_number: str, question: str) -> str:
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
+
+
+@router.get("/compare", response_model=ParcelCompareResponse)
+async def parcels_compare(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    parcels: Annotated[list[str], Query(min_length=2, max_length=MAX_COMPARE_PARCELS)],
+) -> ParcelCompareResponse:
+    return await compare_parcels(session, parcels)
 
 
 @router.get("/{parcel_number}", response_model=ParcelDetail)
