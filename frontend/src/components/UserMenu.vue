@@ -38,6 +38,10 @@ function goLeads(): void {
 function goWatchlist(): void {
   void router.push({ name: 'watchlist' })
 }
+
+function goPipeline(): void {
+  void router.push({ name: 'pipeline' })
+}
 </script>
 
 <template>
@@ -70,6 +74,10 @@ function goWatchlist(): void {
           <q-item-section v-if="alerts > 0" side>
             <q-badge color="negative" rounded>{{ alerts }}</q-badge>
           </q-item-section>
+        </q-item>
+        <q-item v-close-popup clickable @click="goPipeline">
+          <q-item-section avatar><q-icon name="view_kanban" /></q-item-section>
+          <q-item-section>Deal pipeline</q-item-section>
         </q-item>
         <q-item v-close-popup clickable @click="goLeads">
           <q-item-section avatar><q-icon name="sell" /></q-item-section>

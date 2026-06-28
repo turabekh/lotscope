@@ -10,19 +10,49 @@ import PropertyFacts from '@/components/PropertyFacts.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { ApiError } from '@/lib/api'
 import { useParcelStore } from '@/stores/parcel'
+import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useParcelStore()
 const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
 const watchlist = useWatchlistStore()
+const pipeline = usePipelineStore()
 const $q = useQuasar()
 const saving = ref(false)
+const addingDeal = ref(false)
+
+const currentDeal = computed(() =>
+  detail.value ? pipeline.dealFor(detail.value.parcel_number) : undefined,
+)
+const dealStageLabel = computed(
+  () => STAGES.find((stage) => stage.value === currentDeal.value?.stage)?.label ?? '',
+)
+
+async function addToPipeline(): Promise<void> {
+  if (detail.value === null || addingDeal.value) return
+  addingDeal.value = true
+  try {
+    await pipeline.add(detail.value.parcel_number)
+    $q.notify({ message: 'Added to your pipeline', color: 'positive', icon: 'view_kanban' })
+  } catch (cause) {
+    const message =
+      cause instanceof ApiError && cause.status === 429
+        ? cause.message
+        : 'Could not add to pipeline.'
+    $q.notify({ message, color: 'negative', icon: 'error' })
+  } finally {
+    addingDeal.value = false
+  }
+}
 
 const isSaved = computed(() =>
   detail.value ? watchlist.isSaved(detail.value.parcel_number) : false,
 )
 
-onMounted(() => void watchlist.ensureLoaded())
+onMounted(() => {
+  void watchlist.ensureLoaded()
+  void pipeline.ensureLoaded()
+})
 
 async function toggleSave(): Promise<void> {
   if (detail.value === null || saving.value) return
@@ -105,6 +135,28 @@ async function toggleSave(): Promise<void> {
         <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders">
           {{ error }}
         </q-banner>
+
+        <div class="row items-center justify-center">
+          <q-btn
+            v-if="!currentDeal"
+            outline
+            no-caps
+            color="primary"
+            icon="add_task"
+            label="Add to pipeline"
+            :loading="addingDeal"
+            @click="addToPipeline"
+          />
+          <q-btn
+            v-else
+            flat
+            no-caps
+            color="primary"
+            icon="view_kanban"
+            :label="`In pipeline · ${dealStageLabel}`"
+            :to="{ name: 'pipeline' }"
+          />
+        </div>
 
         <template v-if="verdict">
           <VerdictPanel :verdict="verdict" />

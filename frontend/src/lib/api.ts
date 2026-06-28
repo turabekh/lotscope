@@ -3,10 +3,13 @@ import type {
   BasemapSession,
   BillingCadence,
   CheckoutResponse,
+  DealItem,
+  DealStage,
   DistressResult,
   EnvelopeResult,
   LayersResponse,
   LeadsResponse,
+  PipelineResponse,
   ParcelAnswer,
   ParcelDetail,
   ParcelSearchResponse,
@@ -115,6 +118,27 @@ export const api = {
   },
   markWatchlistSeen(parcelNumber: string): Promise<void> {
     return request(`/watchlist/${encodeURIComponent(parcelNumber)}/seen`, { method: 'POST' })
+  },
+  getPipeline(): Promise<PipelineResponse> {
+    return request('/pipeline')
+  },
+  addToPipeline(parcelNumber: string, stage: DealStage = 'lead'): Promise<DealItem> {
+    return request('/pipeline', {
+      method: 'POST',
+      body: JSON.stringify({ parcel_number: parcelNumber, stage }),
+    })
+  },
+  updateDeal(
+    parcelNumber: string,
+    payload: { stage?: DealStage; note?: string | null; target_price?: number | null },
+  ): Promise<DealItem> {
+    return request(`/pipeline/${encodeURIComponent(parcelNumber)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  },
+  removeFromPipeline(parcelNumber: string): Promise<void> {
+    return request(`/pipeline/${encodeURIComponent(parcelNumber)}`, { method: 'DELETE' })
   },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {

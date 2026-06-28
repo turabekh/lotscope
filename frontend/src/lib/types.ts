@@ -68,6 +68,28 @@ export interface EnvelopeResult {
   computed_at: string
 }
 
+export type DealStage = 'lead' | 'diligence' | 'offer' | 'under_contract' | 'closed' | 'lost'
+
+export interface DealItem {
+  id: number
+  parcel_number: string
+  stage: DealStage
+  note: string | null
+  target_price: number | null
+  address: string | null
+  base_zoning_code: string | null
+  is_vacant: boolean | null
+  market_value: number | null
+  opportunity_score: number | null
+  updated_at: string
+}
+
+export interface PipelineResponse {
+  limit: number | null
+  used: number
+  deals: DealItem[]
+}
+
 export interface WatchlistChange {
   code: string
   label: string
