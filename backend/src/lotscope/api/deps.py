@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from lotscope.accounts.billing import StripeApiGateway, StripeGateway
 from lotscope.accounts.models import User
 from lotscope.accounts.security import decode_access_token
 from lotscope.accounts.service import get_user_by_id
@@ -44,6 +45,10 @@ def get_generator(request: Request) -> StructuredGenerator:
     return AnthropicGenerator(get_app_settings(request))
 
 
+def get_stripe_gateway(request: Request) -> StripeGateway:
+    return StripeApiGateway(get_app_settings(request))
+
+
 async def get_current_user(
     session: Annotated[AsyncSession, Depends(get_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
@@ -61,6 +66,26 @@ async def get_current_user(
     user = await get_user_by_id(session, int(subject))
     if user is None or not user.is_active:
         raise AuthError("Account not found or inactive.")
+    return user
+
+
+async def get_optional_user(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
+) -> User | None:
+    if credentials is None:
+        return None
+    try:
+        payload = decode_access_token(settings, credentials.credentials)
+    except jwt.PyJWTError:
+        return None
+    subject = payload.get("sub")
+    if not isinstance(subject, str) or not subject.isdigit():
+        return None
+    user = await get_user_by_id(session, int(subject))
+    if user is None or not user.is_active:
+        return None
     return user
 
 

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 
 from lotscope.api.auth import router as auth_router
+from lotscope.api.billing import router as billing_router
 from lotscope.api.errors import register_exception_handlers
 from lotscope.api.health import router as health_router
 from lotscope.api.layers import router as layers_router
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
     app.include_router(health_router)
     app.include_router(auth_router)
+    app.include_router(billing_router)
     app.include_router(search_router)
     app.include_router(parcels_router)
     app.include_router(layers_router)

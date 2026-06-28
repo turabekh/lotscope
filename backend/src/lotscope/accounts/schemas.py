@@ -26,6 +26,7 @@ class UserRead(BaseModel):
     role: str
     tier: str
     is_active: bool
+    subscription_status: str | None
     created_at: datetime
 
 
@@ -44,3 +45,31 @@ class UsageResponse(BaseModel):
     tier: str
     ask: UsageMetric
     parcel_views: UsageMetric
+
+
+class CheckoutRequest(BaseModel):
+    cadence: Literal["monthly", "annual"] = "monthly"
+
+
+class CheckoutResponse(BaseModel):
+    url: str
+
+
+class PortalResponse(BaseModel):
+    url: str
+
+
+class PlanInfo(BaseModel):
+    tier: str
+    name: str
+    tagline: str
+    price_monthly_cents: int | None
+    price_annual_cents: int | None
+    action: Literal["current", "checkout", "contact"]
+    highlights: list[str]
+    is_current: bool
+
+
+class PlansResponse(BaseModel):
+    plans: list[PlanInfo]
+    contact_url: str

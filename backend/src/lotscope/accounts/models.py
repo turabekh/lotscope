@@ -15,3 +15,6 @@ class User(Base, TimestampMixin):
     role: Mapped[str] = mapped_column(String(20), nullable=False, server_default="user")
     tier: Mapped[str] = mapped_column(String(20), nullable=False, server_default="free")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    subscription_status: Mapped[str | None] = mapped_column(String(40))

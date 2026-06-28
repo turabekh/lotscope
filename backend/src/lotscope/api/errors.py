@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from lotscope.core.errors import (
     AuthError,
+    ConfigurationError,
     ForbiddenError,
     LotScopeError,
     NotFoundError,
@@ -26,6 +27,7 @@ _STATUS_BY_EXCEPTION: dict[type[LotScopeError], int] = {
     ForbiddenError: 403,
     QuotaExceededError: 429,
     UpstreamError: 502,
+    ConfigurationError: 503,
 }
 
 

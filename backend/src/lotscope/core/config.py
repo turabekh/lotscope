@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     embedding_model: str = "voyage-3"
     embedding_dimensions: int = 1024
 
+    stripe_secret_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_price_pro_monthly: str | None = None
+    stripe_price_pro_annual: str | None = None
+    billing_success_url: str = "http://localhost:5173/account?checkout=success"
+    billing_cancel_url: str = "http://localhost:5173/account?checkout=cancel"
+    billing_portal_return_url: str = "http://localhost:5173/account"
+    enterprise_contact_url: str = "mailto:sales@lotscope.app"
+
     carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
     arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
 

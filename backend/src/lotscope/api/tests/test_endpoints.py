@@ -18,8 +18,10 @@ from lotscope.api.deps import (
     get_current_user,
     get_embedder,
     get_generator,
+    get_optional_user,
     get_redis,
     get_session,
+    get_stripe_gateway,
 )
 from lotscope.core.config import Settings
 from lotscope.zoning.seed import seed_zoning_standards
@@ -343,3 +345,146 @@ async def test_layers_endpoint() -> None:
     layers = {layer["name"]: layer for layer in resp.json()["layers"]}
     assert "parcels" in layers
     assert layers["parcels"]["tile_url"] == "http://martin.test:3000/parcels_mvt/{z}/{x}/{y}"
+
+
+def _billing_settings() -> Settings:
+    return Settings(
+        _env_file=None,
+        stripe_secret_key="sk_test",
+        stripe_webhook_secret="wh_test",
+        stripe_price_pro_monthly="price_monthly",
+        stripe_price_pro_annual="price_annual",
+    )
+
+
+class _FakeGateway:
+    def __init__(self, event: dict[str, Any] | None = None) -> None:
+        self.event = event
+        self.checkout_args: dict[str, Any] | None = None
+
+    async def create_customer(self, *, email: str, user_id: int) -> str:
+        return "cus_test"
+
+    async def create_checkout_session(
+        self, *, customer_id: str, price_id: str, success_url: str, cancel_url: str
+    ) -> str:
+        self.checkout_args = {"customer_id": customer_id, "price_id": price_id}
+        return "https://checkout.test/session"
+
+    async def create_portal_session(self, *, customer_id: str, return_url: str) -> str:
+        return "https://portal.test/session"
+
+    def parse_event(self, *, payload: bytes, signature: str) -> dict[str, Any]:
+        assert self.event is not None
+        return self.event
+
+
+async def test_billing_plans_public_lists_catalog() -> None:
+    app = create_app()
+    app.dependency_overrides[get_app_settings] = _billing_settings
+    app.dependency_overrides[get_optional_user] = lambda: None
+    async with _client(app) as client:
+        resp = await client.get("/billing/plans")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    tiers = [plan["tier"] for plan in body["plans"]]
+    assert tiers == ["free", "pro", "enterprise"]
+    assert all(plan["is_current"] is False for plan in body["plans"])
+    assert body["contact_url"]
+
+
+async def test_billing_plans_marks_current_tier() -> None:
+    app = create_app()
+    app.dependency_overrides[get_app_settings] = _billing_settings
+
+    def _pro_user() -> User:
+        user = _fake_user()
+        user.tier = "pro"
+        return user
+
+    app.dependency_overrides[get_optional_user] = _pro_user
+    async with _client(app) as client:
+        resp = await client.get("/billing/plans")
+
+    plans = {plan["tier"]: plan for plan in resp.json()["plans"]}
+    assert plans["pro"]["is_current"] is True
+    assert plans["free"]["is_current"] is False
+
+
+@pytest.mark.integration
+async def test_checkout_returns_session_url(db_session: AsyncSession) -> None:
+    app = _app_with_session(db_session)
+    gateway = _FakeGateway()
+    app.dependency_overrides[get_app_settings] = _billing_settings
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_stripe_gateway] = lambda: gateway
+
+    async with _client(app) as client:
+        resp = await client.post("/billing/checkout", json={"cadence": "annual"})
+
+    assert resp.status_code == 200
+    assert resp.json()["url"] == "https://checkout.test/session"
+    assert gateway.checkout_args == {"customer_id": "cus_test", "price_id": "price_annual"}
+
+
+async def test_portal_requires_existing_customer(db_session: AsyncSession) -> None:
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_app_settings] = _billing_settings
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_stripe_gateway] = lambda: _FakeGateway()
+
+    async with _client(app) as client:
+        resp = await client.post("/billing/portal")
+
+    assert resp.status_code == 422
+
+
+@pytest.mark.integration
+async def test_webhook_activates_pro_tier(db_session: AsyncSession) -> None:
+    user = User(
+        email="buyer@example.com",
+        hashed_password="x",
+        tier="free",
+        stripe_customer_id="cus_1",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    event = {
+        "type": "customer.subscription.updated",
+        "data": {
+            "object": {
+                "id": "sub_1",
+                "customer": "cus_1",
+                "status": "active",
+                "items": {"data": [{"price": {"id": "price_monthly"}}]},
+            }
+        },
+    }
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_app_settings] = _billing_settings
+    app.dependency_overrides[get_stripe_gateway] = lambda: _FakeGateway(event)
+
+    async with _client(app) as client:
+        resp = await client.post(
+            "/billing/webhook", content=b"{}", headers={"Stripe-Signature": "sig"}
+        )
+
+    assert resp.status_code == 200
+    assert resp.json() == {"handled": True}
+    await db_session.refresh(user)
+    assert user.tier == "pro"
+    assert user.subscription_status == "active"
+    assert user.stripe_subscription_id == "sub_1"
+
+
+async def test_webhook_requires_signature(db_session: AsyncSession) -> None:
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_app_settings] = _billing_settings
+    app.dependency_overrides[get_stripe_gateway] = lambda: _FakeGateway()
+
+    async with _client(app) as client:
+        resp = await client.post("/billing/webhook", content=b"{}")
+
+    assert resp.status_code == 422
