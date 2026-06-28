@@ -323,6 +323,17 @@ async def test_parcel_detail_enforces_free_view_quota(db_session: AsyncSession) 
     assert repeat.status_code == 200  # re-opening an already-viewed parcel is free
 
 
+async def test_basemap_session_unconfigured_returns_503() -> None:
+    app = create_app()
+    app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
+
+    async with _client(app) as client:
+        resp = await client.get("/maps/basemap-session?map_type=satellite")
+
+    assert resp.status_code == 503
+    assert resp.json()["error"] == "ConfigurationError"
+
+
 async def test_cors_allows_configured_origin() -> None:
     app = create_app()
     transport = httpx.ASGITransport(app=app)

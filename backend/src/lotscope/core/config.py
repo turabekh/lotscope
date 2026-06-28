@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     billing_portal_return_url: str = "http://localhost:5173/account"
     enterprise_contact_url: str = "mailto:sales@lotscope.app"
 
+    google_maps_api_key: str | None = None
+    google_map_tiles_url: str = "https://tile.googleapis.com/v1"
+
     carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
     arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
 

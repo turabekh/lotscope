@@ -10,6 +10,7 @@ from lotscope.api.billing import router as billing_router
 from lotscope.api.errors import register_exception_handlers
 from lotscope.api.health import router as health_router
 from lotscope.api.layers import router as layers_router
+from lotscope.api.maps import router as maps_router
 from lotscope.api.parcels import router as parcels_router
 from lotscope.api.search import router as search_router
 from lotscope.core.config import get_settings
@@ -49,6 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(search_router)
     app.include_router(parcels_router)
     app.include_router(layers_router)
+    app.include_router(maps_router)
     return app
 
 
