@@ -19,7 +19,7 @@ export const USE_CLASS_OPTIONS: UseClassOption[] = [
 export type Basemap = 'satellite' | 'roadmap' | 'osm'
 
 export const BASEMAP_OPTIONS: { value: Basemap; label: string; icon: string }[] = [
-  { value: 'satellite', label: 'Satellite', icon: 'satellite_alt' },
+  { value: 'satellite', label: 'Satellite', icon: 'satellite' },
   { value: 'roadmap', label: 'Roadmap', icon: 'map' },
   { value: 'osm', label: 'Streets', icon: 'public' },
 ]
