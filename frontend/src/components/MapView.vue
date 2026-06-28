@@ -394,8 +394,8 @@ function renderEnvelope(): void {
 }
 
 function applyPitch(): void {
-  if (!map) return
-  const target = show3d.value && envelope.value !== null ? 55 : 0
+  if (!map || map.isMoving()) return
+  const target = show3d.value ? 55 : 0
   if (Math.round(map.getPitch()) !== target) {
     map.easeTo({ pitch: target, duration: 600 })
   }
