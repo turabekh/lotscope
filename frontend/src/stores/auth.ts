@@ -2,16 +2,16 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { ApiError, api, setAuthToken } from '@/lib/api'
-import type { RegisterPayload, User } from '@/lib/types'
+import type { RegisterPayload, Usage, User } from '@/lib/types'
 
 const TOKEN_KEY = 'lotscope_token'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem(TOKEN_KEY))
   const user = ref<User | null>(null)
+  const usage = ref<Usage | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const dialogOpen = ref(false)
 
   setAuthToken(token.value)
 
@@ -31,7 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await api.login(email, password)
       persist(response.access_token)
       user.value = await api.getMe()
-      dialogOpen.value = false
+      usage.value = null
     } catch (cause) {
       persist(null)
       error.value = cause instanceof ApiError ? cause.message : 'Sign in failed.'
@@ -64,27 +64,32 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function fetchUsage(): Promise<void> {
+    if (token.value === null) return
+    try {
+      usage.value = await api.getUsage()
+    } catch {
+      usage.value = null
+    }
+  }
+
   function logout(): void {
     persist(null)
     user.value = null
-  }
-
-  function openDialog(): void {
-    error.value = null
-    dialogOpen.value = true
+    usage.value = null
   }
 
   return {
     token,
     user,
+    usage,
     loading,
     error,
-    dialogOpen,
     isAuthenticated,
     login,
     register,
     restore,
+    fetchUsage,
     logout,
-    openDialog,
   }
 })

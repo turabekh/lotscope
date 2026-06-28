@@ -1,10 +1,50 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
-import MapPage from '@/pages/MapPage.vue'
+import { useAuthStore } from '@/stores/auth'
 
-const routes: RouteRecordRaw[] = [{ path: '/', name: 'map', component: MapPage }]
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+    guestOnly?: boolean
+  }
+}
+
+const routes: RouteRecordRaw[] = [
+  { path: '/', name: 'map', component: () => import('@/pages/MapPage.vue') },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/pages/AuthPage.vue'),
+    props: { mode: 'login' },
+    meta: { guestOnly: true },
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('@/pages/AuthPage.vue'),
+    props: { mode: 'register' },
+    meta: { guestOnly: true },
+  },
+  {
+    path: '/account',
+    name: 'account',
+    component: () => import('@/pages/AccountPage.vue'),
+    meta: { requiresAuth: true },
+  },
+]
 
 export const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && auth.token === null) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.guestOnly && auth.token !== null) {
+    return { name: 'map' }
+  }
+  return true
 })

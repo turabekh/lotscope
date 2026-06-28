@@ -131,3 +131,10 @@ export interface RegisterPayload {
   password: string
   full_name?: string | null
 }
+
+export interface Usage {
+  tier: string
+  limit: number | null
+  used: number
+  remaining: number | null
+}

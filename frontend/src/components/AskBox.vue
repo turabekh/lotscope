@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
 import type { ParcelAnswer } from '@/lib/types'
@@ -10,6 +11,12 @@ const props = defineProps<{ parcelNumber: string }>()
 
 const auth = useAuthStore()
 const { isAuthenticated } = storeToRefs(auth)
+const router = useRouter()
+const route = useRoute()
+
+function goLogin(): void {
+  void router.push({ name: 'login', query: { redirect: route.fullPath } })
+}
 
 const question = ref('')
 const answer = ref<ParcelAnswer | null>(null)
@@ -48,7 +55,7 @@ async function ask(): Promise<void> {
     answer.value = null
     if (cause instanceof ApiError && cause.status === 401) {
       auth.logout()
-      auth.openDialog()
+      goLogin()
       error.value = 'Your session expired — please sign in again.'
     } else {
       error.value = cause instanceof ApiError ? cause.message : 'Failed to get an answer.'
@@ -77,7 +84,7 @@ function askSuggestion(text: string): void {
         <div class="text-body2 text-grey-7 text-center q-my-sm">
           Sign in to ask the AI about zoning, height, units, and allowed uses for this parcel.
         </div>
-        <q-btn unelevated no-caps color="primary" icon="login" label="Sign in to ask" @click="auth.openDialog()" />
+        <q-btn unelevated no-caps color="primary" icon="login" label="Sign in to ask" @click="goLogin" />
       </div>
 
       <template v-else>

@@ -5,6 +5,7 @@ import type {
   ParcelSearchResponse,
   RegisterPayload,
   TokenResponse,
+  Usage,
   User,
   ValuationResult,
   VerdictResult,
@@ -77,5 +78,8 @@ export const api = {
   },
   getMe(): Promise<User> {
     return request('/auth/me')
+  },
+  getUsage(): Promise<Usage> {
+    return request('/auth/usage')
   },
 }
