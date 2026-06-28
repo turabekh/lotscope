@@ -13,6 +13,7 @@ from lotscope.watchlist.schemas import (
     WatchlistResponse,
 )
 from lotscope.watchlist.service import (
+    acknowledge,
     add_saved,
     is_saved,
     list_saved,
@@ -29,7 +30,12 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 @router.get("", response_model=WatchlistResponse)
 async def get_watchlist(session: SessionDep, user: CurrentUserDep) -> WatchlistResponse:
     items = await list_saved(session, user.id)
-    return WatchlistResponse(limit=watchlist_limit(user.tier), used=len(items), items=items)
+    return WatchlistResponse(
+        limit=watchlist_limit(user.tier),
+        used=len(items),
+        alerts=sum(1 for item in items if item.has_alerts),
+        items=items,
+    )
 
 
 @router.get("/{parcel_number}")
@@ -77,6 +83,12 @@ async def update_watchlist_item(
         note=saved.note,
         created_at=saved.created_at,
     )
+
+
+@router.post("/{parcel_number}/seen", status_code=204)
+async def mark_seen(parcel_number: str, session: SessionDep, user: CurrentUserDep) -> None:
+    await acknowledge(session, user.id, parcel_number)
+    await session.commit()
 
 
 @router.delete("/{parcel_number}", status_code=204)

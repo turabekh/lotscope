@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -14,6 +15,12 @@ class SavedParcelUpdate(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
 
 
+class WatchlistChange(BaseModel):
+    code: str
+    label: str
+    severity: Literal["high", "medium", "info"]
+
+
 class WatchlistItem(BaseModel):
     parcel_number: str
     address: str | None
@@ -25,9 +32,12 @@ class WatchlistItem(BaseModel):
     tags: list[str]
     note: str | None
     created_at: datetime
+    changes: list[WatchlistChange] = Field(default_factory=list)
+    has_alerts: bool = False
 
 
 class WatchlistResponse(BaseModel):
     limit: int | None
     used: int
+    alerts: int
     items: list[WatchlistItem]

@@ -1,4 +1,7 @@
-from sqlalchemy import ForeignKey, String, Text
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,3 +24,5 @@ class SavedParcel(Base, TimestampMixin):
         JSONB, nullable=False, default=list, server_default="[]"
     )
     note: Mapped[str | None] = mapped_column(Text)
+    snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    snapshot_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

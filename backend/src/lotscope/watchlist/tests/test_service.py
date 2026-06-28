@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.core.errors import NotFoundError, QuotaExceededError
 from lotscope.watchlist.schemas import SavedParcelCreate, SavedParcelUpdate
 from lotscope.watchlist.service import (
+    acknowledge,
     add_saved,
     count_saved,
     is_saved,
@@ -106,3 +107,29 @@ async def test_update_missing_raises(db_session: AsyncSession) -> None:
     user_id = await _seed(db_session)
     with pytest.raises(NotFoundError):
         await update_saved(db_session, user_id, "000000001", SavedParcelUpdate(note="x"))
+
+
+async def test_change_alerts_detected_and_acknowledged(db_session: AsyncSession) -> None:
+    user_id = await _seed(db_session)
+    await add_saved(db_session, user_id, SavedParcelCreate(parcel_number="000000001"), limit=25)
+
+    # at save time there were no signals; now the parcel becomes distressed
+    await db_session.execute(
+        text(
+            "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, in_sheriff_sale) "
+            "VALUES ('000000001', true, 12000, true)"
+        )
+    )
+    await db_session.flush()
+
+    items = await list_saved(db_session, user_id)
+    item = items[0]
+    assert item.has_alerts is True
+    codes = {change.code for change in item.changes}
+    assert {"sheriff_sale", "delinquent"} <= codes
+
+    # marking seen re-snapshots, clearing the alerts
+    await acknowledge(db_session, user_id, "000000001")
+    after = await list_saved(db_session, user_id)
+    assert after[0].has_alerts is False
+    assert after[0].changes == []

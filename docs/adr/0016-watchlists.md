@@ -24,5 +24,5 @@ PRD §5.9 lists **Watchlists** ("save parcels with tags and notes") as **Core** 
 
 - Establishes the **user-content table pattern** (composite user×entity PK, cascade deletes, tier cap) for the deal pipeline, notes/tasks, and saved searches to follow.
 - The list endpoint joins to `parcel_verdict`; a saved parcel with no computed verdict simply shows a null opportunity score — acceptable.
-- Watchlists are now the natural trigger source for **change-alerts** (a saved parcel's tax/L&I/price changing) — the recommended next feature building on this.
-- **Deferred:** shared/team watchlists, saved-search criteria (vs. saved parcels), and alerts — all build on this foundation.
+- Watchlists are the trigger source for **change-alerts**, now built on this foundation (ADR-0017).
+- **Deferred:** shared/team watchlists and saved-search criteria (vs. saved parcels) — both build on this foundation.
