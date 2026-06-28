@@ -26,6 +26,8 @@ from lotscope.api.deps import (
     get_redis,
     get_session,
 )
+from lotscope.assemblage.schemas import AssemblageResult
+from lotscope.assemblage.service import compute_assemblage
 from lotscope.core.errors import NotFoundError, QuotaExceededError
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
@@ -109,6 +111,16 @@ async def parcel_envelope(
     if envelope is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return envelope
+
+
+@router.get("/{parcel_number}/assemblage", response_model=AssemblageResult)
+async def parcel_assemblage(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> AssemblageResult:
+    result = await compute_assemblage(session, parcel_number)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
 
 
 @router.get("/{parcel_number}/comps", response_model=ValuationResult)
