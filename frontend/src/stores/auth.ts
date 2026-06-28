@@ -64,6 +64,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function refreshUser(): Promise<void> {
+    if (token.value === null) return
+    try {
+      user.value = await api.getMe()
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) {
+        persist(null)
+        user.value = null
+      }
+    }
+  }
+
   async function fetchUsage(): Promise<void> {
     if (token.value === null) return
     try {
@@ -89,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     restore,
+    refreshUser,
     fetchUsage,
     logout,
   }

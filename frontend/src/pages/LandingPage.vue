@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 
+import PricingPlans from '@/components/PricingPlans.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -108,6 +109,19 @@ const features = [
           </div>
         </section>
 
+        <section class="pricing-section">
+          <div class="pricing-inner">
+            <div class="text-center q-mb-md">
+              <div class="text-overline text-primary">Pricing</div>
+              <div class="text-h4 text-weight-bold">Simple plans for every operator</div>
+              <div class="text-body1 text-grey-7">
+                Start free. Upgrade when you need unlimited research.
+              </div>
+            </div>
+            <PricingPlans />
+          </div>
+        </section>
+
         <section class="cta">
           <div class="text-h5 text-weight-bold">Start exploring Philadelphia lots</div>
           <q-btn
@@ -164,6 +178,13 @@ const features = [
 .feature-card {
   border-radius: 12px;
   height: 100%;
+}
+.pricing-section {
+  padding: 64px 24px;
+}
+.pricing-inner {
+  max-width: 1040px;
+  margin: 0 auto;
 }
 .cta {
   text-align: center;

@@ -1,8 +1,12 @@
 import type {
+  BillingCadence,
+  CheckoutResponse,
   LayersResponse,
   ParcelAnswer,
   ParcelDetail,
   ParcelSearchResponse,
+  PlansResponse,
+  PortalResponse,
   RegisterPayload,
   TokenResponse,
   Usage,
@@ -81,5 +85,14 @@ export const api = {
   },
   getUsage(): Promise<Usage> {
     return request('/auth/usage')
+  },
+  getPlans(): Promise<PlansResponse> {
+    return request('/billing/plans')
+  },
+  createCheckout(cadence: BillingCadence): Promise<CheckoutResponse> {
+    return request('/billing/checkout', { method: 'POST', body: JSON.stringify({ cadence }) })
+  },
+  createPortal(): Promise<PortalResponse> {
+    return request('/billing/portal', { method: 'POST' })
   },
 }

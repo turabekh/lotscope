@@ -20,6 +20,7 @@ const user = {
   role: 'user',
   tier: 'free',
   is_active: true,
+  subscription_status: null,
   created_at: '',
 }
 

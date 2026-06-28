@@ -1,17 +1,42 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
+import PricingPlans from '@/components/PricingPlans.vue'
+import { ApiError, api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 
 const store = useAuthStore()
 const { user, usage } = storeToRefs(store)
 const router = useRouter()
+const route = useRoute()
 
-onMounted(() => {
-  void store.fetchUsage()
+const checkoutNotice = ref<'success' | 'cancel' | null>(null)
+const portalLoading = ref(false)
+const portalError = ref<string | null>(null)
+
+const isPaid = computed(() => (user.value?.tier ?? 'free') !== 'free')
+
+onMounted(async () => {
+  const flag = route.query.checkout
+  if (flag === 'success' || flag === 'cancel') checkoutNotice.value = flag
+  await store.refreshUser()
+  await store.fetchUsage()
 })
+
+async function manageBilling(): Promise<void> {
+  portalError.value = null
+  portalLoading.value = true
+  try {
+    const { url } = await api.createPortal()
+    window.location.href = url
+  } catch (cause) {
+    portalError.value = cause instanceof ApiError ? cause.message : 'Could not open billing portal.'
+  } finally {
+    portalLoading.value = false
+  }
+}
 
 const metrics = computed(() => {
   if (!usage.value) return []
@@ -47,7 +72,24 @@ async function signOut(): Promise<void> {
     </q-header>
 
     <q-page-container>
-      <q-page class="flex flex-center q-pa-md">
+      <q-page class="column items-center q-pa-md q-gutter-md">
+        <q-banner
+          v-if="checkoutNotice === 'success'"
+          dense
+          class="account-card bg-green-1 text-positive rounded-borders"
+        >
+          <template #avatar><q-icon name="check_circle" color="positive" /></template>
+          Payment received — your plan will update within a moment.
+        </q-banner>
+        <q-banner
+          v-else-if="checkoutNotice === 'cancel'"
+          dense
+          class="account-card bg-grey-2 text-grey-8 rounded-borders"
+        >
+          <template #avatar><q-icon name="info" color="grey-7" /></template>
+          Checkout canceled — no charge was made.
+        </q-banner>
+
         <q-card v-if="user" flat bordered class="account-card">
           <q-card-section class="row items-center q-gutter-md">
             <q-avatar size="56px" color="primary" text-color="white" class="text-h5 text-weight-bold">
@@ -97,14 +139,27 @@ async function signOut(): Promise<void> {
 
           <q-separator />
 
-          <q-card-section>
+          <q-card-section v-if="isPaid">
             <div class="row items-center">
               <div>
-                <div class="text-subtitle2">Need more questions?</div>
-                <div class="text-caption text-grey-7">Paid plans are coming soon.</div>
+                <div class="text-subtitle2">Billing</div>
+                <div class="text-caption text-grey-7">
+                  Update payment, switch plans, or cancel anytime.
+                </div>
+                <div v-if="portalError" class="text-caption text-negative q-mt-xs">
+                  {{ portalError }}
+                </div>
               </div>
               <q-space />
-              <q-btn outline disable color="primary" no-caps label="Upgrade" />
+              <q-btn
+                outline
+                color="primary"
+                no-caps
+                icon="credit_card"
+                label="Manage billing"
+                :loading="portalLoading"
+                @click="manageBilling"
+              />
             </div>
           </q-card-section>
 
@@ -114,6 +169,16 @@ async function signOut(): Promise<void> {
             <q-btn flat no-caps color="negative" icon="logout" label="Sign out" @click="signOut" />
           </q-card-actions>
         </q-card>
+
+        <q-card v-if="!isPaid" flat bordered class="pricing-card">
+          <q-card-section class="text-center">
+            <div class="text-h6">Upgrade your plan</div>
+            <div class="text-body2 text-grey-7">Unlock unlimited verdicts and more AI questions.</div>
+          </q-card-section>
+          <q-card-section>
+            <PricingPlans />
+          </q-card-section>
+        </q-card>
       </q-page>
     </q-page-container>
   </q-layout>
@@ -122,6 +187,11 @@ async function signOut(): Promise<void> {
 <style scoped>
 .account-card {
   width: 520px;
+  max-width: 94vw;
+  border-radius: 14px;
+}
+.pricing-card {
+  width: 960px;
   max-width: 94vw;
   border-radius: 14px;
 }

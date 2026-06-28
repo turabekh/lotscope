@@ -118,12 +118,39 @@ export interface User {
   role: string
   tier: string
   is_active: boolean
+  subscription_status: string | null
   created_at: string
 }
 
 export interface TokenResponse {
   access_token: string
   token_type: string
+}
+
+export type BillingCadence = 'monthly' | 'annual'
+
+export interface PlanInfo {
+  tier: string
+  name: string
+  tagline: string
+  price_monthly_cents: number | null
+  price_annual_cents: number | null
+  action: 'current' | 'checkout' | 'contact'
+  highlights: string[]
+  is_current: boolean
+}
+
+export interface PlansResponse {
+  plans: PlanInfo[]
+  contact_url: string
+}
+
+export interface CheckoutResponse {
+  url: string
+}
+
+export interface PortalResponse {
+  url: string
 }
 
 export interface RegisterPayload {
