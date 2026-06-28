@@ -8,11 +8,18 @@ from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.accounts.models import User
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.schemas import ParcelAnswer
 from lotscope.ai.service import ask_the_parcel
-from lotscope.api.deps import get_embedder, get_generator, get_redis, get_session
+from lotscope.api.deps import (
+    get_current_user,
+    get_embedder,
+    get_generator,
+    get_redis,
+    get_session,
+)
 from lotscope.core.errors import NotFoundError
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
@@ -86,6 +93,7 @@ async def ask_parcel(
     embedder: Annotated[Embedder, Depends(get_embedder)],
     generator: Annotated[StructuredGenerator, Depends(get_generator)],
     redis: Annotated[Redis, Depends(get_redis)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ParcelAnswer:
     cache_key = _ask_cache_key(parcel_number, body.question)
     try:

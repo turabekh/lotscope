@@ -7,11 +7,13 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.accounts.models import User
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
 from lotscope.ai.retrieval import add_document
 from lotscope.api.app import create_app
 from lotscope.api.deps import (
     get_app_settings,
+    get_current_user,
     get_embedder,
     get_generator,
     get_redis,
@@ -19,6 +21,18 @@ from lotscope.api.deps import (
 )
 from lotscope.core.config import Settings
 from lotscope.zoning.seed import seed_zoning_standards
+
+
+def _fake_user() -> User:
+    return User(
+        id=1,
+        email="member@example.com",
+        hashed_password="x",
+        full_name=None,
+        role="user",
+        tier="free",
+        is_active=True,
+    )
 
 
 class _FakeRedis:
@@ -169,6 +183,7 @@ async def test_ask_endpoint(db_session: AsyncSession) -> None:
     app.dependency_overrides[get_embedder] = _FakeEmbedder
     app.dependency_overrides[get_generator] = lambda: generator
     app.dependency_overrides[get_redis] = lambda: fake_redis
+    app.dependency_overrides[get_current_user] = _fake_user
 
     async with _client(app) as client:
         resp = await client.post(
@@ -186,6 +201,20 @@ async def test_ask_endpoint(db_session: AsyncSession) -> None:
     assert repeat.status_code == 200
     assert repeat.json() == body
     assert generator.calls == 1
+
+
+@pytest.mark.integration
+async def test_ask_endpoint_requires_authentication(db_session: AsyncSession) -> None:
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_app_settings] = lambda: Settings(
+        _env_file=None, secret_key="test-secret-key-that-is-at-least-32-bytes-long"
+    )
+    app.dependency_overrides[get_embedder] = _FakeEmbedder
+    app.dependency_overrides[get_generator] = lambda: _FakeGenerator()
+    app.dependency_overrides[get_redis] = lambda: _FakeRedis()
+    async with _client(app) as client:
+        resp = await client.post("/parcels/000000001/ask", json={"question": "Hi?"})
+    assert resp.status_code == 401
 
 
 async def test_cors_allows_configured_origin() -> None:
