@@ -1,15 +1,51 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { useQuasar } from 'quasar'
+import { computed, onMounted, ref } from 'vue'
 
 import AskBox from '@/components/AskBox.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
+import { ApiError } from '@/lib/api'
 import { useParcelStore } from '@/stores/parcel'
+import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useParcelStore()
 const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
+const watchlist = useWatchlistStore()
+const $q = useQuasar()
+const saving = ref(false)
+
+const isSaved = computed(() =>
+  detail.value ? watchlist.isSaved(detail.value.parcel_number) : false,
+)
+
+onMounted(() => void watchlist.ensureLoaded())
+
+async function toggleSave(): Promise<void> {
+  if (detail.value === null || saving.value) return
+  const parcelNumber = detail.value.parcel_number
+  saving.value = true
+  try {
+    if (watchlist.isSaved(parcelNumber)) {
+      await watchlist.remove(parcelNumber)
+      $q.notify({ message: 'Removed from watchlist', color: 'grey-8', icon: 'bookmark_remove' })
+    } else {
+      await watchlist.add(parcelNumber)
+      $q.notify({ message: 'Saved to watchlist', color: 'positive', icon: 'bookmark_added' })
+    }
+  } catch (cause) {
+    const message =
+      cause instanceof ApiError && cause.status === 429
+        ? cause.message
+        : 'Could not update your watchlist.'
+    $q.notify({ message, color: 'negative', icon: 'error' })
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 
 <template>
@@ -18,6 +54,20 @@ const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
 
     <template v-if="detail">
       <div class="panel-header">
+        <q-btn
+          round
+          unelevated
+          :color="isSaved ? 'amber-7' : 'white'"
+          :text-color="isSaved ? 'white' : 'primary'"
+          :icon="isSaved ? 'bookmark' : 'bookmark_border'"
+          size="sm"
+          class="save-btn"
+          :loading="saving"
+          :aria-label="isSaved ? 'Remove from watchlist' : 'Save to watchlist'"
+          @click="toggleSave"
+        >
+          <q-tooltip>{{ isSaved ? 'Saved — click to remove' : 'Save to watchlist' }}</q-tooltip>
+        </q-btn>
         <div class="text-h6 ellipsis-2">{{ detail.address ?? detail.parcel_number }}</div>
         <div class="text-caption text-grey-3">Parcel {{ detail.parcel_number }}</div>
         <div class="q-gutter-xs q-mt-sm">
@@ -141,6 +191,15 @@ const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
   background: var(--lot-bg);
   padding-bottom: 36px;
   min-height: 100%;
+}
+.save-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+.panel-header .text-h6 {
+  padding-right: 44px;
 }
 .ellipsis-2 {
   display: -webkit-box;

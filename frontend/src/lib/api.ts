@@ -18,6 +18,7 @@ import type {
   User,
   ValuationResult,
   VerdictResult,
+  WatchlistResponse,
 } from '@/lib/types'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -49,6 +50,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null
     throw new ApiError(response.status, body?.detail ?? response.statusText)
   }
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
@@ -89,6 +91,27 @@ export const api = {
     if (params.vacantOnly) query.set('vacant_only', 'true')
     if (params.zipCode) query.set('zip_code', params.zipCode)
     return request(`/leads?${query.toString()}`)
+  },
+  getWatchlist(): Promise<WatchlistResponse> {
+    return request('/watchlist')
+  },
+  addToWatchlist(parcelNumber: string, tags: string[] = [], note: string | null = null): Promise<void> {
+    return request('/watchlist', {
+      method: 'POST',
+      body: JSON.stringify({ parcel_number: parcelNumber, tags, note }),
+    })
+  },
+  updateWatchlistItem(
+    parcelNumber: string,
+    payload: { tags?: string[]; note?: string | null },
+  ): Promise<void> {
+    return request(`/watchlist/${encodeURIComponent(parcelNumber)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  },
+  removeFromWatchlist(parcelNumber: string): Promise<void> {
+    return request(`/watchlist/${encodeURIComponent(parcelNumber)}`, { method: 'DELETE' })
   },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {

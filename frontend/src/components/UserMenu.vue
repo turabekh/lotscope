@@ -23,6 +23,10 @@ function goAccount(): void {
 function goLeads(): void {
   void router.push({ name: 'leads' })
 }
+
+function goWatchlist(): void {
+  void router.push({ name: 'watchlist' })
+}
 </script>
 
 <template>
@@ -48,6 +52,10 @@ function goLeads(): void {
           </q-item-section>
         </q-item>
         <q-separator />
+        <q-item v-close-popup clickable @click="goWatchlist">
+          <q-item-section avatar><q-icon name="bookmark" /></q-item-section>
+          <q-item-section>My watchlist</q-item-section>
+        </q-item>
         <q-item v-close-popup clickable @click="goLeads">
           <q-item-section avatar><q-icon name="sell" /></q-item-section>
           <q-item-section>Motivated-seller leads</q-item-section>

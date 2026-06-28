@@ -68,6 +68,25 @@ export interface EnvelopeResult {
   computed_at: string
 }
 
+export interface WatchlistItem {
+  parcel_number: string
+  address: string | null
+  owner: string | null
+  base_zoning_code: string | null
+  is_vacant: boolean | null
+  market_value: number | null
+  opportunity_score: number | null
+  tags: string[]
+  note: string | null
+  created_at: string
+}
+
+export interface WatchlistResponse {
+  limit: number | null
+  used: number
+  items: WatchlistItem[]
+}
+
 export type DistressTier = 'high' | 'medium' | 'low' | 'none'
 
 export interface DistressFactor {

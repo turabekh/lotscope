@@ -38,6 +38,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/LeadsPage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/watchlist',
+    name: 'watchlist',
+    component: () => import('@/pages/WatchlistPage.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 export const router = createRouter({

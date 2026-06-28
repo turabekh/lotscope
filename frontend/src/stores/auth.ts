@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import { ApiError, api, setAuthToken } from '@/lib/api'
 import type { RegisterPayload, Usage, User } from '@/lib/types'
+import { useWatchlistStore } from '@/stores/watchlist'
 
 const TOKEN_KEY = 'lotscope_token'
 
@@ -89,6 +90,7 @@ export const useAuthStore = defineStore('auth', () => {
     persist(null)
     user.value = null
     usage.value = null
+    useWatchlistStore().reset()
   }
 
   return {
