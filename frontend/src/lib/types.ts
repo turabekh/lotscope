@@ -68,6 +68,12 @@ export interface EnvelopeResult {
   computed_at: string
 }
 
+export interface WatchlistChange {
+  code: string
+  label: string
+  severity: 'high' | 'medium' | 'info'
+}
+
 export interface WatchlistItem {
   parcel_number: string
   address: string | null
@@ -79,11 +85,14 @@ export interface WatchlistItem {
   tags: string[]
   note: string | null
   created_at: string
+  changes: WatchlistChange[]
+  has_alerts: boolean
 }
 
 export interface WatchlistResponse {
   limit: number | null
   used: number
+  alerts: number
   items: WatchlistItem[]
 }
 

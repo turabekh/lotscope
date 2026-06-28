@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useAuthStore()
 const { user, isAuthenticated } = storeToRefs(store)
+const watchlist = useWatchlistStore()
+const { alerts } = storeToRefs(watchlist)
 const router = useRouter()
 
 const initial = computed(() => (user.value?.email ?? '?').charAt(0).toUpperCase())
+
+watch(
+  isAuthenticated,
+  (value) => {
+    if (value) void watchlist.ensureLoaded()
+  },
+  { immediate: true },
+)
 
 function signOut(): void {
   store.logout()
@@ -43,6 +54,7 @@ function goWatchlist(): void {
     <q-avatar size="30px" color="white" text-color="primary" class="text-weight-bold">
       {{ initial }}
     </q-avatar>
+    <q-badge v-if="alerts > 0" color="negative" floating rounded>{{ alerts }}</q-badge>
     <q-menu anchor="bottom right" self="top right">
       <q-list style="min-width: 200px">
         <q-item>
@@ -55,6 +67,9 @@ function goWatchlist(): void {
         <q-item v-close-popup clickable @click="goWatchlist">
           <q-item-section avatar><q-icon name="bookmark" /></q-item-section>
           <q-item-section>My watchlist</q-item-section>
+          <q-item-section v-if="alerts > 0" side>
+            <q-badge color="negative" rounded>{{ alerts }}</q-badge>
+          </q-item-section>
         </q-item>
         <q-item v-close-popup clickable @click="goLeads">
           <q-item-section avatar><q-icon name="sell" /></q-item-section>

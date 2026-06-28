@@ -430,6 +430,27 @@ function applyAssemblage(): void {
   map.setPaintProperty('assemblage-line', 'line-color', color)
 }
 
+function focusSelected(): void {
+  if (!map || !map.getLayer('parcel-selected')) return
+  const selected = detail.value
+  const filter: FilterSpecification = [
+    '==',
+    ['get', 'parcel_number'],
+    selected?.parcel_number ?? '',
+  ]
+  map.setFilter('parcel-selected', filter)
+  map.setFilter('parcel-selected-fill', filter)
+  if (selected && selected.longitude !== null && selected.latitude !== null) {
+    map.flyTo({
+      center: [selected.longitude, selected.latitude],
+      zoom: 18.5,
+      pitch: show3d.value ? 55 : map.getPitch(),
+      duration: 1000,
+      essential: true,
+    })
+  }
+}
+
 function addParcelLayers(instance: maplibregl.Map): void {
   for (const pin of MARKER_PINS) {
     if (!instance.hasImage(pin.id)) {
@@ -560,6 +581,11 @@ onMounted(() => {
     if (!map) return
     addParcelLayers(map)
     void applyBasemap(basemap.value)
+    focusSelected()
+    applyAssemblage()
+    if (show3d.value && detail.value !== null) void parcelStore.loadEnvelope()
+    renderEnvelope()
+    applyPitch()
   })
   map.on('moveend', scheduleAttributionUpdate)
 })
@@ -596,25 +622,7 @@ watch(assemblage, () => {
   applyAssemblage()
 })
 
-watch(detail, (selected) => {
-  if (!map || !map.getLayer('parcel-selected')) return
-  const filter: FilterSpecification = [
-    '==',
-    ['get', 'parcel_number'],
-    selected?.parcel_number ?? '',
-  ]
-  map.setFilter('parcel-selected', filter)
-  map.setFilter('parcel-selected-fill', filter)
-  if (selected && selected.longitude !== null && selected.latitude !== null) {
-    map.flyTo({
-      center: [selected.longitude, selected.latitude],
-      zoom: 18.5,
-      pitch: show3d.value ? 55 : map.getPitch(),
-      duration: 1000,
-      essential: true,
-    })
-  }
-})
+watch(detail, () => focusSelected())
 
 onBeforeUnmount(() => {
   if (attributionTimer) clearTimeout(attributionTimer)

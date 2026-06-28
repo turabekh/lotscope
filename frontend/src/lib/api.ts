@@ -113,6 +113,9 @@ export const api = {
   removeFromWatchlist(parcelNumber: string): Promise<void> {
     return request(`/watchlist/${encodeURIComponent(parcelNumber)}`, { method: 'DELETE' })
   },
+  markWatchlistSeen(parcelNumber: string): Promise<void> {
+    return request(`/watchlist/${encodeURIComponent(parcelNumber)}/seen`, { method: 'POST' })
+  },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {
       method: 'POST',

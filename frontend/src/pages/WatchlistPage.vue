@@ -11,7 +11,7 @@ import { useWatchlistStore } from '@/stores/watchlist'
 const router = useRouter()
 const parcelStore = useParcelStore()
 const watchlist = useWatchlistStore()
-const { items, limit, used, loading } = storeToRefs(watchlist)
+const { items, limit, used, loading, alerts } = storeToRefs(watchlist)
 
 onMounted(() => void watchlist.load())
 
@@ -20,6 +20,16 @@ function scoreColor(score: number | null): string {
   if (score >= 65) return 'positive'
   if (score >= 45) return 'amber-8'
   return 'negative'
+}
+
+function changeColor(severity: string): string {
+  if (severity === 'high') return 'negative'
+  if (severity === 'medium') return 'warning'
+  return 'info'
+}
+
+function markSeen(item: WatchlistItem): void {
+  void watchlist.markSeen(item.parcel_number)
 }
 
 function openParcel(item: WatchlistItem): void {
@@ -56,6 +66,9 @@ function remove(item: WatchlistItem): void {
           <div class="text-caption text-grey-7 q-mb-sm row items-center">
             <q-icon name="bookmark" size="16px" class="q-mr-xs" />
             {{ used }} saved<span v-if="limit !== null">&nbsp;of {{ limit }}</span>.
+            <q-badge v-if="alerts > 0" color="negative" class="q-ml-sm">
+              {{ alerts }} with updates
+            </q-badge>
             <q-btn
               v-if="limit !== null && used >= limit"
               flat
@@ -116,6 +129,30 @@ function remove(item: WatchlistItem): void {
                 />
               </div>
 
+              <div v-if="item.changes.length" class="wl-changes">
+                <q-icon name="notifications_active" size="16px" color="negative" class="q-mr-xs" />
+                <q-badge
+                  v-for="change in item.changes"
+                  :key="change.code"
+                  :color="changeColor(change.severity)"
+                  text-color="white"
+                  class="wl-change"
+                >
+                  {{ change.label }}
+                </q-badge>
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  color="grey-7"
+                  icon="done"
+                  label="Mark seen"
+                  class="q-ml-auto"
+                  @click="markSeen(item)"
+                />
+              </div>
+
               <q-select
                 :model-value="item.tags"
                 use-input
@@ -165,6 +202,20 @@ function remove(item: WatchlistItem): void {
 .wl-head {
   display: flex;
   align-items: center;
+}
+.wl-changes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: var(--lot-radius-sm);
+  background: #fff7f5;
+  border: 1px solid #ffd9cf;
+}
+.wl-change {
+  font-size: 10.5px;
 }
 .wl-title {
   flex: 1;

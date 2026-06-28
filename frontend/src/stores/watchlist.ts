@@ -13,6 +13,7 @@ export const useWatchlistStore = defineStore('watchlist', () => {
   const savedNumbers = computed(() => new Set(items.value.map((item) => item.parcel_number)))
   const used = computed(() => items.value.length)
   const atLimit = computed(() => limit.value !== null && used.value >= limit.value)
+  const alerts = computed(() => items.value.filter((item) => item.has_alerts).length)
 
   function isSaved(parcelNumber: string): boolean {
     return savedNumbers.value.has(parcelNumber)
@@ -56,6 +57,15 @@ export const useWatchlistStore = defineStore('watchlist', () => {
     }
   }
 
+  async function markSeen(parcelNumber: string): Promise<void> {
+    await api.markWatchlistSeen(parcelNumber)
+    const item = items.value.find((entry) => entry.parcel_number === parcelNumber)
+    if (item) {
+      item.changes = []
+      item.has_alerts = false
+    }
+  }
+
   function reset(): void {
     items.value = []
     limit.value = null
@@ -70,12 +80,14 @@ export const useWatchlistStore = defineStore('watchlist', () => {
     savedNumbers,
     used,
     atLimit,
+    alerts,
     isSaved,
     load,
     ensureLoaded,
     add,
     remove,
     updateItem,
+    markSeen,
     reset,
   }
 })
