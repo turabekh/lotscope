@@ -23,6 +23,7 @@ dependencies = [
     "pyjwt>=2.13.0",
     "stripe>=11.0.0",
     "pywebpush>=2.3.0",
+    "fpdf2>=2.8.7",
 ]
 
 [project.optional-dependencies]

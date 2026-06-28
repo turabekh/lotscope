@@ -2,7 +2,7 @@ import contextlib
 import hashlib
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -33,6 +33,8 @@ from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
+from lotscope.reports.dossier import dossier_filename
+from lotscope.reports.service import build_parcel_dossier
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict.schemas import VerdictResult
@@ -133,6 +135,22 @@ async def parcel_distress(
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result
+
+
+@router.get("/{parcel_number}/dossier")
+async def parcel_dossier(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> Response:
+    pdf = await build_parcel_dossier(session, parcel_number)
+    if pdf is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{dossier_filename(parcel_number)}"'
+        },
+    )
 
 
 @router.get("/{parcel_number}/comps", response_model=ValuationResult)

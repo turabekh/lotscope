@@ -388,6 +388,19 @@ async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
+async def test_dossier_endpoint_returns_pdf(db_session: AsyncSession) -> None:
+    await _setup_verdict_parcel(db_session)
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/parcels/000000001/dossier")
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert "dossier-000000001.pdf" in resp.headers["content-disposition"]
+    assert resp.content[:4] == b"%PDF"
+
+
+@pytest.mark.integration
 async def test_pipeline_add_move_and_remove(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
