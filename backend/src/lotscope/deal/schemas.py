@@ -10,6 +10,7 @@ class DealAssumptionsSchema(BaseModel):
     selling_cost_pct: float
     target_margin: float
     default_unit_sqft: float
+    max_unit_sqft: float
 
 
 class DealResult(BaseModel):

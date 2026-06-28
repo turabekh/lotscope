@@ -35,6 +35,7 @@ def _deal(**overrides: object) -> DealResult:
             selling_cost_pct=0.07,
             target_margin=0.2,
             default_unit_sqft=1200.0,
+            max_unit_sqft=3000.0,
         ),
         "reasons": [],
         "sources": [{"dimension": "deal"}],

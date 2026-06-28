@@ -17,6 +17,7 @@ class DealAssumptions:
     selling_cost_pct: float
     target_margin: float
     default_unit_sqft: float
+    max_unit_sqft: float
 
 
 @dataclass(frozen=True)
@@ -109,12 +110,21 @@ def analyze_deal(inputs: DealInputs, assumptions: DealAssumptions) -> DealAnalys
 
     footprint = inputs.buildable_area_sqft
     floors = inputs.estimated_floors
+    unit_cap = units * assumptions.max_unit_sqft
     if footprint and footprint > 0 and floors:
-        gross_floor_area = footprint * floors
-        gfa_reason = (
-            f"Gross floor area ~{gross_floor_area:,.0f} sqft "
-            f"({footprint:,.0f} sqft footprint x {floors} floor(s))."
-        )
+        envelope_gfa = footprint * floors
+        gross_floor_area = min(envelope_gfa, unit_cap)
+        if gross_floor_area < envelope_gfa:
+            gfa_reason = (
+                f"Gross floor area ~{gross_floor_area:,.0f} sqft "
+                f"(capped at {units} unit(s) x {assumptions.max_unit_sqft:,.0f} sqft; "
+                f"envelope allows ~{envelope_gfa:,.0f} sqft)."
+            )
+        else:
+            gfa_reason = (
+                f"Gross floor area ~{gross_floor_area:,.0f} sqft "
+                f"({footprint:,.0f} sqft footprint x {floors} floor(s))."
+            )
     else:
         gross_floor_area = units * assumptions.default_unit_sqft
         gfa_reason = (

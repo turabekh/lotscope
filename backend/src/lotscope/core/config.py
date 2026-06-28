@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     deal_selling_cost_pct: float = 0.07
     deal_target_margin: float = 0.20
     deal_default_unit_sqft: float = 1200.0
+    deal_max_unit_sqft: float = 3000.0
 
     google_maps_api_key: str | None = None
     google_map_tiles_url: str = "https://tile.googleapis.com/v1"

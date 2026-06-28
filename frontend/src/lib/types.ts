@@ -147,6 +147,7 @@ export interface DealAssumptions {
   selling_cost_pct: number
   target_margin: number
   default_unit_sqft: number
+  max_unit_sqft: number
 }
 
 export interface DealResult {

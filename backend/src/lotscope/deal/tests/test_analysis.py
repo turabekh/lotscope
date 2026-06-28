@@ -6,6 +6,7 @@ ASSUMPTIONS = DealAssumptions(
     selling_cost_pct=0.07,
     target_margin=0.20,
     default_unit_sqft=1200.0,
+    max_unit_sqft=3000.0,
 )
 
 
@@ -37,6 +38,23 @@ def test_gross_floor_area_uses_envelope_when_available() -> None:
 def test_gross_floor_area_falls_back_to_default_unit_size() -> None:
     result = analyze_deal(_inputs(buildable_area_sqft=None, estimated_floors=None), ASSUMPTIONS)
     assert result.gross_floor_area_sqft == 3600.0
+
+
+def test_oversized_envelope_is_capped_by_unit_count() -> None:
+    result = analyze_deal(
+        _inputs(units=1, buildable_area_sqft=37449.0, estimated_floors=3), ASSUMPTIONS
+    )
+    assert result.gross_floor_area_sqft == 3000.0
+    assert result.construction_cost == 525000.0
+    assert any("capped" in reason for reason in result.reasons)
+
+
+def test_normal_envelope_is_not_capped() -> None:
+    result = analyze_deal(
+        _inputs(units=2, buildable_area_sqft=1000.0, estimated_floors=3), ASSUMPTIONS
+    )
+    assert result.gross_floor_area_sqft == 3000.0
+    assert not any("capped" in reason for reason in result.reasons)
 
 
 def test_feasibility_identity_holds() -> None:

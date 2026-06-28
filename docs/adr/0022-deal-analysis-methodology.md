@@ -28,3 +28,10 @@ PRD §5.4 — beyond the land AVM, the core developer persona needs the deal mat
 - **Standalone first.** This slice ships the engine, endpoint, and a parcel-panel deal panel. Folding `deal_score` / MAO into the `parcel_verdict` contract (migration + batch recompute) is a deliberate follow-up so this commit stays atomic; the verdict contract is unchanged here.
 - **ARV is rowhouse-shaped.** Treating each by-right unit as one nearby improved sale fits Philadelphia infill (rowhouse/duplex/triplex) well; it is a weaker proxy for large multifamily or commercial, where a future revision can move to a finished-floor-area $/sqft basis once building gross floor area is ingested.
 - **Deferred:** build-to-rent / hold modeling, full scenario comparison (multiple structures side by side), and exporting the pro-forma as a report (§5.4, §5.10).
+
+## Addendum (2026-06-28): GFA cap by unit count
+
+The original `GFA = buildable_area_sqft x estimated_floors` overstated construction when the by-right unit count and the physical envelope disagreed — e.g. an RSA-5 parcel with one by-right unit but a 37,449 sq ft buildable footprint produced a ~$22M construction cost, a nonsensical MAO, and a margin large enough to overflow the verdict's `est_margin` column. You only build the units you are permitted, not the entire envelope.
+
+GFA is now `min(envelope_gfa, units x max_unit_sqft)`, where `max_unit_sqft` is a new configurable assumption (default 3,000 sq ft — a generous per-unit ceiling across all floors). The cap only binds when the envelope implies an implausible floor area per by-right unit; for normal parcels the envelope still drives GFA, and the no-envelope fallback (`units x default_unit_sqft`) is unchanged. When the cap binds, the deal `reasons` say so explicitly.
+

@@ -41,6 +41,7 @@ def _assumptions(
         else settings.deal_selling_cost_pct,
         target_margin=target_margin if target_margin is not None else settings.deal_target_margin,
         default_unit_sqft=settings.deal_default_unit_sqft,
+        max_unit_sqft=settings.deal_max_unit_sqft,
     )
 
 
@@ -160,6 +161,7 @@ async def build_deal(
             selling_cost_pct=assumptions.selling_cost_pct,
             target_margin=assumptions.target_margin,
             default_unit_sqft=assumptions.default_unit_sqft,
+            max_unit_sqft=assumptions.max_unit_sqft,
         ),
         reasons=analysis.reasons,
         sources=[
