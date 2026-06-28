@@ -33,6 +33,13 @@ class ParcelVerdict(Base, TimestampMixin, ProvenanceMixin):
     value_confidence: Mapped[float | None] = mapped_column(Numeric(5, 4))
     assessment_market_gap: Mapped[float | None] = mapped_column(Numeric(14, 2))
 
+    arv: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    est_profit: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    est_margin: Mapped[float | None] = mapped_column(Numeric(6, 4))
+    max_allowable_offer: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    deal_score: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    is_underpriced: Mapped[bool | None] = mapped_column(Boolean)
+
     risk_score: Mapped[float | None] = mapped_column(Numeric(5, 2))
     risk_flags: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, server_default="[]"

@@ -21,6 +21,12 @@ class VerdictResult(BaseModel):
     value_estimate_high: float | None
     value_confidence: float | None
     assessment_market_gap: float | None
+    arv: float | None
+    est_profit: float | None
+    est_margin: float | None
+    max_allowable_offer: float | None
+    deal_score: float | None
+    is_underpriced: bool | None
     risk_score: float | None
     risk_flags: list[dict[str, Any]]
     sources: list[dict[str, Any]]

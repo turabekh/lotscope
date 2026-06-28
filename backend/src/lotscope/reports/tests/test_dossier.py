@@ -46,6 +46,12 @@ def test_full_dossier_renders_all_sections() -> None:
         value_estimate_high=None,
         value_confidence=None,
         assessment_market_gap=None,
+        arv=None,
+        est_profit=None,
+        est_margin=None,
+        max_allowable_offer=None,
+        deal_score=None,
+        is_underpriced=None,
         risk_score=30,
         risk_flags=[
             {

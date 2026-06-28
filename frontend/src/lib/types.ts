@@ -46,6 +46,12 @@ export interface VerdictResult {
   value_estimate_high: number | null
   value_confidence: number | null
   assessment_market_gap: number | null
+  arv: number | null
+  est_profit: number | null
+  est_margin: number | null
+  max_allowable_offer: number | null
+  deal_score: number | null
+  is_underpriced: boolean | null
   risk_score: number | null
   risk_flags: RiskFlag[]
   sources: unknown[]

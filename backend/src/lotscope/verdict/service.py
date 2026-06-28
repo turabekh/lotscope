@@ -7,6 +7,7 @@ from sqlalchemy import func, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.deal.service import build_deal
 from lotscope.risk.service import assess_parcel_risk
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict.composition import ComposedVerdict, compose_verdict
@@ -14,7 +15,9 @@ from lotscope.verdict.models import ParcelVerdict
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.zoning.service import assess_parcel as assess_zoning
 
-_PARCEL_SQL = text("SELECT market_value FROM parcel WHERE parcel_number = :parcel_number")
+_PARCEL_SQL = text(
+    "SELECT market_value, base_zoning_code FROM parcel WHERE parcel_number = :parcel_number"
+)
 
 
 def _as_float(value: Any) -> float | None:
@@ -59,6 +62,12 @@ def _to_result(
         value_estimate_high=composed.value_estimate_high,
         value_confidence=composed.value_confidence,
         assessment_market_gap=composed.assessment_market_gap,
+        arv=composed.arv,
+        est_profit=composed.est_profit,
+        est_margin=composed.est_margin,
+        max_allowable_offer=composed.max_allowable_offer,
+        deal_score=composed.deal_score,
+        is_underpriced=composed.is_underpriced,
         risk_score=composed.risk_score,
         risk_flags=composed.risk_flags,
         sources=composed.sources,
@@ -81,10 +90,19 @@ async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictR
     buildability = await assess_zoning(session, parcel_number)
     valuation = await value_parcel(session, parcel_number)
     risk = await assess_parcel_risk(session, parcel_number)
+    deal = await build_deal(
+        session,
+        parcel_number,
+        base_zoning_code=parcel.base_zoning_code,
+        market_value=_as_float(parcel.market_value),
+        buildability=buildability,
+        valuation=valuation,
+    )
     composed = compose_verdict(
         buildability,
         valuation,
         risk,
+        deal,
         assessed_market_value=_as_float(parcel.market_value),
     )
     computed_at = datetime.now(UTC)

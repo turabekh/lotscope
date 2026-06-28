@@ -8,7 +8,9 @@ from lotscope.core.config import get_settings
 from lotscope.deal.analysis import DealAssumptions, DealInputs, analyze_deal
 from lotscope.deal.schemas import DealAssumptionsSchema, DealResult
 from lotscope.valuation.avm import land_use_class
+from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import find_comps, value_parcel
+from lotscope.zoning.schemas import BuildabilityResult
 from lotscope.zoning.service import assess_parcel as assess_zoning
 from lotscope.zoning.service import compute_envelope
 
@@ -57,13 +59,47 @@ async def analyze_parcel_deal(
     subject = (await session.execute(_SUBJECT_SQL, {"parcel_number": parcel_number})).one_or_none()
     if subject is None:
         return None
-    computed_at = datetime.now(UTC)
 
     buildability = await assess_zoning(session, parcel_number)
-    envelope = await compute_envelope(session, parcel_number)
     valuation = await value_parcel(session, parcel_number, radius_ft=radius_ft, years=years)
+    return await build_deal(
+        session,
+        parcel_number,
+        base_zoning_code=subject.base_zoning_code,
+        market_value=_as_float(subject.market_value),
+        buildability=buildability,
+        valuation=valuation,
+        acquisition_price=acquisition_price,
+        construction_cost_per_sqft=construction_cost_per_sqft,
+        soft_cost_pct=soft_cost_pct,
+        selling_cost_pct=selling_cost_pct,
+        target_margin=target_margin,
+        radius_ft=radius_ft,
+        years=years,
+    )
 
-    use_class = land_use_class(subject.base_zoning_code)
+
+async def build_deal(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    base_zoning_code: str | None,
+    market_value: float | None,
+    buildability: BuildabilityResult | None,
+    valuation: ValuationResult | None,
+    acquisition_price: float | None = None,
+    construction_cost_per_sqft: float | None = None,
+    soft_cost_pct: float | None = None,
+    selling_cost_pct: float | None = None,
+    target_margin: float | None = None,
+    radius_ft: float = 1500.0,
+    years: int = 3,
+) -> DealResult:
+    computed_at = datetime.now(UTC)
+
+    envelope = await compute_envelope(session, parcel_number)
+
+    use_class = land_use_class(base_zoning_code)
     finished_comps = await find_comps(
         session,
         parcel_number,
@@ -77,7 +113,7 @@ async def analyze_parcel_deal(
     units = buildability.by_right_units if buildability is not None else None
     land_value = valuation.estimate if valuation is not None else None
     if acquisition_price is None and land_value is None:
-        land_value = _as_float(subject.market_value)
+        land_value = market_value
 
     assumptions = _assumptions(
         construction_cost_per_sqft=construction_cost_per_sqft,
