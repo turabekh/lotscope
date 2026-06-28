@@ -3,10 +3,15 @@ import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
 import { ref } from 'vue'
 
-import { COLOR_MODE_OPTIONS, USE_CLASS_OPTIONS, useFiltersStore } from '@/stores/filters'
+import {
+  BASEMAP_OPTIONS,
+  COLOR_MODE_OPTIONS,
+  USE_CLASS_OPTIONS,
+  useFiltersStore,
+} from '@/stores/filters'
 
 const store = useFiltersStore()
-const { vacantOnly, useClasses, colorMode, show3d, activeCount } = storeToRefs(store)
+const { vacantOnly, useClasses, colorMode, show3d, basemap, activeCount } = storeToRefs(store)
 const $q = useQuasar()
 const open = ref(!$q.screen.lt.sm)
 </script>
@@ -32,6 +37,21 @@ const open = ref(!$q.screen.lt.sm)
       <div v-show="open">
         <q-separator />
         <q-card-section class="q-py-sm q-px-md">
+          <div class="text-caption text-grey-7 q-mb-xs">Base map</div>
+          <q-btn-toggle
+            v-model="basemap"
+            spread
+            no-caps
+            dense
+            unelevated
+            toggle-color="primary"
+            color="grey-3"
+            text-color="grey-9"
+            :options="BASEMAP_OPTIONS"
+          />
+
+          <q-separator class="q-my-sm" />
+
           <div class="text-caption text-grey-7 q-mb-xs">Color lots by</div>
           <q-btn-toggle
             v-model="colorMode"

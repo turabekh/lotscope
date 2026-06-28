@@ -16,6 +16,14 @@ export const USE_CLASS_OPTIONS: UseClassOption[] = [
   { value: 'S', label: 'Special', color: '#2e7d32' },
 ]
 
+export type Basemap = 'satellite' | 'roadmap' | 'osm'
+
+export const BASEMAP_OPTIONS: { value: Basemap; label: string; icon: string }[] = [
+  { value: 'satellite', label: 'Satellite', icon: 'satellite_alt' },
+  { value: 'roadmap', label: 'Roadmap', icon: 'map' },
+  { value: 'osm', label: 'Streets', icon: 'public' },
+]
+
 export type ColorMode = 'vacancy' | 'opportunity' | 'risk'
 
 export const COLOR_MODE_OPTIONS: { value: ColorMode; label: string; icon: string }[] = [
@@ -29,6 +37,7 @@ export const useFiltersStore = defineStore('filters', () => {
   const useClasses = ref<UseClass[]>([])
   const colorMode = ref<ColorMode>('vacancy')
   const show3d = ref(false)
+  const basemap = ref<Basemap>('satellite')
 
   function toggleClass(value: UseClass): void {
     useClasses.value = useClasses.value.includes(value)
@@ -46,5 +55,14 @@ export const useFiltersStore = defineStore('filters', () => {
     () => (vacantOnly.value ? 1 : 0) + (useClasses.value.length > 0 ? 1 : 0),
   )
 
-  return { vacantOnly, useClasses, colorMode, show3d, toggleClass, reset, activeCount }
+  return {
+    vacantOnly,
+    useClasses,
+    colorMode,
+    show3d,
+    basemap,
+    toggleClass,
+    reset,
+    activeCount,
+  }
 })

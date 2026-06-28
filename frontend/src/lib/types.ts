@@ -116,6 +116,13 @@ export interface ParcelAnswer {
   is_informational: boolean
 }
 
+export interface BasemapSession {
+  map_type: string
+  tile_url: string
+  attribution: string
+  tile_size: number
+}
+
 export interface LayerInfo {
   name: string
   source_layer: string

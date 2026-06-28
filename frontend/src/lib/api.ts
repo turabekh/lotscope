@@ -1,4 +1,5 @@
 import type {
+  BasemapSession,
   BillingCadence,
   CheckoutResponse,
   EnvelopeResult,
@@ -77,6 +78,9 @@ export const api = {
   },
   getLayers(): Promise<LayersResponse> {
     return request('/layers')
+  },
+  getBasemapSession(mapType: 'satellite' | 'roadmap'): Promise<BasemapSession> {
+    return request(`/maps/basemap-session?map_type=${mapType}`)
   },
   login(email: string, password: string): Promise<TokenResponse> {
     return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })

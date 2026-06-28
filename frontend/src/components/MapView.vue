@@ -8,6 +8,7 @@ import maplibregl, {
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { api } from '@/lib/api'
 import { useFiltersStore } from '@/stores/filters'
 import { useParcelStore } from '@/stores/parcel'
 
@@ -20,8 +21,10 @@ const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 const parcelStore = useParcelStore()
 const { detail, envelope } = storeToRefs(parcelStore)
 const filters = useFiltersStore()
-const { vacantOnly, useClasses, colorMode, show3d } = storeToRefs(filters)
+const { vacantOnly, useClasses, colorMode, show3d, basemap } = storeToRefs(filters)
 const FEET_TO_METERS = 0.3048
+const OSM_TILES = ['https://tile.openstreetmap.org/{z}/{x}/{y}.png']
+const OSM_ATTRIBUTION = '© OpenStreetMap contributors'
 
 const envelopeCaption = computed(() => {
   const env = envelope.value
@@ -45,14 +48,38 @@ const popup = new maplibregl.Popup({
 const baseStyle: StyleSpecification = {
   version: 8,
   sources: {
-    osm: {
+    basemap: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: OSM_TILES,
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
+      attribution: OSM_ATTRIBUTION,
     },
   },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+  layers: [{ id: 'basemap-layer', type: 'raster', source: 'basemap' }],
+}
+
+async function applyBasemap(id: 'satellite' | 'roadmap' | 'osm'): Promise<void> {
+  if (!map) return
+  let tiles = OSM_TILES
+  let attribution = OSM_ATTRIBUTION
+  let tileSize = 256
+  if (id === 'satellite' || id === 'roadmap') {
+    try {
+      const session = await api.getBasemapSession(id)
+      tiles = [session.tile_url]
+      attribution = session.attribution
+      tileSize = session.tile_size
+    } catch {
+      if (basemap.value !== 'osm') basemap.value = 'osm'
+      return
+    }
+  }
+  if (!map) return
+  if (map.getLayer('basemap-layer')) map.removeLayer('basemap-layer')
+  if (map.getSource('basemap')) map.removeSource('basemap')
+  map.addSource('basemap', { type: 'raster', tiles, tileSize, attribution })
+  const below = map.getLayer('parcels-fill') ? 'parcels-fill' : undefined
+  map.addLayer({ id: 'basemap-layer', type: 'raster', source: 'basemap' }, below)
 }
 
 function classCondition(): ExpressionSpecification | null {
@@ -248,6 +275,11 @@ function popupHtml(properties: Record<string, unknown>): string {
       rows += `<div class="lp-extra">${[byRight, value].filter(Boolean).join(' · ')}</div>`
     }
   }
+  const maxHeight = properties.max_height_ft
+  if (typeof maxHeight === 'number' && maxHeight > 0) {
+    const floors = Math.max(1, Math.floor(maxHeight / 10.5))
+    rows += `<div class="lp-extra">Up to ${maxHeight} ft · ~${floors} floor${floors === 1 ? '' : 's'} by-right</div>`
+  }
   return (
     `<div class="lot-pop"><div class="lp-addr">${address}</div>` +
     `<div class="lp-meta"><span class="lp-zone">${zoning}</span>${vacantTag}</div>` +
@@ -416,8 +448,14 @@ onMounted(() => {
   })
   map.addControl(new maplibregl.NavigationControl(), 'top-right')
   map.on('load', () => {
-    if (map) addParcelLayers(map)
+    if (!map) return
+    addParcelLayers(map)
+    void applyBasemap(basemap.value)
   })
+})
+
+watch(basemap, (id) => {
+  void applyBasemap(id)
 })
 
 watch([vacantOnly, useClasses], () => {
