@@ -98,12 +98,13 @@ const open = ref(!$q.screen.lt.sm)
 
           <q-separator class="q-my-sm" />
 
-          <q-toggle v-model="show3d" dense color="primary">
-            <div class="row items-center no-wrap">
-              <q-icon name="deployed_code" size="18px" class="q-mr-xs" />
-              <span>3D building envelope</span>
-            </div>
-          </q-toggle>
+          <q-toggle
+            v-model="show3d"
+            icon="deployed_code"
+            label="3D building envelope"
+            dense
+            color="primary"
+          />
           <div class="text-caption text-grey-6 q-mb-xs">
             Extrudes the selected lot to its by-right height after setbacks. Approximate.
           </div>

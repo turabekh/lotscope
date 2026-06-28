@@ -44,6 +44,10 @@ function severityHint(severity: string): string {
   return SEVERITY_HINT[severity] ?? ''
 }
 
+const hasValueEstimate = computed(
+  () => props.verdict.value_estimate_low != null || props.verdict.value_estimate_high != null,
+)
+
 const buildStatus = computed<Status>(() => {
   const v = props.verdict
   if (v.summary?.toLowerCase().includes('master plan')) {
@@ -63,9 +67,12 @@ const buildStatus = computed<Status>(() => {
   <q-card flat bordered class="rounded-borders">
     <q-card-section class="row items-center no-wrap q-pb-sm">
       <q-circular-progress
+        show-value
         :value="verdict.opportunity_score"
+        :min="0"
+        :max="100"
         size="74px"
-        :thickness="0.18"
+        :thickness="0.22"
         :color="scoreColor(verdict.opportunity_score)"
         track-color="grey-3"
         class="q-mr-md"
@@ -132,26 +139,32 @@ const buildStatus = computed<Status>(() => {
       <div class="section-title">
         <q-icon name="payments" size="18px" class="q-mr-xs" />Estimated land value
       </div>
-      <div class="text-h6 text-primary">
-        {{ formatRange(verdict.value_estimate_low, verdict.value_estimate_high) }}
-      </div>
-      <div class="row q-col-gutter-sm q-mt-xs">
-        <div class="col-6 stat">
-          <div class="stat-label">Confidence</div>
-          <div class="stat-value">{{ formatPercent(verdict.value_confidence) }}</div>
-          <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-            How tightly recent comparable sales agree. Lower confidence means thin or scattered
-            comps.
-          </q-tooltip>
+      <template v-if="hasValueEstimate">
+        <div class="text-h6 text-primary">
+          {{ formatRange(verdict.value_estimate_low, verdict.value_estimate_high) }}
         </div>
-        <div class="col-6 stat">
-          <div class="stat-label">vs. assessment</div>
-          <div class="stat-value">{{ formatCurrency(verdict.assessment_market_gap) }}</div>
-          <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-            Estimated market value minus the OPA assessed value. A large gap can signal an
-            over- or under-assessment (tax-appeal angle).
-          </q-tooltip>
+        <div class="row q-col-gutter-sm q-mt-xs">
+          <div class="col-6 stat">
+            <div class="stat-label">Confidence</div>
+            <div class="stat-value">{{ formatPercent(verdict.value_confidence) }}</div>
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              How tightly recent comparable sales agree. Lower confidence means thin or scattered
+              comps.
+            </q-tooltip>
+          </div>
+          <div class="col-6 stat">
+            <div class="stat-label">vs. assessment</div>
+            <div class="stat-value">{{ formatCurrency(verdict.assessment_market_gap) }}</div>
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              Estimated market value minus the OPA assessed value. A large gap can signal an
+              over- or under-assessment (tax-appeal angle).
+            </q-tooltip>
+          </div>
         </div>
+      </template>
+      <div v-else class="empty-value">
+        <q-icon name="search_off" size="18px" class="q-mr-xs text-grey-5" />
+        Not enough recorded comparable sales nearby to estimate a land value yet.
       </div>
     </q-card-section>
 
@@ -236,6 +249,13 @@ const buildStatus = computed<Status>(() => {
 }
 .flag-detail {
   white-space: normal;
+  line-height: 1.35;
+}
+.empty-value {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #78909c;
   line-height: 1.35;
 }
 </style>
