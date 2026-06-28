@@ -3,11 +3,20 @@ import type {
   ParcelAnswer,
   ParcelDetail,
   ParcelSearchResponse,
+  RegisterPayload,
+  TokenResponse,
+  User,
   ValuationResult,
   VerdictResult,
 } from '@/lib/types'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+
+let authToken: string | null = null
+
+export function setAuthToken(token: string | null): void {
+  authToken = token
+}
 
 export class ApiError extends Error {
   constructor(
@@ -20,10 +29,12 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'content-type': 'application/json' },
-    ...init,
-  })
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    ...((init?.headers as Record<string, string>) ?? {}),
+  }
+  if (authToken !== null) headers.authorization = `Bearer ${authToken}`
+  const response = await fetch(`${BASE_URL}${path}`, { ...init, headers })
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null
     throw new ApiError(response.status, body?.detail ?? response.statusText)
@@ -57,5 +68,14 @@ export const api = {
   },
   getLayers(): Promise<LayersResponse> {
     return request('/layers')
+  },
+  login(email: string, password: string): Promise<TokenResponse> {
+    return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+  },
+  register(payload: RegisterPayload): Promise<User> {
+    return request('/auth/register', { method: 'POST', body: JSON.stringify(payload) })
+  },
+  getMe(): Promise<User> {
+    return request('/auth/me')
   },
 }

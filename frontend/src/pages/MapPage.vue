@@ -1,17 +1,25 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
+import AuthDialog from '@/components/AuthDialog.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelPanel from '@/components/ParcelPanel.vue'
 import SearchBox from '@/components/SearchBox.vue'
+import UserMenu from '@/components/UserMenu.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useParcelStore } from '@/stores/parcel'
 
 const store = useParcelStore()
+const auth = useAuthStore()
 const $q = useQuasar()
 const drawerOpen = ref(!$q.screen.lt.md)
 const drawerWidth = computed(() => ($q.screen.lt.sm ? Math.min($q.screen.width - 36, 380) : 430))
+
+onMounted(() => {
+  void auth.restore()
+})
 
 function onSelect(parcelNumber: string): void {
   void store.select(parcelNumber)
@@ -36,11 +44,14 @@ function onSelect(parcelNumber: string): void {
         <q-toolbar-title>
           LotScope <span class="text-weight-light">PHL</span>
         </q-toolbar-title>
-        <q-chip dense outline color="white" text-color="white" class="gt-sm">
+        <q-chip dense outline color="white" text-color="white" class="gt-sm q-mr-sm">
           Philadelphia parcel intelligence
         </q-chip>
+        <UserMenu />
       </q-toolbar>
     </q-header>
+
+    <AuthDialog />
 
     <q-drawer
       v-model="drawerOpen"

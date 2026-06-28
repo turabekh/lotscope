@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { ref, watch } from 'vue'
 
 import { ApiError, api } from '@/lib/api'
 import type { ParcelAnswer } from '@/lib/types'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{ parcelNumber: string }>()
+
+const auth = useAuthStore()
+const { isAuthenticated } = storeToRefs(auth)
 
 const question = ref('')
 const answer = ref<ParcelAnswer | null>(null)
@@ -41,7 +46,13 @@ async function ask(): Promise<void> {
     question.value = ''
   } catch (cause) {
     answer.value = null
-    error.value = cause instanceof ApiError ? cause.message : 'Failed to get an answer.'
+    if (cause instanceof ApiError && cause.status === 401) {
+      auth.logout()
+      auth.openDialog()
+      error.value = 'Your session expired — please sign in again.'
+    } else {
+      error.value = cause instanceof ApiError ? cause.message : 'Failed to get an answer.'
+    }
   } finally {
     loading.value = false
   }
@@ -60,34 +71,45 @@ function askSuggestion(text: string): void {
         <q-icon name="forum" size="20px" class="q-mr-sm text-primary" />
         <div class="text-subtitle1">Ask the parcel</div>
       </div>
-      <q-input
-        v-model="question"
-        dense
-        outlined
-        autogrow
-        placeholder="Ask about zoning, height, units, uses…"
-        :disable="loading"
-        @keyup.enter="ask"
-      >
-        <template #append>
-          <q-btn round dense flat icon="send" color="primary" :loading="loading" @click="ask" />
-        </template>
-      </q-input>
 
-      <div class="q-gutter-xs q-mt-sm">
-        <q-chip
-          v-for="text in suggestions"
-          :key="text"
-          clickable
-          dense
-          outline
-          color="primary"
-          :disable="loading"
-          @click="askSuggestion(text)"
-        >
-          {{ text }}
-        </q-chip>
+      <div v-if="!isAuthenticated" class="signin-gate column items-center q-py-md">
+        <q-icon name="lock" size="28px" color="grey-5" />
+        <div class="text-body2 text-grey-7 text-center q-my-sm">
+          Sign in to ask the AI about zoning, height, units, and allowed uses for this parcel.
+        </div>
+        <q-btn unelevated no-caps color="primary" icon="login" label="Sign in to ask" @click="auth.openDialog()" />
       </div>
+
+      <template v-else>
+        <q-input
+          v-model="question"
+          dense
+          outlined
+          autogrow
+          placeholder="Ask about zoning, height, units, uses…"
+          :disable="loading"
+          @keyup.enter="ask"
+        >
+          <template #append>
+            <q-btn round dense flat icon="send" color="primary" :loading="loading" @click="ask" />
+          </template>
+        </q-input>
+
+        <div class="q-gutter-xs q-mt-sm">
+          <q-chip
+            v-for="text in suggestions"
+            :key="text"
+            clickable
+            dense
+            outline
+            color="primary"
+            :disable="loading"
+            @click="askSuggestion(text)"
+          >
+            {{ text }}
+          </q-chip>
+        </div>
+      </template>
 
       <q-banner v-if="error" dense class="bg-red-1 text-negative q-mt-sm rounded-borders">
         {{ error }}
