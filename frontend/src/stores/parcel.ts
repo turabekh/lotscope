@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { ApiError, api } from '@/lib/api'
 import type {
   AssemblageResult,
+  DistressResult,
   EnvelopeResult,
   ParcelDetail,
   VerdictResult,
@@ -15,6 +16,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const envelope = ref<EnvelopeResult | null>(null)
   const assemblage = ref<AssemblageResult | null>(null)
   const assemblageLoading = ref(false)
+  const distress = ref<DistressResult | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const errorStatus = ref<number | null>(null)
@@ -26,10 +28,12 @@ export const useParcelStore = defineStore('parcel', () => {
     verdict.value = null
     envelope.value = null
     assemblage.value = null
+    distress.value = null
     try {
       detail.value = await api.getParcel(parcelNumber)
       verdict.value = await loadVerdict(parcelNumber)
       void loadAssemblage(parcelNumber)
+      void loadDistress(parcelNumber)
     } catch (cause) {
       detail.value = null
       if (cause instanceof ApiError) {
@@ -83,11 +87,21 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
+  async function loadDistress(parcelNumber: string): Promise<void> {
+    try {
+      const result = await api.getDistress(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) distress.value = result
+    } catch {
+      distress.value = null
+    }
+  }
+
   function clear(): void {
     detail.value = null
     verdict.value = null
     envelope.value = null
     assemblage.value = null
+    distress.value = null
     error.value = null
     errorStatus.value = null
   }
@@ -98,6 +112,7 @@ export const useParcelStore = defineStore('parcel', () => {
     envelope,
     assemblage,
     assemblageLoading,
+    distress,
     loading,
     error,
     errorStatus,
@@ -105,6 +120,7 @@ export const useParcelStore = defineStore('parcel', () => {
     refreshVerdict,
     loadEnvelope,
     loadAssemblage,
+    loadDistress,
     clear,
   }
 })

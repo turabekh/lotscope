@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 
 import AskBox from '@/components/AskBox.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
+import DistressPanel from '@/components/DistressPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { useParcelStore } from '@/stores/parcel'
@@ -67,6 +68,8 @@ const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
         </q-banner>
 
         <AssemblagePanel />
+
+        <DistressPanel />
 
         <PropertyFacts :detail="detail" />
 

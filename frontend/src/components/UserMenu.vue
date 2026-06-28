@@ -19,6 +19,10 @@ function signOut(): void {
 function goAccount(): void {
   void router.push({ name: 'account' })
 }
+
+function goLeads(): void {
+  void router.push({ name: 'leads' })
+}
 </script>
 
 <template>
@@ -44,6 +48,10 @@ function goAccount(): void {
           </q-item-section>
         </q-item>
         <q-separator />
+        <q-item v-close-popup clickable @click="goLeads">
+          <q-item-section avatar><q-icon name="sell" /></q-item-section>
+          <q-item-section>Motivated-seller leads</q-item-section>
+        </q-item>
         <q-item v-close-popup clickable @click="goAccount">
           <q-item-section avatar><q-icon name="manage_accounts" /></q-item-section>
           <q-item-section>Account & usage</q-item-section>

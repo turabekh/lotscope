@@ -68,6 +68,43 @@ export interface EnvelopeResult {
   computed_at: string
 }
 
+export type DistressTier = 'high' | 'medium' | 'low' | 'none'
+
+export interface DistressFactor {
+  code: string
+  label: string
+  weight: number
+}
+
+export interface DistressResult {
+  parcel_number: string
+  score: number
+  tier: DistressTier
+  factors: DistressFactor[]
+  sources: unknown[]
+  computed_at: string
+}
+
+export interface LeadItem {
+  parcel_number: string
+  address: string | null
+  owner: string | null
+  base_zoning_code: string | null
+  is_vacant: boolean | null
+  market_value: number | null
+  total_due: number | null
+  in_sheriff_sale: boolean | null
+  score: number
+  top_factors: string[]
+}
+
+export interface LeadsResponse {
+  tier: string
+  limit: number
+  returned: number
+  leads: LeadItem[]
+}
+
 export type Acquirability = 'same_owner' | 'city_owned' | 'vacant' | 'built'
 export type AssemblagePotential = 'high' | 'medium' | 'low' | 'none'
 

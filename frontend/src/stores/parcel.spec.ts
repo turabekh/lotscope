@@ -20,6 +20,7 @@ vi.mock('@/lib/api', async () => {
       refreshVerdict: vi.fn(),
       getEnvelope: vi.fn(),
       getAssemblage: vi.fn(),
+      getDistress: vi.fn(),
     },
   }
 })

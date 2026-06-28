@@ -3,8 +3,10 @@ import type {
   BasemapSession,
   BillingCadence,
   CheckoutResponse,
+  DistressResult,
   EnvelopeResult,
   LayersResponse,
+  LeadsResponse,
   ParcelAnswer,
   ParcelDetail,
   ParcelSearchResponse,
@@ -73,6 +75,20 @@ export const api = {
   },
   getAssemblage(parcelNumber: string): Promise<AssemblageResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/assemblage`)
+  },
+  getDistress(parcelNumber: string): Promise<DistressResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/distress`)
+  },
+  getLeads(params: {
+    minScore?: number
+    vacantOnly?: boolean
+    zipCode?: string
+  }): Promise<LeadsResponse> {
+    const query = new URLSearchParams()
+    if (params.minScore != null) query.set('min_score', String(params.minScore))
+    if (params.vacantOnly) query.set('vacant_only', 'true')
+    if (params.zipCode) query.set('zip_code', params.zipCode)
+    return request(`/leads?${query.toString()}`)
   },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {
