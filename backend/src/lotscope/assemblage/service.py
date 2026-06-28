@@ -20,6 +20,7 @@ from lotscope.assemblage.schemas import (
     AssemblageSummary,
     Potential,
 )
+from lotscope.zoning.service import assemblage_unit_estimate
 
 _ADJACENCY_TOLERANCE_FT = 2.0
 _NEIGHBOR_LIMIT = 16
@@ -120,12 +121,15 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
         frontage_ft=_as_float(target_row.frontage_ft),
     )
 
-    empty_summary = summarize(target, [])
     if not target_row.has_geometry:
         return _result(
             parcel_number,
             "none",
-            AssemblageSummary(**vars(empty_summary)),
+            AssemblageSummary(
+                **vars(summarize(target, [])),
+                by_right_units_current=None,
+                by_right_units_combined=None,
+            ),
             [],
             ["This parcel has no boundary geometry, so adjacent lots cannot be detected."],
             computed_at,
@@ -143,7 +147,18 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
     ).all()
     signals = [_signal(row) for row in rows]
     neighbors = [_adjacent_lot(row, signal) for row, signal in zip(rows, signals, strict=True)]
-    summary = AssemblageSummary(**vars(summarize(target, signals)))
+    logic_summary = summarize(target, signals)
+    units_current, units_combined = await assemblage_unit_estimate(
+        session,
+        parcel_number,
+        current_area_sqft=target.lot_area_sqft,
+        combined_area_sqft=logic_summary.combined_lot_area_sqft,
+    )
+    summary = AssemblageSummary(
+        **vars(logic_summary),
+        by_right_units_current=units_current,
+        by_right_units_combined=units_combined,
+    )
     return _result(
         parcel_number,
         assess_potential(signals),

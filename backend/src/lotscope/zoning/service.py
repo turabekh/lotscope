@@ -10,6 +10,7 @@ from lotscope.zoning.buildability import (
     DistrictStandard,
     ParcelDimensions,
     assess_buildability,
+    by_right_unit_count,
 )
 from lotscope.zoning.codes import normalize_zoning_code
 from lotscope.zoning.envelope import estimate_floors, representative_inset_ft
@@ -36,8 +37,8 @@ _FOOTPRINT_SQL = text(
 _MIN_BUILDABLE_RATIO = 0.05
 _STANDARD_SQL = text(
     "SELECT code, code_version, permitted_uses, min_lot_area_sqft, min_lot_width_ft, "
-    "max_height_ft, max_units, max_occupancy_pct, front_setback_ft, rear_setback_ft, "
-    "side_setback_ft, requires_master_plan "
+    "max_height_ft, max_units, lot_area_per_unit_sqft, max_occupancy_pct, front_setback_ft, "
+    "rear_setback_ft, side_setback_ft, requires_master_plan "
     "FROM zoning_standard WHERE upper(replace(replace(code, '-', ''), ' ', '')) = :code "
     "ORDER BY code_version DESC LIMIT 1"
 )
@@ -77,11 +78,43 @@ async def _get_standard(session: AsyncSession, code: str) -> DistrictStandard | 
         min_lot_width_ft=_as_float(row.min_lot_width_ft),
         max_height_ft=_as_float(row.max_height_ft),
         max_units=row.max_units,
+        lot_area_per_unit_sqft=_as_float(row.lot_area_per_unit_sqft),
         max_occupancy_pct=_as_float(row.max_occupancy_pct),
         front_setback_ft=_as_float(row.front_setback_ft),
         rear_setback_ft=_as_float(row.rear_setback_ft),
         side_setback_ft=_as_float(row.side_setback_ft),
         requires_master_plan=row.requires_master_plan,
+    )
+
+
+async def get_parcel_standard(session: AsyncSession, parcel_number: str) -> DistrictStandard | None:
+    parcel = (await session.execute(_PARCEL_SQL, {"parcel_number": parcel_number})).one_or_none()
+    if parcel is None:
+        return None
+    resolution = await resolve_district(
+        session,
+        parcel_number,
+        base_zoning_code=parcel.base_zoning_code,
+        has_geometry=parcel.has_geometry,
+    )
+    if resolution is None:
+        return None
+    return await _get_standard(session, resolution.code)
+
+
+async def assemblage_unit_estimate(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    current_area_sqft: float | None,
+    combined_area_sqft: float | None,
+) -> tuple[int | None, int | None]:
+    standard = await get_parcel_standard(session, parcel_number)
+    if standard is None:
+        return None, None
+    return (
+        by_right_unit_count(standard, current_area_sqft),
+        by_right_unit_count(standard, combined_area_sqft),
     )
 
 

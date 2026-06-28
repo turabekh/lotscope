@@ -2,7 +2,48 @@ from lotscope.zoning.buildability import (
     DistrictStandard,
     ParcelDimensions,
     assess_buildability,
+    by_right_unit_count,
 )
+
+
+def _rm1(**overrides: object) -> DistrictStandard:
+    base = {
+        "code": "RM-1",
+        "code_version": "2024-01",
+        "permitted_uses": ["single_family", "two_family", "multi_family"],
+        "min_lot_area_sqft": 1440.0,
+        "max_height_ft": 38.0,
+        "lot_area_per_unit_sqft": 480.0,
+    }
+    base.update(overrides)
+    return DistrictStandard(**base)  # type: ignore[arg-type]
+
+
+def test_density_units_scale_with_lot_area() -> None:
+    assert by_right_unit_count(_rm1(), 480.0) == 1
+    assert by_right_unit_count(_rm1(), 1440.0) == 3
+    assert by_right_unit_count(_rm1(), 5000.0) == 10
+
+
+def test_density_units_floor_at_one_when_area_present() -> None:
+    assert by_right_unit_count(_rm1(), 300.0) == 1
+
+
+def test_density_falls_back_to_flat_cap_without_density_rule() -> None:
+    standard = _rm1(lot_area_per_unit_sqft=None, max_units=4)
+    assert by_right_unit_count(standard, 5000.0) == 4
+
+
+def test_density_requires_multi_family_use() -> None:
+    standard = _rm1(permitted_uses=["single_family"], max_units=1)
+    assert by_right_unit_count(standard, 5000.0) == 1
+
+
+def test_assess_buildability_uses_density_units() -> None:
+    result = assess_buildability(
+        ParcelDimensions(lot_area_sqft=2880.0, lot_width_ft=18.0, depth_ft=90.0), _rm1()
+    )
+    assert result.by_right_units == 6
 
 
 def _rsa5(**overrides: object) -> DistrictStandard:

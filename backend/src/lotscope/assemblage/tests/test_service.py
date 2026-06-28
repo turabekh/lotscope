@@ -3,6 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.assemblage.service import compute_assemblage
+from lotscope.zoning.seed import seed_zoning_standards
 
 pytestmark = pytest.mark.integration
 
@@ -90,6 +91,34 @@ async def test_assemblage_detects_adjacent_candidates(db_session: AsyncSession) 
     assert result.potential == "high"
     assert result.summary.candidate_count == 3
     assert result.summary.combined_lot_area_sqft == 6480.0
+
+
+async def test_assemblage_estimates_combined_units_for_density_district(
+    db_session: AsyncSession,
+) -> None:
+    await seed_zoning_standards(db_session)
+    await _insert(
+        db_session,
+        "000000001",
+        owner="OWNER A",
+        zoning="RM-1",
+        is_vacant=True,
+        polygon="POLYGON((0 0,0 90,18 90,18 0,0 0))",
+    )
+    await _insert(
+        db_session,
+        "000000002",
+        owner="OWNER B",
+        zoning="RM-1",
+        is_vacant=True,
+        polygon="POLYGON((18 0,18 90,36 90,36 0,18 0))",
+    )
+    await db_session.flush()
+
+    result = await compute_assemblage(db_session, "000000001")
+    assert result is not None
+    assert result.summary.by_right_units_current == 3
+    assert result.summary.by_right_units_combined == 6
 
 
 async def test_assemblage_missing_parcel_returns_none(db_session: AsyncSession) -> None:

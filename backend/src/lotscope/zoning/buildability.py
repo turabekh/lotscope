@@ -20,6 +20,7 @@ class DistrictStandard:
     min_lot_width_ft: float | None = None
     max_height_ft: float | None = None
     max_units: int | None = None
+    lot_area_per_unit_sqft: float | None = None
     max_occupancy_pct: float | None = None
     front_setback_ft: float | None = None
     rear_setback_ft: float | None = None
@@ -143,6 +144,16 @@ def _score(
     return min(100.0, score)
 
 
+def by_right_unit_count(standard: DistrictStandard, lot_area_sqft: float | None) -> int | None:
+    if (
+        "multi_family" in standard.permitted_uses
+        and standard.lot_area_per_unit_sqft
+        and lot_area_sqft is not None
+    ):
+        return max(1, int(lot_area_sqft // standard.lot_area_per_unit_sqft))
+    return standard.max_units
+
+
 def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> Buildability:
     reasons: list[str] = []
     conforming = _check_conformance(dims, standard, reasons)
@@ -171,10 +182,16 @@ def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> B
         by_right_units = None
     else:
         can_build_by_right = conforming is True and has_permitted_uses
-        by_right_units = standard.max_units
-        if standard.max_units is not None:
+        by_right_units = by_right_unit_count(standard, dims.lot_area_sqft)
+        if standard.lot_area_per_unit_sqft is not None and by_right_units is not None:
             reasons.append(
-                f"District {standard.code} permits up to {standard.max_units} unit(s) by-right."
+                f"District {standard.code} permits about {by_right_units} unit(s) by-right at "
+                f"~{standard.lot_area_per_unit_sqft:.0f} sqft of lot area per unit; the count "
+                "scales with lot size."
+            )
+        elif by_right_units is not None:
+            reasons.append(
+                f"District {standard.code} permits up to {by_right_units} unit(s) by-right."
             )
 
     return Buildability(

@@ -47,6 +47,7 @@ class ZoningStandard(Base, TimestampMixin):
     min_lot_width_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
     max_height_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
     max_units: Mapped[int | None] = mapped_column(Integer)
+    lot_area_per_unit_sqft: Mapped[float | None] = mapped_column(Numeric(12, 2))
     max_occupancy_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
     front_setback_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
     side_setback_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))

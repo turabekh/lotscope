@@ -29,6 +29,8 @@ class AssemblageSummary(BaseModel):
     candidate_count: int
     combined_lot_area_sqft: float | None
     combined_frontage_ft: float | None
+    by_right_units_current: int | None
+    by_right_units_combined: int | None
     has_same_owner_neighbor: bool
     has_city_owned_neighbor: bool
     has_vacant_neighbor: bool

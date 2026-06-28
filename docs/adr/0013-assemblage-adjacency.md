@@ -23,6 +23,6 @@ PRD §5.2 ("Adjacent parcels & assemblage") and §5.3 ("Subdivision / consolidat
 ## Consequences
 
 - **Combined dimensions are approximate.** Combined area sums target + candidate lot areas (sound). Combined frontage sums frontages, which is only correct for side-by-side lots — we don't infer parcel orientation in v1, so it is labeled approximate and the UI leads with combined area.
-- **No combined by-right recompute.** Current `zoning_standard.max_units` is a flat district cap, not area-scaled, so assembling lots would not change the computed unit count meaningfully. We therefore report combined land and acquirability and tell the user to confirm by-right outcomes for the merged lot, rather than asserting a unit gain. Re-running buildability on the merged geometry is a follow-up once the zoning model carries area-based density.
+- **Combined by-right units** are estimated for districts with area-based density (ADR-0014): the summary exposes `by_right_units_current` vs `by_right_units_combined` and the panel shows "1 → N units." FAR-governed districts still report combined land only, since unit count there is design-dependent.
 - The 2 ft tolerance can include corner-touching or across-narrow-gap parcels; they are ranked last by shared boundary and rarely matter. Tightening this is a tuning follow-up.
 - On-demand spatial query per parcel; fast via the GiST index on `geom_2272`. Capped at 16 neighbors.
