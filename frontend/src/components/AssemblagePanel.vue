@@ -37,7 +37,16 @@ const unitUnlock = computed(() => {
   const s = assemblage.value?.summary
   if (!s || s.by_right_units_current == null || s.by_right_units_combined == null) return null
   if (s.by_right_units_combined <= s.by_right_units_current) return null
-  return { from: s.by_right_units_current, to: s.by_right_units_combined }
+  const estimate = s.units_basis === 'far_estimate'
+  return {
+    from: s.by_right_units_current,
+    to: s.by_right_units_combined,
+    added: s.by_right_units_combined - s.by_right_units_current,
+    heading: estimate ? 'Estimated capacity' : 'By-right units',
+    note: estimate
+      ? "A rough capacity from the district's floor-area ratio (assumes ~1,100 sqft of floor area per unit). Confirm with design and the zoning code."
+      : 'Confirm the by-right outcome for the combined lot with the zoning code.',
+  }
 })
 
 function badge(value: Acquirability): Badge {
@@ -78,12 +87,12 @@ function selectNeighbor(parcelNumber: string): void {
           <q-icon name="apartment" size="20px" class="q-mr-sm" />
           <div>
             <div class="unlock-head">
-              By-right units: <b>{{ unitUnlock.from }} → {{ unitUnlock.to }}</b>
+              {{ unitUnlock.heading }}: <b>{{ unitUnlock.from }} → {{ unitUnlock.to }}</b>
+              <span class="unlock-add">+{{ unitUnlock.added }}</span>
             </div>
             <div class="unlock-sub">
-              Assembling the buyable neighbors could add about
-              {{ unitUnlock.to - unitUnlock.from }} more by-right unit(s) for this district.
-              Approximate — confirm with the zoning code.
+              Assembling the buyable neighbors could add about {{ unitUnlock.added }} more unit(s).
+              {{ unitUnlock.note }}
             </div>
           </div>
         </div>
@@ -195,6 +204,15 @@ function selectNeighbor(parcelNumber: string): void {
 }
 .unlock-head b {
   color: #2e7d32;
+}
+.unlock-add {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: #2e7d32;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
 }
 .unlock-sub {
   font-size: 11.5px;

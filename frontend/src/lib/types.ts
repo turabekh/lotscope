@@ -95,6 +95,7 @@ export interface AssemblageSummary {
   combined_frontage_ft: number | null
   by_right_units_current: number | null
   by_right_units_combined: number | null
+  units_basis: 'per_unit' | 'far_estimate' | 'flat_cap' | null
   has_same_owner_neighbor: boolean
   has_city_owned_neighbor: boolean
   has_vacant_neighbor: boolean
