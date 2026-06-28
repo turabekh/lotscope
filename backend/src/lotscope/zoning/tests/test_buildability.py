@@ -3,7 +3,42 @@ from lotscope.zoning.buildability import (
     ParcelDimensions,
     assess_buildability,
     by_right_unit_count,
+    estimate_density_units,
+    far_unit_estimate,
 )
+
+
+def _far_district(**overrides: object) -> DistrictStandard:
+    base = {
+        "code": "RM-4",
+        "code_version": "2024-01",
+        "permitted_uses": ["single_family", "two_family", "multi_family"],
+        "max_floor_area_ratio_pct": 350.0,
+    }
+    base.update(overrides)
+    return DistrictStandard(**base)  # type: ignore[arg-type]
+
+
+def test_far_unit_estimate_from_floor_area() -> None:
+    assert far_unit_estimate(_far_district(), 2500.0) == 7
+    assert far_unit_estimate(_far_district(), None) is None
+
+
+def test_far_unit_estimate_requires_multi_family_and_no_master_plan() -> None:
+    assert far_unit_estimate(_far_district(permitted_uses=["commercial"]), 2500.0) is None
+    assert far_unit_estimate(_far_district(requires_master_plan=True), 2500.0) is None
+
+
+def test_estimate_density_prefers_per_unit_then_far_then_cap() -> None:
+    assert estimate_density_units(_far_district(lot_area_per_unit_sqft=480.0), 5000.0) == (
+        10,
+        "per_unit",
+    )
+    assert estimate_density_units(_far_district(), 5000.0) == (15, "far_estimate")
+    flat = DistrictStandard(
+        code="X", code_version="v", permitted_uses=["multi_family"], max_units=4
+    )
+    assert estimate_density_units(flat, 5000.0) == (4, "flat_cap")
 
 
 def _rm1(**overrides: object) -> DistrictStandard:

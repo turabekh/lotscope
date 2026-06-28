@@ -129,6 +129,7 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
                 **vars(summarize(target, [])),
                 by_right_units_current=None,
                 by_right_units_combined=None,
+                units_basis=None,
             ),
             [],
             ["This parcel has no boundary geometry, so adjacent lots cannot be detected."],
@@ -148,7 +149,7 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
     signals = [_signal(row) for row in rows]
     neighbors = [_adjacent_lot(row, signal) for row, signal in zip(rows, signals, strict=True)]
     logic_summary = summarize(target, signals)
-    units_current, units_combined = await assemblage_unit_estimate(
+    units_current, units_combined, units_basis = await assemblage_unit_estimate(
         session,
         parcel_number,
         current_area_sqft=target.lot_area_sqft,
@@ -158,6 +159,7 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
         **vars(logic_summary),
         by_right_units_current=units_current,
         by_right_units_combined=units_combined,
+        units_basis=units_basis,
     )
     return _result(
         parcel_number,

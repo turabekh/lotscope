@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.zoning.buildability import (
     DistrictStandard,
     ParcelDimensions,
+    UnitBasis,
     assess_buildability,
-    by_right_unit_count,
+    estimate_density_units,
 )
 from lotscope.zoning.codes import normalize_zoning_code
 from lotscope.zoning.envelope import estimate_floors, representative_inset_ft
@@ -37,8 +38,8 @@ _FOOTPRINT_SQL = text(
 _MIN_BUILDABLE_RATIO = 0.05
 _STANDARD_SQL = text(
     "SELECT code, code_version, permitted_uses, min_lot_area_sqft, min_lot_width_ft, "
-    "max_height_ft, max_units, lot_area_per_unit_sqft, max_occupancy_pct, front_setback_ft, "
-    "rear_setback_ft, side_setback_ft, requires_master_plan "
+    "max_height_ft, max_units, lot_area_per_unit_sqft, max_floor_area_ratio_pct, "
+    "max_occupancy_pct, front_setback_ft, rear_setback_ft, side_setback_ft, requires_master_plan "
     "FROM zoning_standard WHERE upper(replace(replace(code, '-', ''), ' ', '')) = :code "
     "ORDER BY code_version DESC LIMIT 1"
 )
@@ -79,6 +80,7 @@ async def _get_standard(session: AsyncSession, code: str) -> DistrictStandard | 
         max_height_ft=_as_float(row.max_height_ft),
         max_units=row.max_units,
         lot_area_per_unit_sqft=_as_float(row.lot_area_per_unit_sqft),
+        max_floor_area_ratio_pct=_as_float(row.max_floor_area_ratio_pct),
         max_occupancy_pct=_as_float(row.max_occupancy_pct),
         front_setback_ft=_as_float(row.front_setback_ft),
         rear_setback_ft=_as_float(row.rear_setback_ft),
@@ -108,14 +110,13 @@ async def assemblage_unit_estimate(
     *,
     current_area_sqft: float | None,
     combined_area_sqft: float | None,
-) -> tuple[int | None, int | None]:
+) -> tuple[int | None, int | None, UnitBasis | None]:
     standard = await get_parcel_standard(session, parcel_number)
     if standard is None:
-        return None, None
-    return (
-        by_right_unit_count(standard, current_area_sqft),
-        by_right_unit_count(standard, combined_area_sqft),
-    )
+        return None, None, None
+    current_units, basis = estimate_density_units(standard, current_area_sqft)
+    combined_units, combined_basis = estimate_density_units(standard, combined_area_sqft)
+    return current_units, combined_units, basis or combined_basis
 
 
 def _unknown_result(parcel_number: str, computed_at: datetime, reason: str) -> BuildabilityResult:

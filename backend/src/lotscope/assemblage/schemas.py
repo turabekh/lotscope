@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 Acquirability = Literal["same_owner", "city_owned", "vacant", "built"]
 Potential = Literal["high", "medium", "low", "none"]
+UnitBasis = Literal["per_unit", "far_estimate", "flat_cap"]
 
 
 class AdjacentLot(BaseModel):
@@ -31,6 +32,7 @@ class AssemblageSummary(BaseModel):
     combined_frontage_ft: float | None
     by_right_units_current: int | None
     by_right_units_combined: int | None
+    units_basis: UnitBasis | None
     has_same_owner_neighbor: bool
     has_city_owned_neighbor: bool
     has_vacant_neighbor: bool

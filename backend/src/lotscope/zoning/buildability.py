@@ -2,6 +2,9 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 Confidence = Literal["high", "medium", "low"]
+UnitBasis = Literal["per_unit", "far_estimate", "flat_cap"]
+
+_AVG_GROSS_FLOOR_PER_UNIT_SQFT = 1100.0
 
 
 @dataclass(frozen=True)
@@ -21,6 +24,7 @@ class DistrictStandard:
     max_height_ft: float | None = None
     max_units: int | None = None
     lot_area_per_unit_sqft: float | None = None
+    max_floor_area_ratio_pct: float | None = None
     max_occupancy_pct: float | None = None
     front_setback_ft: float | None = None
     rear_setback_ft: float | None = None
@@ -152,6 +156,35 @@ def by_right_unit_count(standard: DistrictStandard, lot_area_sqft: float | None)
     ):
         return max(1, int(lot_area_sqft // standard.lot_area_per_unit_sqft))
     return standard.max_units
+
+
+def far_unit_estimate(standard: DistrictStandard, lot_area_sqft: float | None) -> int | None:
+    if (
+        "multi_family" in standard.permitted_uses
+        and not standard.requires_master_plan
+        and standard.max_floor_area_ratio_pct
+        and lot_area_sqft is not None
+    ):
+        floor_area = lot_area_sqft * standard.max_floor_area_ratio_pct / 100.0
+        return max(1, int(floor_area / _AVG_GROSS_FLOOR_PER_UNIT_SQFT))
+    return None
+
+
+def estimate_density_units(
+    standard: DistrictStandard, lot_area_sqft: float | None
+) -> tuple[int | None, UnitBasis | None]:
+    if (
+        "multi_family" in standard.permitted_uses
+        and standard.lot_area_per_unit_sqft
+        and lot_area_sqft is not None
+    ):
+        return max(1, int(lot_area_sqft // standard.lot_area_per_unit_sqft)), "per_unit"
+    far = far_unit_estimate(standard, lot_area_sqft)
+    if far is not None:
+        return far, "far_estimate"
+    if standard.max_units is not None:
+        return standard.max_units, "flat_cap"
+    return None, None
 
 
 def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> Buildability:

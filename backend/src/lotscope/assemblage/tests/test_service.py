@@ -117,8 +117,39 @@ async def test_assemblage_estimates_combined_units_for_density_district(
 
     result = await compute_assemblage(db_session, "000000001")
     assert result is not None
+    assert result.summary.units_basis == "per_unit"
     assert result.summary.by_right_units_current == 3
     assert result.summary.by_right_units_combined == 6
+
+
+async def test_assemblage_estimates_combined_units_for_far_district(
+    db_session: AsyncSession,
+) -> None:
+    await seed_zoning_standards(db_session)
+    await _insert(
+        db_session,
+        "000000001",
+        owner="OWNER A",
+        zoning="RM-4",
+        is_vacant=True,
+        polygon="POLYGON((0 0,0 90,18 90,18 0,0 0))",
+    )
+    await _insert(
+        db_session,
+        "000000002",
+        owner="OWNER B",
+        zoning="RM-4",
+        is_vacant=True,
+        polygon="POLYGON((18 0,18 90,36 90,36 0,18 0))",
+    )
+    await db_session.flush()
+
+    result = await compute_assemblage(db_session, "000000001")
+    assert result is not None
+    assert result.summary.units_basis == "far_estimate"
+    assert result.summary.by_right_units_combined is not None
+    assert result.summary.by_right_units_current is not None
+    assert result.summary.by_right_units_combined > result.summary.by_right_units_current
 
 
 async def test_assemblage_missing_parcel_returns_none(db_session: AsyncSession) -> None:
