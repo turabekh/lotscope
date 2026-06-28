@@ -8,7 +8,7 @@ import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
-import { ApiError } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 import { useParcelStore } from '@/stores/parcel'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -20,6 +20,20 @@ const pipeline = usePipelineStore()
 const $q = useQuasar()
 const saving = ref(false)
 const addingDeal = ref(false)
+const downloadingDossier = ref(false)
+
+async function downloadDossier(): Promise<void> {
+  if (detail.value === null || downloadingDossier.value) return
+  downloadingDossier.value = true
+  try {
+    await api.downloadDossier(detail.value.parcel_number)
+  } catch (cause) {
+    const message = cause instanceof ApiError ? cause.message : 'Could not generate the dossier.'
+    $q.notify({ message, color: 'negative', icon: 'error' })
+  } finally {
+    downloadingDossier.value = false
+  }
+}
 
 const currentDeal = computed(() =>
   detail.value ? pipeline.dealFor(detail.value.parcel_number) : undefined,
@@ -136,7 +150,7 @@ async function toggleSave(): Promise<void> {
           {{ error }}
         </q-banner>
 
-        <div class="row items-center justify-center">
+        <div class="row items-center justify-center q-gutter-sm">
           <q-btn
             v-if="!currentDeal"
             outline
@@ -155,6 +169,15 @@ async function toggleSave(): Promise<void> {
             icon="view_kanban"
             :label="`In pipeline · ${dealStageLabel}`"
             :to="{ name: 'pipeline' }"
+          />
+          <q-btn
+            outline
+            no-caps
+            color="grey-8"
+            icon="picture_as_pdf"
+            label="PDF dossier"
+            :loading="downloadingDossier"
+            @click="downloadDossier"
           />
         </div>
 

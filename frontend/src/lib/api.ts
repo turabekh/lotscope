@@ -84,6 +84,26 @@ export const api = {
   getDistress(parcelNumber: string): Promise<DistressResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/distress`)
   },
+  async downloadDossier(parcelNumber: string): Promise<void> {
+    const headers: Record<string, string> = {}
+    if (authToken !== null) headers.authorization = `Bearer ${authToken}`
+    const response = await fetch(
+      `${BASE_URL}/parcels/${encodeURIComponent(parcelNumber)}/dossier`,
+      { headers },
+    )
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { detail?: string } | null
+      throw new ApiError(response.status, body?.detail ?? response.statusText)
+    }
+    const url = URL.createObjectURL(await response.blob())
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `lotscope-dossier-${parcelNumber}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  },
   getLeads(params: {
     minScore?: number
     vacantOnly?: boolean
