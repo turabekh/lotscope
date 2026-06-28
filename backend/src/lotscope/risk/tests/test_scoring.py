@@ -47,6 +47,28 @@ def test_imminently_dangerous_dominates_unsafe() -> None:
     assert "li_violations" in codes
 
 
+def test_li_violation_detail_includes_types_and_open_count() -> None:
+    signals = RiskSignals(
+        li=LiSignal(
+            violations=3,
+            open_violations=2,
+            violation_types=("DANGEROUS", "INTERIOR"),
+        )
+    )
+    flag = next(f for f in assess_risk(signals).flags if f.code == "li_violations")
+    assert flag.detail == "3 violation(s) on record, 2 still open — Dangerous, Interior."
+    assert flag.severity == "medium"
+
+
+def test_li_violation_detail_without_types_stays_generic() -> None:
+    flag = next(
+        f
+        for f in assess_risk(RiskSignals(li=LiSignal(violations=1))).flags
+        if f.code == "li_violations"
+    )
+    assert flag.detail == "1 violation(s) on record."
+
+
 def test_high_risk_flood_zone_is_high_severity() -> None:
     result = assess_risk(RiskSignals(li=LiSignal(), flood_zones=["AE"]))
     flood = next(f for f in result.flags if f.code == "flood_zone")

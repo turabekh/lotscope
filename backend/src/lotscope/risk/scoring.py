@@ -24,6 +24,8 @@ class LiSignal:
     has_unsafe: bool = False
     has_imminently_dangerous: bool = False
     demolitions: int = 0
+    open_violations: int = 0
+    violation_types: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,10 @@ def _tax_flags(tax: TaxSignal) -> list[RiskFlag]:
     return flags
 
 
+def _format_violation_type(value: str) -> str:
+    return value.strip().title()
+
+
 def _li_flags(li: LiSignal) -> list[RiskFlag]:
     flags: list[RiskFlag] = []
     if li.has_imminently_dangerous:
@@ -101,12 +107,18 @@ def _li_flags(li: LiSignal) -> list[RiskFlag]:
         )
     if li.violations > 0:
         severity: Severity = "medium" if li.violations >= 3 else "low"
+        detail = f"{li.violations} violation(s) on record"
+        if li.open_violations:
+            detail += f", {li.open_violations} still open"
+        if li.violation_types:
+            kinds = ", ".join(_format_violation_type(value) for value in li.violation_types)
+            detail += f" — {kinds}"
         flags.append(
             RiskFlag(
                 "li_violations",
                 severity,
                 "L&I violations on record",
-                f"{li.violations} violation(s) on record.",
+                detail + ".",
                 "li_event",
             )
         )

@@ -44,6 +44,27 @@ async def test_unsafe_li_event_flagged(db_session: AsyncSession) -> None:
     assert "li_violations" in _codes(result)
 
 
+async def test_li_violation_types_surface_in_detail(db_session: AsyncSession) -> None:
+    await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000009')"))
+    await db_session.execute(
+        text(
+            "INSERT INTO li_event "
+            "(parcel_number, external_id, event_type, status, description) VALUES "
+            "('000000009', 'V-1', 'violation', 'OPEN', 'DANGEROUS'), "
+            "('000000009', 'V-2', 'violation', 'OPEN', 'DANGEROUS'), "
+            "('000000009', 'V-3', 'violation', 'CLOSED', 'INTERIOR')"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel_risk(db_session, "000000009")
+    assert result is not None
+    flag = next(f for f in result.flags if f.code == "li_violations")
+    assert "Dangerous" in flag.detail
+    assert "Interior" in flag.detail
+    assert "2 still open" in flag.detail
+
+
 async def test_flood_zone_intersection_flagged(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(

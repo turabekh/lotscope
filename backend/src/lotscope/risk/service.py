@@ -17,11 +17,19 @@ _TAX_SQL = text(
 )
 _LI_SQL = text(
     "SELECT count(*) FILTER (WHERE event_type = 'violation') AS violations, "
+    "count(*) FILTER (WHERE event_type = 'violation' AND upper(coalesce(status, '')) = 'OPEN') "
+    "AS open_violations, "
     "coalesce(bool_or(coalesce(is_unsafe, false)), false) AS has_unsafe, "
     "coalesce(bool_or(coalesce(is_imminently_dangerous, false)), false) "
     "AS has_imminently_dangerous, "
     "count(*) FILTER (WHERE event_type = 'demolition') AS demolitions "
     "FROM li_event WHERE parcel_number = :parcel_number"
+)
+_LI_TYPES_SQL = text(
+    "SELECT description FROM li_event "
+    "WHERE parcel_number = :parcel_number AND event_type = 'violation' "
+    "AND description IS NOT NULL "
+    "GROUP BY description ORDER BY count(*) DESC, description LIMIT 4"
 )
 _FLOOD_SQL = text(
     "SELECT array_agg(DISTINCT fz.zone) AS zones "
@@ -50,11 +58,14 @@ async def _tax_signal(session: AsyncSession, parcel_number: str) -> TaxSignal | 
 
 async def _li_signal(session: AsyncSession, parcel_number: str) -> LiSignal:
     row = (await session.execute(_LI_SQL, {"parcel_number": parcel_number})).one()
+    types = (await session.execute(_LI_TYPES_SQL, {"parcel_number": parcel_number})).scalars().all()
     return LiSignal(
         violations=row.violations,
         has_unsafe=row.has_unsafe,
         has_imminently_dangerous=row.has_imminently_dangerous,
         demolitions=row.demolitions,
+        open_violations=row.open_violations,
+        violation_types=tuple(types),
     )
 
 
