@@ -150,6 +150,18 @@ export const api = {
   setDigestPreference(frequency: 'off' | 'weekly' | 'daily'): Promise<User> {
     return request('/auth/digest', { method: 'PATCH', body: JSON.stringify({ frequency }) })
   },
+  getVapidPublicKey(): Promise<{ public_key: string | null }> {
+    return request('/push/vapid-public-key')
+  },
+  pushSubscribe(subscription: {
+    endpoint: string
+    keys: { p256dh: string; auth: string }
+  }): Promise<void> {
+    return request('/push/subscribe', { method: 'POST', body: JSON.stringify(subscription) })
+  },
+  pushUnsubscribe(endpoint: string): Promise<void> {
+    return request('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) })
+  },
   getUsage(): Promise<Usage> {
     return request('/auth/usage')
   },
