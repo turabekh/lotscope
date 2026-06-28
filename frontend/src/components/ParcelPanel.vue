@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import AskBox from '@/components/AskBox.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
+import DealPanel from '@/components/DealPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
@@ -191,6 +192,8 @@ async function toggleSave(): Promise<void> {
             <q-btn flat dense color="primary" label="Compute" @click="store.refreshVerdict()" />
           </template>
         </q-banner>
+
+        <DealPanel />
 
         <AssemblagePanel />
 

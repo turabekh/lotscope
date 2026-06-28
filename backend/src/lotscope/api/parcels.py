@@ -29,6 +29,8 @@ from lotscope.api.deps import (
 from lotscope.assemblage.schemas import AssemblageResult
 from lotscope.assemblage.service import compute_assemblage
 from lotscope.core.errors import NotFoundError, QuotaExceededError
+from lotscope.deal.schemas import DealResult
+from lotscope.deal.service import analyze_parcel_deal
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
 from lotscope.parcels.schemas import ParcelDetail
@@ -162,6 +164,35 @@ async def parcel_comps(
     years: Annotated[int, Query(ge=1, le=20)] = 3,
 ) -> ValuationResult:
     result = await value_parcel(session, parcel_number, radius_ft=radius_ft, years=years)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
+
+
+@router.get("/{parcel_number}/deal", response_model=DealResult)
+async def parcel_deal(
+    parcel_number: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    acquisition_price: Annotated[float | None, Query(ge=0)] = None,
+    construction_cost_per_sqft: Annotated[float | None, Query(gt=0, le=2000)] = None,
+    soft_cost_pct: Annotated[float | None, Query(ge=0, le=1)] = None,
+    selling_cost_pct: Annotated[float | None, Query(ge=0, le=1)] = None,
+    target_margin: Annotated[float | None, Query(ge=0, lt=1)] = None,
+    radius_ft: Annotated[float, Query(gt=0, le=10000)] = 1500.0,
+    years: Annotated[int, Query(ge=1, le=20)] = 3,
+) -> DealResult:
+    result = await analyze_parcel_deal(
+        session,
+        parcel_number,
+        acquisition_price=acquisition_price,
+        construction_cost_per_sqft=construction_cost_per_sqft,
+        soft_cost_pct=soft_cost_pct,
+        selling_cost_pct=selling_cost_pct,
+        target_margin=target_margin,
+        radius_ft=radius_ft,
+        years=years,
+    )
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result

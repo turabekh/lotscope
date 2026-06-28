@@ -4,6 +4,7 @@ import type {
   BillingCadence,
   CheckoutResponse,
   DealItem,
+  DealResult,
   DealStage,
   DistressResult,
   EnvelopeResult,
@@ -83,6 +84,17 @@ export const api = {
   },
   getDistress(parcelNumber: string): Promise<DistressResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/distress`)
+  },
+  getDeal(
+    parcelNumber: string,
+    params: { acquisitionPrice?: number | null; targetMargin?: number | null } = {},
+  ): Promise<DealResult> {
+    const query = new URLSearchParams()
+    if (params.acquisitionPrice != null)
+      query.set('acquisition_price', String(params.acquisitionPrice))
+    if (params.targetMargin != null) query.set('target_margin', String(params.targetMargin))
+    const qs = query.toString()
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/deal${qs ? `?${qs}` : ''}`)
   },
   async downloadDossier(parcelNumber: string): Promise<void> {
     const headers: Record<string, string> = {}

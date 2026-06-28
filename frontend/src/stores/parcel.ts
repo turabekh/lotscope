@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { ApiError, api } from '@/lib/api'
 import type {
   AssemblageResult,
+  DealResult,
   DistressResult,
   EnvelopeResult,
   ParcelDetail,
@@ -17,6 +18,8 @@ export const useParcelStore = defineStore('parcel', () => {
   const assemblage = ref<AssemblageResult | null>(null)
   const assemblageLoading = ref(false)
   const distress = ref<DistressResult | null>(null)
+  const deal = ref<DealResult | null>(null)
+  const dealLoading = ref(false)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const errorStatus = ref<number | null>(null)
@@ -29,11 +32,13 @@ export const useParcelStore = defineStore('parcel', () => {
     envelope.value = null
     assemblage.value = null
     distress.value = null
+    deal.value = null
     try {
       detail.value = await api.getParcel(parcelNumber)
       verdict.value = await loadVerdict(parcelNumber)
       void loadAssemblage(parcelNumber)
       void loadDistress(parcelNumber)
+      void loadDeal(parcelNumber)
     } catch (cause) {
       detail.value = null
       if (cause instanceof ApiError) {
@@ -96,12 +101,28 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
+  async function loadDeal(
+    parcelNumber: string,
+    overrides: { acquisitionPrice?: number | null; targetMargin?: number | null } = {},
+  ): Promise<void> {
+    dealLoading.value = true
+    try {
+      const result = await api.getDeal(parcelNumber, overrides)
+      if (detail.value?.parcel_number === parcelNumber) deal.value = result
+    } catch {
+      if (detail.value?.parcel_number === parcelNumber) deal.value = null
+    } finally {
+      dealLoading.value = false
+    }
+  }
+
   function clear(): void {
     detail.value = null
     verdict.value = null
     envelope.value = null
     assemblage.value = null
     distress.value = null
+    deal.value = null
     error.value = null
     errorStatus.value = null
   }
@@ -113,6 +134,8 @@ export const useParcelStore = defineStore('parcel', () => {
     assemblage,
     assemblageLoading,
     distress,
+    deal,
+    dealLoading,
     loading,
     error,
     errorStatus,
@@ -121,6 +144,7 @@ export const useParcelStore = defineStore('parcel', () => {
     loadEnvelope,
     loadAssemblage,
     loadDistress,
+    loadDeal,
     clear,
   }
 })

@@ -135,6 +135,39 @@ export interface DistressResult {
   computed_at: string
 }
 
+export interface DealAssumptions {
+  construction_cost_per_sqft: number
+  soft_cost_pct: number
+  selling_cost_pct: number
+  target_margin: number
+  default_unit_sqft: number
+}
+
+export interface DealResult {
+  parcel_number: string
+  units: number | null
+  arv: number | null
+  per_unit_value: number | null
+  gross_floor_area_sqft: number | null
+  acquisition_cost: number | null
+  construction_cost: number | null
+  soft_cost: number | null
+  selling_cost: number | null
+  total_cost: number | null
+  profit: number | null
+  margin: number | null
+  roi: number | null
+  max_allowable_offer: number | null
+  is_underpriced: boolean | null
+  deal_score: number | null
+  comp_count: number
+  confidence: 'high' | 'medium' | 'low'
+  assumptions: DealAssumptions
+  reasons: string[]
+  sources: unknown[]
+  computed_at: string
+}
+
 export interface LeadItem {
   parcel_number: string
   address: string | null

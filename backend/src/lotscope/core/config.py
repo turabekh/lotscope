@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     billing_portal_return_url: str = "http://localhost:5173/account"
     enterprise_contact_url: str = "mailto:sales@lotscope.app"
 
+    deal_construction_cost_per_sqft: float = 175.0
+    deal_soft_cost_pct: float = 0.15
+    deal_selling_cost_pct: float = 0.07
+    deal_target_margin: float = 0.20
+    deal_default_unit_sqft: float = 1200.0
+
     google_maps_api_key: str | None = None
     google_map_tiles_url: str = "https://tile.googleapis.com/v1"
     google_viewport_url: str = "https://tile.googleapis.com/tile/v1/viewport"
