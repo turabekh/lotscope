@@ -7,6 +7,7 @@ import type {
   DealResult,
   DistressResult,
   EnvelopeResult,
+  ParcelChecklist,
   ParcelDetail,
   VerdictResult,
 } from '@/lib/types'
@@ -20,6 +21,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const distress = ref<DistressResult | null>(null)
   const deal = ref<DealResult | null>(null)
   const dealLoading = ref(false)
+  const checklist = ref<ParcelChecklist | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const errorStatus = ref<number | null>(null)
@@ -33,12 +35,14 @@ export const useParcelStore = defineStore('parcel', () => {
     assemblage.value = null
     distress.value = null
     deal.value = null
+    checklist.value = null
     try {
       detail.value = await api.getParcel(parcelNumber)
       verdict.value = await loadVerdict(parcelNumber)
       void loadAssemblage(parcelNumber)
       void loadDistress(parcelNumber)
       void loadDeal(parcelNumber)
+      void loadChecklist(parcelNumber)
     } catch (cause) {
       detail.value = null
       if (cause instanceof ApiError) {
@@ -116,6 +120,15 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
+  async function loadChecklist(parcelNumber: string): Promise<void> {
+    try {
+      const result = await api.getChecklist(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) checklist.value = result
+    } catch {
+      if (detail.value?.parcel_number === parcelNumber) checklist.value = null
+    }
+  }
+
   function clear(): void {
     detail.value = null
     verdict.value = null
@@ -123,6 +136,7 @@ export const useParcelStore = defineStore('parcel', () => {
     assemblage.value = null
     distress.value = null
     deal.value = null
+    checklist.value = null
     error.value = null
     errorStatus.value = null
   }
@@ -136,6 +150,7 @@ export const useParcelStore = defineStore('parcel', () => {
     distress,
     deal,
     dealLoading,
+    checklist,
     loading,
     error,
     errorStatus,
@@ -145,6 +160,7 @@ export const useParcelStore = defineStore('parcel', () => {
     loadAssemblage,
     loadDistress,
     loadDeal,
+    loadChecklist,
     clear,
   }
 })

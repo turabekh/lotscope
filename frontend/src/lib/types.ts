@@ -23,6 +23,31 @@ export interface ParcelDetail {
   latitude: number | null
 }
 
+export type ChecklistStatus = 'pass' | 'warn' | 'fail' | 'info'
+
+export interface ChecklistItem {
+  code: string
+  category: string
+  status: ChecklistStatus
+  detail: string
+  source: string | null
+}
+
+export interface ChecklistSummary {
+  passed: number
+  warnings: number
+  failures: number
+  info: number
+  ready: boolean
+}
+
+export interface ParcelChecklist {
+  parcel_number: string
+  items: ChecklistItem[]
+  summary: ChecklistSummary
+  computed_at: string
+}
+
 export interface ParcelCompareItem {
   detail: ParcelDetail
   verdict: VerdictResult | null

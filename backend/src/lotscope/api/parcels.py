@@ -28,6 +28,8 @@ from lotscope.api.deps import (
 )
 from lotscope.assemblage.schemas import AssemblageResult
 from lotscope.assemblage.service import compute_assemblage
+from lotscope.checklist.schemas import ParcelChecklist
+from lotscope.checklist.service import build_parcel_checklist
 from lotscope.compare.schemas import ParcelCompareResponse
 from lotscope.compare.service import MAX_COMPARE_PARCELS, compare_parcels
 from lotscope.core.errors import NotFoundError, QuotaExceededError
@@ -145,6 +147,16 @@ async def parcel_distress(
     parcel_number: str, session: SessionDep, current_user: CurrentUserDep
 ) -> DistressResult:
     result = await assess_parcel_distress(session, parcel_number)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
+
+
+@router.get("/{parcel_number}/checklist", response_model=ParcelChecklist)
+async def parcel_checklist(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> ParcelChecklist:
+    result = await build_parcel_checklist(session, parcel_number)
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result
