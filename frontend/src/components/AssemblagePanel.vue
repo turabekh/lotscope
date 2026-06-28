@@ -33,6 +33,13 @@ const potentialBadge = computed(() =>
   assemblage.value ? POTENTIAL[assemblage.value.potential] : POTENTIAL.none,
 )
 
+const unitUnlock = computed(() => {
+  const s = assemblage.value?.summary
+  if (!s || s.by_right_units_current == null || s.by_right_units_combined == null) return null
+  if (s.by_right_units_combined <= s.by_right_units_current) return null
+  return { from: s.by_right_units_current, to: s.by_right_units_combined }
+})
+
 function badge(value: Acquirability): Badge {
   return ACQUIRABILITY[value]
 }
@@ -66,6 +73,20 @@ function selectNeighbor(parcelNumber: string): void {
         >
           {{ potentialBadge.label }}
         </q-chip>
+
+        <div v-if="unitUnlock" class="unit-unlock q-mt-sm">
+          <q-icon name="apartment" size="20px" class="q-mr-sm" />
+          <div>
+            <div class="unlock-head">
+              By-right units: <b>{{ unitUnlock.from }} → {{ unitUnlock.to }}</b>
+            </div>
+            <div class="unlock-sub">
+              Assembling the buyable neighbors could add about
+              {{ unitUnlock.to - unitUnlock.from }} more by-right unit(s) for this district.
+              Approximate — confirm with the zoning code.
+            </div>
+          </div>
+        </div>
 
         <div v-if="assemblage.summary.candidate_count > 0" class="row q-col-gutter-sm q-mt-xs">
           <div class="col-6 stat">
@@ -159,6 +180,27 @@ function selectNeighbor(parcelNumber: string): void {
   font-size: 15px;
   font-weight: 700;
   color: #1f2933;
+}
+.unit-unlock {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--lot-radius-sm);
+  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+  border: 1px solid #c5e1a5;
+  color: #2e5e1e;
+}
+.unlock-head {
+  font-size: 14px;
+}
+.unlock-head b {
+  color: #2e7d32;
+}
+.unlock-sub {
+  font-size: 11.5px;
+  color: #5b6b5b;
+  line-height: 1.35;
+  margin-top: 2px;
 }
 .neighbor-list {
   display: flex;

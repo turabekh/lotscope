@@ -93,6 +93,8 @@ export interface AssemblageSummary {
   candidate_count: number
   combined_lot_area_sqft: number | null
   combined_frontage_ft: number | null
+  by_right_units_current: number | null
+  by_right_units_combined: number | null
   has_same_owner_neighbor: boolean
   has_city_owned_neighbor: boolean
   has_vacant_neighbor: boolean
