@@ -58,14 +58,18 @@ defineProps<{ detail: ParcelDetail }>()
 </template>
 
 <style scoped>
+.rounded-borders {
+  border-radius: var(--lot-radius) !important;
+  box-shadow: var(--lot-shadow);
+}
 .section-title {
   display: flex;
   align-items: center;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #455a64;
+  letter-spacing: 0.04em;
+  color: #5b6b7d;
   margin-bottom: 4px;
 }
 .value {

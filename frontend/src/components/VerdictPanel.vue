@@ -48,6 +48,24 @@ const hasValueEstimate = computed(
   () => props.verdict.value_estimate_low != null || props.verdict.value_estimate_high != null,
 )
 
+const SCORE_HEX: Record<string, string> = {
+  positive: '#2e7d32',
+  'amber-8': '#ef6c00',
+  negative: '#c62828',
+  grey: '#9e9e9e',
+}
+const scoreHex = computed(() => SCORE_HEX[scoreColor(props.verdict.opportunity_score)] ?? '#9e9e9e')
+
+const SEVERITY_HEX: Record<string, string> = {
+  high: '#c62828',
+  medium: '#f9a825',
+  low: '#90a4ae',
+  info: '#0277bd',
+}
+function severityHex(severity: string): string {
+  return SEVERITY_HEX[severity] ?? '#90a4ae'
+}
+
 const buildStatus = computed<Status>(() => {
   const v = props.verdict
   if (v.summary?.toLowerCase().includes('master plan')) {
@@ -65,7 +83,10 @@ const buildStatus = computed<Status>(() => {
 
 <template>
   <q-card flat bordered class="rounded-borders">
-    <q-card-section class="row items-center no-wrap q-pb-sm">
+    <q-card-section
+      class="row items-center no-wrap q-pb-sm score-head"
+      :style="{ '--accent': scoreHex }"
+    >
       <q-circular-progress
         show-value
         :value="verdict.opportunity_score"
@@ -193,39 +214,52 @@ const buildStatus = computed<Status>(() => {
           </q-tooltip>
         </q-chip>
       </div>
-      <div v-if="verdict.risk_flags.length" class="q-mt-xs">
-        <q-list separator dense>
-          <q-item v-for="flag in verdict.risk_flags" :key="flag.code" class="q-px-none">
-            <q-item-section avatar top class="q-pr-sm" style="min-width: 32px">
-              <q-icon :name="severityIcon(flag.severity)" :color="severityColor(flag.severity)" />
-              <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-                {{ severityHint(flag.severity) }}
-              </q-tooltip>
-            </q-item-section>
-            <q-item-section>
-              <q-item-label class="text-weight-medium">{{ flag.label }}</q-item-label>
-              <q-item-label caption class="flag-detail">{{ flag.detail }}</q-item-label>
-              <q-tooltip max-width="240px" anchor="bottom middle" self="top middle">
-                {{ sourceLabel(flag.source) }}
-              </q-tooltip>
-            </q-item-section>
-          </q-item>
-        </q-list>
+      <div v-if="verdict.risk_flags.length" class="flag-list q-mt-xs">
+        <div
+          v-for="flag in verdict.risk_flags"
+          :key="flag.code"
+          class="flag"
+          :style="{ '--bar': severityHex(flag.severity) }"
+        >
+          <q-icon
+            :name="severityIcon(flag.severity)"
+            :color="severityColor(flag.severity)"
+            size="19px"
+            class="flag-icon"
+          />
+          <div class="flag-body">
+            <div class="flag-title">{{ flag.label }}</div>
+            <div class="flag-detail">{{ flag.detail }}</div>
+          </div>
+          <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+            {{ severityHint(flag.severity) }} · {{ sourceLabel(flag.source) }}
+          </q-tooltip>
+        </div>
       </div>
-      <div v-else class="text-body2 text-grey-6 q-mt-xs">No major risk flags.</div>
+      <div v-else class="no-flags">
+        <q-icon name="verified" size="18px" color="positive" class="q-mr-xs" />
+        No major risk flags found.
+      </div>
     </q-card-section>
   </q-card>
 </template>
 
 <style scoped>
+.rounded-borders {
+  border-radius: var(--lot-radius) !important;
+  box-shadow: var(--lot-shadow);
+}
+.score-head {
+  border-left: 4px solid var(--accent);
+}
 .section-title {
   display: flex;
   align-items: center;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #455a64;
+  letter-spacing: 0.04em;
+  color: #5b6b7d;
   margin-bottom: 6px;
 }
 .summary-text {
@@ -235,6 +269,9 @@ const buildStatus = computed<Status>(() => {
 }
 .stat {
   text-align: center;
+  border-radius: var(--lot-radius-sm);
+  padding: 6px 4px;
+  background: #f6f8fb;
 }
 .stat-label {
   font-size: 11px;
@@ -244,12 +281,47 @@ const buildStatus = computed<Status>(() => {
 }
 .stat-value {
   font-size: 15px;
+  font-weight: 700;
+  color: #1f2933;
+}
+.flag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.flag {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: var(--lot-radius-sm);
+  background: #f8fafc;
+  border-left: 3px solid var(--bar);
+}
+.flag-icon {
+  margin-top: 1px;
+}
+.flag-body {
+  min-width: 0;
+}
+.flag-title {
   font-weight: 600;
-  color: #263238;
+  font-size: 13px;
+  color: #1f2933;
+  line-height: 1.25;
 }
 .flag-detail {
   white-space: normal;
   line-height: 1.35;
+  font-size: 12px;
+  color: #5b6b7d;
+  margin-top: 1px;
+}
+.no-flags {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #5b6b7d;
 }
 .empty-value {
   display: flex;

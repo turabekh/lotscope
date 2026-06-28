@@ -5,6 +5,7 @@ import { Quasar, Notify } from 'quasar'
 import '@quasar/extras/material-icons/material-icons.css'
 import 'quasar/src/css/index.sass'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import '@/css/app.css'
 
 import App from '@/App.vue'
 import { router } from '@/router'

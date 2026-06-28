@@ -17,7 +17,7 @@ const open = ref(!$q.screen.lt.sm)
 </script>
 
 <template>
-  <q-card class="filter-panel" flat bordered>
+  <q-card class="filter-panel lot-scroll" flat bordered>
     <q-card-section class="row items-center q-py-sm q-px-md">
       <q-icon name="tune" size="20px" class="q-mr-sm text-primary" />
       <div class="text-subtitle2">Map controls</div>
@@ -144,11 +144,15 @@ const open = ref(!$q.screen.lt.sm)
   top: 12px;
   left: 12px;
   z-index: 5;
-  width: 290px;
+  width: 256px;
   max-width: calc(100vw - 24px);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  border-radius: var(--lot-radius);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.18);
 }
 .dot {
   display: inline-block;

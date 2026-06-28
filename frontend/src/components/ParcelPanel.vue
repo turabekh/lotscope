@@ -11,7 +11,7 @@ const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
 </script>
 
 <template>
-  <div class="panel-root">
+  <div class="panel-root lot-scroll">
     <q-inner-loading :showing="loading" color="primary" />
 
     <template v-if="detail">
@@ -124,12 +124,17 @@ const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
   overflow-y: auto;
 }
 .panel-header {
-  background: linear-gradient(135deg, #1565c0, #1976d2);
+  background: linear-gradient(135deg, #0f4ba8 0%, #1976d2 100%);
   color: white;
-  padding: 16px;
+  padding: 18px 16px;
+  box-shadow: 0 2px 10px rgba(13, 71, 161, 0.25);
+  position: relative;
+  z-index: 1;
 }
 .panel-body {
-  padding-bottom: 32px;
+  background: var(--lot-bg);
+  padding-bottom: 36px;
+  min-height: 100%;
 }
 .ellipsis-2 {
   display: -webkit-box;
