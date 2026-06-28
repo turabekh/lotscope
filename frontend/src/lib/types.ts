@@ -68,6 +68,46 @@ export interface EnvelopeResult {
   computed_at: string
 }
 
+export type Acquirability = 'same_owner' | 'city_owned' | 'vacant' | 'built'
+export type AssemblagePotential = 'high' | 'medium' | 'low' | 'none'
+
+export interface AdjacentLot {
+  parcel_number: string
+  address: string | null
+  owner: string | null
+  base_zoning_code: string | null
+  lot_area_sqft: number | null
+  frontage_ft: number | null
+  market_value: number | null
+  is_vacant: boolean | null
+  is_city_owned: boolean | null
+  same_owner: boolean
+  same_zoning: boolean
+  shared_boundary_ft: number | null
+  acquirability: Acquirability
+  is_candidate: boolean
+}
+
+export interface AssemblageSummary {
+  adjacent_count: number
+  candidate_count: number
+  combined_lot_area_sqft: number | null
+  combined_frontage_ft: number | null
+  has_same_owner_neighbor: boolean
+  has_city_owned_neighbor: boolean
+  has_vacant_neighbor: boolean
+}
+
+export interface AssemblageResult {
+  parcel_number: string
+  potential: AssemblagePotential
+  summary: AssemblageSummary
+  neighbors: AdjacentLot[]
+  reasons: string[]
+  sources: unknown[]
+  computed_at: string
+}
+
 export interface ParcelSearchResult {
   parcel_number: string
   address: string | null

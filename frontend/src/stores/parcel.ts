@@ -2,12 +2,19 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { ApiError, api } from '@/lib/api'
-import type { EnvelopeResult, ParcelDetail, VerdictResult } from '@/lib/types'
+import type {
+  AssemblageResult,
+  EnvelopeResult,
+  ParcelDetail,
+  VerdictResult,
+} from '@/lib/types'
 
 export const useParcelStore = defineStore('parcel', () => {
   const detail = ref<ParcelDetail | null>(null)
   const verdict = ref<VerdictResult | null>(null)
   const envelope = ref<EnvelopeResult | null>(null)
+  const assemblage = ref<AssemblageResult | null>(null)
+  const assemblageLoading = ref(false)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const errorStatus = ref<number | null>(null)
@@ -18,9 +25,11 @@ export const useParcelStore = defineStore('parcel', () => {
     errorStatus.value = null
     verdict.value = null
     envelope.value = null
+    assemblage.value = null
     try {
       detail.value = await api.getParcel(parcelNumber)
       verdict.value = await loadVerdict(parcelNumber)
+      void loadAssemblage(parcelNumber)
     } catch (cause) {
       detail.value = null
       if (cause instanceof ApiError) {
@@ -62,10 +71,23 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
+  async function loadAssemblage(parcelNumber: string): Promise<void> {
+    assemblageLoading.value = true
+    try {
+      const result = await api.getAssemblage(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) assemblage.value = result
+    } catch {
+      assemblage.value = null
+    } finally {
+      assemblageLoading.value = false
+    }
+  }
+
   function clear(): void {
     detail.value = null
     verdict.value = null
     envelope.value = null
+    assemblage.value = null
     error.value = null
     errorStatus.value = null
   }
@@ -74,12 +96,15 @@ export const useParcelStore = defineStore('parcel', () => {
     detail,
     verdict,
     envelope,
+    assemblage,
+    assemblageLoading,
     loading,
     error,
     errorStatus,
     select,
     refreshVerdict,
     loadEnvelope,
+    loadAssemblage,
     clear,
   }
 })

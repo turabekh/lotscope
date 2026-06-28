@@ -2,6 +2,7 @@
 import { storeToRefs } from 'pinia'
 
 import AskBox from '@/components/AskBox.vue'
+import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { useParcelStore } from '@/stores/parcel'
@@ -64,6 +65,8 @@ const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
             <q-btn flat dense color="primary" label="Compute" @click="store.refreshVerdict()" />
           </template>
         </q-banner>
+
+        <AssemblagePanel />
 
         <PropertyFacts :detail="detail" />
 

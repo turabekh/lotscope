@@ -1,4 +1,5 @@
 import type {
+  AssemblageResult,
   BasemapSession,
   BillingCadence,
   CheckoutResponse,
@@ -69,6 +70,9 @@ export const api = {
   },
   getEnvelope(parcelNumber: string): Promise<EnvelopeResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/envelope`)
+  },
+  getAssemblage(parcelNumber: string): Promise<AssemblageResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/assemblage`)
   },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {

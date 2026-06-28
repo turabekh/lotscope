@@ -19,7 +19,14 @@ const martinUrl = import.meta.env.VITE_MARTIN_URL ?? 'http://localhost:3000'
 const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 
 const parcelStore = useParcelStore()
-const { detail, envelope } = storeToRefs(parcelStore)
+const { detail, envelope, assemblage } = storeToRefs(parcelStore)
+const ACQUIRABILITY_COLOR: Record<string, string> = {
+  same_owner: '#8e24aa',
+  city_owned: '#ef6c00',
+  vacant: '#00897b',
+  built: '#90a4ae',
+}
+const EMPTY_PARCEL_FILTER: FilterSpecification = ['in', ['get', 'parcel_number'], ['literal', ['']]]
 const filters = useFiltersStore()
 const { vacantOnly, useClasses, colorMode, show3d, basemap } = storeToRefs(filters)
 const FEET_TO_METERS = 0.3048
@@ -401,6 +408,28 @@ function applyPitch(): void {
   }
 }
 
+function applyAssemblage(): void {
+  if (!map?.getLayer('assemblage-fill')) return
+  const candidates = (assemblage.value?.neighbors ?? []).filter((lot) => lot.is_candidate)
+  if (candidates.length === 0) {
+    map.setFilter('assemblage-fill', EMPTY_PARCEL_FILTER)
+    map.setFilter('assemblage-line', EMPTY_PARCEL_FILTER)
+    return
+  }
+  const ids = candidates.map((lot) => lot.parcel_number)
+  const colorMatch: unknown[] = ['match', ['get', 'parcel_number']]
+  for (const lot of candidates) {
+    colorMatch.push(lot.parcel_number, ACQUIRABILITY_COLOR[lot.acquirability] ?? '#90a4ae')
+  }
+  colorMatch.push('#90a4ae')
+  const filter: FilterSpecification = ['in', ['get', 'parcel_number'], ['literal', ids]]
+  const color = colorMatch as unknown as ExpressionSpecification
+  map.setFilter('assemblage-fill', filter)
+  map.setFilter('assemblage-line', filter)
+  map.setPaintProperty('assemblage-fill', 'fill-color', color)
+  map.setPaintProperty('assemblage-line', 'line-color', color)
+}
+
 function addParcelLayers(instance: maplibregl.Map): void {
   for (const pin of MARKER_PINS) {
     if (!instance.hasImage(pin.id)) {
@@ -456,6 +485,22 @@ function addParcelLayers(instance: maplibregl.Map): void {
     filter: ['==', ['get', 'parcel_number'], ''],
   })
   instance.addLayer({
+    id: 'assemblage-fill',
+    type: 'fill',
+    source: 'parcels',
+    'source-layer': 'parcels',
+    paint: { 'fill-color': '#8e24aa', 'fill-opacity': 0.32 },
+    filter: EMPTY_PARCEL_FILTER,
+  })
+  instance.addLayer({
+    id: 'assemblage-line',
+    type: 'line',
+    source: 'parcels',
+    'source-layer': 'parcels',
+    paint: { 'line-color': '#8e24aa', 'line-width': 2.5, 'line-dasharray': [2, 1] },
+    filter: EMPTY_PARCEL_FILTER,
+  })
+  instance.addLayer({
     id: 'vacant-markers',
     type: 'symbol',
     source: 'parcels',
@@ -492,6 +537,7 @@ function addParcelLayers(instance: maplibregl.Map): void {
 
   instance.setFilter('parcels-fill', parcelFilter())
   applyFillPaint()
+  applyAssemblage()
 
   for (const layer of ['parcels-fill', 'vacant-markers']) {
     instance.on('click', layer, selectFromEvent)
@@ -544,6 +590,10 @@ watch([detail, show3d], () => {
 watch(envelope, () => {
   renderEnvelope()
   applyPitch()
+})
+
+watch(assemblage, () => {
+  applyAssemblage()
 })
 
 watch(detail, (selected) => {

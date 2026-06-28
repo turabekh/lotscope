@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError, api } from '@/lib/api'
 import { useParcelStore } from '@/stores/parcel'
-import type { EnvelopeResult, ParcelDetail, VerdictResult } from '@/lib/types'
+import type {
+  AssemblageResult,
+  EnvelopeResult,
+  ParcelDetail,
+  VerdictResult,
+} from '@/lib/types'
 
 vi.mock('@/lib/api', async () => {
   const actual = await vi.importActual<typeof import('@/lib/api')>('@/lib/api')
@@ -14,6 +19,7 @@ vi.mock('@/lib/api', async () => {
       getVerdict: vi.fn(),
       refreshVerdict: vi.fn(),
       getEnvelope: vi.fn(),
+      getAssemblage: vi.fn(),
     },
   }
 })
@@ -21,6 +27,7 @@ vi.mock('@/lib/api', async () => {
 const parcel = { parcel_number: '001', owner: 'Jane' } as unknown as ParcelDetail
 const verdict = { parcel_number: '001', summary: 'RSA-5' } as unknown as VerdictResult
 const envelope = { parcel_number: '001', available: true } as unknown as EnvelopeResult
+const assemblage = { parcel_number: '001', potential: 'high' } as unknown as AssemblageResult
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -75,6 +82,19 @@ describe('parcel store', () => {
 
     expect(api.getEnvelope).toHaveBeenCalledTimes(1)
     expect(store.envelope?.available).toBe(true)
+  })
+
+  it('loads assemblage for the selected parcel', async () => {
+    vi.mocked(api.getParcel).mockResolvedValue(parcel)
+    vi.mocked(api.getVerdict).mockResolvedValue(verdict)
+    vi.mocked(api.getAssemblage).mockResolvedValue(assemblage)
+
+    const store = useParcelStore()
+    await store.select('001')
+    await store.loadAssemblage('001')
+
+    expect(api.getAssemblage).toHaveBeenCalledWith('001')
+    expect(store.assemblage?.potential).toBe('high')
   })
 
   it('clears the envelope when a new parcel is selected', async () => {
