@@ -2,7 +2,11 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.distress.service import assess_parcel_distress, find_leads
+from lotscope.distress.service import (
+    assess_parcel_distress,
+    find_leads,
+    recompute_distress,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -91,6 +95,7 @@ async def test_leads_rank_and_exclude(db_session: AsyncSession) -> None:
     await _tax(db_session, "000000004", delinquent=True, due=50000, years=9, sheriff=True)
     await db_session.flush()
 
+    await recompute_distress(db_session, ["000000001", "000000002", "000000003", "000000004"])
     leads = await find_leads(db_session, limit=50, min_score=1)
     numbers = [lead.parcel_number for lead in leads]
 
@@ -101,13 +106,31 @@ async def test_leads_rank_and_exclude(db_session: AsyncSession) -> None:
     top = next(lead for lead in leads if lead.parcel_number == "000000001")
     parcel = await assess_parcel_distress(db_session, "000000001")
     assert parcel is not None
-    assert top.score == parcel.score  # lead-list SQL and per-parcel scorer agree
+    assert top.score == parcel.score  # precomputed lead score and live per-parcel scorer agree
+
+
+async def test_recompute_distress_is_idempotent(db_session: AsyncSession) -> None:
+    await _parcel(
+        db_session, "000000001", address="1 A ST", mailing="99 ZZ AVE, NEW YORK NY", is_vacant=True
+    )
+    await _tax(db_session, "000000001", delinquent=True, due=25000, years=5, sheriff=True)
+    await db_session.flush()
+
+    first = await recompute_distress(db_session, ["000000001"])
+    second = await recompute_distress(db_session, ["000000001"])
+    assert first == 1
+    assert second == 1
+
+    leads = await find_leads(db_session, limit=50, min_score=1)
+    assert len(leads) == 1
+    assert leads[0].score == 80
 
 
 async def test_leads_respect_min_score_and_vacant_filter(db_session: AsyncSession) -> None:
     await _parcel(db_session, "000000002", address="2 B ST", mailing="2 B ST, PHILADELPHIA PA")
     await _tax(db_session, "000000002", delinquent=True, due=500, years=1)
     await db_session.flush()
+    await recompute_distress(db_session, ["000000002"])
 
     assert await find_leads(db_session, limit=50, min_score=30) == []
     assert await find_leads(db_session, limit=50, min_score=1, vacant_only=True) == []

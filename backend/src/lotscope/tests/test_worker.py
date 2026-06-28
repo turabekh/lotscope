@@ -9,8 +9,13 @@ def _cron_names() -> set[str]:
     return {job.coroutine.__qualname__ for job in worker.WorkerSettings.cron_jobs}
 
 
-def test_scheduled_jobs_cover_ingest_and_both_recomputes() -> None:
-    assert _cron_names() == {"ingest_all", "recompute_vacant_verdicts", "recompute_verdicts"}
+def test_scheduled_jobs_cover_ingest_and_recomputes() -> None:
+    assert _cron_names() == {
+        "ingest_all",
+        "recompute_vacant_verdicts",
+        "recompute_verdicts",
+        "recompute_distress",
+    }
 
 
 async def test_recompute_vacant_verdicts_requests_vacant_only(

@@ -6,6 +6,7 @@ from arq.connections import RedisSettings
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.jobs import INGEST_JOBS
 from lotscope.verdict.jobs import recompute_all_verdicts
 
@@ -50,12 +51,19 @@ async def recompute_vacant_verdicts(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def recompute_distress(ctx: dict[str, Any]) -> int:
+    count = await recompute_all_distress(ctx["session_factory"])
+    _logger.info("recomputed_distress", count=count)
+    return count
+
+
 class WorkerSettings:
     functions: ClassVar = [
         ingest_dataset,
         ingest_all,
         recompute_verdicts,
         recompute_vacant_verdicts,
+        recompute_distress,
     ]
     on_startup = startup
     on_shutdown = shutdown
@@ -63,5 +71,6 @@ class WorkerSettings:
     cron_jobs: ClassVar = [
         cron(ingest_all, hour=4, minute=0),
         cron(recompute_vacant_verdicts, hour=7, minute=0),
+        cron(recompute_distress, hour=8, minute=0),
         cron(recompute_verdicts, weekday="sun", hour=5, minute=0),
     ]

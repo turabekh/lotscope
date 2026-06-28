@@ -24,6 +24,7 @@ from lotscope.api.deps import (
     get_stripe_gateway,
 )
 from lotscope.core.config import Settings
+from lotscope.distress.service import recompute_distress
 from lotscope.zoning.seed import seed_zoning_standards
 
 
@@ -338,6 +339,7 @@ async def test_leads_endpoint_ranks_and_caps_by_tier(db_session: AsyncSession) -
         )
     )
     await db_session.flush()
+    await recompute_distress(db_session, ["000000001"])
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:

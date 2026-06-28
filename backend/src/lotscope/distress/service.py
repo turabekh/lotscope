@@ -1,27 +1,15 @@
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.distress.models import ParcelDistress
 from lotscope.distress.schemas import DistressFactor, DistressResult, LeadItem
-from lotscope.distress.scoring import (
-    _ABSENTEE_WEIGHT,
-    _DANGEROUS_WEIGHT,
-    _DELINQUENT_WEIGHT,
-    _DEMOLITION_WEIGHT,
-    _LIEN_WEIGHT,
-    _SEVERE_DELINQUENT_WEIGHT,
-    _SEVERE_DUE,
-    _SEVERE_YEARS,
-    _SHERIFF_SALE_WEIGHT,
-    _VACANT_WEIGHT,
-    _VIOLATION_WEIGHT,
-    DistressSignals,
-    is_absentee,
-    score_distress,
-)
+from lotscope.distress.scoring import DistressSignals, is_absentee, score_distress
 
 _SOURCES: list[dict[str, Any]] = [
     {"source": "tax_status"},
@@ -48,47 +36,37 @@ _PARCEL_DISTRESS_SQL = text(
     "WHERE p.parcel_number = :parcel_number"
 )
 
-_LEADS_SQL = text(
-    f"""
-WITH li AS (
-  SELECT parcel_number,
-    bool_or(coalesce(is_unsafe, false) OR coalesce(is_imminently_dangerous, false)) AS dangerous,
-    count(*) FILTER (WHERE event_type = 'violation') AS violations,
-    count(*) FILTER (WHERE event_type = 'demolition') AS demolitions
-  FROM li_event GROUP BY parcel_number
-),
-scored AS (
-  SELECT p.parcel_number, p.address, p.owner, p.base_zoning_code, p.is_vacant, p.market_value,
-    ts.total_due, ts.in_sheriff_sale,
-    LEAST(100,
-      (CASE WHEN ts.in_sheriff_sale THEN {_SHERIFF_SALE_WEIGHT} ELSE 0 END)
-      + (CASE WHEN ts.is_delinquent THEN {_DELINQUENT_WEIGHT} ELSE 0 END)
-      + (CASE WHEN ts.is_delinquent AND (coalesce(ts.total_due, 0) >= {_SEVERE_DUE}
-             OR coalesce(ts.years_owed, 0) >= {_SEVERE_YEARS}) THEN {_SEVERE_DELINQUENT_WEIGHT}
-             ELSE 0 END)
-      + (CASE WHEN coalesce(ts.lien_count, 0) > 0 THEN {_LIEN_WEIGHT} ELSE 0 END)
-      + (CASE WHEN li.dangerous THEN {_DANGEROUS_WEIGHT}
-             WHEN coalesce(li.violations, 0) > 0 THEN {_VIOLATION_WEIGHT} ELSE 0 END)
-      + (CASE WHEN coalesce(li.demolitions, 0) > 0 THEN {_DEMOLITION_WEIGHT} ELSE 0 END)
-      + (CASE WHEN coalesce(p.is_vacant, false) THEN {_VACANT_WEIGHT} ELSE 0 END)
-      + (CASE WHEN p.mailing_address IS NOT NULL AND p.address IS NOT NULL
-             AND position(upper(p.address) in upper(p.mailing_address)) = 0
-             THEN {_ABSENTEE_WEIGHT} ELSE 0 END)
-    ) AS score
-  FROM parcel p
-  LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number
-  LEFT JOIN li ON li.parcel_number = p.parcel_number
-  WHERE coalesce(p.is_city_owned, false) = false
-    AND (coalesce(ts.is_delinquent, false) OR coalesce(ts.in_sheriff_sale, false)
-         OR coalesce(p.is_vacant, false) OR coalesce(li.dangerous, false)
-         OR coalesce(li.violations, 0) > 0)
-    AND (NOT CAST(:vacant_only AS boolean) OR coalesce(p.is_vacant, false))
-    AND (CAST(:zip_code AS text) IS NULL OR p.zip_code = CAST(:zip_code AS text))
+_BULK_SIGNALS_SQL = text(
+    "SELECT p.parcel_number, p.is_vacant, p.is_city_owned, p.address, p.mailing_address, "
+    "ts.is_delinquent, ts.total_due, ts.years_owed, ts.lien_count, ts.in_sheriff_sale, "
+    "coalesce(li.dangerous, false) AS dangerous, "
+    "coalesce(li.violations, 0) AS violations, "
+    "coalesce(li.demolitions, 0) AS demolitions "
+    "FROM parcel p "
+    "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
+    "LEFT JOIN ("
+    "  SELECT parcel_number, "
+    "  bool_or(coalesce(is_unsafe, false) OR coalesce(is_imminently_dangerous, false)) "
+    "  AS dangerous, "
+    "  count(*) FILTER (WHERE event_type = 'violation') AS violations, "
+    "  count(*) FILTER (WHERE event_type = 'demolition') AS demolitions "
+    "  FROM li_event WHERE parcel_number = ANY(:parcel_numbers) GROUP BY parcel_number"
+    ") li ON li.parcel_number = p.parcel_number "
+    "WHERE p.parcel_number = ANY(:parcel_numbers)"
 )
-SELECT * FROM scored WHERE score >= CAST(:min_score AS integer)
-ORDER BY score DESC, coalesce(total_due, 0) DESC, parcel_number
-LIMIT CAST(:limit AS integer)
-"""
+
+_LEADS_SQL = text(
+    "SELECT p.parcel_number, p.address, p.owner, p.base_zoning_code, p.is_vacant, p.market_value, "
+    "ts.total_due, ts.in_sheriff_sale, pd.score "
+    "FROM parcel_distress pd "
+    "JOIN parcel p ON p.parcel_number = pd.parcel_number "
+    "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
+    "WHERE pd.score >= CAST(:min_score AS integer) "
+    "AND coalesce(p.is_city_owned, false) = false "
+    "AND (NOT CAST(:vacant_only AS boolean) OR coalesce(p.is_vacant, false)) "
+    "AND (CAST(:zip_code AS text) IS NULL OR p.zip_code = CAST(:zip_code AS text)) "
+    "ORDER BY pd.score DESC, coalesce(ts.total_due, 0) DESC, p.parcel_number "
+    "LIMIT CAST(:limit AS integer)"
 )
 
 
@@ -131,6 +109,41 @@ async def assess_parcel_distress(
         sources=_SOURCES,
         computed_at=datetime.now(UTC),
     )
+
+
+async def recompute_distress(session: AsyncSession, parcel_numbers: Sequence[str]) -> int:
+    if not parcel_numbers:
+        return 0
+    rows = (
+        await session.execute(_BULK_SIGNALS_SQL, {"parcel_numbers": list(parcel_numbers)})
+    ).all()
+    if not rows:
+        return 0
+    now = datetime.now(UTC)
+    values = []
+    for row in rows:
+        assessment = score_distress(_signals(row))
+        values.append(
+            {
+                "parcel_number": row.parcel_number,
+                "score": assessment.score,
+                "tier": assessment.tier,
+                "sources": _SOURCES,
+                "computed_at": now,
+            }
+        )
+    statement = insert(ParcelDistress).values(values)
+    statement = statement.on_conflict_do_update(
+        index_elements=["parcel_number"],
+        set_={
+            "score": statement.excluded.score,
+            "tier": statement.excluded.tier,
+            "sources": statement.excluded.sources,
+            "computed_at": statement.excluded.computed_at,
+        },
+    )
+    await session.execute(statement)
+    return len(values)
 
 
 def _lead_top_factors(row: Row[Any]) -> list[str]:
