@@ -27,7 +27,12 @@ class UserRead(BaseModel):
     tier: str
     is_active: bool
     subscription_status: str | None
+    digest_frequency: str
     created_at: datetime
+
+
+class DigestPreference(BaseModel):
+    frequency: Literal["off", "weekly", "daily"]
 
 
 class TokenResponse(BaseModel):

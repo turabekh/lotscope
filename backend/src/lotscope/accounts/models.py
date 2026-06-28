@@ -18,3 +18,6 @@ class User(Base, TimestampMixin):
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), index=True)
     subscription_status: Mapped[str | None] = mapped_column(String(40))
+    digest_frequency: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="weekly", server_default="weekly"
+    )

@@ -37,6 +37,8 @@ def _fake_user() -> User:
         role="user",
         tier="free",
         is_active=True,
+        digest_frequency="weekly",
+        created_at=datetime.now(UTC),
     )
 
 
@@ -383,6 +385,37 @@ async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
     assert state.json() == {"saved": True}
     assert removed.status_code == 204
     assert after.json()["used"] == 0
+
+
+@pytest.mark.integration
+async def test_digest_preference_and_unsubscribe(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active, "
+            "digest_frequency) VALUES (1, 'm@example.com', 'x', 'user', 'free', true, 'weekly')"
+        )
+    )
+    await db_session.flush()
+
+    settings = Settings(_env_file=None, secret_key="test-secret-key-test-secret-key-32")
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_app_settings] = lambda: settings
+
+    async with _client(app) as client:
+        pref = await client.patch("/auth/digest", json={"frequency": "daily"})
+        assert pref.status_code == 200
+        assert pref.json()["digest_frequency"] == "daily"
+
+        from lotscope.accounts.security import create_unsubscribe_token
+
+        token = create_unsubscribe_token(settings, user_id=1)
+        unsub = await client.get(f"/digests/unsubscribe?token={token}")
+        assert unsub.status_code == 200
+        assert "unsubscribed" in unsub.text.lower()
+
+    frequency = await db_session.scalar(text("SELECT digest_frequency FROM app_user WHERE id = 1"))
+    assert frequency == "off"
 
 
 async def test_basemap_session_unconfigured_returns_503() -> None:

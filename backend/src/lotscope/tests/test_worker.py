@@ -9,12 +9,14 @@ def _cron_names() -> set[str]:
     return {job.coroutine.__qualname__ for job in worker.WorkerSettings.cron_jobs}
 
 
-def test_scheduled_jobs_cover_ingest_and_recomputes() -> None:
+def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
     assert _cron_names() == {
         "ingest_all",
         "recompute_vacant_verdicts",
         "recompute_verdicts",
         "recompute_distress",
+        "send_daily_digests",
+        "send_weekly_digests",
     }
 
 

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
 from lotscope.accounts.schemas import (
+    DigestPreference,
     LoginRequest,
     TokenResponse,
     UsageMetric,
@@ -44,6 +45,17 @@ async def login(data: LoginRequest, session: SessionDep, settings: SettingsDep) 
 
 @router.get("/me", response_model=UserRead)
 async def me(user: Annotated[User, Depends(get_current_user)]) -> UserRead:
+    return UserRead.model_validate(user)
+
+
+@router.patch("/digest", response_model=UserRead)
+async def set_digest_preference(
+    data: DigestPreference,
+    session: SessionDep,
+    user: Annotated[User, Depends(get_current_user)],
+) -> UserRead:
+    user.digest_frequency = data.frequency
+    await session.commit()
     return UserRead.model_validate(user)
 
 

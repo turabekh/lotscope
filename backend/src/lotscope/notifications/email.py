@@ -1,0 +1,46 @@
+import asyncio
+import smtplib
+from email.message import EmailMessage
+from email.utils import formataddr
+from typing import Protocol
+
+from lotscope.core.config import Settings
+
+
+class EmailSender(Protocol):
+    async def send(self, *, to: str, subject: str, html: str, text: str) -> None: ...
+
+
+class SmtpEmailSender:
+    def __init__(self, settings: Settings) -> None:
+        if not settings.smtp_host:
+            raise ValueError("SMTP is not configured.")
+        self._host = settings.smtp_host
+        self._port = settings.smtp_port
+        self._user = settings.smtp_user
+        self._password = settings.smtp_password
+        self._use_tls = settings.smtp_use_tls
+        self._from = formataddr((settings.email_from_name, settings.email_from))
+
+    async def send(self, *, to: str, subject: str, html: str, text: str) -> None:
+        message = EmailMessage()
+        message["Subject"] = subject
+        message["From"] = self._from
+        message["To"] = to
+        message.set_content(text)
+        message.add_alternative(html, subtype="html")
+        await asyncio.to_thread(self._send_sync, message)
+
+    def _send_sync(self, message: EmailMessage) -> None:
+        with smtplib.SMTP(self._host, self._port, timeout=30) as client:
+            if self._use_tls:
+                client.starttls()
+            if self._user and self._password:
+                client.login(self._user, self._password)
+            client.send_message(message)
+
+
+def get_email_sender(settings: Settings) -> EmailSender | None:
+    if not settings.smtp_host:
+        return None
+    return SmtpEmailSender(settings)

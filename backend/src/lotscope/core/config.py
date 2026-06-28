@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     embedding_model: str = "voyage-3"
     embedding_dimensions: int = 1024
 
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    email_from: str = "alerts@lotscope.app"
+    email_from_name: str = "LotScope PHL"
+    app_base_url: str = "http://localhost:5173"
+    api_base_url: str = "http://localhost:8000"
+    company_postal_address: str = "LotScope PHL, Philadelphia, PA"
+
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
     stripe_price_pro_monthly: str | None = None

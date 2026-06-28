@@ -3,9 +3,11 @@ import pytest
 
 from lotscope.accounts.security import (
     create_access_token,
+    create_unsubscribe_token,
     decode_access_token,
     hash_password,
     verify_password,
+    verify_unsubscribe_token,
 )
 from lotscope.core.config import Settings
 
@@ -43,3 +45,18 @@ def test_expired_token_is_rejected() -> None:
     token = create_access_token(settings, subject="1", role="user", expires_minutes=-1)
     with pytest.raises(jwt.ExpiredSignatureError):
         decode_access_token(settings, token)
+
+
+def test_unsubscribe_token_roundtrip() -> None:
+    settings = _settings()
+    token = create_unsubscribe_token(settings, user_id=7)
+    assert verify_unsubscribe_token(settings, token) == 7
+
+
+def test_unsubscribe_token_rejects_tamper_and_wrong_purpose() -> None:
+    settings = _settings()
+    assert verify_unsubscribe_token(settings, "not-a-token") is None
+    other = create_unsubscribe_token(_settings(_SECRET_B), user_id=7)
+    assert verify_unsubscribe_token(settings, other) is None
+    access = create_access_token(settings, subject="7", role="user")
+    assert verify_unsubscribe_token(settings, access) is None
