@@ -21,12 +21,30 @@ const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
         <div class="q-gutter-xs q-mt-sm">
           <q-chip dense color="white" text-color="primary" class="text-weight-bold">
             {{ detail.base_zoning_code ?? 'No zoning' }}
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              Base Title 14 zoning district. It sets what you can build by-right — uses, units,
+              height, and setbacks.
+            </q-tooltip>
           </q-chip>
           <q-chip v-if="detail.is_vacant" dense color="amber-8" text-color="white" icon="grass">
             Vacant
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              Flagged by the city's Vacant Property Indicators model as a likely-vacant lot —
+              LotScope's core inventory.
+            </q-tooltip>
           </q-chip>
-          <q-chip v-if="detail.is_city_owned" dense color="deep-orange" text-color="white" icon="account_balance">
+          <q-chip
+            v-if="detail.is_city_owned"
+            dense
+            color="deep-orange"
+            text-color="white"
+            icon="account_balance"
+          >
             City-owned
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              Owned by the City or Land Bank. Acquisition runs through the public disposition
+              process, not a private sale.
+            </q-tooltip>
           </q-chip>
         </div>
       </div>

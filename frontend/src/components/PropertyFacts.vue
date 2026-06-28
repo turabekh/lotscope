@@ -31,11 +31,23 @@ defineProps<{ detail: ParcelDetail }>()
           </q-item-section>
         </q-item>
         <q-item class="q-px-none">
-          <q-item-section>Assessed value</q-item-section>
+          <q-item-section>
+            Assessed value
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              The OPA's assessed value — the basis for property taxes. Not the same as the market
+              estimate in the verdict above.
+            </q-tooltip>
+          </q-item-section>
           <q-item-section side class="value">{{ formatCurrency(detail.market_value) }}</q-item-section>
         </q-item>
         <q-item v-if="detail.land_value != null" class="q-px-none">
-          <q-item-section>Land / improvement</q-item-section>
+          <q-item-section>
+            Land / improvement
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              How the assessment splits between land and any structure. Vacant lots are mostly or
+              entirely land value.
+            </q-tooltip>
+          </q-item-section>
           <q-item-section side class="value">
             {{ formatCurrency(detail.land_value) }} / {{ formatCurrency(detail.improvement_value) }}
           </q-item-section>
