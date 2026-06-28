@@ -388,6 +388,36 @@ async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
+async def test_pipeline_add_move_and_remove(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'm@example.com', 'x', 'user', 'free', true)"
+        )
+    )
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, address) VALUES ('000000001', '1 Main St')")
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        added = await client.post("/pipeline", json={"parcel_number": "000000001"})
+        listed = await client.get("/pipeline")
+        moved = await client.patch("/pipeline/000000001", json={"stage": "offer"})
+        removed = await client.delete("/pipeline/000000001")
+        after = await client.get("/pipeline")
+
+    assert added.status_code == 201
+    assert added.json()["stage"] == "lead"
+    assert listed.json()["limit"] == 10
+    assert listed.json()["deals"][0]["address"] == "1 Main St"
+    assert moved.json()["stage"] == "offer"
+    assert removed.status_code == 204
+    assert after.json()["used"] == 0
+
+
+@pytest.mark.integration
 async def test_push_subscribe_and_vapid_key(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(

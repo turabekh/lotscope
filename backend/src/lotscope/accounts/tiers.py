@@ -27,6 +27,12 @@ WATCHLIST_LIMITS: dict[str, int | None] = {
     "enterprise": None,
 }
 
+PIPELINE_LIMITS: dict[str, int | None] = {
+    "free": 10,
+    "pro": None,
+    "enterprise": None,
+}
+
 
 def ask_daily_limit(tier: str) -> int | None:
     return ASK_DAILY_LIMITS.get(tier, ASK_DAILY_LIMITS[_DEFAULT_TIER])
@@ -38,6 +44,10 @@ def lead_list_limit(tier: str) -> int:
 
 def watchlist_limit(tier: str) -> int | None:
     return WATCHLIST_LIMITS.get(tier, WATCHLIST_LIMITS[_DEFAULT_TIER])
+
+
+def pipeline_limit(tier: str) -> int | None:
+    return PIPELINE_LIMITS.get(tier, PIPELINE_LIMITS[_DEFAULT_TIER])
 
 
 def parcel_view_daily_limit(tier: str) -> int | None:
