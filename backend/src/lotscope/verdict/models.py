@@ -35,7 +35,7 @@ class ParcelVerdict(Base, TimestampMixin, ProvenanceMixin):
 
     arv: Mapped[float | None] = mapped_column(Numeric(14, 2))
     est_profit: Mapped[float | None] = mapped_column(Numeric(14, 2))
-    est_margin: Mapped[float | None] = mapped_column(Numeric(6, 4))
+    est_margin: Mapped[float | None] = mapped_column(Numeric(14, 4))
     max_allowable_offer: Mapped[float | None] = mapped_column(Numeric(14, 2))
     deal_score: Mapped[float | None] = mapped_column(Numeric(5, 2))
     is_underpriced: Mapped[bool | None] = mapped_column(Boolean)
