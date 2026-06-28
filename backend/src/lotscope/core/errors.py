@@ -28,3 +28,7 @@ class AuthError(LotScopeError):
 
 class ForbiddenError(LotScopeError):
     default_message = "You do not have permission to perform this action."
+
+
+class QuotaExceededError(LotScopeError):
+    default_message = "You have reached your plan's usage limit."

@@ -32,3 +32,10 @@ class UserRead(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
+
+
+class UsageResponse(BaseModel):
+    tier: str
+    limit: int | None
+    used: int
+    remaining: int | None

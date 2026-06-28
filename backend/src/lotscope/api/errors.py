@@ -8,6 +8,7 @@ from lotscope.core.errors import (
     ForbiddenError,
     LotScopeError,
     NotFoundError,
+    QuotaExceededError,
     UpstreamError,
     ValidationError,
 )
@@ -23,6 +24,7 @@ _STATUS_BY_EXCEPTION: dict[type[LotScopeError], int] = {
     ValidationError: 422,
     AuthError: 401,
     ForbiddenError: 403,
+    QuotaExceededError: 429,
     UpstreamError: 502,
 }
 

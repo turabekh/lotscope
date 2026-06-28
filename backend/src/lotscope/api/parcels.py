@@ -9,6 +9,8 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
+from lotscope.accounts.tiers import ask_daily_limit
+from lotscope.accounts.usage import get_ask_usage, increment_ask_usage
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.schemas import ParcelAnswer
@@ -20,7 +22,7 @@ from lotscope.api.deps import (
     get_redis,
     get_session,
 )
-from lotscope.core.errors import NotFoundError
+from lotscope.core.errors import NotFoundError, QuotaExceededError
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.valuation.schemas import ValuationResult
@@ -103,11 +105,23 @@ async def ask_parcel(
     if cached is not None:
         return ParcelAnswer.model_validate_json(cached)
 
+    limit = ask_daily_limit(current_user.tier)
+    if limit is not None:
+        used = 0
+        with contextlib.suppress(RedisError):
+            used = await get_ask_usage(redis, current_user.id)
+        if used >= limit:
+            raise QuotaExceededError(
+                f"You've reached your {current_user.tier} plan's daily limit of "
+                f"{limit} AI questions. It resets tomorrow."
+            )
+
     answer = await ask_the_parcel(
         session, parcel_number, body.question, embedder=embedder, generator=generator
     )
     if answer is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     with contextlib.suppress(RedisError):
+        await increment_ask_usage(redis, current_user.id)
         await redis.set(cache_key, answer.model_dump_json(), ex=_ASK_CACHE_TTL_SECONDS)
     return answer

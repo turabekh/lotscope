@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -8,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
+from lotscope.accounts.usage import ask_usage_key
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
 from lotscope.ai.retrieval import add_document
 from lotscope.api.app import create_app
@@ -37,13 +39,22 @@ def _fake_user() -> User:
 
 class _FakeRedis:
     def __init__(self) -> None:
-        self.store: dict[str, str] = {}
+        self.store: dict[str, object] = {}
 
-    async def get(self, key: str) -> str | None:
+    async def get(self, key: str) -> object | None:
         return self.store.get(key)
 
     async def set(self, key: str, value: str, ex: int | None = None) -> None:
         self.store[key] = value
+
+    async def incr(self, key: str) -> int:
+        current = self.store.get(key, 0)
+        value = (current if isinstance(current, int) else 0) + 1
+        self.store[key] = value
+        return value
+
+    async def expire(self, key: str, ttl: int) -> bool:
+        return True
 
 
 def _app_with_session(session: AsyncSession) -> FastAPI:
@@ -215,6 +226,48 @@ async def test_ask_endpoint_requires_authentication(db_session: AsyncSession) ->
     async with _client(app) as client:
         resp = await client.post("/parcels/000000001/ask", json={"question": "Hi?"})
     assert resp.status_code == 401
+
+
+@pytest.mark.integration
+async def test_ask_endpoint_enforces_tier_quota(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+    )
+    await db_session.flush()
+
+    app = _app_with_session(db_session)
+    generator = _FakeGenerator()
+    fake_redis = _FakeRedis()
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    fake_redis.store[ask_usage_key(1, today)] = 10  # free tier limit already reached
+    app.dependency_overrides[get_embedder] = _FakeEmbedder
+    app.dependency_overrides[get_generator] = lambda: generator
+    app.dependency_overrides[get_redis] = lambda: fake_redis
+    app.dependency_overrides[get_current_user] = _fake_user
+
+    async with _client(app) as client:
+        resp = await client.post("/parcels/000000001/ask", json={"question": "Anything?"})
+
+    assert resp.status_code == 429
+    assert resp.json()["error"] == "QuotaExceededError"
+    assert generator.calls == 0
+
+
+@pytest.mark.integration
+async def test_usage_endpoint_reports_tier_and_remaining(db_session: AsyncSession) -> None:
+    app = _app_with_session(db_session)
+    fake_redis = _FakeRedis()
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    fake_redis.store[ask_usage_key(1, today)] = 3
+    app.dependency_overrides[get_redis] = lambda: fake_redis
+    app.dependency_overrides[get_current_user] = _fake_user
+
+    async with _client(app) as client:
+        resp = await client.get("/auth/usage")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body == {"tier": "free", "limit": 10, "used": 3, "remaining": 7}
 
 
 async def test_cors_allows_configured_origin() -> None:
