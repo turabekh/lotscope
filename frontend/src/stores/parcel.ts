@@ -2,11 +2,12 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { ApiError, api } from '@/lib/api'
-import type { ParcelDetail, VerdictResult } from '@/lib/types'
+import type { EnvelopeResult, ParcelDetail, VerdictResult } from '@/lib/types'
 
 export const useParcelStore = defineStore('parcel', () => {
   const detail = ref<ParcelDetail | null>(null)
   const verdict = ref<VerdictResult | null>(null)
+  const envelope = ref<EnvelopeResult | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const errorStatus = ref<number | null>(null)
@@ -16,6 +17,7 @@ export const useParcelStore = defineStore('parcel', () => {
     error.value = null
     errorStatus.value = null
     verdict.value = null
+    envelope.value = null
     try {
       detail.value = await api.getParcel(parcelNumber)
       verdict.value = await loadVerdict(parcelNumber)
@@ -49,12 +51,35 @@ export const useParcelStore = defineStore('parcel', () => {
     verdict.value = await api.refreshVerdict(detail.value.parcel_number)
   }
 
+  async function loadEnvelope(): Promise<void> {
+    if (detail.value === null) return
+    const parcelNumber = detail.value.parcel_number
+    if (envelope.value?.parcel_number === parcelNumber) return
+    try {
+      envelope.value = await api.getEnvelope(parcelNumber)
+    } catch {
+      envelope.value = null
+    }
+  }
+
   function clear(): void {
     detail.value = null
     verdict.value = null
+    envelope.value = null
     error.value = null
     errorStatus.value = null
   }
 
-  return { detail, verdict, loading, error, errorStatus, select, refreshVerdict, clear }
+  return {
+    detail,
+    verdict,
+    envelope,
+    loading,
+    error,
+    errorStatus,
+    select,
+    refreshVerdict,
+    loadEnvelope,
+    clear,
+  }
 })

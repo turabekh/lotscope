@@ -28,6 +28,7 @@ export const useFiltersStore = defineStore('filters', () => {
   const vacantOnly = ref(false)
   const useClasses = ref<UseClass[]>([])
   const colorMode = ref<ColorMode>('vacancy')
+  const show3d = ref(false)
 
   function toggleClass(value: UseClass): void {
     useClasses.value = useClasses.value.includes(value)
@@ -45,5 +46,5 @@ export const useFiltersStore = defineStore('filters', () => {
     () => (vacantOnly.value ? 1 : 0) + (useClasses.value.length > 0 ? 1 : 0),
   )
 
-  return { vacantOnly, useClasses, colorMode, toggleClass, reset, activeCount }
+  return { vacantOnly, useClasses, colorMode, show3d, toggleClass, reset, activeCount }
 })

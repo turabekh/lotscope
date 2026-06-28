@@ -6,7 +6,7 @@ import maplibregl, {
   type StyleSpecification,
 } from 'maplibre-gl'
 import { storeToRefs } from 'pinia'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useFiltersStore } from '@/stores/filters'
 import { useParcelStore } from '@/stores/parcel'
@@ -17,9 +17,23 @@ const container = ref<HTMLDivElement | null>(null)
 const martinUrl = import.meta.env.VITE_MARTIN_URL ?? 'http://localhost:3000'
 const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 
-const { detail } = storeToRefs(useParcelStore())
+const parcelStore = useParcelStore()
+const { detail, envelope } = storeToRefs(parcelStore)
 const filters = useFiltersStore()
-const { vacantOnly, useClasses, colorMode } = storeToRefs(filters)
+const { vacantOnly, useClasses, colorMode, show3d } = storeToRefs(filters)
+const FEET_TO_METERS = 0.3048
+
+const envelopeCaption = computed(() => {
+  const env = envelope.value
+  if (!show3d.value || env === null) return null
+  if (!env.available) return env.reasons[0] ?? 'No by-right height recorded for this district.'
+  const height = env.max_height_ft !== null ? `${Math.round(env.max_height_ft)} ft` : ''
+  const floors =
+    env.estimated_floors !== null
+      ? `~${env.estimated_floors} floor${env.estimated_floors === 1 ? '' : 's'}`
+      : ''
+  return [env.district_code ?? '', height, floors].filter(Boolean).join(' · ')
+})
 let map: maplibregl.Map | undefined
 const popup = new maplibregl.Popup({
   closeButton: false,
@@ -261,6 +275,39 @@ function selectFromEvent(event: MapLayerMouseEvent): void {
   if (typeof parcelNumber === 'string') emit('select', parcelNumber)
 }
 
+function emptyCollection(): GeoJSON.FeatureCollection {
+  return { type: 'FeatureCollection', features: [] }
+}
+
+function renderEnvelope(): void {
+  const source = map?.getSource('envelope')
+  if (!(source instanceof maplibregl.GeoJSONSource)) return
+  const env = envelope.value
+  if (!show3d.value || env === null || env.buildable_footprint === null) {
+    source.setData(emptyCollection())
+    return
+  }
+  const heightMeters = env.max_height_ft !== null ? env.max_height_ft * FEET_TO_METERS : 0
+  source.setData({
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: { height_m: heightMeters },
+        geometry: env.buildable_footprint,
+      },
+    ],
+  })
+}
+
+function applyPitch(): void {
+  if (!map) return
+  const target = show3d.value && envelope.value !== null ? 55 : 0
+  if (Math.round(map.getPitch()) !== target) {
+    map.easeTo({ pitch: target, duration: 600 })
+  }
+}
+
 function addParcelLayers(instance: maplibregl.Map): void {
   for (const pin of MARKER_PINS) {
     if (!instance.hasImage(pin.id)) {
@@ -330,6 +377,25 @@ function addParcelLayers(instance: maplibregl.Map): void {
     },
   })
 
+  instance.addSource('envelope', { type: 'geojson', data: emptyCollection() })
+  instance.addLayer({
+    id: 'envelope-extrusion',
+    type: 'fill-extrusion',
+    source: 'envelope',
+    paint: {
+      'fill-extrusion-color': '#1565c0',
+      'fill-extrusion-height': ['coalesce', ['get', 'height_m'], 0],
+      'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.6,
+    },
+  })
+  instance.addLayer({
+    id: 'envelope-outline',
+    type: 'line',
+    source: 'envelope',
+    paint: { 'line-color': '#0d47a1', 'line-width': 2 },
+  })
+
   instance.setFilter('parcels-fill', parcelFilter())
   applyFillPaint()
 
@@ -365,6 +431,19 @@ watch(colorMode, () => {
   applyMarkerIcon()
 })
 
+watch([detail, show3d], () => {
+  if (show3d.value && detail.value !== null) {
+    void parcelStore.loadEnvelope()
+  }
+  renderEnvelope()
+  applyPitch()
+})
+
+watch(envelope, () => {
+  renderEnvelope()
+  applyPitch()
+})
+
 watch(detail, (selected) => {
   if (!map || !map.getLayer('parcel-selected')) return
   const filter: FilterSpecification = [
@@ -387,6 +466,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="container" class="map-root" />
+  <div v-if="envelopeCaption" class="envelope-caption">
+    <q-icon name="deployed_code" size="16px" class="q-mr-xs" />
+    <span>{{ envelopeCaption }}</span>
+    <span class="ec-note">approx · informational</span>
+  </div>
 </template>
 
 <style scoped>
@@ -394,6 +478,30 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   min-height: 300px;
+}
+.envelope-caption {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 32px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(13, 71, 161, 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+}
+.envelope-caption .ec-note {
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.8;
+  margin-left: 4px;
 }
 </style>
 

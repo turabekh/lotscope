@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError, api } from '@/lib/api'
 import { useParcelStore } from '@/stores/parcel'
-import type { ParcelDetail, VerdictResult } from '@/lib/types'
+import type { EnvelopeResult, ParcelDetail, VerdictResult } from '@/lib/types'
 
 vi.mock('@/lib/api', async () => {
   const actual = await vi.importActual<typeof import('@/lib/api')>('@/lib/api')
@@ -13,12 +13,14 @@ vi.mock('@/lib/api', async () => {
       getParcel: vi.fn(),
       getVerdict: vi.fn(),
       refreshVerdict: vi.fn(),
+      getEnvelope: vi.fn(),
     },
   }
 })
 
 const parcel = { parcel_number: '001', owner: 'Jane' } as unknown as ParcelDetail
 const verdict = { parcel_number: '001', summary: 'RSA-5' } as unknown as VerdictResult
+const envelope = { parcel_number: '001', available: true } as unknown as EnvelopeResult
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -59,5 +61,33 @@ describe('parcel store', () => {
 
     expect(store.detail).toBeNull()
     expect(store.error).toBe('boom')
+  })
+
+  it('loads the envelope once and caches it per parcel', async () => {
+    vi.mocked(api.getParcel).mockResolvedValue(parcel)
+    vi.mocked(api.getVerdict).mockResolvedValue(verdict)
+    vi.mocked(api.getEnvelope).mockResolvedValue(envelope)
+
+    const store = useParcelStore()
+    await store.select('001')
+    await store.loadEnvelope()
+    await store.loadEnvelope()
+
+    expect(api.getEnvelope).toHaveBeenCalledTimes(1)
+    expect(store.envelope?.available).toBe(true)
+  })
+
+  it('clears the envelope when a new parcel is selected', async () => {
+    vi.mocked(api.getParcel).mockResolvedValue(parcel)
+    vi.mocked(api.getVerdict).mockResolvedValue(verdict)
+    vi.mocked(api.getEnvelope).mockResolvedValue(envelope)
+
+    const store = useParcelStore()
+    await store.select('001')
+    await store.loadEnvelope()
+    expect(store.envelope).not.toBeNull()
+
+    await store.select('002')
+    expect(store.envelope).toBeNull()
   })
 })

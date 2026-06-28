@@ -6,7 +6,7 @@ import { ref } from 'vue'
 import { COLOR_MODE_OPTIONS, USE_CLASS_OPTIONS, useFiltersStore } from '@/stores/filters'
 
 const store = useFiltersStore()
-const { vacantOnly, useClasses, colorMode, activeCount } = storeToRefs(store)
+const { vacantOnly, useClasses, colorMode, show3d, activeCount } = storeToRefs(store)
 const $q = useQuasar()
 const open = ref(!$q.screen.lt.sm)
 </script>
@@ -74,6 +74,18 @@ const open = ref(!$q.screen.lt.sm)
           <div class="text-caption text-grey-6 q-mt-xs row items-center no-wrap">
             <q-icon name="place" size="14px" class="q-mr-xs" />
             <span>Pins mark vacant lots{{ colorMode === 'vacancy' ? '' : `, shaded by ${colorMode}` }}</span>
+          </div>
+
+          <q-separator class="q-my-sm" />
+
+          <q-toggle v-model="show3d" dense color="primary">
+            <div class="row items-center no-wrap">
+              <q-icon name="deployed_code" size="18px" class="q-mr-xs" />
+              <span>3D building envelope</span>
+            </div>
+          </q-toggle>
+          <div class="text-caption text-grey-6 q-mb-xs">
+            Extrudes the selected lot to its by-right height after setbacks. Approximate.
           </div>
 
           <q-separator class="q-my-sm" />

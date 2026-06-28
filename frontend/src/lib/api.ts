@@ -1,6 +1,7 @@
 import type {
   BillingCadence,
   CheckoutResponse,
+  EnvelopeResult,
   LayersResponse,
   ParcelAnswer,
   ParcelDetail,
@@ -64,6 +65,9 @@ export const api = {
   },
   getComps(parcelNumber: string): Promise<ValuationResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/comps`)
+  },
+  getEnvelope(parcelNumber: string): Promise<EnvelopeResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/envelope`)
   },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {

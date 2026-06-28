@@ -52,6 +52,22 @@ export interface VerdictResult {
   computed_at: string
 }
 
+export interface EnvelopeResult {
+  parcel_number: string
+  available: boolean
+  district_code: string | null
+  cited_section: string | null
+  max_height_ft: number | null
+  estimated_floors: number | null
+  applied_setback_ft: number | null
+  buildable_area_sqft: number | null
+  lot_footprint: GeoJSON.Polygon | null
+  buildable_footprint: GeoJSON.Polygon | null
+  reasons: string[]
+  sources: unknown[]
+  computed_at: string
+}
+
 export interface ParcelSearchResult {
   parcel_number: string
   address: string | null
