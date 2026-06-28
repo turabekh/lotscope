@@ -32,6 +32,9 @@ class LeadItem(BaseModel):
     in_sheriff_sale: bool | None
     score: int
     top_factors: list[str]
+    deal_score: float | None = None
+    max_allowable_offer: float | None = None
+    is_underpriced: bool | None = None
 
 
 class LeadsResponse(BaseModel):

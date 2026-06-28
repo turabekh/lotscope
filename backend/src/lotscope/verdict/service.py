@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -19,9 +19,39 @@ _PARCEL_SQL = text(
     "SELECT market_value, base_zoning_code FROM parcel WHERE parcel_number = :parcel_number"
 )
 
+_DEAL_SIGNALS_SQL = text(
+    "SELECT parcel_number, deal_score, max_allowable_offer, is_underpriced "
+    "FROM parcel_verdict WHERE parcel_number = ANY(:parcel_numbers)"
+)
+
+
+@dataclass(frozen=True)
+class DealSignal:
+    deal_score: float | None
+    max_allowable_offer: float | None
+    is_underpriced: bool | None
+
 
 def _as_float(value: Any) -> float | None:
     return float(value) if value is not None else None
+
+
+async def get_deal_signals(
+    session: AsyncSession, parcel_numbers: Sequence[str]
+) -> dict[str, DealSignal]:
+    if not parcel_numbers:
+        return {}
+    rows = (
+        await session.execute(_DEAL_SIGNALS_SQL, {"parcel_numbers": list(parcel_numbers)})
+    ).all()
+    return {
+        row.parcel_number: DealSignal(
+            deal_score=_as_float(row.deal_score),
+            max_allowable_offer=_as_float(row.max_allowable_offer),
+            is_underpriced=row.is_underpriced,
+        )
+        for row in rows
+    }
 
 
 async def _persist(

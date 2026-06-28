@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.distress.models import ParcelDistress
 from lotscope.distress.schemas import DistressFactor, DistressResult, LeadItem
 from lotscope.distress.scoring import DistressSignals, is_absentee, score_distress
+from lotscope.verdict.service import DealSignal, get_deal_signals
 
 _SOURCES: list[dict[str, Any]] = [
     {"source": "tax_status"},
@@ -176,18 +177,23 @@ async def find_leads(
             },
         )
     ).all()
-    return [
-        LeadItem(
-            parcel_number=row.parcel_number,
-            address=row.address,
-            owner=row.owner,
-            base_zoning_code=row.base_zoning_code,
-            is_vacant=row.is_vacant,
-            market_value=_as_float(row.market_value),
-            total_due=_as_float(row.total_due),
-            in_sheriff_sale=row.in_sheriff_sale,
-            score=int(row.score),
-            top_factors=_lead_top_factors(row),
-        )
-        for row in rows
-    ]
+    signals = await get_deal_signals(session, [row.parcel_number for row in rows])
+    return [_lead_item(row, signals.get(row.parcel_number)) for row in rows]
+
+
+def _lead_item(row: Row[Any], signal: DealSignal | None) -> LeadItem:
+    return LeadItem(
+        parcel_number=row.parcel_number,
+        address=row.address,
+        owner=row.owner,
+        base_zoning_code=row.base_zoning_code,
+        is_vacant=row.is_vacant,
+        market_value=_as_float(row.market_value),
+        total_due=_as_float(row.total_due),
+        in_sheriff_sale=row.in_sheriff_sale,
+        score=int(row.score),
+        top_factors=_lead_top_factors(row),
+        deal_score=signal.deal_score if signal is not None else None,
+        max_allowable_offer=signal.max_allowable_offer if signal is not None else None,
+        is_underpriced=signal.is_underpriced if signal is not None else None,
+    )

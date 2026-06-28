@@ -33,10 +33,10 @@ def test_minimal_dossier_is_valid_pdf() -> None:
 def test_full_dossier_renders_all_sections() -> None:
     verdict = VerdictResult(
         parcel_number="000000001",
-        verdict_version="v1",
+        verdict_version="v2",
         buildability_score=70,
         opportunity_score=68,
-        summary="RSD-3: buildable by-right (1 unit); 2 risk flags.",
+        summary="RSD-3: buildable by-right (1 unit); 2 risk flags; MAO $95,000 (underpriced).",
         can_build_by_right=True,
         by_right_units=1,
         max_height_ft=38,
@@ -46,12 +46,12 @@ def test_full_dossier_renders_all_sections() -> None:
         value_estimate_high=None,
         value_confidence=None,
         assessment_market_gap=None,
-        arv=None,
-        est_profit=None,
-        est_margin=None,
-        max_allowable_offer=None,
-        deal_score=None,
-        is_underpriced=None,
+        arv=480000,
+        est_profit=72000,
+        est_margin=0.15,
+        max_allowable_offer=95000,
+        deal_score=62,
+        is_underpriced=True,
         risk_score=30,
         risk_flags=[
             {

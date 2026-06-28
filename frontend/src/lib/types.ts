@@ -185,6 +185,9 @@ export interface LeadItem {
   in_sheriff_sale: boolean | null
   score: number
   top_factors: string[]
+  deal_score: number | null
+  max_allowable_offer: number | null
+  is_underpriced: boolean | null
 }
 
 export interface LeadsResponse {

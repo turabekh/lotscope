@@ -143,6 +143,20 @@ def render_dossier_pdf(
         _kv(pdf, "Estimated land value", value)
         _kv(pdf, "vs. assessment", _money(verdict.assessment_market_gap))
 
+        if verdict.max_allowable_offer is not None:
+            _section(pdf, "Deal analysis")
+            if verdict.deal_score is not None:
+                color = (27, 94, 32) if verdict.is_underpriced else _BRAND
+                _tag(pdf, f"DEAL SCORE {round(verdict.deal_score)}/100", color)
+                if verdict.is_underpriced:
+                    _tag(pdf, "UNDERPRICED", (27, 94, 32))
+                pdf.ln(8)
+            _kv(pdf, "Max allowable offer", _money(verdict.max_allowable_offer))
+            _kv(pdf, "After-build value (ARV)", _money(verdict.arv))
+            _kv(pdf, "Estimated profit", _money(verdict.est_profit))
+            margin = f"{verdict.est_margin * 100:.1f}%" if verdict.est_margin is not None else "-"
+            _kv(pdf, "Estimated margin", margin)
+
         _section(pdf, "Risk")
         score = "-" if verdict.risk_score is None else f"{round(verdict.risk_score)}/100"
         _kv(pdf, "Risk score", score)

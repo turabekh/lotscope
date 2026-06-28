@@ -34,6 +34,12 @@ function scoreColor(score: number): string {
   return 'blue-grey-6'
 }
 
+function money(value: number | null): string {
+  if (value == null) return '—'
+  const sign = value < 0 ? '-' : ''
+  return `${sign}$${Math.abs(Math.round(value)).toLocaleString('en-US')}`
+}
+
 async function load(): Promise<void> {
   loading.value = true
   error.value = null
@@ -176,6 +182,22 @@ onMounted(load)
                   </q-badge>
                   <q-badge v-if="lead.base_zoning_code" color="grey-3" text-color="grey-9">
                     {{ lead.base_zoning_code }}
+                  </q-badge>
+                  <q-badge
+                    v-if="lead.is_underpriced"
+                    color="green-1"
+                    text-color="green-9"
+                    class="lead-tag"
+                  >
+                    Underpriced · MAO {{ money(lead.max_allowable_offer) }}
+                  </q-badge>
+                  <q-badge
+                    v-else-if="lead.deal_score != null"
+                    color="blue-1"
+                    text-color="primary"
+                    class="lead-tag"
+                  >
+                    Deal {{ Math.round(lead.deal_score) }}
                   </q-badge>
                 </div>
               </div>
