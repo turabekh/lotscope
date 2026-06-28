@@ -326,6 +326,7 @@ async def test_parcel_detail_enforces_free_view_quota(db_session: AsyncSession) 
 async def test_basemap_session_unconfigured_returns_503() -> None:
     app = create_app()
     app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
+    app.dependency_overrides[get_redis] = lambda: _FakeRedis()
 
     async with _client(app) as client:
         resp = await client.get("/maps/basemap-session?map_type=satellite")

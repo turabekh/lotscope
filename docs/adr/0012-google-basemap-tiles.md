@@ -26,6 +26,6 @@ The map shipped on free OpenStreetMap raster tiles. We want Google **satellite**
 
 - The key is runtime-visible in the browser network tab; referrer restriction is the control. Acceptable and standard for client-rendered Google maps.
 - Google Maps Platform billing/quota applies to Map Tiles usage; OSM is the zero-cost default-able fallback.
-- Attribution: we surface Google's attribution string via the raster source. A fuller implementation would pull per-viewport attribution from the Map Tiles `viewport` endpoint — a follow-up.
-- Session tokens are minted per request today; caching them (they live ~2 weeks) is a follow-up. The frontend already fetches once per basemap per page session.
-- **Deferred:** photorealistic 3D (Cesium/deck.gl), per-viewport attribution, server-side session caching, and a tile-proxy option for full key hiding.
+- **Attribution is per-viewport.** `GET /maps/attribution` proxies Google's `tile/v1/viewport` endpoint (a different base path from createSession/tiles) and returns the `copyright` string for the current bounds + zoom; the map updates it on a debounced `moveend`. The displayed text is rendered in a custom overlay (the default MapLibre attribution control is disabled), with OSM attribution shown for the OSM basemap.
+- **Session tokens are cached in Redis** (`gmaps:session:{map_type}`) with a TTL derived from Google's `expiry` minus a safety buffer, so createSession is called at most once per validity window rather than per request. Cache failures fall back to minting fresh (fail-open).
+- **Deferred:** photorealistic 3D (Cesium/deck.gl) and a tile-proxy option for full key hiding.

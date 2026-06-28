@@ -1,9 +1,17 @@
+from typing import cast
+
 import httpx
 import pytest
+from redis.asyncio import Redis
 
 from lotscope.core.config import Settings
 from lotscope.core.errors import ConfigurationError, UpstreamError
-from lotscope.tiles.google import build_tile_url, create_basemap_session
+from lotscope.tiles.google import (
+    build_tile_url,
+    create_basemap_session,
+    fetch_viewport_attribution,
+    resolve_basemap_session,
+)
 
 
 def _settings(**overrides: object) -> Settings:
@@ -18,6 +26,38 @@ def _ok_transport() -> httpx.MockTransport:
         return httpx.Response(200, json={"session": "sess123"})
 
     return httpx.MockTransport(handler)
+
+
+class _FakeRedis:
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
+    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+        self.store[key] = value
+
+
+def _redis() -> Redis:
+    return cast(Redis, _FakeRedis())
+
+
+class _CountingTransport(httpx.MockTransport):
+    def __init__(self, *, expiry: int) -> None:
+        self.session_calls = 0
+        self.viewport_calls = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if "createSession" in str(request.url):
+                self.session_calls += 1
+                return httpx.Response(
+                    200, json={"session": "sess123", "expiry": str(expiry), "tileWidth": 256}
+                )
+            self.viewport_calls += 1
+            return httpx.Response(200, json={"copyright": "Imagery ©2026 Maxar, Google"})
+
+        super().__init__(handler)
 
 
 def test_build_tile_url() -> None:
@@ -54,3 +94,45 @@ async def test_malformed_response_raises() -> None:
         await create_basemap_session(
             _settings(), "satellite", transport=httpx.MockTransport(handler)
         )
+
+
+async def test_resolve_caches_session_token() -> None:
+    redis = _redis()
+    transport = _CountingTransport(expiry=2_000_000_000)
+
+    first = await resolve_basemap_session(_settings(), redis, "satellite", transport=transport)
+    second = await resolve_basemap_session(_settings(), redis, "satellite", transport=transport)
+
+    assert "session=sess123" in first.tile_url
+    assert second.tile_url == first.tile_url
+    assert transport.session_calls == 1
+
+
+async def test_expired_session_is_not_cached() -> None:
+    redis = _redis()
+    transport = _CountingTransport(expiry=1)
+
+    await resolve_basemap_session(_settings(), redis, "satellite", transport=transport)
+    await resolve_basemap_session(_settings(), redis, "satellite", transport=transport)
+
+    assert transport.session_calls == 2
+
+
+async def test_fetch_viewport_attribution_returns_copyright() -> None:
+    redis = _redis()
+    transport = _CountingTransport(expiry=2_000_000_000)
+
+    text = await fetch_viewport_attribution(
+        _settings(),
+        redis,
+        "satellite",
+        zoom=15,
+        north=40.0,
+        south=39.9,
+        east=-75.1,
+        west=-75.2,
+        transport=transport,
+    )
+
+    assert text == "Imagery ©2026 Maxar, Google"
+    assert transport.viewport_calls == 1

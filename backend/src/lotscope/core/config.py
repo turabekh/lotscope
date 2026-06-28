@@ -50,6 +50,7 @@ class Settings(BaseSettings):
 
     google_maps_api_key: str | None = None
     google_map_tiles_url: str = "https://tile.googleapis.com/v1"
+    google_viewport_url: str = "https://tile.googleapis.com/tile/v1/viewport"
 
     carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
     arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
