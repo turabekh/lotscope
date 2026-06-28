@@ -250,6 +250,7 @@ export interface User {
   tier: string
   is_active: boolean
   subscription_status: string | null
+  digest_frequency: 'off' | 'weekly' | 'daily'
   created_at: string
 }
 

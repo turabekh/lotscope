@@ -15,8 +15,27 @@ const route = useRoute()
 const checkoutNotice = ref<'success' | 'cancel' | null>(null)
 const portalLoading = ref(false)
 const portalError = ref<string | null>(null)
+const digestSaving = ref(false)
 
 const isPaid = computed(() => (user.value?.tier ?? 'free') !== 'free')
+
+const DIGEST_OPTIONS = [
+  { label: 'Weekly', value: 'weekly' as const },
+  { label: 'Daily', value: 'daily' as const },
+  { label: 'Off', value: 'off' as const },
+]
+
+const digestFrequency = computed({
+  get: () => user.value?.digest_frequency ?? 'weekly',
+  set: (value: 'off' | 'weekly' | 'daily') => {
+    digestSaving.value = true
+    void store
+      .setDigest(value)
+      .finally(() => {
+        digestSaving.value = false
+      })
+  },
+})
 
 onMounted(async () => {
   const flag = route.query.checkout
@@ -136,6 +155,32 @@ async function signOut(): Promise<void> {
             <div class="text-caption text-grey-6">Limits reset daily.</div>
           </q-card-section>
           <q-card-section v-else class="text-body2 text-grey-6">Loading usage…</q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <div class="row items-center q-mb-xs">
+              <q-icon name="mail" size="18px" color="grey-7" class="q-mr-xs" />
+              <div class="text-subtitle2">Email digest of watchlist updates</div>
+              <q-space />
+              <q-spinner v-if="digestSaving" size="16px" color="primary" />
+            </div>
+            <div class="text-caption text-grey-7 q-mb-sm">
+              Get an email when your saved lots change (tax, L&amp;I, price, status).
+            </div>
+            <q-btn-toggle
+              v-model="digestFrequency"
+              spread
+              no-caps
+              dense
+              unelevated
+              rounded
+              toggle-color="primary"
+              color="grey-2"
+              text-color="grey-9"
+              :options="DIGEST_OPTIONS"
+            />
+          </q-card-section>
 
           <q-separator />
 

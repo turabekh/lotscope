@@ -77,6 +77,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function setDigest(frequency: 'off' | 'weekly' | 'daily'): Promise<void> {
+    user.value = await api.setDigestPreference(frequency)
+  }
+
   async function fetchUsage(): Promise<void> {
     if (token.value === null) return
     try {
@@ -104,6 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     restore,
     refreshUser,
+    setDigest,
     fetchUsage,
     logout,
   }

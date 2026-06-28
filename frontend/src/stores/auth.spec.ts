@@ -21,6 +21,7 @@ const user = {
   tier: 'free',
   is_active: true,
   subscription_status: null,
+  digest_frequency: 'weekly' as const,
   created_at: '',
 }
 

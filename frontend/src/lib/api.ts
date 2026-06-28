@@ -147,6 +147,9 @@ export const api = {
   getMe(): Promise<User> {
     return request('/auth/me')
   },
+  setDigestPreference(frequency: 'off' | 'weekly' | 'daily'): Promise<User> {
+    return request('/auth/digest', { method: 'PATCH', body: JSON.stringify({ frequency }) })
+  },
   getUsage(): Promise<Usage> {
     return request('/auth/usage')
   },
