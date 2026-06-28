@@ -15,9 +15,19 @@ PARCEL_VIEW_DAILY_LIMITS: dict[str, int | None] = {
     "enterprise": None,
 }
 
+LEAD_LIST_LIMITS: dict[str, int] = {
+    "free": 8,
+    "pro": 200,
+    "enterprise": 1000,
+}
+
 
 def ask_daily_limit(tier: str) -> int | None:
     return ASK_DAILY_LIMITS.get(tier, ASK_DAILY_LIMITS[_DEFAULT_TIER])
+
+
+def lead_list_limit(tier: str) -> int:
+    return LEAD_LIST_LIMITS.get(tier, LEAD_LIST_LIMITS[_DEFAULT_TIER])
 
 
 def parcel_view_daily_limit(tier: str) -> int | None:

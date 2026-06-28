@@ -29,6 +29,8 @@ from lotscope.api.deps import (
 from lotscope.assemblage.schemas import AssemblageResult
 from lotscope.assemblage.service import compute_assemblage
 from lotscope.core.errors import NotFoundError, QuotaExceededError
+from lotscope.distress.schemas import DistressResult
+from lotscope.distress.service import assess_parcel_distress
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.valuation.schemas import ValuationResult
@@ -118,6 +120,16 @@ async def parcel_assemblage(
     parcel_number: str, session: SessionDep, current_user: CurrentUserDep
 ) -> AssemblageResult:
     result = await compute_assemblage(session, parcel_number)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
+
+
+@router.get("/{parcel_number}/distress", response_model=DistressResult)
+async def parcel_distress(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> DistressResult:
+    result = await assess_parcel_distress(session, parcel_number)
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result

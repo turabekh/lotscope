@@ -323,6 +323,34 @@ async def test_parcel_detail_enforces_free_view_quota(db_session: AsyncSession) 
     assert repeat.status_code == 200  # re-opening an already-viewed parcel is free
 
 
+@pytest.mark.integration
+async def test_leads_endpoint_ranks_and_caps_by_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, owner, address, mailing_address, is_vacant) "
+            "VALUES ('000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
+            "in_sheriff_sale) VALUES ('000000001', true, 25000, 5, true)"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/leads?min_score=30")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["tier"] == "free"
+    assert body["limit"] == 8
+    assert body["leads"][0]["parcel_number"] == "000000001"
+    assert body["leads"][0]["score"] == 80
+
+
 async def test_basemap_session_unconfigured_returns_503() -> None:
     app = create_app()
     app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
