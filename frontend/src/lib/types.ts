@@ -206,6 +206,39 @@ export interface SavedSearchListResponse {
   searches: SavedSearchItem[]
 }
 
+export interface GeoPoint {
+  lat: number
+  lng: number
+}
+
+export interface AreaSearchRequest {
+  center?: GeoPoint
+  radius_m?: number
+  polygon?: Record<string, unknown>
+  vacant_only?: boolean
+  zoning_codes?: string[]
+  limit?: number
+}
+
+export interface SpatialParcelResult {
+  parcel_number: string
+  address: string | null
+  owner: string | null
+  base_zoning_code: string | null
+  is_vacant: boolean | null
+  market_value: number | null
+  opportunity_score: number | null
+  lng: number | null
+  lat: number | null
+  distance_m: number | null
+}
+
+export interface AreaSearchResponse {
+  count: number
+  truncated: boolean
+  results: SpatialParcelResult[]
+}
+
 export type DistressTier = 'high' | 'medium' | 'low' | 'none'
 
 export interface DistressFactor {

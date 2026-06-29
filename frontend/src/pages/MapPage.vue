@@ -2,6 +2,7 @@
 import { useQuasar } from 'quasar'
 import { computed, ref } from 'vue'
 
+import AreaSearchPanel from '@/components/AreaSearchPanel.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelPanel from '@/components/ParcelPanel.vue'
@@ -65,6 +66,7 @@ function onSelect(parcelNumber: string): void {
       <q-page class="map-page">
         <MapView @select="onSelect" />
         <FilterPanel />
+        <AreaSearchPanel @select="onSelect" />
       </q-page>
     </q-page-container>
   </q-layout>

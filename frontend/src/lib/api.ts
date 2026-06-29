@@ -18,6 +18,8 @@ import type {
   ParcelSearchResponse,
   PlansResponse,
   PortalResponse,
+  AreaSearchRequest,
+  AreaSearchResponse,
   RegisterPayload,
   SavedSearchDetail,
   SavedSearchListResponse,
@@ -185,6 +187,9 @@ export const api = {
   },
   removeFromPipeline(parcelNumber: string): Promise<void> {
     return request(`/pipeline/${encodeURIComponent(parcelNumber)}`, { method: 'DELETE' })
+  },
+  searchArea(payload: AreaSearchRequest): Promise<AreaSearchResponse> {
+    return request('/search/area', { method: 'POST', body: JSON.stringify(payload) })
   },
   getSavedSearches(): Promise<SavedSearchListResponse> {
     return request('/saved-searches')

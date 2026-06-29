@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import { ApiError, api, setAuthToken } from '@/lib/api'
 import type { RegisterPayload, Usage, User } from '@/lib/types'
+import { useAreaSearchStore } from '@/stores/areaSearch'
 import { usePipelineStore } from '@/stores/pipeline'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -99,6 +100,7 @@ export const useAuthStore = defineStore('auth', () => {
     useWatchlistStore().reset()
     usePipelineStore().reset()
     useSavedSearchesStore().reset()
+    useAreaSearchStore().reset()
   }
 
   return {

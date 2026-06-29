@@ -9,10 +9,20 @@ import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { api } from '@/lib/api'
+import { useAreaSearchStore } from '@/stores/areaSearch'
 import { useFiltersStore } from '@/stores/filters'
 import { useParcelStore } from '@/stores/parcel'
 
 const emit = defineEmits<{ select: [parcelNumber: string] }>()
+
+const areaSearch = useAreaSearchStore()
+const {
+  active: areaActive,
+  center: areaCenter,
+  radiusM: areaRadius,
+  results: areaResults,
+} = storeToRefs(areaSearch)
+const EARTH_RADIUS_M = 6378137
 
 const container = ref<HTMLDivElement | null>(null)
 const martinUrl = import.meta.env.VITE_MARTIN_URL ?? 'http://localhost:3000'
@@ -371,8 +381,52 @@ function hidePopup(): void {
 }
 
 function selectFromEvent(event: MapLayerMouseEvent): void {
+  if (areaActive.value) return
   const parcelNumber = event.features?.[0]?.properties?.parcel_number
   if (typeof parcelNumber === 'string') emit('select', parcelNumber)
+}
+
+function onMapClick(event: MapLayerMouseEvent): void {
+  if (!areaActive.value) return
+  hidePopup()
+  void areaSearch.setCenter({ lat: event.lngLat.lat, lng: event.lngLat.lng })
+}
+
+function circleFeature(): GeoJSON.FeatureCollection {
+  const point = areaCenter.value
+  if (!areaActive.value || point === null) return emptyCollection()
+  const steps = 72
+  const latRad = (point.lat * Math.PI) / 180
+  const ring: [number, number][] = []
+  for (let i = 0; i <= steps; i += 1) {
+    const theta = (i / steps) * 2 * Math.PI
+    const dLng =
+      ((areaRadius.value * Math.cos(theta)) / (EARTH_RADIUS_M * Math.cos(latRad))) * (180 / Math.PI)
+    const dLat = ((areaRadius.value * Math.sin(theta)) / EARTH_RADIUS_M) * (180 / Math.PI)
+    ring.push([point.lng + dLng, point.lat + dLat])
+  }
+  return {
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } }],
+  }
+}
+
+function renderAreaCircle(): void {
+  const source = map?.getSource('area-circle')
+  if (source instanceof maplibregl.GeoJSONSource) source.setData(circleFeature())
+}
+
+function applyAreaResults(): void {
+  if (!map?.getLayer('area-results-line')) return
+  const ids = areaResults.value.map((result) => result.parcel_number)
+  const filter: FilterSpecification =
+    ids.length === 0 ? EMPTY_PARCEL_FILTER : ['in', ['get', 'parcel_number'], ['literal', ids]]
+  map.setFilter('area-results-fill', filter)
+  map.setFilter('area-results-line', filter)
+}
+
+function applyAreaCursor(): void {
+  if (map) map.getCanvas().style.cursor = areaActive.value ? 'crosshair' : ''
 }
 
 function emptyCollection(): GeoJSON.FeatureCollection {
@@ -522,6 +576,37 @@ function addParcelLayers(instance: maplibregl.Map): void {
     filter: EMPTY_PARCEL_FILTER,
   })
   instance.addLayer({
+    id: 'area-results-fill',
+    type: 'fill',
+    source: 'parcels',
+    'source-layer': 'parcels',
+    paint: { 'fill-color': '#1565c0', 'fill-opacity': 0.4 },
+    filter: EMPTY_PARCEL_FILTER,
+  })
+  instance.addLayer({
+    id: 'area-results-line',
+    type: 'line',
+    source: 'parcels',
+    'source-layer': 'parcels',
+    paint: { 'line-color': '#0d47a1', 'line-width': 2 },
+    filter: EMPTY_PARCEL_FILTER,
+  })
+
+  instance.addSource('area-circle', { type: 'geojson', data: emptyCollection() })
+  instance.addLayer({
+    id: 'area-circle-fill',
+    type: 'fill',
+    source: 'area-circle',
+    paint: { 'fill-color': '#1565c0', 'fill-opacity': 0.08 },
+  })
+  instance.addLayer({
+    id: 'area-circle-line',
+    type: 'line',
+    source: 'area-circle',
+    paint: { 'line-color': '#1565c0', 'line-width': 2, 'line-dasharray': [2, 1] },
+  })
+
+  instance.addLayer({
     id: 'vacant-markers',
     type: 'symbol',
     source: 'parcels',
@@ -565,6 +650,7 @@ function addParcelLayers(instance: maplibregl.Map): void {
     instance.on('mousemove', layer, showPopup)
     instance.on('mouseleave', layer, hidePopup)
   }
+  instance.on('click', onMapClick)
 }
 
 onMounted(() => {
@@ -586,6 +672,9 @@ onMounted(() => {
     if (show3d.value && detail.value !== null) void parcelStore.loadEnvelope()
     renderEnvelope()
     applyPitch()
+    renderAreaCircle()
+    applyAreaResults()
+    applyAreaCursor()
   })
   map.on('moveend', scheduleAttributionUpdate)
 })
@@ -623,6 +712,13 @@ watch(assemblage, () => {
 })
 
 watch(detail, () => focusSelected())
+
+watch([areaActive, areaCenter, areaRadius], () => {
+  renderAreaCircle()
+  applyAreaCursor()
+})
+
+watch(areaResults, () => applyAreaResults())
 
 onBeforeUnmount(() => {
   if (attributionTimer) clearTimeout(attributionTimer)
