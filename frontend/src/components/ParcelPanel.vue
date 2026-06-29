@@ -8,6 +8,7 @@ import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
 import DealPanel from '@/components/DealPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
+import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { ApiError, api } from '@/lib/api'
@@ -232,6 +233,8 @@ async function toggleSave(): Promise<void> {
         <DealPanel />
 
         <AssemblagePanel />
+
+        <OwnerPortfolioPanel />
 
         <DistressPanel />
 

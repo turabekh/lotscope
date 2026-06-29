@@ -21,6 +21,7 @@ import type {
   AreaSearchRequest,
   AreaSearchResponse,
   NeighborhoodListResponse,
+  OwnerPortfolio,
   RegisterPayload,
   SavedSearchDetail,
   SavedSearchListResponse,
@@ -219,6 +220,9 @@ export const api = {
   },
   deleteSavedSearch(id: number): Promise<void> {
     return request(`/saved-searches/${id}`, { method: 'DELETE' })
+  },
+  getOwnerPortfolio(parcelNumber: string): Promise<OwnerPortfolio> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/owner-portfolio`)
   },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {

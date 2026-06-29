@@ -1,0 +1,151 @@
+<script setup lang="ts">
+import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
+
+import { formatCurrency } from '@/lib/format'
+import { useParcelStore } from '@/stores/parcel'
+
+const store = useParcelStore()
+const { ownerPortfolio } = storeToRefs(store)
+
+const show = computed(() => ownerPortfolio.value !== null && ownerPortfolio.value.total_count > 1)
+const moreCount = computed(() => {
+  const p = ownerPortfolio.value
+  if (p === null) return 0
+  return Math.max(0, p.total_count - 1 - p.parcels.length)
+})
+
+function selectParcel(parcelNumber: string): void {
+  void store.select(parcelNumber)
+}
+</script>
+
+<template>
+  <q-card v-if="show && ownerPortfolio" flat bordered class="rounded-borders">
+    <q-card-section class="q-py-sm">
+      <div class="section-title">
+        <q-icon name="account_balance_wallet" size="18px" class="q-mr-xs" />Owner portfolio
+        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
+          Other Philadelphia parcels held by the same owner of record — an assemblage and
+          motivated-seller signal. Owner names are matched as recorded, so spelling variants may
+          split a portfolio.
+        </q-tooltip>
+      </div>
+
+      <div class="owner-name ellipsis">{{ ownerPortfolio.owner }}</div>
+
+      <div class="row q-col-gutter-sm q-mt-xs">
+        <div class="col-4 stat">
+          <div class="stat-label">Parcels</div>
+          <div class="stat-value">{{ ownerPortfolio.total_count }}</div>
+        </div>
+        <div class="col-4 stat">
+          <div class="stat-label">Vacant</div>
+          <div class="stat-value">{{ ownerPortfolio.vacant_count }}</div>
+        </div>
+        <div class="col-4 stat">
+          <div class="stat-label">Assessed</div>
+          <div class="stat-value">{{ formatCurrency(ownerPortfolio.total_market_value) }}</div>
+        </div>
+      </div>
+
+      <div class="owner-list q-mt-sm">
+        <div
+          v-for="lot in ownerPortfolio.parcels"
+          :key="lot.parcel_number"
+          class="owner-row"
+          @click="selectParcel(lot.parcel_number)"
+        >
+          <div class="owner-body">
+            <div class="owner-addr ellipsis">{{ lot.address ?? lot.parcel_number }}</div>
+            <div class="owner-meta">
+              {{ lot.base_zoning_code ?? 'No zoning' }}
+              <span v-if="lot.is_vacant" class="text-amber-9">· Vacant</span>
+              <span v-if="lot.market_value"> · {{ formatCurrency(lot.market_value) }}</span>
+            </div>
+          </div>
+          <q-badge v-if="lot.opportunity_score !== null" color="primary" outline>
+            {{ lot.opportunity_score }}
+          </q-badge>
+        </div>
+      </div>
+
+      <div v-if="moreCount > 0" class="text-caption text-grey-6 q-mt-xs">
+        + {{ moreCount }} more parcel{{ moreCount === 1 ? '' : 's' }} held by this owner.
+      </div>
+    </q-card-section>
+  </q-card>
+</template>
+
+<style scoped>
+.rounded-borders {
+  border-radius: var(--lot-radius) !important;
+  box-shadow: var(--lot-shadow);
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5b6b7d;
+  margin-bottom: 6px;
+}
+.owner-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2933;
+}
+.stat {
+  text-align: center;
+  border-radius: var(--lot-radius-sm);
+  padding: 6px 4px;
+  background: #f6f8fb;
+}
+.stat-label {
+  font-size: 11px;
+  color: #78909c;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2933;
+}
+.owner-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.owner-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: var(--lot-radius-sm);
+  background: #f8fafc;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.owner-row:hover {
+  background: #eef2f7;
+}
+.owner-body {
+  min-width: 0;
+  flex: 1;
+}
+.owner-addr {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1f2933;
+}
+.owner-meta {
+  font-size: 11.5px;
+  color: #5b6b7d;
+}
+</style>

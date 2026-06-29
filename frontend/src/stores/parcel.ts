@@ -7,6 +7,7 @@ import type {
   DealResult,
   DistressResult,
   EnvelopeResult,
+  OwnerPortfolio,
   ParcelChecklist,
   ParcelDetail,
   VerdictResult,
@@ -22,6 +23,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const deal = ref<DealResult | null>(null)
   const dealLoading = ref(false)
   const checklist = ref<ParcelChecklist | null>(null)
+  const ownerPortfolio = ref<OwnerPortfolio | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const errorStatus = ref<number | null>(null)
@@ -36,6 +38,7 @@ export const useParcelStore = defineStore('parcel', () => {
     distress.value = null
     deal.value = null
     checklist.value = null
+    ownerPortfolio.value = null
     try {
       detail.value = await api.getParcel(parcelNumber)
       verdict.value = await loadVerdict(parcelNumber)
@@ -43,6 +46,7 @@ export const useParcelStore = defineStore('parcel', () => {
       void loadDistress(parcelNumber)
       void loadDeal(parcelNumber)
       void loadChecklist(parcelNumber)
+      void loadOwnerPortfolio(parcelNumber)
     } catch (cause) {
       detail.value = null
       if (cause instanceof ApiError) {
@@ -129,6 +133,15 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
+  async function loadOwnerPortfolio(parcelNumber: string): Promise<void> {
+    try {
+      const result = await api.getOwnerPortfolio(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) ownerPortfolio.value = result
+    } catch {
+      if (detail.value?.parcel_number === parcelNumber) ownerPortfolio.value = null
+    }
+  }
+
   function clear(): void {
     detail.value = null
     verdict.value = null
@@ -137,6 +150,7 @@ export const useParcelStore = defineStore('parcel', () => {
     distress.value = null
     deal.value = null
     checklist.value = null
+    ownerPortfolio.value = null
     error.value = null
     errorStatus.value = null
   }
@@ -151,6 +165,7 @@ export const useParcelStore = defineStore('parcel', () => {
     deal,
     dealLoading,
     checklist,
+    ownerPortfolio,
     loading,
     error,
     errorStatus,
@@ -161,6 +176,7 @@ export const useParcelStore = defineStore('parcel', () => {
     loadDistress,
     loadDeal,
     loadChecklist,
+    loadOwnerPortfolio,
     clear,
   }
 })

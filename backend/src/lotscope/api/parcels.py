@@ -37,6 +37,8 @@ from lotscope.deal.schemas import DealResult
 from lotscope.deal.service import analyze_parcel_deal
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
+from lotscope.owners.schemas import OwnerPortfolio
+from lotscope.owners.service import get_owner_portfolio
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.reports.dossier import dossier_filename
@@ -147,6 +149,16 @@ async def parcel_distress(
     parcel_number: str, session: SessionDep, current_user: CurrentUserDep
 ) -> DistressResult:
     result = await assess_parcel_distress(session, parcel_number)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
+
+
+@router.get("/{parcel_number}/owner-portfolio", response_model=OwnerPortfolio)
+async def parcel_owner_portfolio(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> OwnerPortfolio:
+    result = await get_owner_portfolio(session, parcel_number)
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result

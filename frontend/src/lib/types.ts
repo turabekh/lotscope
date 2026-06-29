@@ -221,6 +221,25 @@ export interface AreaSearchRequest {
   limit?: number
 }
 
+export interface OwnerParcel {
+  parcel_number: string
+  address: string | null
+  base_zoning_code: string | null
+  is_vacant: boolean | null
+  market_value: number | null
+  opportunity_score: number | null
+}
+
+export interface OwnerPortfolio {
+  owner: string | null
+  mailing_address: string | null
+  total_count: number
+  vacant_count: number
+  total_market_value: number | null
+  shown: number
+  parcels: OwnerParcel[]
+}
+
 export interface NeighborhoodSummary {
   name: string
 }
