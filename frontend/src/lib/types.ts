@@ -214,7 +214,7 @@ export interface GeoPoint {
 export interface AreaSearchRequest {
   center?: GeoPoint
   radius_m?: number
-  polygon?: Record<string, unknown>
+  polygon?: GeoJSON.Polygon
   vacant_only?: boolean
   zoning_codes?: string[]
   limit?: number

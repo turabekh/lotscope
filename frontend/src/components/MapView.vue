@@ -6,6 +6,8 @@ import maplibregl, {
   type StyleSpecification,
 } from 'maplibre-gl'
 import { storeToRefs } from 'pinia'
+import { TerraDraw, TerraDrawPolygonMode } from 'terra-draw'
+import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { api } from '@/lib/api'
@@ -18,11 +20,14 @@ const emit = defineEmits<{ select: [parcelNumber: string] }>()
 const areaSearch = useAreaSearchStore()
 const {
   active: areaActive,
+  shape: areaShape,
   center: areaCenter,
   radiusM: areaRadius,
   results: areaResults,
 } = storeToRefs(areaSearch)
 const EARTH_RADIUS_M = 6378137
+let draw: TerraDraw | undefined
+let drawStarted = false
 
 const container = ref<HTMLDivElement | null>(null)
 const martinUrl = import.meta.env.VITE_MARTIN_URL ?? 'http://localhost:3000'
@@ -387,14 +392,51 @@ function selectFromEvent(event: MapLayerMouseEvent): void {
 }
 
 function onMapClick(event: MapLayerMouseEvent): void {
-  if (!areaActive.value) return
+  if (!areaActive.value || areaShape.value !== 'radius') return
   hidePopup()
   void areaSearch.setCenter({ lat: event.lngLat.lat, lng: event.lngLat.lng })
 }
 
+function onPolygonFinish(id: string | number): void {
+  if (!draw) return
+  const feature = draw.getSnapshotFeature(id)
+  if (feature === undefined || feature.geometry.type !== 'Polygon') return
+  const stale = draw
+    .getSnapshot()
+    .map((item) => item.id)
+    .filter((other): other is string | number => other !== undefined && other !== id)
+  if (stale.length > 0) draw.removeFeatures(stale)
+  void areaSearch.searchPolygon(feature.geometry)
+}
+
+function ensureDraw(): void {
+  if (draw || !map) return
+  draw = new TerraDraw({
+    adapter: new TerraDrawMapLibreGLAdapter({ map }),
+    modes: [new TerraDrawPolygonMode()],
+  })
+  draw.on('finish', onPolygonFinish)
+}
+
+function syncDraw(): void {
+  if (!map) return
+  if (areaActive.value && areaShape.value === 'polygon') {
+    ensureDraw()
+    if (draw && !drawStarted) {
+      draw.start()
+      drawStarted = true
+    }
+    draw?.setMode('polygon')
+  } else if (draw && drawStarted) {
+    draw.clear()
+    draw.stop()
+    drawStarted = false
+  }
+}
+
 function circleFeature(): GeoJSON.FeatureCollection {
   const point = areaCenter.value
-  if (!areaActive.value || point === null) return emptyCollection()
+  if (!areaActive.value || areaShape.value !== 'radius' || point === null) return emptyCollection()
   const steps = 72
   const latRad = (point.lat * Math.PI) / 180
   const ring: [number, number][] = []
@@ -426,7 +468,8 @@ function applyAreaResults(): void {
 }
 
 function applyAreaCursor(): void {
-  if (map) map.getCanvas().style.cursor = areaActive.value ? 'crosshair' : ''
+  if (!map) return
+  map.getCanvas().style.cursor = areaActive.value && areaShape.value === 'radius' ? 'crosshair' : ''
 }
 
 function emptyCollection(): GeoJSON.FeatureCollection {
@@ -672,6 +715,7 @@ onMounted(() => {
     if (show3d.value && detail.value !== null) void parcelStore.loadEnvelope()
     renderEnvelope()
     applyPitch()
+    syncDraw()
     renderAreaCircle()
     applyAreaResults()
     applyAreaCursor()
@@ -713,7 +757,8 @@ watch(assemblage, () => {
 
 watch(detail, () => focusSelected())
 
-watch([areaActive, areaCenter, areaRadius], () => {
+watch([areaActive, areaShape, areaCenter, areaRadius], () => {
+  syncDraw()
   renderAreaCircle()
   applyAreaCursor()
 })
@@ -722,6 +767,7 @@ watch(areaResults, () => applyAreaResults())
 
 onBeforeUnmount(() => {
   if (attributionTimer) clearTimeout(attributionTimer)
+  if (draw && drawStarted) draw.stop()
   popup.remove()
   map?.remove()
 })

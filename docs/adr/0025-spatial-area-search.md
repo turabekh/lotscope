@@ -21,8 +21,8 @@ PRD §5.1 lists **draw / radius / neighborhood search** (Core): find parcels wit
 
 ## Consequences
 
-- **Radius search is complete and dependency-free.** The polygon endpoint is exercised by tests and usable by API clients today, even though no freehand-draw UI ships yet.
-- **Freehand polygon drawing is deferred** — it needs a map-draw library (e.g. mapbox-gl-draw / terra-draw), a dependency addition to confirm before adding (§2/§15).
+- **Radius search is complete and dependency-free.**
+- **Freehand polygon drawing is now implemented** (added after the initial radius slice, with the dependency confirmed): the frontend uses **terra-draw** with its MapLibre adapter (`terra-draw` + `terra-draw-maplibre-gl-adapter`, pinned) — chosen over `mapbox-gl-draw` for being TypeScript-native and map-library-agnostic via adapters. A shape toggle switches the "Search this area" mode between radius and polygon; the drawn polygon's geometry is sent to the existing `POST /search/area` polygon path. terra-draw is started/stopped with the mode so it never intercepts clicks during radius mode.
 - **Named-neighborhood search is deferred** — it needs a new ingestion loader for the Philadelphia neighborhood/RCO boundary layer (ArcGIS Hub); once that table exists, "search by neighborhood" becomes a point-in-polygon lookup that reuses this same endpoint.
 - Area search respects the map's `vacant_only` filter at query time; it does not yet re-run automatically when that toggle flips on an already-placed circle (the next center/radius change picks it up). A minor follow-up.
 - The search module stays self-contained; it reads parcel/verdict state via SQL and owns no domain truth.

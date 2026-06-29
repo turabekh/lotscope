@@ -18,6 +18,8 @@
     "maplibre-gl": "^4.7.1",
     "pinia": "^2.2.6",
     "quasar": "^2.17.4",
+    "terra-draw": "1.31.2",
+    "terra-draw-maplibre-gl-adapter": "1.4.1",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
   },

@@ -1,14 +1,25 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 
 import { formatCurrency } from '@/lib/format'
 import type { SpatialParcelResult } from '@/lib/types'
-import { useAreaSearchStore } from '@/stores/areaSearch'
+import { type AreaShape, useAreaSearchStore } from '@/stores/areaSearch'
 
 const emit = defineEmits<{ select: [parcelNumber: string] }>()
 
 const store = useAreaSearchStore()
-const { active, center, radiusM, loading, results, count, truncated } = storeToRefs(store)
+const { active, shape, center, polygon, radiusM, loading, results, count, truncated } =
+  storeToRefs(store)
+
+const SHAPE_OPTIONS: { label: string; value: AreaShape; icon: string }[] = [
+  { label: 'Radius', value: 'radius', icon: 'radio_button_unchecked' },
+  { label: 'Polygon', value: 'polygon', icon: 'pentagon' },
+]
+
+const hasQuery = computed(() =>
+  shape.value === 'radius' ? center.value !== null : polygon.value !== null,
+)
 
 function onRadius(value: number | null): void {
   if (typeof value === 'number') void store.setRadius(value)
@@ -44,7 +55,22 @@ function distanceLabel(meters: number | null): string {
 
     <q-slide-transition>
       <div v-show="active" class="area-body">
-        <div class="area-radius">
+        <q-btn-toggle
+          :model-value="shape"
+          spread
+          no-caps
+          dense
+          unelevated
+          rounded
+          toggle-color="primary"
+          color="grey-2"
+          text-color="grey-9"
+          class="q-mb-sm"
+          :options="SHAPE_OPTIONS"
+          @update:model-value="(value: AreaShape) => store.setShape(value)"
+        />
+
+        <div v-if="shape === 'radius'" class="area-radius">
           <div class="area-label">
             <span>Radius</span>
             <span class="text-primary text-weight-bold">{{ radiusLabel(radiusM) }}</span>
@@ -59,9 +85,10 @@ function distanceLabel(meters: number | null): string {
           />
         </div>
 
-        <div v-if="center === null" class="area-hint">
-          <q-icon name="touch_app" size="16px" class="q-mr-xs" />
-          Tap the map to set a center point.
+        <div v-if="!hasQuery" class="area-hint">
+          <q-icon :name="shape === 'radius' ? 'touch_app' : 'gesture'" size="16px" class="q-mr-xs" />
+          <span v-if="shape === 'radius'">Tap the map to set a center point.</span>
+          <span v-else>Click to add points; click the first point to close the shape.</span>
         </div>
 
         <template v-else>
@@ -69,8 +96,10 @@ function distanceLabel(meters: number | null): string {
             <q-spinner v-if="loading" size="16px" color="primary" class="q-mr-xs" />
             <q-icon v-else name="place" size="16px" class="q-mr-xs text-primary" />
             <span>
-              <b>{{ count }}</b> lot<span v-if="count !== 1">s</span> within {{ radiusLabel(radiusM) }}
-              <span v-if="truncated" class="text-grey-6">(showing first {{ count }})</span>
+              <b>{{ count }}</b> lot<span v-if="count !== 1">s</span>
+              <span v-if="shape === 'radius'"> within {{ radiusLabel(radiusM) }}</span>
+              <span v-else> in this area</span>
+              <span v-if="truncated" class="text-grey-6"> (first {{ count }})</span>
             </span>
           </div>
 
@@ -99,7 +128,9 @@ function distanceLabel(meters: number | null): string {
               </q-item-section>
             </q-item>
             <q-item v-if="!loading && results.length === 0">
-              <q-item-section class="text-grey-6">No lots here. Try a larger radius.</q-item-section>
+              <q-item-section class="text-grey-6">
+                No lots here. Try a {{ shape === 'radius' ? 'larger radius' : 'bigger area' }}.
+              </q-item-section>
             </q-item>
           </q-list>
         </template>
