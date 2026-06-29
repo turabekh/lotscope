@@ -59,6 +59,10 @@ function goCompare(): void {
 function goSavedSearches(): void {
   void router.push({ name: 'saved-searches' })
 }
+
+function goAdmin(): void {
+  void router.push({ name: 'admin' })
+}
 </script>
 
 <template>
@@ -119,6 +123,10 @@ function goSavedSearches(): void {
         <q-item v-close-popup clickable @click="goAccount">
           <q-item-section avatar><q-icon name="manage_accounts" /></q-item-section>
           <q-item-section>Account & usage</q-item-section>
+        </q-item>
+        <q-item v-if="user?.role === 'admin'" v-close-popup clickable @click="goAdmin">
+          <q-item-section avatar><q-icon name="admin_panel_settings" /></q-item-section>
+          <q-item-section>Admin console</q-item-section>
         </q-item>
         <q-item v-close-popup clickable @click="signOut">
           <q-item-section avatar><q-icon name="logout" /></q-item-section>

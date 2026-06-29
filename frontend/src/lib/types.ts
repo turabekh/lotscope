@@ -477,6 +477,37 @@ export interface User {
   created_at: string
 }
 
+export interface DatasetStatus {
+  dataset: string
+  status: string
+  last_attempt_at: string | null
+  last_success_at: string | null
+  row_count: number | null
+  detail: string | null
+}
+
+export interface AdminOverview {
+  users_total: number
+  users_by_tier: Record<string, number>
+  parcels_total: number
+  parcels_vacant: number
+  verdicts_total: number
+  deeds_total: number
+  saved_searches_total: number
+  neighborhoods_total: number
+}
+
+export interface AdminUsersResponse {
+  total: number
+  users: User[]
+}
+
+export interface AdminUserUpdate {
+  role?: string
+  tier?: string
+  is_active?: boolean
+}
+
 export interface TokenResponse {
   access_token: string
   token_type: string

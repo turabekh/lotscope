@@ -18,8 +18,12 @@ import type {
   ParcelSearchResponse,
   PlansResponse,
   PortalResponse,
+  AdminOverview,
+  AdminUserUpdate,
+  AdminUsersResponse,
   AreaSearchRequest,
   AreaSearchResponse,
+  DatasetStatus,
   DeedRestrictionsResponse,
   NeighborhoodListResponse,
   OwnerPortfolio,
@@ -196,6 +200,18 @@ export const api = {
   },
   getNeighborhoods(): Promise<NeighborhoodListResponse> {
     return request('/neighborhoods')
+  },
+  getAdminOverview(): Promise<AdminOverview> {
+    return request('/admin/overview')
+  },
+  getAdminDatasets(): Promise<DatasetStatus[]> {
+    return request('/admin/datasets')
+  },
+  getAdminUsers(limit = 50, offset = 0): Promise<AdminUsersResponse> {
+    return request(`/admin/users?limit=${limit}&offset=${offset}`)
+  },
+  updateAdminUser(userId: number, payload: AdminUserUpdate): Promise<User> {
+    return request(`/admin/users/${userId}`, { method: 'PATCH', body: JSON.stringify(payload) })
   },
   getSavedSearches(): Promise<SavedSearchListResponse> {
     return request('/saved-searches')

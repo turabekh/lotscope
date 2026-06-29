@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 declare module 'vue-router' {
   interface RouteMeta {
     requiresAuth?: boolean
+    requiresAdmin?: boolean
     guestOnly?: boolean
   }
 }
@@ -62,6 +63,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/SavedSearchesPage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('@/pages/AdminPage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ]
 
 export const router = createRouter({
@@ -75,6 +82,9 @@ router.beforeEach((to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.meta.guestOnly && auth.token !== null) {
+    return { name: 'map' }
+  }
+  if (to.meta.requiresAdmin && auth.user !== null && auth.user.role !== 'admin') {
     return { name: 'map' }
   }
   return true

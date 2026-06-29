@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 
+from lotscope.api.admin import router as admin_router
 from lotscope.api.auth import router as auth_router
 from lotscope.api.billing import router as billing_router
 from lotscope.api.digests import router as digests_router
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(pipeline_router)
     app.include_router(saved_searches_router)
     app.include_router(neighborhoods_router)
+    app.include_router(admin_router)
     return app
 
 
