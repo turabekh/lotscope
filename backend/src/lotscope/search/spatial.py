@@ -104,9 +104,34 @@ async def _search_polygon(
     return [_result(row, with_distance=False) for row in rows]
 
 
+async def _search_neighborhood(
+    session: AsyncSession, request: AreaSearchRequest
+) -> list[SpatialParcelResult]:
+    assert request.neighborhood is not None
+    where, params = build_filters(
+        vacant_only=request.vacant_only, zoning_codes=request.zoning_codes
+    )
+    sql = text(
+        f"SELECT {_SELECT} "
+        f"FROM parcel p {_JOINS} "
+        f"WHERE {where} "
+        "AND ST_Intersects(p.geom_4326, "
+        "(SELECT ST_Union(n.geom_4326) FROM neighborhood n WHERE n.name = :neighborhood)) "
+        "ORDER BY pv.opportunity_score DESC NULLS LAST, p.parcel_number LIMIT :limit"
+    )
+    rows = (
+        await session.execute(
+            sql, {**params, "neighborhood": request.neighborhood, "limit": request.limit}
+        )
+    ).all()
+    return [_result(row, with_distance=False) for row in rows]
+
+
 async def search_area(
     session: AsyncSession, request: AreaSearchRequest
 ) -> list[SpatialParcelResult]:
     if request.polygon is not None:
         return await _search_polygon(session, request)
+    if request.neighborhood is not None:
+        return await _search_neighborhood(session, request)
     return await _search_radius(session, request)

@@ -2,6 +2,7 @@ from lotscope.accounts.models import User
 from lotscope.ai.models import Document
 from lotscope.core.db import Base
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.neighborhoods.models import Neighborhood
 from lotscope.parcels.models import Parcel
 from lotscope.risk.models import FloodZone, LiEvent, TaxStatus
 from lotscope.valuation.models import Sale
@@ -15,6 +16,7 @@ __all__ = [
     "Document",
     "FloodZone",
     "LiEvent",
+    "Neighborhood",
     "Parcel",
     "ParcelVerdict",
     "Sale",

@@ -7,7 +7,17 @@ from lotscope.core.config import Settings
 from lotscope.ingestion.arcgis import ArcGisClient
 from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.filters import li_events_where, rtt_sales_where
-from lotscope.ingestion.loaders import flood, li, opa, pwd, rtt, tax, vacancy, zoning
+from lotscope.ingestion.loaders import (
+    flood,
+    li,
+    neighborhoods,
+    opa,
+    pwd,
+    rtt,
+    tax,
+    vacancy,
+    zoning,
+)
 from lotscope.ingestion.runner import run_loader
 
 SessionFactory = async_sessionmaker[AsyncSession]
@@ -117,6 +127,15 @@ async def ingest_flood(session_factory: SessionFactory, settings: Settings) -> i
     )
 
 
+async def ingest_neighborhoods(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=neighborhoods.load_neighborhoods,
+        dataset=neighborhoods.NEIGHBORHOODS_DATASET,
+    )
+
+
 INGEST_JOBS: dict[str, Job] = {
     "opa": ingest_opa,
     "pwd": ingest_pwd,
@@ -128,4 +147,5 @@ INGEST_JOBS: dict[str, Job] = {
     "zoning": ingest_zoning,
     "vacancy": ingest_vacancy,
     "flood": ingest_flood,
+    "neighborhoods": ingest_neighborhoods,
 }

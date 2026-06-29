@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { formatCurrency } from '@/lib/format'
 import type { SpatialParcelResult } from '@/lib/types'
@@ -9,20 +9,48 @@ import { type AreaShape, useAreaSearchStore } from '@/stores/areaSearch'
 const emit = defineEmits<{ select: [parcelNumber: string] }>()
 
 const store = useAreaSearchStore()
-const { active, shape, center, polygon, radiusM, loading, results, count, truncated } =
+const { active, shape, center, polygon, neighborhood, neighborhoods, radiusM, loading, results, count, truncated } =
   storeToRefs(store)
 
 const SHAPE_OPTIONS: { label: string; value: AreaShape; icon: string }[] = [
   { label: 'Radius', value: 'radius', icon: 'radio_button_unchecked' },
   { label: 'Polygon', value: 'polygon', icon: 'pentagon' },
+  { label: 'Area', value: 'neighborhood', icon: 'map' },
 ]
 
-const hasQuery = computed(() =>
-  shape.value === 'radius' ? center.value !== null : polygon.value !== null,
+const hasQuery = computed(() => {
+  if (shape.value === 'radius') return center.value !== null
+  if (shape.value === 'polygon') return polygon.value !== null
+  return neighborhood.value !== null
+})
+
+const neighborhoodOptions = ref<string[]>([])
+
+watch(
+  [active, shape],
+  () => {
+    if (active.value && shape.value === 'neighborhood') void store.loadNeighborhoods()
+  },
+  { immediate: true },
 )
+
+watch(neighborhoods, (list) => (neighborhoodOptions.value = list), { immediate: true })
 
 function onRadius(value: number | null): void {
   if (typeof value === 'number') void store.setRadius(value)
+}
+
+function onNeighborhood(value: string | null): void {
+  if (value !== null) void store.searchNeighborhood(value)
+}
+
+function filterNeighborhoods(value: string, update: (callback: () => void) => void): void {
+  update(() => {
+    const needle = value.toLowerCase()
+    neighborhoodOptions.value = needle
+      ? neighborhoods.value.filter((name) => name.toLowerCase().includes(needle))
+      : neighborhoods.value
+  })
 }
 
 function pick(result: SpatialParcelResult): void {
@@ -85,10 +113,33 @@ function distanceLabel(meters: number | null): string {
           />
         </div>
 
+        <q-select
+          v-if="shape === 'neighborhood'"
+          :model-value="neighborhood"
+          :options="neighborhoodOptions"
+          outlined
+          dense
+          clearable
+          use-input
+          input-debounce="0"
+          label="Neighborhood"
+          class="q-mb-xs"
+          :loading="neighborhoods.length === 0"
+          @update:model-value="onNeighborhood"
+          @filter="filterNeighborhoods"
+        />
+
         <div v-if="!hasQuery" class="area-hint">
-          <q-icon :name="shape === 'radius' ? 'touch_app' : 'gesture'" size="16px" class="q-mr-xs" />
+          <q-icon
+            :name="shape === 'radius' ? 'touch_app' : shape === 'polygon' ? 'gesture' : 'map'"
+            size="16px"
+            class="q-mr-xs"
+          />
           <span v-if="shape === 'radius'">Tap the map to set a center point.</span>
-          <span v-else>Click to add points; click the first point to close the shape.</span>
+          <span v-else-if="shape === 'polygon'">
+            Click to add points; click the first point to close the shape.
+          </span>
+          <span v-else>Pick a Philadelphia neighborhood.</span>
         </div>
 
         <template v-else>
@@ -98,6 +149,7 @@ function distanceLabel(meters: number | null): string {
             <span>
               <b>{{ count }}</b> lot<span v-if="count !== 1">s</span>
               <span v-if="shape === 'radius'"> within {{ radiusLabel(radiusM) }}</span>
+              <span v-else-if="shape === 'neighborhood'"> in {{ neighborhood }}</span>
               <span v-else> in this area</span>
               <span v-if="truncated" class="text-grey-6"> (first {{ count }})</span>
             </span>
@@ -129,7 +181,10 @@ function distanceLabel(meters: number | null): string {
             </q-item>
             <q-item v-if="!loading && results.length === 0">
               <q-item-section class="text-grey-6">
-                No lots here. Try a {{ shape === 'radius' ? 'larger radius' : 'bigger area' }}.
+                No lots here.
+                <span v-if="shape === 'radius'">Try a larger radius.</span>
+                <span v-else-if="shape === 'neighborhood'">Try another neighborhood.</span>
+                <span v-else>Try a bigger area.</span>
               </q-item-section>
             </q-item>
           </q-list>

@@ -8,13 +8,15 @@ import { useFiltersStore } from '@/stores/filters'
 const DEFAULT_RADIUS_M = 500
 const RESULT_LIMIT = 200
 
-export type AreaShape = 'radius' | 'polygon'
+export type AreaShape = 'radius' | 'polygon' | 'neighborhood'
 
 export const useAreaSearchStore = defineStore('areaSearch', () => {
   const active = ref(false)
   const shape = ref<AreaShape>('radius')
   const center = ref<GeoPoint | null>(null)
   const polygon = ref<GeoJSON.Polygon | null>(null)
+  const neighborhood = ref<string | null>(null)
+  const neighborhoods = ref<string[]>([])
   const radiusM = ref(DEFAULT_RADIUS_M)
   const loading = ref(false)
   const results = ref<SpatialParcelResult[]>([])
@@ -24,9 +26,16 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   function clear(): void {
     center.value = null
     polygon.value = null
+    neighborhood.value = null
     results.value = []
     count.value = 0
     truncated.value = false
+  }
+
+  async function loadNeighborhoods(): Promise<void> {
+    if (neighborhoods.value.length > 0) return
+    const response = await api.getNeighborhoods()
+    neighborhoods.value = response.neighborhoods.map((item) => item.name)
   }
 
   function toggle(): void {
@@ -95,6 +104,23 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     }
   }
 
+  async function searchNeighborhood(name: string): Promise<void> {
+    neighborhood.value = name
+    loading.value = true
+    try {
+      const filters = useFiltersStore()
+      applyResponse(
+        await api.searchArea({
+          neighborhood: name,
+          vacant_only: filters.vacantOnly,
+          limit: RESULT_LIMIT,
+        }),
+      )
+    } finally {
+      loading.value = false
+    }
+  }
+
   function reset(): void {
     active.value = false
     shape.value = 'radius'
@@ -107,6 +133,8 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     shape,
     center,
     polygon,
+    neighborhood,
+    neighborhoods,
     radiusM,
     loading,
     results,
@@ -115,10 +143,12 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     clear,
     toggle,
     setShape,
+    loadNeighborhoods,
     run,
     setCenter,
     setRadius,
     searchPolygon,
+    searchNeighborhood,
     reset,
   }
 })

@@ -20,6 +20,7 @@ import type {
   PortalResponse,
   AreaSearchRequest,
   AreaSearchResponse,
+  NeighborhoodListResponse,
   RegisterPayload,
   SavedSearchDetail,
   SavedSearchListResponse,
@@ -190,6 +191,9 @@ export const api = {
   },
   searchArea(payload: AreaSearchRequest): Promise<AreaSearchResponse> {
     return request('/search/area', { method: 'POST', body: JSON.stringify(payload) })
+  },
+  getNeighborhoods(): Promise<NeighborhoodListResponse> {
+    return request('/neighborhoods')
   },
   getSavedSearches(): Promise<SavedSearchListResponse> {
     return request('/saved-searches')

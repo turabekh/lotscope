@@ -215,9 +215,18 @@ export interface AreaSearchRequest {
   center?: GeoPoint
   radius_m?: number
   polygon?: GeoJSON.Polygon
+  neighborhood?: string
   vacant_only?: boolean
   zoning_codes?: string[]
   limit?: number
+}
+
+export interface NeighborhoodSummary {
+  name: string
+}
+
+export interface NeighborhoodListResponse {
+  neighborhoods: NeighborhoodSummary[]
 }
 
 export interface SpatialParcelResult {

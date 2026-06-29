@@ -7,8 +7,8 @@ from lotscope.search.schemas import AreaSearchRequest, GeoPoint
 from lotscope.search.spatial import build_filters, search_area
 
 
-def test_request_rejects_both_shapes() -> None:
-    with pytest.raises(ValueError, match="either"):
+def test_request_rejects_multiple_shapes() -> None:
+    with pytest.raises(ValueError, match="exactly one"):
         AreaSearchRequest(
             center=GeoPoint(lat=39.95, lng=-75.16),
             radius_m=500,
@@ -17,7 +17,7 @@ def test_request_rejects_both_shapes() -> None:
 
 
 def test_request_rejects_no_shape() -> None:
-    with pytest.raises(ValueError, match="either"):
+    with pytest.raises(ValueError, match="exactly one"):
         AreaSearchRequest()
 
 
@@ -29,6 +29,11 @@ def test_request_accepts_radius_only() -> None:
 def test_request_accepts_polygon_only() -> None:
     request = AreaSearchRequest(polygon={"type": "Polygon", "coordinates": []})
     assert request.polygon is not None
+
+
+def test_request_accepts_neighborhood_only() -> None:
+    request = AreaSearchRequest(neighborhood="Fishtown")
+    assert request.neighborhood == "Fishtown"
 
 
 def test_build_filters_default_requires_geometry() -> None:
@@ -136,3 +141,26 @@ async def test_polygon_rejects_non_polygon_geometry(db_session: AsyncSession) ->
     request = AreaSearchRequest(polygon={"type": "Point", "coordinates": [-75.16, 39.95]})
     with pytest.raises(ValidationError):
         await search_area(db_session, request)
+
+
+@pytest.mark.integration
+async def test_neighborhood_returns_parcels_inside_boundary(db_session: AsyncSession) -> None:
+    await _seed(db_session)
+    await db_session.execute(
+        text(
+            "INSERT INTO neighborhood (external_id, name, geom_4326) "
+            "VALUES ('1', 'Test Park', ST_GeomFromText(:wkt, 4326))"
+        ),
+        {"wkt": _square(-75.1600, 39.9510, size=0.0015)},
+    )
+    await db_session.flush()
+
+    results = await search_area(db_session, AreaSearchRequest(neighborhood="Test Park"))
+    assert sorted(r.parcel_number for r in results) == ["000000001", "000000002"]
+
+
+@pytest.mark.integration
+async def test_neighborhood_unknown_name_returns_empty(db_session: AsyncSession) -> None:
+    await _seed(db_session)
+    results = await search_area(db_session, AreaSearchRequest(neighborhood="Nowhere"))
+    assert results == []
