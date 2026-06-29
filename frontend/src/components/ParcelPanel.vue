@@ -7,6 +7,7 @@ import AskBox from '@/components/AskBox.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
 import DealPanel from '@/components/DealPanel.vue'
+import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
@@ -237,6 +238,8 @@ async function toggleSave(): Promise<void> {
         <OwnerPortfolioPanel />
 
         <DistressPanel />
+
+        <DeedRestrictionsPanel />
 
         <PropertyFacts :detail="detail" />
 

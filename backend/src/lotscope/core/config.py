@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     voyage_url: str = "https://api.voyageai.com/v1/embeddings"
     embedding_model: str = "voyage-3"
     embedding_dimensions: int = 1024
+    deed_blob_root: str = "data/deeds"
 
     smtp_host: str | None = None
     smtp_port: int = 587

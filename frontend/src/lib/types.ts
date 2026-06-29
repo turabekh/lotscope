@@ -240,6 +240,21 @@ export interface OwnerPortfolio {
   parcels: OwnerParcel[]
 }
 
+export interface DeedRestrictionItem {
+  kind: string
+  text: string
+  citation: string | null
+  confidence: string
+  document_type: string | null
+  recording_date: string | null
+}
+
+export interface DeedRestrictionsResponse {
+  parcel_number: string
+  count: number
+  restrictions: DeedRestrictionItem[]
+}
+
 export interface NeighborhoodSummary {
   name: string
 }

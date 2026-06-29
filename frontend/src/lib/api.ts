@@ -20,6 +20,7 @@ import type {
   PortalResponse,
   AreaSearchRequest,
   AreaSearchResponse,
+  DeedRestrictionsResponse,
   NeighborhoodListResponse,
   OwnerPortfolio,
   RegisterPayload,
@@ -223,6 +224,9 @@ export const api = {
   },
   getOwnerPortfolio(parcelNumber: string): Promise<OwnerPortfolio> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/owner-portfolio`)
+  },
+  getDeedRestrictions(parcelNumber: string): Promise<DeedRestrictionsResponse> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/deed-restrictions`)
   },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {

@@ -1,3 +1,4 @@
+import json
 from collections.abc import Sequence
 
 from sqlalchemy import text
@@ -8,8 +9,17 @@ from lotscope.ai.schemas import RetrievedDocument
 
 _INSERT_SQL = text(
     "INSERT INTO document (source, section, title, content, doc_metadata, embedding) "
-    "VALUES (:source, :section, :title, :content, '{}'::jsonb, (:embedding)::vector) "
+    "VALUES (:source, :section, :title, :content, (:metadata)::jsonb, (:embedding)::vector) "
     "RETURNING id"
+)
+_PARCEL_DEED_SQL = text(
+    "SELECT id, source, section, title, content, "
+    "(embedding <=> (:embedding)::vector) AS distance "
+    "FROM document "
+    "WHERE embedding IS NOT NULL AND source = :source "
+    "AND doc_metadata->>'parcel_number' = :parcel_number "
+    "ORDER BY distance ASC "
+    "LIMIT :limit"
 )
 _SEARCH_SQL = text(
     "SELECT id, source, section, title, content, "
@@ -44,6 +54,7 @@ async def add_document(
     embedding: Sequence[float],
     section: str | None = None,
     title: str | None = None,
+    metadata: dict[str, object] | None = None,
 ) -> int:
     result = await session.execute(
         _INSERT_SQL,
@@ -52,10 +63,43 @@ async def add_document(
             "section": section,
             "title": title,
             "content": content,
+            "metadata": json.dumps(metadata or {}),
             "embedding": to_vector_literal(embedding),
         },
     )
     return int(result.scalar_one())
+
+
+async def search_parcel_documents(
+    session: AsyncSession,
+    embedder: Embedder,
+    query: str,
+    parcel_number: str,
+    *,
+    source: str,
+    limit: int = 3,
+) -> list[RetrievedDocument]:
+    vectors = await embedder.embed([query])
+    rows = await session.execute(
+        _PARCEL_DEED_SQL,
+        {
+            "embedding": to_vector_literal(vectors[0]),
+            "source": source,
+            "parcel_number": parcel_number,
+            "limit": limit,
+        },
+    )
+    return [
+        RetrievedDocument(
+            id=row.id,
+            source=row.source,
+            section=row.section,
+            title=row.title,
+            content=row.content,
+            distance=float(row.distance),
+        )
+        for row in rows
+    ]
 
 
 async def vector_search(

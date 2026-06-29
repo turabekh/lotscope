@@ -29,6 +29,13 @@ dependencies = [
 geo = [
     "shapely>=2.0.6",
 ]
+ocr = [
+    "paddleocr>=2.7.0",
+    "paddlepaddle>=2.6.0",
+    "pillow>=10.0.0",
+    "numpy>=1.26.0",
+    "boto3>=1.35.0",
+]
 
 [dependency-groups]
 dev = [
@@ -95,6 +102,7 @@ module = [
     "pgvector.*",
     "py_vapid.*",
     "pywebpush.*",
+    "paddleocr.*",
 ]
 ignore_missing_imports = true
 

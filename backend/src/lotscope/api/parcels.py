@@ -37,6 +37,8 @@ from lotscope.deal.schemas import DealResult
 from lotscope.deal.service import analyze_parcel_deal
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
+from lotscope.documents.schemas import DeedRestrictionsResponse
+from lotscope.documents.service import get_deed_restrictions
 from lotscope.owners.schemas import OwnerPortfolio
 from lotscope.owners.service import get_owner_portfolio
 from lotscope.parcels.schemas import ParcelDetail
@@ -162,6 +164,16 @@ async def parcel_owner_portfolio(
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result
+
+
+@router.get("/{parcel_number}/deed-restrictions", response_model=DeedRestrictionsResponse)
+async def parcel_deed_restrictions(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> DeedRestrictionsResponse:
+    detail = await get_parcel_detail(session, parcel_number)
+    if detail is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return await get_deed_restrictions(session, parcel_number)
 
 
 @router.get("/{parcel_number}/checklist", response_model=ParcelChecklist)
