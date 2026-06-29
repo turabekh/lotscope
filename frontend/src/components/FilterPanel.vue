@@ -2,6 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import {
   BASEMAP_OPTIONS,
@@ -13,7 +14,12 @@ import {
 const store = useFiltersStore()
 const { vacantOnly, useClasses, colorMode, show3d, basemap, activeCount } = storeToRefs(store)
 const $q = useQuasar()
+const router = useRouter()
 const open = ref(!$q.screen.lt.sm)
+
+function saveSearch(): void {
+  void router.push({ name: 'saved-searches', query: vacantOnly.value ? { vacant: '1' } : {} })
+}
 </script>
 
 <template>
@@ -141,6 +147,17 @@ const open = ref(!$q.screen.lt.sm)
         </section>
 
         <div class="fp-footer">
+          <q-btn
+            flat
+            dense
+            no-caps
+            size="sm"
+            color="primary"
+            icon="notifications_active"
+            label="Save as alert"
+            @click="saveSearch"
+          />
+          <q-space />
           <q-btn
             flat
             dense

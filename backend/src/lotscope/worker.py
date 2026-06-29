@@ -10,7 +10,11 @@ from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.jobs import INGEST_JOBS
 from lotscope.notifications.email import get_email_sender
 from lotscope.notifications.push import get_push_sender
-from lotscope.notifications.service import send_digests, send_push_alerts
+from lotscope.notifications.service import (
+    send_digests,
+    send_push_alerts,
+    send_saved_search_alerts,
+)
 from lotscope.verdict.jobs import recompute_all_verdicts
 
 _logger = get_logger("worker")
@@ -78,6 +82,14 @@ async def send_push_notifications(ctx: dict[str, Any]) -> int:
     return await send_push_alerts(ctx["session_factory"], sender, settings)
 
 
+async def send_saved_search_match_alerts(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    sender = get_email_sender(settings)
+    count = await send_saved_search_alerts(ctx["session_factory"], sender, settings)
+    _logger.info("sent_saved_search_alerts", count=count)
+    return count
+
+
 class WorkerSettings:
     functions: ClassVar = [
         ingest_dataset,
@@ -88,6 +100,7 @@ class WorkerSettings:
         send_weekly_digests,
         send_daily_digests,
         send_push_notifications,
+        send_saved_search_match_alerts,
     ]
     on_startup = startup
     on_shutdown = shutdown
@@ -100,4 +113,5 @@ class WorkerSettings:
         cron(send_push_notifications, hour=12, minute=0),
         cron(send_daily_digests, hour=13, minute=0),
         cron(send_weekly_digests, weekday="mon", hour=13, minute=30),
+        cron(send_saved_search_match_alerts, hour=9, minute=0),
     ]

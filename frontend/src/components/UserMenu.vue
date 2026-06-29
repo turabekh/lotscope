@@ -5,12 +5,15 @@ import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
 import { useCompareStore } from '@/stores/compare'
+import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useAuthStore()
 const { user, isAuthenticated } = storeToRefs(store)
 const watchlist = useWatchlistStore()
 const { alerts } = storeToRefs(watchlist)
+const savedSearches = useSavedSearchesStore()
+const { newTotal } = storeToRefs(savedSearches)
 const compare = useCompareStore()
 const { count: compareCount } = storeToRefs(compare)
 const router = useRouter()
@@ -20,7 +23,10 @@ const initial = computed(() => (user.value?.email ?? '?').charAt(0).toUpperCase(
 watch(
   isAuthenticated,
   (value) => {
-    if (value) void watchlist.ensureLoaded()
+    if (value) {
+      void watchlist.ensureLoaded()
+      void savedSearches.ensureLoaded()
+    }
   },
   { immediate: true },
 )
@@ -49,6 +55,10 @@ function goPipeline(): void {
 function goCompare(): void {
   void router.push({ name: 'compare' })
 }
+
+function goSavedSearches(): void {
+  void router.push({ name: 'saved-searches' })
+}
 </script>
 
 <template>
@@ -65,7 +75,9 @@ function goCompare(): void {
     <q-avatar size="30px" color="white" text-color="primary" class="text-weight-bold">
       {{ initial }}
     </q-avatar>
-    <q-badge v-if="alerts > 0" color="negative" floating rounded>{{ alerts }}</q-badge>
+    <q-badge v-if="alerts + newTotal > 0" color="negative" floating rounded>
+      {{ alerts + newTotal }}
+    </q-badge>
     <q-menu anchor="bottom right" self="top right">
       <q-list style="min-width: 200px">
         <q-item>
@@ -85,6 +97,13 @@ function goCompare(): void {
         <q-item v-close-popup clickable @click="goPipeline">
           <q-item-section avatar><q-icon name="view_kanban" /></q-item-section>
           <q-item-section>Deal pipeline</q-item-section>
+        </q-item>
+        <q-item v-close-popup clickable @click="goSavedSearches">
+          <q-item-section avatar><q-icon name="saved_search" /></q-item-section>
+          <q-item-section>Saved searches</q-item-section>
+          <q-item-section v-if="newTotal > 0" side>
+            <q-badge color="negative" rounded>{{ newTotal }}</q-badge>
+          </q-item-section>
         </q-item>
         <q-item v-close-popup clickable @click="goCompare">
           <q-item-section avatar><q-icon name="compare_arrows" /></q-item-section>

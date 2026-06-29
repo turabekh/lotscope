@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { ApiError, api, setAuthToken } from '@/lib/api'
 import type { RegisterPayload, Usage, User } from '@/lib/types'
 import { usePipelineStore } from '@/stores/pipeline'
+import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const TOKEN_KEY = 'lotscope_token'
@@ -97,6 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
     usage.value = null
     useWatchlistStore().reset()
     usePipelineStore().reset()
+    useSavedSearchesStore().reset()
   }
 
   return {

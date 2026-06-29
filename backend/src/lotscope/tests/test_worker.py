@@ -18,6 +18,7 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "send_daily_digests",
         "send_weekly_digests",
         "send_push_notifications",
+        "send_saved_search_match_alerts",
     }
 
 

@@ -19,6 +19,9 @@ import type {
   PlansResponse,
   PortalResponse,
   RegisterPayload,
+  SavedSearchDetail,
+  SavedSearchListResponse,
+  SearchCriteria,
   TokenResponse,
   Usage,
   User,
@@ -182,6 +185,31 @@ export const api = {
   },
   removeFromPipeline(parcelNumber: string): Promise<void> {
     return request(`/pipeline/${encodeURIComponent(parcelNumber)}`, { method: 'DELETE' })
+  },
+  getSavedSearches(): Promise<SavedSearchListResponse> {
+    return request('/saved-searches')
+  },
+  createSavedSearch(payload: {
+    name: string
+    criteria: SearchCriteria
+    alerts_enabled?: boolean
+  }): Promise<SavedSearchDetail> {
+    return request('/saved-searches', { method: 'POST', body: JSON.stringify(payload) })
+  },
+  getSavedSearch(id: number): Promise<SavedSearchDetail> {
+    return request(`/saved-searches/${id}`)
+  },
+  updateSavedSearch(
+    id: number,
+    payload: { name?: string; criteria?: SearchCriteria; alerts_enabled?: boolean },
+  ): Promise<SavedSearchDetail> {
+    return request(`/saved-searches/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+  },
+  runSavedSearch(id: number): Promise<SavedSearchDetail> {
+    return request(`/saved-searches/${id}/run`, { method: 'POST' })
+  },
+  deleteSavedSearch(id: number): Promise<void> {
+    return request(`/saved-searches/${id}`, { method: 'DELETE' })
   },
   ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {

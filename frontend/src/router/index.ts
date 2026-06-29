@@ -56,6 +56,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/ComparePage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/saved-searches',
+    name: 'saved-searches',
+    component: () => import('@/pages/SavedSearchesPage.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 export const router = createRouter({
