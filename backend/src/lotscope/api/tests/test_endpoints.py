@@ -155,7 +155,7 @@ async def test_verdict_refresh_then_read(db_session: AsyncSession) -> None:
 
     assert before.status_code == 404
     assert refreshed.status_code == 200
-    assert refreshed.json()["verdict_version"] == "v1"
+    assert refreshed.json()["verdict_version"] == "v2"
     assert after.status_code == 200
     assert "RSA-5" in after.json()["summary"]
 
