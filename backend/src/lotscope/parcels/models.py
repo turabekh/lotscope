@@ -1,11 +1,17 @@
 from datetime import date
 
 from geoalchemy2 import Geometry, WKBElement
-from sqlalchemy import Boolean, Date, Index, Numeric, String, Text
+from sqlalchemy import Boolean, Computed, Date, Index, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
 from lotscope.core.mixins import IngestionMixin, TimestampMixin
+
+OWNER_KEY_EXPRESSION = (
+    "nullif(upper(btrim("
+    "regexp_replace(regexp_replace(owner, '[.,#]', '', 'g'), '\\s+', ' ', 'g')"
+    ")), '')"
+)
 
 
 class Parcel(Base, TimestampMixin, IngestionMixin):
@@ -32,6 +38,9 @@ class Parcel(Base, TimestampMixin, IngestionMixin):
     address: Mapped[str | None] = mapped_column(String(255))
     zip_code: Mapped[str | None] = mapped_column(String(10))
     owner: Mapped[str | None] = mapped_column(String(255))
+    owner_key: Mapped[str | None] = mapped_column(
+        String(255), Computed(OWNER_KEY_EXPRESSION, persisted=True), index=True
+    )
     mailing_address: Mapped[str | None] = mapped_column(String(255))
 
     land_use: Mapped[str | None] = mapped_column(String(120))

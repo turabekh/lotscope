@@ -8,20 +8,22 @@ from lotscope.owners.schemas import OwnerParcel, OwnerPortfolio
 
 MAX_PORTFOLIO_PARCELS = 50
 
-_OWNER_SQL = text("SELECT owner, mailing_address FROM parcel WHERE parcel_number = :parcel_number")
+_OWNER_SQL = text(
+    "SELECT owner, owner_key, mailing_address FROM parcel WHERE parcel_number = :parcel_number"
+)
 
 _AGG_SQL = text(
     "SELECT count(*) AS total, "
     "count(*) FILTER (WHERE coalesce(is_vacant, false)) AS vacant, "
     "sum(market_value) AS total_value "
-    "FROM parcel WHERE lower(btrim(owner)) = :owner_key"
+    "FROM parcel WHERE owner_key = :owner_key"
 )
 
 _LIST_SQL = text(
     "SELECT p.parcel_number, p.address, p.base_zoning_code, p.is_vacant, p.market_value, "
     "round(pv.opportunity_score)::int AS opportunity_score "
     "FROM parcel p LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
-    "WHERE lower(btrim(p.owner)) = :owner_key AND p.parcel_number <> :parcel_number "
+    "WHERE p.owner_key = :owner_key AND p.parcel_number <> :parcel_number "
     "ORDER BY p.market_value DESC NULLS LAST, p.parcel_number LIMIT :limit"
 )
 
@@ -46,7 +48,8 @@ async def get_owner_portfolio(session: AsyncSession, parcel_number: str) -> Owne
     if base is None:
         return None
     owner = base.owner
-    if owner is None or not owner.strip():
+    owner_key = base.owner_key
+    if owner_key is None:
         return OwnerPortfolio(
             owner=owner,
             mailing_address=base.mailing_address,
@@ -56,7 +59,6 @@ async def get_owner_portfolio(session: AsyncSession, parcel_number: str) -> Owne
             shown=0,
             parcels=[],
         )
-    owner_key = owner.strip().lower()
     agg = (await session.execute(_AGG_SQL, {"owner_key": owner_key})).one()
     rows = (
         await session.execute(
