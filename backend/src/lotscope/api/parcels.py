@@ -44,6 +44,8 @@ from lotscope.distress.service import assess_parcel_distress
 from lotscope.documents.schemas import DeedRestrictionsResponse
 from lotscope.documents.service import analyze_uploaded_deed, get_deed_restrictions
 from lotscope.documents.storage import LocalBlobStore
+from lotscope.historic.schemas import HistoricResult
+from lotscope.historic.service import get_parcel_historic
 from lotscope.owners.schemas import OwnerPortfolio
 from lotscope.owners.service import get_owner_portfolio
 from lotscope.parcels.schemas import ParcelDetail
@@ -231,6 +233,16 @@ async def parcel_subdivision(
     parcel_number: str, session: SessionDep, current_user: CurrentUserDep
 ) -> SubdivisionResult:
     result = await analyze_parcel_subdivision(session, parcel_number)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
+
+
+@router.get("/{parcel_number}/historic", response_model=HistoricResult)
+async def parcel_historic(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> HistoricResult:
+    result = await get_parcel_historic(session, parcel_number)
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result

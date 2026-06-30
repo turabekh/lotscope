@@ -15,6 +15,7 @@ Base endpoint: `https://phl.carto.com/api/v2/sql`
 | Parcels (PWD) | `pwd_parcels` | Authoritative parcel polygons | Join key to OPA is **not** aligned — reconcile explicitly. |
 | Tax delinquency | (revenue dataset) | Liens, amounts, years owed, sheriff-sale exposure | Distress signal. |
 | L&I | (violations / permits / demolitions) | Violations, permits, demolitions, unsafe / imminently-dangerous flags | Daily freshness target. |
+| Historic districts | `historicdistricts_local` | Local Register historic-district boundaries → Historical Commission review overlay (ADR-0028) | 17 polygons; fields `objectid`, `name`, `designated`, `the_geom`. |
 
 **Carto gotchas (must respect):**
 - Carto **times out on full-table dumps** → chunk by parcel-number ranges; never paginate a full table in one query.

@@ -9,6 +9,7 @@ from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.filters import li_events_where, rtt_sales_where
 from lotscope.ingestion.loaders import (
     flood,
+    historic,
     li,
     neighborhoods,
     opa,
@@ -143,6 +144,15 @@ async def ingest_streets(session_factory: SessionFactory, settings: Settings) ->
     )
 
 
+async def ingest_historic(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(
+        session_factory,
+        settings,
+        loader=historic.load_historic,
+        dataset=historic.HISTORIC_DATASET,
+    )
+
+
 INGEST_JOBS: dict[str, Job] = {
     "opa": ingest_opa,
     "pwd": ingest_pwd,
@@ -156,4 +166,5 @@ INGEST_JOBS: dict[str, Job] = {
     "flood": ingest_flood,
     "neighborhoods": ingest_neighborhoods,
     "streets": ingest_streets,
+    "historic": ingest_historic,
 }
