@@ -144,6 +144,50 @@ async def test_parcel_with_frontage_not_flagged(db_session: AsyncSession) -> Non
     assert "no_street_access" not in _codes(result)
 
 
+async def test_historic_district_intersection_flagged(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "('000000030', ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO historic_district (name, geom_2272) VALUES "
+            "('Society Hill', ST_GeomFromText('POLYGON((5 5,5 20,20 20,20 5,5 5))', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel_risk(db_session, "000000030")
+    assert result is not None
+    flag = next(f for f in result.flags if f.code == "historic_district")
+    assert flag.severity == "low"
+    assert "Society Hill" in flag.detail
+    assert flag.source == "historicdistricts_local"
+
+
+async def test_parcel_outside_historic_district_not_flagged(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "('000000031', ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO historic_district (name, geom_2272) VALUES "
+            "('Far Away', ST_GeomFromText('POLYGON((100 100,100 120,120 120,120 100,100 100))', "
+            "2272))"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel_risk(db_session, "000000031")
+    assert result is not None
+    assert "historic_district" not in _codes(result)
+
+
 async def test_clean_parcel_has_no_flags(db_session: AsyncSession) -> None:
     await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000004')"))
     await db_session.flush()

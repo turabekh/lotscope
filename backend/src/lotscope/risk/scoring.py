@@ -50,6 +50,12 @@ class AccessSignal:
 
 
 @dataclass(frozen=True)
+class HistoricSignal:
+    in_district: bool
+    district_name: str | None = None
+
+
+@dataclass(frozen=True)
 class RiskSignals:
     li: LiSignal
     tax: TaxSignal | None = None
@@ -57,6 +63,7 @@ class RiskSignals:
     flood_zones: list[str] = field(default_factory=list)
     title: TitleSignal | None = None
     access: AccessSignal | None = None
+    historic: HistoricSignal | None = None
 
 
 @dataclass(frozen=True)
@@ -210,6 +217,21 @@ def _access_flag(access: AccessSignal) -> RiskFlag | None:
     )
 
 
+def _historic_flag(historic: HistoricSignal) -> RiskFlag | None:
+    if not historic.in_district:
+        return None
+    where = f"the {historic.district_name} historic district" if historic.district_name else "a"
+    article = "" if historic.district_name else " local historic district"
+    return RiskFlag(
+        "historic_district",
+        "low",
+        "Historic district overlay",
+        f"Parcel sits in {where}{article}; exterior alterations, demolition, and new "
+        "construction require Philadelphia Historical Commission review, adding time and cost.",
+        "historicdistricts_local",
+    )
+
+
 def _flood_flag(flood_zones: list[str]) -> RiskFlag | None:
     if not flood_zones:
         return None
@@ -260,6 +282,10 @@ def assess_risk(signals: RiskSignals) -> RiskAssessment:
         access_flag = _access_flag(signals.access)
         if access_flag is not None:
             flags.append(access_flag)
+    if signals.historic is not None:
+        historic_flag = _historic_flag(signals.historic)
+        if historic_flag is not None:
+            flags.append(historic_flag)
 
     risk_score = min(100.0, sum(_WEIGHT[flag.severity] for flag in flags))
     confidence: Confidence = "high" if signals.tax is not None else "medium"

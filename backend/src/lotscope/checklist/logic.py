@@ -42,6 +42,12 @@ _RISK_CATEGORIES: list[tuple[str, str, frozenset[str], str]] = [
         frozenset({"public_ownership", "estate_owner", "multiple_owners"}),
         "Privately held with no public-ownership or title-cloud flags on the owner record.",
     ),
+    (
+        "overlays",
+        "Historic & overlays",
+        frozenset({"historic_district"}),
+        "Not in a Philadelphia Register historic district; no Historical Commission review.",
+    ),
 ]
 
 

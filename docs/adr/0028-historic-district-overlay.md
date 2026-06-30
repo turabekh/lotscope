@@ -28,3 +28,7 @@ This mirrors the standalone-signal pattern already used for over-assessment (ADR
 - **It does not yet influence `opportunity_score` or appear in the DD checklist.** Promoting it to a `risk` flag (`historic_district`, with a new "Historic & overlays" checklist category) is a clean follow-up to **batch with the next verdict-contract change**, so verdict-affecting additions are recomputed together rather than one bump at a time. Recorded here so the follow-up isn't lost.
 - Informational and cited (`historicdistricts_local`), per §13 — it states that Historical Commission review is required, not that a project is barred.
 - The `historic_district` layer is reusable for map overlays and future overlay logic; it owns no domain truth.
+
+## Follow-up (2026-06-30): folded into the verdict
+
+The deferred promotion is now done, batched as the single verdict-contract change for `VERDICT_VERSION` v4→v5 (the v4 recompute had completed, so no thrash). The risk engine emits a `historic_district` flag (severity `low` — Historical Commission review is process friction, not a development bar; same tier as the landlocked flag) sourced from `historicdistricts_local`, queried via `ST_Intersects` against `historic_district.geom_2272` like the flood overlay. A new "Historic & overlays" DD-checklist category surfaces it (low → `info`). The standalone `GET /parcels/{id}/historic` endpoint and panel stay — they carry richer detail (designation date, full review note) than the verdict flag. All ~8k in-district parcels now reflect the flag after the v5 recompute.

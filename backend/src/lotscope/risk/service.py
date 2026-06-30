@@ -8,6 +8,7 @@ from lotscope.risk.schemas import RiskFlagSchema, RiskResult
 from lotscope.risk.scoring import (
     STREET_ACCESS_MAX_FT,
     AccessSignal,
+    HistoricSignal,
     LiSignal,
     RiskSignals,
     TaxSignal,
@@ -50,8 +51,21 @@ _ACCESS_SQL = text(
     "WHERE ST_DWithin(s.geom_2272, p.geom_2272, :max)"
     ") AS has_frontage"
 )
+_HISTORIC_SQL = text(
+    "SELECT hd.name FROM parcel p "
+    "JOIN historic_district hd ON ST_Intersects(hd.geom_2272, p.geom_2272) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL "
+    "ORDER BY hd.name LIMIT 1"
+)
 
-_CHECKED_SOURCES = ("tax_status", "li_event", "flood_zone", "street_centerline", "parcel")
+_CHECKED_SOURCES = (
+    "tax_status",
+    "li_event",
+    "flood_zone",
+    "street_centerline",
+    "historicdistricts_local",
+    "parcel",
+)
 
 
 def _as_float(value: Any) -> float | None:
@@ -95,6 +109,11 @@ async def _has_street_frontage(session: AsyncSession, parcel_number: str) -> boo
     return bool(has_frontage)
 
 
+async def _historic_signal(session: AsyncSession, parcel_number: str) -> HistoricSignal:
+    name = await session.scalar(_HISTORIC_SQL, {"parcel_number": parcel_number})
+    return HistoricSignal(in_district=name is not None, district_name=name)
+
+
 async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskResult | None:
     parcel = (await session.execute(_PARCEL_SQL, {"parcel_number": parcel_number})).one_or_none()
     if parcel is None:
@@ -107,6 +126,11 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
     has_frontage = (
         await _has_street_frontage(session, parcel_number) if parcel.has_geometry else False
     )
+    historic = (
+        await _historic_signal(session, parcel_number)
+        if parcel.has_geometry
+        else HistoricSignal(in_district=False)
+    )
     assessment = assess_risk(
         RiskSignals(
             li=li,
@@ -114,9 +138,8 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
             is_city_owned=parcel.is_city_owned,
             flood_zones=flood_zones,
             title=TitleSignal(owner=parcel.owner),
-            access=AccessSignal(
-                has_geometry=parcel.has_geometry, has_street_frontage=has_frontage
-            ),
+            access=AccessSignal(has_geometry=parcel.has_geometry, has_street_frontage=has_frontage),
+            historic=historic,
         )
     )
     return RiskResult(

@@ -51,6 +51,7 @@ def test_clean_parcel_is_all_pass() -> None:
     assert statuses["flood"] == "pass"
     assert statuses["access"] == "pass"
     assert statuses["ownership"] == "pass"
+    assert statuses["overlays"] == "pass"
     assert statuses["valuation"] == "pass"
     assert statuses["deal"] == "pass"
     assert summary.ready is True
@@ -67,6 +68,7 @@ def test_every_category_always_present() -> None:
         "flood",
         "access",
         "ownership",
+        "overlays",
         "valuation",
         "deal",
     }
@@ -176,6 +178,23 @@ def test_no_street_access_flag_surfaces_in_access_category() -> None:
     access = _item(items, "access")
     assert access.status == "info"
     assert access.source == "street_centerline"
+
+
+def test_historic_district_flag_surfaces_in_overlays_category() -> None:
+    flags = [
+        {
+            "code": "historic_district",
+            "severity": "low",
+            "label": "Historic district overlay",
+            "detail": "Parcel sits in the Society Hill historic district.",
+            "source": "historicdistricts_local",
+        }
+    ]
+    items, _ = build_checklist(_verdict(risk_flags=flags))
+    overlays = _item(items, "overlays")
+    assert overlays.status == "info"
+    assert "Society Hill" in overlays.detail
+    assert overlays.source == "historicdistricts_local"
 
 
 def test_variance_zoning_warns() -> None:

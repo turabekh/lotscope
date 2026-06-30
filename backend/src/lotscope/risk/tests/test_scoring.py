@@ -2,6 +2,7 @@ import pytest
 
 from lotscope.risk.scoring import (
     AccessSignal,
+    HistoricSignal,
     LiSignal,
     RiskSignals,
     TaxSignal,
@@ -171,6 +172,31 @@ def test_no_geometry_does_not_flag_access() -> None:
         li=LiSignal(), access=AccessSignal(has_geometry=False, has_street_frontage=False)
     )
     assert "no_street_access" not in _codes(signals)
+
+
+def test_historic_district_is_flagged() -> None:
+    signals = RiskSignals(
+        li=LiSignal(),
+        historic=HistoricSignal(in_district=True, district_name="Society Hill"),
+    )
+    flag = next(f for f in assess_risk(signals).flags if f.code == "historic_district")
+    assert flag.severity == "low"
+    assert flag.source == "historicdistricts_local"
+    assert "Society Hill" in flag.detail
+
+
+def test_historic_district_without_name_is_still_flagged() -> None:
+    signals = RiskSignals(li=LiSignal(), historic=HistoricSignal(in_district=True))
+    assert "historic_district" in _codes(signals)
+
+
+def test_parcel_outside_historic_district_not_flagged() -> None:
+    signals = RiskSignals(li=LiSignal(), historic=HistoricSignal(in_district=False))
+    assert "historic_district" not in _codes(signals)
+
+
+def test_missing_historic_signal_adds_no_flag() -> None:
+    assert "historic_district" not in _codes(RiskSignals(li=LiSignal(), historic=None))
 
 
 def test_risk_score_is_capped_at_100() -> None:
