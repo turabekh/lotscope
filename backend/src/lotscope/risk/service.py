@@ -5,10 +5,10 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.risk.schemas import RiskFlagSchema, RiskResult
-from lotscope.risk.scoring import LiSignal, RiskSignals, TaxSignal, assess_risk
+from lotscope.risk.scoring import LiSignal, RiskSignals, TaxSignal, TitleSignal, assess_risk
 
 _PARCEL_SQL = text(
-    "SELECT is_city_owned, (geom_2272 IS NOT NULL) AS has_geometry "
+    "SELECT is_city_owned, owner, (geom_2272 IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _TAX_SQL = text(
@@ -89,6 +89,7 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
             tax=tax,
             is_city_owned=parcel.is_city_owned,
             flood_zones=flood_zones,
+            title=TitleSignal(owner=parcel.owner),
         )
     )
     return RiskResult(

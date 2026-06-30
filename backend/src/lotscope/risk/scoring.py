@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -8,6 +9,14 @@ _WEIGHT: dict[Severity, float] = {"high": 40.0, "medium": 20.0, "low": 10.0, "in
 _HIGH_RISK_FLOOD_ZONES = frozenset({"A", "AE", "AO", "AH", "VE", "V"})
 _TAX_HIGH_DUE = 10000.0
 _TAX_HIGH_YEARS = 3
+_ESTATE_RE = re.compile(r"\b(ESTATE OF|HEIRS?|DECEASED|DECD)\b")
+_TRAILING_ESTATE_RE = re.compile(r"\bESTATE\b")
+_REAL_ESTATE_RE = re.compile(r"\bREAL ESTATE\b")
+_BUSINESS_ENTITY_RE = re.compile(
+    r"\b(LLC|L L C|INC|LP|LLP|CORP|COMPANY|PARTNERS?|PARTNERSHIP|ASSOC|ASSOCIATES|HOLDINGS|"
+    r"GROUP|PROPERTIES|PROPS|INVESTMENTS?|INVESTORS?|REALTY|MGMT|MANAGEMENT|TRUST)\b"
+)
+_MULTIPLE_OWNERS_RE = re.compile(r"\bET (AL|UX)\b")
 
 
 @dataclass(frozen=True)
@@ -29,11 +38,17 @@ class LiSignal:
 
 
 @dataclass(frozen=True)
+class TitleSignal:
+    owner: str | None
+
+
+@dataclass(frozen=True)
 class RiskSignals:
     li: LiSignal
     tax: TaxSignal | None = None
     is_city_owned: bool | None = None
     flood_zones: list[str] = field(default_factory=list)
+    title: TitleSignal | None = None
 
 
 @dataclass(frozen=True)
@@ -135,6 +150,44 @@ def _li_flags(li: LiSignal) -> list[RiskFlag]:
     return flags
 
 
+def _owner_is_estate(owner: str) -> bool:
+    if _ESTATE_RE.search(owner):
+        return True
+    if not _TRAILING_ESTATE_RE.search(owner) or _REAL_ESTATE_RE.search(owner):
+        return False
+    return not _BUSINESS_ENTITY_RE.search(owner)
+
+
+def _title_flags(title: TitleSignal) -> list[RiskFlag]:
+    owner = (title.owner or "").upper()
+    if not owner:
+        return []
+    flags: list[RiskFlag] = []
+    if _owner_is_estate(owner):
+        flags.append(
+            RiskFlag(
+                "estate_owner",
+                "medium",
+                "Estate / deceased owner",
+                "Owner of record appears to be an estate or deceased owner; expect probate or "
+                "title-clearing before a clean conveyance.",
+                "parcel",
+            )
+        )
+    if _MULTIPLE_OWNERS_RE.search(owner):
+        flags.append(
+            RiskFlag(
+                "multiple_owners",
+                "low",
+                "Additional owners on record",
+                "Owner of record lists unnamed additional parties (et al/et ux); confirm every "
+                "owner is on the deed for a clean title.",
+                "parcel",
+            )
+        )
+    return flags
+
+
 def _flood_flag(flood_zones: list[str]) -> RiskFlag | None:
     if not flood_zones:
         return None
@@ -165,6 +218,8 @@ def assess_risk(signals: RiskSignals) -> RiskAssessment:
     if signals.tax is not None:
         flags.extend(_tax_flags(signals.tax))
     flags.extend(_li_flags(signals.li))
+    if signals.title is not None:
+        flags.extend(_title_flags(signals.title))
     if signals.is_city_owned:
         flags.append(
             RiskFlag(

@@ -87,6 +87,22 @@ async def test_flood_zone_intersection_flagged(db_session: AsyncSession) -> None
     assert "AE" in flood.detail
 
 
+async def test_estate_owner_flag_from_owner_record(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, owner) "
+            "VALUES ('000000010', 'AGHOIAN GREGORY K ESTATE OF')"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel_risk(db_session, "000000010")
+    assert result is not None
+    flag = next(f for f in result.flags if f.code == "estate_owner")
+    assert flag.severity == "medium"
+    assert flag.source == "parcel"
+
+
 async def test_clean_parcel_has_no_flags(db_session: AsyncSession) -> None:
     await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000004')"))
     await db_session.flush()

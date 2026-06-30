@@ -1,13 +1,20 @@
+import pytest
+
 from lotscope.risk.scoring import (
     LiSignal,
     RiskSignals,
     TaxSignal,
+    TitleSignal,
     assess_risk,
 )
 
 
 def _codes(signals: RiskSignals) -> set[str]:
     return {flag.code for flag in assess_risk(signals).flags}
+
+
+def _title_codes(owner: str | None) -> set[str]:
+    return _codes(RiskSignals(li=LiSignal(), title=TitleSignal(owner=owner)))
 
 
 def test_clean_parcel_has_no_flags() -> None:
@@ -89,6 +96,57 @@ def test_city_owned_is_flagged() -> None:
 def test_missing_tax_data_lowers_confidence() -> None:
     result = assess_risk(RiskSignals(li=LiSignal(), tax=None))
     assert result.confidence == "medium"
+
+
+@pytest.mark.parametrize(
+    "owner",
+    [
+        "AGHOIAN GREGORY K ESTATE OF",
+        "MYERS THURMAN ESTATE",
+        "STERLING HEIRS TRUST",
+        "SMITH JOHN HEIR",
+        "JONES MARY DECEASED",
+        "WILLIAMS ROBERT DECD",
+    ],
+)
+def test_estate_owner_flagged(owner: str) -> None:
+    codes = _title_codes(owner)
+    assert "estate_owner" in codes
+
+
+@pytest.mark.parametrize(
+    "owner",
+    [
+        "URBAN REAL ESTATE INVESTMENTS LLC",
+        "ACME HOLDINGS LLC",
+        "SMITH JOHN",
+        "GRANT ESTATE LLC",
+        "JLS ESTATE PARTNERS LLC",
+        "REAL DEAL ESTATE LLC",
+        "BRESNENI ESTATE LLC",
+        None,
+        "",
+    ],
+)
+def test_non_estate_owner_not_flagged(owner: str | None) -> None:
+    assert "estate_owner" not in _title_codes(owner)
+
+
+def test_estate_owner_severity_is_medium() -> None:
+    signals = RiskSignals(li=LiSignal(), title=TitleSignal(owner="DALE MATTIE ESTATE OF"))
+    flag = next(f for f in assess_risk(signals).flags if f.code == "estate_owner")
+    assert flag.severity == "medium"
+    assert flag.source == "parcel"
+
+
+def test_multiple_owners_flagged() -> None:
+    codes = _title_codes("MICKENS ARTHUR ET AL")
+    assert "multiple_owners" in codes
+    assert _title_codes("BROWN SUSAN ET UX") == {"multiple_owners"}
+
+
+def test_missing_title_signal_adds_no_flags() -> None:
+    assert _codes(RiskSignals(li=LiSignal(), title=None)) == set()
 
 
 def test_risk_score_is_capped_at_100() -> None:
