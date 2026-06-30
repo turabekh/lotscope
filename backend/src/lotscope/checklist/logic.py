@@ -33,8 +33,8 @@ _RISK_CATEGORIES: list[tuple[str, str, frozenset[str], str]] = [
     (
         "ownership",
         "Ownership & title",
-        frozenset({"public_ownership"}),
-        "Privately held - no public-ownership flag.",
+        frozenset({"public_ownership", "estate_owner", "multiple_owners"}),
+        "Privately held with no public-ownership or title-cloud flags on the owner record.",
     ),
 ]
 

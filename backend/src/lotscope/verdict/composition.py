@@ -6,7 +6,7 @@ from lotscope.risk.schemas import RiskResult
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.zoning.schemas import BuildabilityResult
 
-VERDICT_VERSION = "v2"
+VERDICT_VERSION = "v3"
 
 _CONFIDENCE_SCORE = {"high": 0.9, "medium": 0.6, "low": 0.3}
 _BUILDABILITY_WEIGHT = 0.6

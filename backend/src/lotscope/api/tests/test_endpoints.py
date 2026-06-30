@@ -25,6 +25,7 @@ from lotscope.api.deps import (
 )
 from lotscope.core.config import Settings
 from lotscope.distress.service import recompute_distress
+from lotscope.verdict.composition import VERDICT_VERSION
 from lotscope.zoning.seed import seed_zoning_standards
 
 
@@ -155,7 +156,7 @@ async def test_verdict_refresh_then_read(db_session: AsyncSession) -> None:
 
     assert before.status_code == 404
     assert refreshed.status_code == 200
-    assert refreshed.json()["verdict_version"] == "v2"
+    assert refreshed.json()["verdict_version"] == VERDICT_VERSION
     assert after.status_code == 200
     assert "RSA-5" in after.json()["summary"]
 

@@ -109,6 +109,49 @@ def test_worst_severity_wins_within_a_category() -> None:
     assert _item(items, "li").status == "fail"
 
 
+def test_estate_owner_warns_ownership_category() -> None:
+    flags = [
+        {
+            "code": "estate_owner",
+            "severity": "medium",
+            "label": "Estate / deceased owner",
+            "detail": "Owner of record appears to be an estate or deceased owner.",
+            "source": "parcel",
+        }
+    ]
+    items, _ = build_checklist(_verdict(risk_flags=flags))
+    ownership = _item(items, "ownership")
+    assert ownership.status == "warn"
+    assert "estate" in ownership.detail.lower()
+    assert ownership.source == "parcel"
+
+
+def test_multiple_owners_is_info_in_ownership_category() -> None:
+    flags = [
+        {
+            "code": "multiple_owners",
+            "severity": "low",
+            "label": "Additional owners on record",
+            "detail": "Owner of record lists unnamed additional parties.",
+            "source": "parcel",
+        }
+    ]
+    items, _ = build_checklist(_verdict(risk_flags=flags))
+    assert _item(items, "ownership").status == "info"
+
+
+def test_public_and_estate_flags_combine_in_ownership() -> None:
+    flags = [
+        {"code": "public_ownership", "severity": "medium", "detail": "City owned."},
+        {"code": "estate_owner", "severity": "medium", "detail": "Estate owner."},
+    ]
+    items, _ = build_checklist(_verdict(risk_flags=flags))
+    ownership = _item(items, "ownership")
+    assert ownership.status == "warn"
+    assert "City owned." in ownership.detail
+    assert "Estate owner." in ownership.detail
+
+
 def test_variance_zoning_warns() -> None:
     items, _ = build_checklist(
         _verdict(can_build_by_right=False, needs_variance=True, by_right_units=None)
