@@ -17,6 +17,7 @@ import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
+import VerdictHero from '@/components/VerdictHero.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { ApiError, api } from '@/lib/api'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
@@ -33,6 +34,20 @@ const $q = useQuasar()
 const saving = ref(false)
 const addingDeal = ref(false)
 const downloadingDossier = ref(false)
+const tab = ref('verdict')
+
+const TABS = [
+  { name: 'verdict', label: 'Verdict', icon: 'verified' },
+  { name: 'deal', label: 'Deal', icon: 'payments' },
+  { name: 'land', label: 'Land', icon: 'architecture' },
+  { name: 'risk', label: 'Risk', icon: 'gpp_maybe' },
+  { name: 'docs', label: 'Docs', icon: 'description' },
+]
+
+const dealEmpty = computed(
+  () => !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.market,
+)
+const riskEmpty = computed(() => !store.distress && !store.ownerPortfolio)
 
 async function downloadDossier(): Promise<void> {
   if (detail.value === null || downloadingDossier.value) return
@@ -127,36 +142,39 @@ async function toggleSave(): Promise<void> {
 </script>
 
 <template>
-  <div class="panel-root lot-scroll">
+  <div class="panel-root">
     <q-inner-loading :showing="loading" color="primary" />
 
     <template v-if="detail">
-      <div class="panel-header">
-        <q-btn
-          round
-          unelevated
-          :color="isSaved ? 'amber-7' : 'white'"
-          :text-color="isSaved ? 'white' : 'primary'"
-          :icon="isSaved ? 'bookmark' : 'bookmark_border'"
-          size="sm"
-          class="save-btn"
-          :loading="saving"
-          :aria-label="isSaved ? 'Remove from watchlist' : 'Save to watchlist'"
-          @click="toggleSave"
-        >
-          <q-tooltip>{{ isSaved ? 'Saved — click to remove' : 'Save to watchlist' }}</q-tooltip>
-        </q-btn>
-        <div class="text-h6 ellipsis-2">{{ detail.address ?? detail.parcel_number }}</div>
-        <div class="text-caption text-grey-3">Parcel {{ detail.parcel_number }}</div>
-        <div class="q-gutter-xs q-mt-sm">
-          <q-chip dense color="white" text-color="primary" class="text-weight-bold">
+      <header class="panel-header">
+        <div class="header-row">
+          <div class="header-id">
+            <div class="addr ellipsis-2">{{ detail.address ?? detail.parcel_number }}</div>
+            <div class="pid lot-numeric">Parcel {{ detail.parcel_number }}</div>
+          </div>
+          <q-btn
+            round
+            unelevated
+            :color="isSaved ? 'amber-7' : 'grey-3'"
+            :text-color="isSaved ? 'white' : 'grey-8'"
+            :icon="isSaved ? 'bookmark' : 'bookmark_border'"
+            size="sm"
+            :loading="saving"
+            :aria-label="isSaved ? 'Remove from watchlist' : 'Save to watchlist'"
+            @click="toggleSave"
+          >
+            <q-tooltip>{{ isSaved ? 'Saved — click to remove' : 'Save to watchlist' }}</q-tooltip>
+          </q-btn>
+        </div>
+        <div class="chips">
+          <q-chip dense square color="primary" text-color="white" class="text-weight-medium">
             {{ detail.base_zoning_code ?? 'No zoning' }}
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
               Base Title 14 zoning district. It sets what you can build by-right — uses, units,
               height, and setbacks.
             </q-tooltip>
           </q-chip>
-          <q-chip v-if="detail.is_vacant" dense color="amber-8" text-color="white" icon="grass">
+          <q-chip v-if="detail.is_vacant" dense square color="amber-8" text-color="white" icon="grass">
             Vacant
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
               Flagged by the city's Vacant Property Indicators model as a likely-vacant lot —
@@ -166,6 +184,7 @@ async function toggleSave(): Promise<void> {
           <q-chip
             v-if="detail.is_city_owned"
             dense
+            square
             color="deep-orange"
             text-color="white"
             icon="account_balance"
@@ -177,56 +196,14 @@ async function toggleSave(): Promise<void> {
             </q-tooltip>
           </q-chip>
         </div>
-      </div>
+      </header>
 
-      <div class="panel-body q-pa-md q-gutter-md">
+      <div class="panel-body lot-scroll">
         <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders">
           {{ error }}
         </q-banner>
 
-        <div class="row items-center justify-center q-gutter-sm">
-          <q-btn
-            v-if="!currentDeal"
-            outline
-            no-caps
-            color="primary"
-            icon="add_task"
-            label="Add to pipeline"
-            :loading="addingDeal"
-            @click="addToPipeline"
-          />
-          <q-btn
-            v-else
-            flat
-            no-caps
-            color="primary"
-            icon="view_kanban"
-            :label="`In pipeline · ${dealStageLabel}`"
-            :to="{ name: 'pipeline' }"
-          />
-          <q-btn
-            outline
-            no-caps
-            color="grey-8"
-            icon="picture_as_pdf"
-            label="PDF dossier"
-            :loading="downloadingDossier"
-            @click="downloadDossier"
-          />
-          <q-btn
-            :outline="!inCompare"
-            :unelevated="inCompare"
-            no-caps
-            :color="inCompare ? 'primary' : 'grey-8'"
-            icon="compare_arrows"
-            :label="inCompare ? 'In compare' : 'Compare'"
-            @click="toggleCompare"
-          />
-        </div>
-
-        <template v-if="verdict">
-          <VerdictPanel :verdict="verdict" />
-        </template>
+        <VerdictHero v-if="verdict" :verdict="verdict" />
         <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
           <template #avatar><q-icon name="info" color="grey-7" /></template>
           No verdict yet.
@@ -235,46 +212,114 @@ async function toggleSave(): Promise<void> {
           </template>
         </q-banner>
 
-        <ChecklistPanel />
-
-        <DealPanel />
-
-        <CompsPanel />
-
-        <ScenariosPanel />
-
-        <AssessmentPanel />
-
-        <SubdivisionPanel />
-
-        <HistoricPanel />
-
-        <AssemblagePanel />
-
-        <OwnerPortfolioPanel />
-
-        <DistressPanel />
-
-        <MarketPanel />
-
-        <DeedRestrictionsPanel />
-
-        <PropertyFacts :detail="detail" />
-
-        <div class="text-center">
+        <div class="actions">
           <q-btn
-            flat
-            dense
+            v-if="!currentDeal"
+            outline
             no-caps
-            color="grey-7"
-            icon="refresh"
-            label="Recompute verdict"
-            :loading="loading"
-            @click="store.refreshVerdict()"
+            dense
+            color="primary"
+            icon="add_task"
+            label="Pipeline"
+            :loading="addingDeal"
+            @click="addToPipeline"
+          />
+          <q-btn
+            v-else
+            flat
+            no-caps
+            dense
+            color="primary"
+            icon="view_kanban"
+            :label="dealStageLabel"
+            :to="{ name: 'pipeline' }"
+          />
+          <q-btn
+            :outline="!inCompare"
+            :unelevated="inCompare"
+            no-caps
+            dense
+            :color="inCompare ? 'primary' : 'grey-8'"
+            icon="compare_arrows"
+            :label="inCompare ? 'In compare' : 'Compare'"
+            @click="toggleCompare"
+          />
+          <q-btn
+            outline
+            no-caps
+            dense
+            color="grey-8"
+            icon="picture_as_pdf"
+            label="PDF"
+            :loading="downloadingDossier"
+            @click="downloadDossier"
           />
         </div>
 
-        <AskBox :parcel-number="detail.parcel_number" />
+        <q-tabs
+          v-model="tab"
+          dense
+          no-caps
+          class="dossier-tabs"
+          active-color="primary"
+          indicator-color="primary"
+          align="justify"
+          narrow-indicator
+        >
+          <q-tab v-for="t in TABS" :key="t.name" :name="t.name" :icon="t.icon" :label="t.label" />
+        </q-tabs>
+
+        <q-tab-panels v-model="tab" animated keep-alive class="dossier-panels">
+          <q-tab-panel name="verdict" class="tab-pane">
+            <VerdictPanel v-if="verdict" :verdict="verdict" />
+            <ChecklistPanel />
+            <div class="tab-foot">
+              <q-btn
+                flat
+                dense
+                no-caps
+                color="grey-7"
+                icon="refresh"
+                label="Recompute verdict"
+                :loading="loading"
+                @click="store.refreshVerdict()"
+              />
+            </div>
+          </q-tab-panel>
+
+          <q-tab-panel name="deal" class="tab-pane">
+            <DealPanel />
+            <ScenariosPanel />
+            <CompsPanel />
+            <AssessmentPanel />
+            <MarketPanel />
+            <div v-if="dealEmpty" class="tab-empty">
+              <q-icon name="query_stats" size="26px" />
+              <span>No deal, comp, or market data for this lot yet.</span>
+            </div>
+          </q-tab-panel>
+
+          <q-tab-panel name="land" class="tab-pane">
+            <SubdivisionPanel />
+            <AssemblagePanel />
+            <HistoricPanel />
+            <PropertyFacts :detail="detail" />
+          </q-tab-panel>
+
+          <q-tab-panel name="risk" class="tab-pane">
+            <DistressPanel />
+            <OwnerPortfolioPanel />
+            <div v-if="riskEmpty" class="tab-empty">
+              <q-icon name="verified_user" size="26px" />
+              <span>No distress signals or owner-portfolio data surfaced for this lot.</span>
+            </div>
+          </q-tab-panel>
+
+          <q-tab-panel name="docs" class="tab-pane">
+            <DeedRestrictionsPanel />
+            <AskBox :parcel-number="detail.parcel_number" />
+          </q-tab-panel>
+        </q-tab-panels>
       </div>
     </template>
 
@@ -315,39 +360,102 @@ async function toggleSave(): Promise<void> {
 .panel-root {
   position: relative;
   height: 100%;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--lot-bg);
 }
 .panel-header {
-  background: linear-gradient(135deg, #0f4ba8 0%, #1976d2 100%);
-  color: white;
-  padding: 18px 16px;
-  box-shadow: 0 2px 10px rgba(13, 71, 161, 0.25);
-  position: relative;
-  z-index: 1;
-}
-.panel-body {
-  background: var(--lot-bg);
-  padding-bottom: 36px;
-  min-height: 100%;
-}
-.save-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  flex: 0 0 auto;
+  background: var(--lot-surface);
+  border-bottom: 1px solid var(--lot-border);
+  padding: 12px 14px 10px;
   z-index: 2;
 }
-.panel-header .text-h6 {
-  padding-right: 44px;
+.header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.header-id {
+  min-width: 0;
+  flex: 1;
+}
+.addr {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--lot-ink);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.pid {
+  font-size: 12px;
+  color: var(--lot-faint);
+  margin-top: 1px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
 }
 .ellipsis-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.25;
+}
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dossier-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--lot-bg);
+  border-bottom: 1px solid var(--lot-border);
+  margin: 0 -12px;
+  padding: 0 6px;
+  color: var(--lot-muted);
+}
+.dossier-panels {
+  background: transparent;
+}
+.tab-pane {
+  padding: 4px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tab-foot {
+  display: flex;
+  justify-content: center;
+}
+.tab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 28px 16px;
+  color: var(--lot-faint);
+  font-size: 13px;
+}
+.rounded-borders {
+  border-radius: var(--lot-radius);
 }
 .empty-state {
   text-align: center;
   padding: 48px 28px;
+  margin: auto;
 }
 </style>
