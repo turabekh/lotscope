@@ -145,8 +145,10 @@ const features = [
 
 <style scoped>
 .hero {
-  background: linear-gradient(135deg, #0d47a1, #1976d2);
-  padding: 72px 24px 88px;
+  background:
+    radial-gradient(120% 120% at 10% 0%, #6366f1 0%, transparent 55%),
+    linear-gradient(135deg, #3730a3, #6d28d9);
+  padding: 76px 24px 92px;
 }
 .hero-inner {
   max-width: 820px;
@@ -156,17 +158,18 @@ const features = [
   font-size: clamp(28px, 5vw, 52px);
   line-height: 1.1;
   font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 8px 0 12px;
 }
 .hero-sub {
   font-size: clamp(15px, 2.4vw, 20px);
-  color: #e3f2fd;
+  color: rgba(255, 255, 255, 0.86);
   max-width: 640px;
   margin: 0;
 }
 .features {
   padding: 56px 24px;
-  background: #f6f8fa;
+  background: var(--lot-bg);
 }
 .features-grid {
   max-width: 1040px;
@@ -176,11 +179,21 @@ const features = [
   gap: 16px;
 }
 .feature-card {
-  border-radius: 12px;
+  border-radius: var(--lot-radius);
   height: 100%;
+  background: var(--lot-surface);
+  border-color: var(--lot-border);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--lot-shadow-lg);
 }
 .pricing-section {
   padding: 64px 24px;
+  background: var(--lot-surface);
 }
 .pricing-inner {
   max-width: 1040px;
