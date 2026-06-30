@@ -14,6 +14,7 @@ from lotscope.ingestion.loaders import (
     opa,
     pwd,
     rtt,
+    streets,
     tax,
     vacancy,
     zoning,
@@ -136,6 +137,12 @@ async def ingest_neighborhoods(session_factory: SessionFactory, settings: Settin
     )
 
 
+async def ingest_streets(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory, settings, loader=streets.load_streets, dataset=streets.STREETS_DATASET
+    )
+
+
 INGEST_JOBS: dict[str, Job] = {
     "opa": ingest_opa,
     "pwd": ingest_pwd,
@@ -148,4 +155,5 @@ INGEST_JOBS: dict[str, Job] = {
     "vacancy": ingest_vacancy,
     "flood": ingest_flood,
     "neighborhoods": ingest_neighborhoods,
+    "streets": ingest_streets,
 }

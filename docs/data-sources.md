@@ -49,6 +49,7 @@ Base: `https://data-phl.opendata.arcgis.com`
 | FEMA flood | Flood zones. |
 | Historic districts | Overlay / review impacts. |
 | Council districts, neighborhoods / RCOs | Boundaries, notification requirements. |
+| Street Centerline | Street network (~41k LineString segments); basis for the landlocked / no-street-access flag (ADR-0027). `Street_Centerline` FeatureServer; key `seg_id`, name `stname`. |
 
 ## Publicly-owned / Land Bank
 
