@@ -8,6 +8,7 @@ import type {
   DealResult,
   DealStage,
   DistressResult,
+  HistoricResult,
   ParcelChecklist,
   ParcelCompareResponse,
   EnvelopeResult,
@@ -117,6 +118,9 @@ export const api = {
   },
   getSubdivision(parcelNumber: string): Promise<SubdivisionResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/subdivision`)
+  },
+  getHistoric(parcelNumber: string): Promise<HistoricResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/historic`)
   },
   getChecklist(parcelNumber: string): Promise<ParcelChecklist> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/checklist`)

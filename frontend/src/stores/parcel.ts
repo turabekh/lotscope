@@ -9,6 +9,7 @@ import type {
   DeedRestrictionsResponse,
   DistressResult,
   EnvelopeResult,
+  HistoricResult,
   OwnerPortfolio,
   ParcelChecklist,
   ParcelDetail,
@@ -25,6 +26,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const distress = ref<DistressResult | null>(null)
   const assessment = ref<AssessmentResult | null>(null)
   const subdivision = ref<SubdivisionResult | null>(null)
+  const historic = ref<HistoricResult | null>(null)
   const deal = ref<DealResult | null>(null)
   const dealLoading = ref(false)
   const checklist = ref<ParcelChecklist | null>(null)
@@ -44,6 +46,7 @@ export const useParcelStore = defineStore('parcel', () => {
     distress.value = null
     assessment.value = null
     subdivision.value = null
+    historic.value = null
     deal.value = null
     checklist.value = null
     ownerPortfolio.value = null
@@ -55,6 +58,7 @@ export const useParcelStore = defineStore('parcel', () => {
       void loadDistress(parcelNumber)
       void loadAssessment(parcelNumber)
       void loadSubdivision(parcelNumber)
+      void loadHistoric(parcelNumber)
       void loadDeal(parcelNumber)
       void loadChecklist(parcelNumber)
       void loadOwnerPortfolio(parcelNumber)
@@ -139,6 +143,15 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
+  async function loadHistoric(parcelNumber: string): Promise<void> {
+    try {
+      const result = await api.getHistoric(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) historic.value = result
+    } catch {
+      if (detail.value?.parcel_number === parcelNumber) historic.value = null
+    }
+  }
+
   async function loadDeal(
     parcelNumber: string,
     overrides: { acquisitionPrice?: number | null; targetMargin?: number | null } = {},
@@ -189,6 +202,7 @@ export const useParcelStore = defineStore('parcel', () => {
     distress.value = null
     assessment.value = null
     subdivision.value = null
+    historic.value = null
     deal.value = null
     checklist.value = null
     ownerPortfolio.value = null
@@ -206,6 +220,7 @@ export const useParcelStore = defineStore('parcel', () => {
     distress,
     assessment,
     subdivision,
+    historic,
     deal,
     dealLoading,
     checklist,
@@ -221,6 +236,7 @@ export const useParcelStore = defineStore('parcel', () => {
     loadDistress,
     loadAssessment,
     loadSubdivision,
+    loadHistoric,
     loadDeal,
     loadChecklist,
     loadOwnerPortfolio,

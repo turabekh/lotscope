@@ -332,6 +332,16 @@ export interface AssessmentResult {
   computed_at: string
 }
 
+export interface HistoricResult {
+  parcel_number: string
+  in_historic_district: boolean
+  district_name: string | null
+  designated_date: string | null
+  note: string | null
+  sources: unknown[]
+  computed_at: string
+}
+
 export type SubdivisionLimitingFactor = 'area' | 'width' | 'both' | 'none'
 
 export interface SubdivisionResult {
