@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
 
+import AppHeader from '@/components/AppHeader.vue'
 import { api } from '@/lib/api'
 import type { AdminOverview, DatasetStatus, User } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
@@ -81,12 +82,7 @@ onMounted(() => void load())
 
 <template>
   <q-layout view="hHh Lpr fFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
-        <q-btn flat dense round icon="arrow_back" to="/app" aria-label="Back to map" />
-        <q-toolbar-title>Admin console</q-toolbar-title>
-      </q-toolbar>
-    </q-header>
+    <AppHeader title="Admin console" />
 
     <q-page-container>
       <q-page class="q-pa-md">

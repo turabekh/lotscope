@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AppHeader from '@/components/AppHeader.vue'
 import { formatCurrency } from '@/lib/format'
 import type { DealItem, DealStage } from '@/lib/types'
 import { useParcelStore } from '@/stores/parcel'
@@ -59,13 +60,7 @@ function saveTarget(deal: DealItem, value: number | null): void {
 
 <template>
   <q-layout view="hHh Lpr fFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
-        <q-btn flat dense round icon="arrow_back" to="/app" aria-label="Back to map" />
-        <q-toolbar-title>Deal pipeline</q-toolbar-title>
-        <q-btn flat dense no-caps icon="manage_accounts" label="Account" :to="{ name: 'account' }" />
-      </q-toolbar>
-    </q-header>
+    <AppHeader title="Deal pipeline" />
 
     <q-page-container>
       <q-page class="pipeline-page">
@@ -191,8 +186,8 @@ function saveTarget(deal: DealItem, value: number | null): void {
 <style scoped>
 .pipeline-page {
   position: relative;
-  height: calc(100vh - 50px);
-  height: calc(100dvh - 50px);
+  height: calc(100vh - 54px);
+  height: calc(100dvh - 54px);
 }
 .board {
   display: flex;
@@ -213,8 +208,8 @@ function saveTarget(deal: DealItem, value: number | null): void {
   transition: background 0.12s ease;
 }
 .column.over {
-  background: #e7f0fb;
-  border-color: #90caf9;
+  background: var(--lot-accent-soft);
+  border-color: var(--lot-accent);
 }
 .column-head {
   display: flex;

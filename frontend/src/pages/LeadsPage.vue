@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AppHeader from '@/components/AppHeader.vue'
 import { ApiError, api } from '@/lib/api'
 import type { LeadItem } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
@@ -68,13 +69,7 @@ onMounted(load)
 
 <template>
   <q-layout view="hHh Lpr fFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
-        <q-btn flat dense round icon="arrow_back" to="/app" aria-label="Back to map" />
-        <q-toolbar-title>Motivated-seller leads</q-toolbar-title>
-        <q-btn flat dense no-caps icon="manage_accounts" label="Account" :to="{ name: 'account' }" />
-      </q-toolbar>
-    </q-header>
+    <AppHeader title="Motivated-seller leads" />
 
     <q-page-container>
       <q-page class="q-pa-md">

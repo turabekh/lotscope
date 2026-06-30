@@ -76,7 +76,7 @@ function goAdmin(): void {
     :to="{ name: 'login' }"
   />
   <q-btn v-else flat dense round aria-label="Account">
-    <q-avatar size="30px" color="white" text-color="primary" class="text-weight-bold">
+    <q-avatar size="30px" color="primary" text-color="white" class="text-weight-bold">
       {{ initial }}
     </q-avatar>
     <q-badge v-if="alerts + newTotal > 0" color="negative" floating rounded>

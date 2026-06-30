@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import AppHeader from '@/components/AppHeader.vue'
 import PricingPlans from '@/components/PricingPlans.vue'
 import { ApiError, api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
@@ -92,12 +93,7 @@ async function signOut(): Promise<void> {
 
 <template>
   <q-layout view="hHh Lpr fFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
-        <q-btn flat dense round icon="arrow_back" to="/" aria-label="Back to map" />
-        <q-toolbar-title>Account</q-toolbar-title>
-      </q-toolbar>
-    </q-header>
+    <AppHeader title="Account" />
 
     <q-page-container>
       <q-page class="column items-center q-pa-md q-gutter-md">

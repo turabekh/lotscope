@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AppHeader from '@/components/AppHeader.vue'
 import { ApiError, api } from '@/lib/api'
 import type { ParcelCompareItem } from '@/lib/types'
 import { useCompareStore } from '@/stores/compare'
@@ -101,10 +102,8 @@ watch(() => [...compare.parcelNumbers], load, { immediate: true })
 
 <template>
   <q-layout view="hHh Lpr fFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
-        <q-btn flat dense round icon="arrow_back" to="/app" aria-label="Back to map" />
-        <q-toolbar-title>Compare parcels</q-toolbar-title>
+    <AppHeader title="Compare parcels">
+      <template #actions>
         <q-btn
           v-if="compare.count > 0"
           flat
@@ -114,8 +113,8 @@ watch(() => [...compare.parcelNumbers], load, { immediate: true })
           label="Clear"
           @click="compare.clear()"
         />
-      </q-toolbar>
-    </q-header>
+      </template>
+    </AppHeader>
 
     <q-page-container>
       <q-page class="q-pa-md">

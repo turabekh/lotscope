@@ -2,12 +2,12 @@
 import { useQuasar } from 'quasar'
 import { computed, ref } from 'vue'
 
+import AppHeader from '@/components/AppHeader.vue'
 import AreaSearchPanel from '@/components/AreaSearchPanel.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelPanel from '@/components/ParcelPanel.vue'
 import SearchBox from '@/components/SearchBox.vue'
-import UserMenu from '@/components/UserMenu.vue'
 import { useParcelStore } from '@/stores/parcel'
 
 const store = useParcelStore()
@@ -23,27 +23,19 @@ function onSelect(parcelNumber: string): void {
 
 <template>
   <q-layout view="hHh Lpr fFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
+    <AppHeader>
+      <template #lead>
         <q-btn
           flat
           dense
           round
           icon="menu"
-          class="lt-md q-mr-xs"
+          class="lt-md"
           aria-label="Toggle panel"
           @click="drawerOpen = !drawerOpen"
         />
-        <q-icon name="location_city" size="26px" class="q-mr-sm" />
-        <q-toolbar-title>
-          LotScope <span class="text-weight-light">PHL</span>
-        </q-toolbar-title>
-        <q-chip dense outline color="white" text-color="white" class="gt-sm q-mr-sm">
-          Philadelphia parcel intelligence
-        </q-chip>
-        <UserMenu />
-      </q-toolbar>
-    </q-header>
+      </template>
+    </AppHeader>
 
     <q-drawer
       v-model="drawerOpen"
@@ -53,8 +45,8 @@ function onSelect(parcelNumber: string): void {
       side="left"
       :breakpoint="1023"
     >
-      <div class="column no-wrap fit">
-        <div class="q-pa-sm bg-grey-1">
+      <div class="column no-wrap fit drawer-shell">
+        <div class="q-pa-sm search-strip">
           <SearchBox @select="onSelect" />
         </div>
         <q-separator />
@@ -75,8 +67,14 @@ function onSelect(parcelNumber: string): void {
 <style scoped>
 .map-page {
   position: relative;
-  height: calc(100vh - 50px);
-  height: calc(100dvh - 50px);
+  height: calc(100vh - 54px);
+  height: calc(100dvh - 54px);
   overflow: hidden;
+}
+.drawer-shell {
+  background: var(--lot-surface);
+}
+.search-strip {
+  background: var(--lot-surface-2);
 }
 </style>

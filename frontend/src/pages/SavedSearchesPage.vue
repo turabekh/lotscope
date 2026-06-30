@@ -4,6 +4,7 @@ import { useQuasar } from 'quasar'
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import AppHeader from '@/components/AppHeader.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SavedSearchItem, SavedSearchMatchItem, SearchCriteria } from '@/lib/types'
@@ -140,13 +141,7 @@ function asNumber(value: string | number | null): number | null {
 
 <template>
   <q-layout view="hHh Lpr fFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
-        <q-btn flat dense round icon="arrow_back" to="/app" aria-label="Back to map" />
-        <q-toolbar-title>Saved searches</q-toolbar-title>
-        <q-btn flat dense no-caps icon="manage_accounts" label="Account" :to="{ name: 'account' }" />
-      </q-toolbar>
-    </q-header>
+    <AppHeader title="Saved searches" />
 
     <q-page-container>
       <q-page class="q-pa-md">
