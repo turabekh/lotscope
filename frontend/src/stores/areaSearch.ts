@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { api } from '@/lib/api'
-import type { GeoPoint, SpatialParcelResult } from '@/lib/types'
+import type { AreaSearchRequest, GeoPoint, SpatialParcelResult } from '@/lib/types'
 import { useFiltersStore } from '@/stores/filters'
 
 const DEFAULT_RADIUS_M = 500
@@ -18,10 +18,25 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   const neighborhood = ref<string | null>(null)
   const neighborhoods = ref<string[]>([])
   const radiusM = ref(DEFAULT_RADIUS_M)
+  const minValue = ref<number | null>(null)
+  const maxValue = ref<number | null>(null)
+  const minLotArea = ref<number | null>(null)
+  const maxLotArea = ref<number | null>(null)
+  const minScore = ref<number | null>(null)
   const loading = ref(false)
   const results = ref<SpatialParcelResult[]>([])
   const count = ref(0)
   const truncated = ref(false)
+
+  function criteria(): Partial<AreaSearchRequest> {
+    const c: Partial<AreaSearchRequest> = { vacant_only: useFiltersStore().vacantOnly }
+    if (minValue.value !== null) c.min_market_value = minValue.value
+    if (maxValue.value !== null) c.max_market_value = maxValue.value
+    if (minLotArea.value !== null) c.min_lot_area_sqft = minLotArea.value
+    if (maxLotArea.value !== null) c.max_lot_area_sqft = maxLotArea.value
+    if (minScore.value !== null) c.min_opportunity_score = minScore.value
+    return c
+  }
 
   function clear(): void {
     center.value = null
@@ -63,12 +78,11 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     if (center.value === null) return
     loading.value = true
     try {
-      const filters = useFiltersStore()
       applyResponse(
         await api.searchArea({
           center: center.value,
           radius_m: radiusM.value,
-          vacant_only: filters.vacantOnly,
+          ...criteria(),
           limit: RESULT_LIMIT,
         }),
       )
@@ -91,11 +105,10 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     polygon.value = geometry
     loading.value = true
     try {
-      const filters = useFiltersStore()
       applyResponse(
         await api.searchArea({
           polygon: geometry,
-          vacant_only: filters.vacantOnly,
+          ...criteria(),
           limit: RESULT_LIMIT,
         }),
       )
@@ -108,11 +121,10 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     neighborhood.value = name
     loading.value = true
     try {
-      const filters = useFiltersStore()
       applyResponse(
         await api.searchArea({
           neighborhood: name,
-          vacant_only: filters.vacantOnly,
+          ...criteria(),
           limit: RESULT_LIMIT,
         }),
       )
@@ -121,10 +133,22 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     }
   }
 
+  async function rerun(): Promise<void> {
+    if (shape.value === 'radius' && center.value !== null) await run()
+    else if (shape.value === 'polygon' && polygon.value !== null) await searchPolygon(polygon.value)
+    else if (shape.value === 'neighborhood' && neighborhood.value !== null)
+      await searchNeighborhood(neighborhood.value)
+  }
+
   function reset(): void {
     active.value = false
     shape.value = 'radius'
     radiusM.value = DEFAULT_RADIUS_M
+    minValue.value = null
+    maxValue.value = null
+    minLotArea.value = null
+    maxLotArea.value = null
+    minScore.value = null
     clear()
   }
 
@@ -136,6 +160,11 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     neighborhood,
     neighborhoods,
     radiusM,
+    minValue,
+    maxValue,
+    minLotArea,
+    maxLotArea,
+    minScore,
     loading,
     results,
     count,
@@ -149,6 +178,7 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     setRadius,
     searchPolygon,
     searchNeighborhood,
+    rerun,
     reset,
   }
 })

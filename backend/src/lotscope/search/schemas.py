@@ -27,6 +27,11 @@ class AreaSearchRequest(BaseModel):
     neighborhood: str | None = Field(default=None, min_length=1, max_length=120)
     vacant_only: bool = False
     zoning_codes: list[str] = Field(default_factory=list, max_length=40)
+    min_lot_area_sqft: float | None = Field(default=None, ge=0)
+    max_lot_area_sqft: float | None = Field(default=None, ge=0)
+    min_market_value: float | None = Field(default=None, ge=0)
+    max_market_value: float | None = Field(default=None, ge=0)
+    min_opportunity_score: int | None = Field(default=None, ge=0, le=100)
     limit: int = Field(default=200, ge=1, le=500)
 
     @model_validator(mode="after")

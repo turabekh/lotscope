@@ -9,8 +9,35 @@ import { type AreaShape, useAreaSearchStore } from '@/stores/areaSearch'
 const emit = defineEmits<{ select: [parcelNumber: string] }>()
 
 const store = useAreaSearchStore()
-const { active, shape, center, polygon, neighborhood, neighborhoods, radiusM, loading, results, count, truncated } =
-  storeToRefs(store)
+const {
+  active,
+  shape,
+  center,
+  polygon,
+  neighborhood,
+  neighborhoods,
+  radiusM,
+  minValue,
+  maxValue,
+  minLotArea,
+  maxLotArea,
+  minScore,
+  loading,
+  results,
+  count,
+  truncated,
+} = storeToRefs(store)
+
+type Criterion = 'minValue' | 'maxValue' | 'minLotArea' | 'maxLotArea' | 'minScore'
+const criterionRefs = { minValue, maxValue, minLotArea, maxLotArea, minScore }
+let rerunTimer: ReturnType<typeof setTimeout> | undefined
+
+function setCriterion(field: Criterion, value: string | number | null): void {
+  const n = value === null || value === '' ? null : Number(value)
+  criterionRefs[field].value = n !== null && Number.isFinite(n) ? n : null
+  clearTimeout(rerunTimer)
+  rerunTimer = setTimeout(() => void store.rerun(), 400)
+}
 
 const SHAPE_OPTIONS: { label: string; value: AreaShape; icon: string }[] = [
   { label: 'Radius', value: 'radius', icon: 'radio_button_unchecked' },
@@ -129,6 +156,52 @@ function distanceLabel(meters: number | null): string {
           @filter="filterNeighborhoods"
         />
 
+        <q-expansion-item dense label="Buy box" icon="tune" class="buy-box q-mb-xs">
+          <div class="buy-box-grid">
+            <q-input
+              :model-value="minValue"
+              type="number"
+              outlined
+              dense
+              label="Min $"
+              @update:model-value="(v) => setCriterion('minValue', v)"
+            />
+            <q-input
+              :model-value="maxValue"
+              type="number"
+              outlined
+              dense
+              label="Max $"
+              @update:model-value="(v) => setCriterion('maxValue', v)"
+            />
+            <q-input
+              :model-value="minLotArea"
+              type="number"
+              outlined
+              dense
+              label="Min sq ft"
+              @update:model-value="(v) => setCriterion('minLotArea', v)"
+            />
+            <q-input
+              :model-value="maxLotArea"
+              type="number"
+              outlined
+              dense
+              label="Max sq ft"
+              @update:model-value="(v) => setCriterion('maxLotArea', v)"
+            />
+            <q-input
+              :model-value="minScore"
+              type="number"
+              outlined
+              dense
+              label="Min score"
+              class="buy-box-wide"
+              @update:model-value="(v) => setCriterion('minScore', v)"
+            />
+          </div>
+        </q-expansion-item>
+
         <div v-if="!hasQuery" class="area-hint">
           <q-icon
             :name="shape === 'radius' ? 'touch_app' : shape === 'polygon' ? 'gesture' : 'map'"
@@ -218,6 +291,15 @@ function distanceLabel(meters: number | null): string {
 }
 .area-radius {
   padding-bottom: 4px;
+}
+.buy-box-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 6px 4px 2px;
+}
+.buy-box-wide {
+  grid-column: 1 / -1;
 }
 .area-label {
   display: flex;

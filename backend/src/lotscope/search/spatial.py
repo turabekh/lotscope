@@ -21,7 +21,16 @@ _JOINS = "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number"
 _POINT = "ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography"
 
 
-def build_filters(*, vacant_only: bool, zoning_codes: list[str]) -> tuple[str, dict[str, Any]]:
+def build_filters(
+    *,
+    vacant_only: bool,
+    zoning_codes: list[str],
+    min_lot_area_sqft: float | None = None,
+    max_lot_area_sqft: float | None = None,
+    min_market_value: float | None = None,
+    max_market_value: float | None = None,
+    min_opportunity_score: int | None = None,
+) -> tuple[str, dict[str, Any]]:
     conditions = ["p.geom_4326 IS NOT NULL"]
     params: dict[str, Any] = {}
     if vacant_only:
@@ -29,7 +38,34 @@ def build_filters(*, vacant_only: bool, zoning_codes: list[str]) -> tuple[str, d
     if zoning_codes:
         conditions.append("p.base_zoning_code = ANY(:zoning_codes)")
         params["zoning_codes"] = [code.strip().upper() for code in zoning_codes if code.strip()]
+    if min_lot_area_sqft is not None:
+        conditions.append("p.lot_area_sqft >= :min_lot_area")
+        params["min_lot_area"] = min_lot_area_sqft
+    if max_lot_area_sqft is not None:
+        conditions.append("p.lot_area_sqft <= :max_lot_area")
+        params["max_lot_area"] = max_lot_area_sqft
+    if min_market_value is not None:
+        conditions.append("p.market_value >= :min_value")
+        params["min_value"] = min_market_value
+    if max_market_value is not None:
+        conditions.append("p.market_value <= :max_value")
+        params["max_value"] = max_market_value
+    if min_opportunity_score is not None:
+        conditions.append("pv.opportunity_score >= :min_score")
+        params["min_score"] = min_opportunity_score
     return " AND ".join(conditions), params
+
+
+def _filters_for(request: AreaSearchRequest) -> tuple[str, dict[str, Any]]:
+    return build_filters(
+        vacant_only=request.vacant_only,
+        zoning_codes=request.zoning_codes,
+        min_lot_area_sqft=request.min_lot_area_sqft,
+        max_lot_area_sqft=request.max_lot_area_sqft,
+        min_market_value=request.min_market_value,
+        max_market_value=request.max_market_value,
+        min_opportunity_score=request.min_opportunity_score,
+    )
 
 
 def _result(row: Row[Any], *, with_distance: bool) -> SpatialParcelResult:
@@ -53,9 +89,7 @@ async def _search_radius(
     assert request.center is not None
     assert request.radius_m is not None
     radius = min(request.radius_m, MAX_RADIUS_M)
-    where, params = build_filters(
-        vacant_only=request.vacant_only, zoning_codes=request.zoning_codes
-    )
+    where, params = _filters_for(request)
     sql = text(
         f"SELECT {_SELECT}, "
         f"ST_Distance(p.geom_4326::geography, {_POINT}) AS distance_m "
@@ -86,9 +120,7 @@ async def _search_polygon(
     assert polygon is not None
     if polygon.get("type") not in _POLYGON_TYPES:
         raise ValidationError("polygon must be a GeoJSON Polygon or MultiPolygon geometry.")
-    where, params = build_filters(
-        vacant_only=request.vacant_only, zoning_codes=request.zoning_codes
-    )
+    where, params = _filters_for(request)
     sql = text(
         f"SELECT {_SELECT} "
         f"FROM parcel p {_JOINS} "
@@ -108,9 +140,7 @@ async def _search_neighborhood(
     session: AsyncSession, request: AreaSearchRequest
 ) -> list[SpatialParcelResult]:
     assert request.neighborhood is not None
-    where, params = build_filters(
-        vacant_only=request.vacant_only, zoning_codes=request.zoning_codes
-    )
+    where, params = _filters_for(request)
     sql = text(
         f"SELECT {_SELECT} "
         f"FROM parcel p {_JOINS} "

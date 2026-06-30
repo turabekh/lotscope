@@ -49,6 +49,38 @@ def test_build_filters_vacant_and_zoning_normalized() -> None:
     assert params["zoning_codes"] == ["RSA5", "RM1"]
 
 
+def test_build_filters_buy_box_criteria() -> None:
+    where, params = build_filters(
+        vacant_only=False,
+        zoning_codes=[],
+        min_lot_area_sqft=1000,
+        max_lot_area_sqft=5000,
+        min_market_value=50000,
+        max_market_value=300000,
+        min_opportunity_score=60,
+    )
+    assert "p.lot_area_sqft >= :min_lot_area" in where
+    assert "p.lot_area_sqft <= :max_lot_area" in where
+    assert "p.market_value >= :min_value" in where
+    assert "p.market_value <= :max_value" in where
+    assert "pv.opportunity_score >= :min_score" in where
+    assert params == {
+        "min_lot_area": 1000,
+        "max_lot_area": 5000,
+        "min_value": 50000,
+        "max_value": 300000,
+        "min_score": 60,
+    }
+
+
+def test_build_filters_omits_unset_criteria() -> None:
+    where, params = build_filters(vacant_only=False, zoning_codes=[], min_opportunity_score=70)
+    assert "pv.opportunity_score >= :min_score" in where
+    assert "lot_area" not in where
+    assert "market_value" not in where
+    assert params == {"min_score": 70}
+
+
 def _square(lng: float, lat: float, size: float = 0.0001) -> str:
     points = [
         (lng - size, lat - size),

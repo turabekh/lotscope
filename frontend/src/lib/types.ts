@@ -218,6 +218,11 @@ export interface AreaSearchRequest {
   neighborhood?: string
   vacant_only?: boolean
   zoning_codes?: string[]
+  min_lot_area_sqft?: number
+  max_lot_area_sqft?: number
+  min_market_value?: number
+  max_market_value?: number
+  min_opportunity_score?: number
   limit?: number
 }
 
