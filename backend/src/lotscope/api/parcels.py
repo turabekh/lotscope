@@ -37,8 +37,8 @@ from lotscope.compare.schemas import ParcelCompareResponse
 from lotscope.compare.service import MAX_COMPARE_PARCELS, compare_parcels
 from lotscope.core.config import Settings
 from lotscope.core.errors import NotFoundError, QuotaExceededError
-from lotscope.deal.schemas import DealResult
-from lotscope.deal.service import analyze_parcel_deal
+from lotscope.deal.schemas import DealResult, ScenariosResult
+from lotscope.deal.service import analyze_parcel_deal, analyze_parcel_scenarios
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
 from lotscope.documents.schemas import DeedRestrictionsResponse
@@ -302,6 +302,35 @@ async def parcel_deal(
     years: Annotated[int, Query(ge=1, le=20)] = 3,
 ) -> DealResult:
     result = await analyze_parcel_deal(
+        session,
+        parcel_number,
+        acquisition_price=acquisition_price,
+        construction_cost_per_sqft=construction_cost_per_sqft,
+        soft_cost_pct=soft_cost_pct,
+        selling_cost_pct=selling_cost_pct,
+        target_margin=target_margin,
+        radius_ft=radius_ft,
+        years=years,
+    )
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
+
+
+@router.get("/{parcel_number}/scenarios", response_model=ScenariosResult)
+async def parcel_scenarios(
+    parcel_number: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    acquisition_price: Annotated[float | None, Query(ge=0)] = None,
+    construction_cost_per_sqft: Annotated[float | None, Query(gt=0, le=2000)] = None,
+    soft_cost_pct: Annotated[float | None, Query(ge=0, le=1)] = None,
+    selling_cost_pct: Annotated[float | None, Query(ge=0, le=1)] = None,
+    target_margin: Annotated[float | None, Query(ge=0, lt=1)] = None,
+    radius_ft: Annotated[float, Query(gt=0, le=10000)] = 1500.0,
+    years: Annotated[int, Query(ge=1, le=20)] = 3,
+) -> ScenariosResult:
+    result = await analyze_parcel_scenarios(
         session,
         parcel_number,
         acquisition_price=acquisition_price,

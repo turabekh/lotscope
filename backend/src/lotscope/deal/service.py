@@ -6,7 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.config import get_settings
 from lotscope.deal.analysis import DealAssumptions, DealInputs, analyze_deal
-from lotscope.deal.schemas import DealAssumptionsSchema, DealResult
+from lotscope.deal.scenarios import ScenarioInputs, build_scenarios
+from lotscope.deal.schemas import (
+    DealAssumptionsSchema,
+    DealResult,
+    ScenarioItem,
+    ScenariosResult,
+)
 from lotscope.valuation.avm import land_use_class
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import find_comps, value_parcel
@@ -77,6 +83,97 @@ async def analyze_parcel_deal(
         target_margin=target_margin,
         radius_ft=radius_ft,
         years=years,
+    )
+
+
+async def analyze_parcel_scenarios(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    acquisition_price: float | None = None,
+    construction_cost_per_sqft: float | None = None,
+    soft_cost_pct: float | None = None,
+    selling_cost_pct: float | None = None,
+    target_margin: float | None = None,
+    radius_ft: float = 1500.0,
+    years: int = 3,
+) -> ScenariosResult | None:
+    subject = (await session.execute(_SUBJECT_SQL, {"parcel_number": parcel_number})).one_or_none()
+    if subject is None:
+        return None
+    computed_at = datetime.now(UTC)
+
+    buildability = await assess_zoning(session, parcel_number)
+    valuation = await value_parcel(session, parcel_number, radius_ft=radius_ft, years=years)
+    envelope = await compute_envelope(session, parcel_number)
+
+    use_class = land_use_class(subject.base_zoning_code)
+    finished_comps = await find_comps(
+        session, parcel_number, radius_ft=radius_ft, years=years, vacant_only=False,
+        use_class=use_class,
+    )
+    finished_prices = [comp.sale_price for comp in finished_comps]
+
+    land_value = valuation.estimate if valuation is not None else None
+    if acquisition_price is None and land_value is None:
+        land_value = _as_float(subject.market_value)
+
+    assumptions = _assumptions(
+        construction_cost_per_sqft=construction_cost_per_sqft,
+        soft_cost_pct=soft_cost_pct,
+        selling_cost_pct=selling_cost_pct,
+        target_margin=target_margin,
+    )
+    analysis = build_scenarios(
+        ScenarioInputs(
+            by_right_units=buildability.by_right_units if buildability is not None else None,
+            buildable_area_sqft=buildability.buildable_area_sqft if buildability is not None
+            else None,
+            estimated_floors=envelope.estimated_floors if envelope is not None else None,
+            finished_comp_prices=finished_prices,
+            land_value=land_value,
+            acquisition_price=acquisition_price,
+        ),
+        assumptions,
+    )
+    return ScenariosResult(
+        parcel_number=parcel_number,
+        by_right_units=analysis.by_right_units,
+        recommended_units=analysis.recommended_units,
+        scenarios=[
+            ScenarioItem(
+                units=scenario.units,
+                by_right=scenario.by_right,
+                arv=scenario.arv,
+                total_cost=scenario.total_cost,
+                profit=scenario.profit,
+                margin=scenario.margin,
+                roi=scenario.roi,
+                max_allowable_offer=scenario.max_allowable_offer,
+                deal_score=scenario.deal_score,
+            )
+            for scenario in analysis.scenarios
+        ],
+        confidence=analysis.confidence,
+        assumptions=DealAssumptionsSchema(
+            construction_cost_per_sqft=assumptions.construction_cost_per_sqft,
+            soft_cost_pct=assumptions.soft_cost_pct,
+            selling_cost_pct=assumptions.selling_cost_pct,
+            target_margin=assumptions.target_margin,
+            default_unit_sqft=assumptions.default_unit_sqft,
+            max_unit_sqft=assumptions.max_unit_sqft,
+        ),
+        reasons=analysis.reasons,
+        sources=[
+            {
+                "dimension": "scenarios",
+                "arv_comps": len(finished_comps),
+                "radius_ft": radius_ft,
+                "years": years,
+                "use_class": use_class,
+            }
+        ],
+        computed_at=computed_at,
     )
 
 

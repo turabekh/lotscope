@@ -13,6 +13,30 @@ class DealAssumptionsSchema(BaseModel):
     max_unit_sqft: float
 
 
+class ScenarioItem(BaseModel):
+    units: int
+    by_right: bool
+    arv: float | None
+    total_cost: float | None
+    profit: float | None
+    margin: float | None
+    roi: float | None
+    max_allowable_offer: float | None
+    deal_score: float | None
+
+
+class ScenariosResult(BaseModel):
+    parcel_number: str
+    by_right_units: int | None
+    recommended_units: int | None
+    scenarios: list[ScenarioItem]
+    confidence: Literal["high", "medium", "low"]
+    assumptions: DealAssumptionsSchema
+    reasons: list[str]
+    sources: list[dict[str, Any]]
+    computed_at: datetime
+
+
 class DealResult(BaseModel):
     parcel_number: str
     units: int | None
