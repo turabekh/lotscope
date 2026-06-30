@@ -28,6 +28,8 @@ from lotscope.api.deps import (
 )
 from lotscope.assemblage.schemas import AssemblageResult
 from lotscope.assemblage.service import compute_assemblage
+from lotscope.assessment.schemas import AssessmentResult
+from lotscope.assessment.service import analyze_parcel_assessment
 from lotscope.checklist.schemas import ParcelChecklist
 from lotscope.checklist.service import build_parcel_checklist
 from lotscope.compare.schemas import ParcelCompareResponse
@@ -174,6 +176,16 @@ async def parcel_deed_restrictions(
     if detail is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return await get_deed_restrictions(session, parcel_number)
+
+
+@router.get("/{parcel_number}/assessment", response_model=AssessmentResult)
+async def parcel_assessment(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> AssessmentResult:
+    result = await analyze_parcel_assessment(session, parcel_number)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
 
 
 @router.get("/{parcel_number}/checklist", response_model=ParcelChecklist)
