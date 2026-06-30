@@ -2,8 +2,12 @@
 import { onMounted } from 'vue'
 
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 
 const auth = useAuthStore()
+const theme = useThemeStore()
+
+theme.init()
 
 onMounted(() => {
   void auth.restore()

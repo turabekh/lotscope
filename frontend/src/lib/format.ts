@@ -53,6 +53,24 @@ export function scoreLabel(score: number | null | undefined): string {
   return 'Caution'
 }
 
+export function scoreVar(score: number | null | undefined): string {
+  if (score == null) return 'var(--lot-score-none)'
+  if (score >= 65) return 'var(--lot-score-positive)'
+  if (score >= 45) return 'var(--lot-score-mixed)'
+  return 'var(--lot-score-caution)'
+}
+
+const SEVERITY_VAR: Record<string, string> = {
+  high: 'var(--lot-sev-high)',
+  medium: 'var(--lot-sev-medium)',
+  low: 'var(--lot-sev-low)',
+  info: 'var(--lot-sev-info)',
+}
+
+export function severityVar(severity: string): string {
+  return SEVERITY_VAR[severity] ?? 'var(--lot-sev-low)'
+}
+
 const SEVERITY_COLOR: Record<string, string> = {
   high: 'negative',
   medium: 'warning',

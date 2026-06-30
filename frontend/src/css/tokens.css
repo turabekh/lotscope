@@ -1,0 +1,99 @@
+:root {
+  --lot-font:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --lot-radius-xs: 6px;
+  --lot-radius-sm: 8px;
+  --lot-radius: 12px;
+  --lot-radius-lg: 16px;
+  --lot-radius-pill: 999px;
+
+  --lot-space-1: 4px;
+  --lot-space-2: 8px;
+  --lot-space-3: 12px;
+  --lot-space-4: 16px;
+  --lot-space-5: 24px;
+  --lot-space-6: 32px;
+
+  --lot-bg: #f6f8fc;
+  --lot-surface: #ffffff;
+  --lot-surface-2: #f1f5f9;
+  --lot-surface-3: #e9eef6;
+  --lot-border: #e2e8f0;
+  --lot-border-strong: #cbd5e1;
+
+  --lot-ink: #0f172a;
+  --lot-muted: #475569;
+  --lot-faint: #94a3b8;
+  --lot-on-accent: #ffffff;
+
+  --lot-accent: #4f46e5;
+  --lot-accent-strong: #4338ca;
+  --lot-accent-soft: rgba(79, 70, 229, 0.1);
+  --lot-accent-ink: #4338ca;
+
+  --lot-score-positive: #16a34a;
+  --lot-score-mixed: #ea580c;
+  --lot-score-caution: #dc2626;
+  --lot-score-none: #94a3b8;
+
+  --lot-sev-high: #dc2626;
+  --lot-sev-medium: #d97706;
+  --lot-sev-low: #64748b;
+  --lot-sev-info: #0ea5e9;
+
+  --lot-positive-soft: rgba(22, 163, 74, 0.12);
+  --lot-warning-soft: rgba(217, 119, 6, 0.14);
+  --lot-negative-soft: rgba(220, 38, 38, 0.12);
+  --lot-info-soft: rgba(14, 165, 233, 0.12);
+
+  --lot-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --lot-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.05);
+  --lot-shadow-lg: 0 8px 26px rgba(15, 23, 42, 0.16);
+  --lot-shadow-pop: 0 12px 34px rgba(15, 23, 42, 0.22);
+
+  --lot-scroll-thumb: #cfd8e3;
+  --lot-scroll-thumb-hover: #aebccd;
+}
+
+body.body--dark {
+  --lot-bg: #0b1220;
+  --lot-surface: #161f31;
+  --lot-surface-2: #1e293b;
+  --lot-surface-3: #273449;
+  --lot-border: #2b3a52;
+  --lot-border-strong: #3b4d6b;
+
+  --lot-ink: #f1f5f9;
+  --lot-muted: #9fb0c7;
+  --lot-faint: #64748b;
+  --lot-on-accent: #ffffff;
+
+  --lot-accent: #818cf8;
+  --lot-accent-strong: #a5b4fc;
+  --lot-accent-soft: rgba(129, 140, 248, 0.18);
+  --lot-accent-ink: #c7d2fe;
+
+  --lot-score-positive: #34d399;
+  --lot-score-mixed: #fb923c;
+  --lot-score-caution: #f87171;
+  --lot-score-none: #64748b;
+
+  --lot-sev-high: #f87171;
+  --lot-sev-medium: #fbbf24;
+  --lot-sev-low: #94a3b8;
+  --lot-sev-info: #38bdf8;
+
+  --lot-positive-soft: rgba(52, 211, 153, 0.16);
+  --lot-warning-soft: rgba(251, 191, 36, 0.16);
+  --lot-negative-soft: rgba(248, 113, 113, 0.16);
+  --lot-info-soft: rgba(56, 189, 248, 0.16);
+
+  --lot-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --lot-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.35);
+  --lot-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --lot-shadow-pop: 0 14px 38px rgba(0, 0, 0, 0.6);
+
+  --lot-scroll-thumb: #3b4d6b;
+  --lot-scroll-thumb-hover: #4f6488;
+}
