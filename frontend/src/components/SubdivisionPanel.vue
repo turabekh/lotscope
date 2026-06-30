@@ -62,7 +62,7 @@ const reason = computed(() => subdivision.value?.reasons[0] ?? '')
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 </style>

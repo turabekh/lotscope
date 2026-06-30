@@ -186,7 +186,7 @@ function reset(): void {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .underpriced-banner {
@@ -194,8 +194,8 @@ function reset(): void {
   align-items: center;
   font-size: 12.5px;
   font-weight: 600;
-  color: #1b5e20;
-  background: #e8f5e9;
+  color: var(--lot-score-positive);
+  background: var(--lot-positive-soft);
   border-radius: var(--lot-radius-sm);
   padding: 6px 10px;
 }
@@ -205,43 +205,43 @@ function reset(): void {
   gap: 8px;
 }
 .metric {
-  background: #f4f7fb;
+  background: var(--lot-surface-2);
   border-radius: var(--lot-radius-sm);
   padding: 8px 10px;
 }
 .metric--hero {
   grid-column: 1 / -1;
-  background: #eaf2ff;
+  background: var(--lot-accent-soft);
 }
 .metric-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #6b7a8d;
+  color: var(--lot-muted);
 }
 .metric-value {
   font-size: 16px;
   font-weight: 700;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .metric--hero .metric-value {
   font-size: 20px;
-  color: #0f4ba8;
+  color: var(--lot-accent);
 }
 .breakdown {
-  border-top: 1px solid #eceff3;
+  border-top: 1px solid var(--lot-surface-2);
   padding-top: 6px;
 }
 .breakdown-row {
   display: flex;
   justify-content: space-between;
   font-size: 12.5px;
-  color: #36404a;
+  color: var(--lot-ink);
   padding: 3px 2px;
 }
 .breakdown-row--total {
   font-weight: 700;
-  border-top: 1px dashed #d6dde6;
+  border-top: 1px dashed var(--lot-border);
   margin-top: 2px;
   padding-top: 6px;
 }
@@ -251,7 +251,7 @@ function reset(): void {
 }
 .reason-list li {
   font-size: 12px;
-  color: #51606f;
+  color: var(--lot-muted);
   margin-bottom: 3px;
 }
 </style>

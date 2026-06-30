@@ -78,8 +78,8 @@ function saveSearch(): void {
 
           <div class="fp-legend">
             <template v-if="colorMode === 'vacancy'">
-              <span class="dot" style="background: #f9a825" />Vacant
-              <span class="dot q-ml-md" style="background: #1565c0" />Built
+              <span class="dot" style="background: var(--lot-sev-medium)" />Vacant
+              <span class="dot q-ml-md" style="background: var(--lot-accent)" />Built
             </template>
             <template v-else>
               <span class="lg-end">{{ colorMode === 'opportunity' ? 'Low' : 'Low risk' }}</span>
@@ -88,8 +88,8 @@ function saveSearch(): void {
                 :style="{
                   background:
                     colorMode === 'opportunity'
-                      ? 'linear-gradient(90deg,#c62828,#f9a825,#9ccc65,#2e7d32)'
-                      : 'linear-gradient(90deg,#2e7d32,#9ccc65,#f9a825,#c62828)',
+                      ? 'linear-gradient(90deg,var(--lot-sev-high),var(--lot-sev-medium),var(--lot-score-positive),var(--lot-score-positive))'
+                      : 'linear-gradient(90deg,var(--lot-score-positive),var(--lot-score-positive),var(--lot-sev-medium),var(--lot-sev-high))',
                 }"
               />
               <span class="lg-end">{{ colorMode === 'opportunity' ? 'High' : 'High risk' }}</span>
@@ -232,7 +232,7 @@ function saveSearch(): void {
   gap: 6px;
   margin-top: 10px;
   font-size: 12px;
-  color: #455a64;
+  color: var(--lot-muted);
 }
 .fp-legend .lg-end {
   font-size: 11px;

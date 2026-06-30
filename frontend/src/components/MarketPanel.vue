@@ -70,13 +70,13 @@ const stats = computed<Stat[]>(() => {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 8px;
 }
 .nbhd {
   font-size: 12px;
   font-weight: 600;
-  color: #2c5b8f;
+  color: var(--lot-accent-ink);
 }
 .grid {
   display: grid;
@@ -88,22 +88,22 @@ const stats = computed<Stat[]>(() => {
   flex-direction: column;
   padding: 6px 8px;
   border-radius: var(--lot-radius-sm);
-  background: #f4f6f8;
+  background: var(--lot-surface-2);
 }
 .tile-label {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #7b8794;
+  color: var(--lot-faint);
 }
 .tile-value {
   font-size: 14px;
   font-weight: 700;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .note {
   font-size: 10.5px;
-  color: #a0aab3;
+  color: var(--lot-faint);
   margin-top: 6px;
 }
 </style>

@@ -94,7 +94,7 @@ function marginClass(item: ScenarioItem): string {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .scn {
@@ -107,24 +107,24 @@ function marginClass(item: ScenarioItem): string {
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #90a4ae;
+  color: var(--lot-faint);
   padding: 3px 6px;
-  border-bottom: 1px solid #eceff1;
+  border-bottom: 1px solid var(--lot-surface-2);
 }
 .scn td {
   padding: 4px 6px;
-  border-bottom: 1px solid #f4f6f8;
+  border-bottom: 1px solid var(--lot-surface-2);
 }
 .scn .num {
   text-align: right;
 }
 .scn tr.rec td {
-  background: #eef3ff;
+  background: var(--lot-accent-soft);
   font-weight: 600;
 }
 .scn-note {
   font-size: 10.5px;
-  color: #a0aab3;
+  color: var(--lot-faint);
   margin-top: 6px;
 }
 </style>

@@ -159,7 +159,7 @@ function askSuggestion(text: string): void {
 
 <style scoped>
 .answer-block {
-  background: #f5f7fa;
+  background: var(--lot-surface-2);
   border-radius: 8px;
   padding: 12px;
 }

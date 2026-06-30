@@ -69,12 +69,12 @@ defineProps<{ detail: ParcelDetail }>()
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 4px;
 }
 .value {
   font-weight: 500;
-  color: #263238;
+  color: var(--lot-ink);
   text-align: right;
   white-space: normal;
   max-width: 60%;

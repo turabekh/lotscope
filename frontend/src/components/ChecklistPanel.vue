@@ -86,7 +86,7 @@ const headlineColor = computed(() => {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .check-list {
@@ -109,11 +109,11 @@ const headlineColor = computed(() => {
 .check-cat {
   font-size: 12.5px;
   font-weight: 600;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .check-detail {
   font-size: 12px;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   line-height: 1.3;
 }
 </style>

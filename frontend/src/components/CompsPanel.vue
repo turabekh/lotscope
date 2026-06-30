@@ -77,7 +77,7 @@ function pricePerSqft(comp: CompResult): string {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .estimate {
@@ -89,11 +89,11 @@ function pricePerSqft(comp: CompResult): string {
 .estimate-value {
   font-size: 15px;
   font-weight: 700;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .estimate-sub {
   font-size: 11px;
-  color: #90a4ae;
+  color: var(--lot-faint);
 }
 .comp-list {
   display: flex;
@@ -106,7 +106,7 @@ function pricePerSqft(comp: CompResult): string {
   justify-content: space-between;
   padding: 5px 8px;
   border-radius: var(--lot-radius-sm);
-  background: #f4f6f8;
+  background: var(--lot-surface-2);
 }
 .comp-main {
   display: flex;
@@ -116,14 +116,14 @@ function pricePerSqft(comp: CompResult): string {
 .comp-addr {
   font-size: 12.5px;
   font-weight: 600;
-  color: #1f2933;
+  color: var(--lot-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .comp-meta {
   font-size: 10.5px;
-  color: #90a4ae;
+  color: var(--lot-faint);
 }
 .comp-price {
   display: flex;
@@ -135,10 +135,10 @@ function pricePerSqft(comp: CompResult): string {
 .comp-amt {
   font-size: 12.5px;
   font-weight: 700;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .comp-ppsf {
   font-size: 10.5px;
-  color: #607d8b;
+  color: var(--lot-faint);
 }
 </style>

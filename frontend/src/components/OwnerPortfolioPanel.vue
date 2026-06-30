@@ -90,30 +90,30 @@ function selectParcel(parcelNumber: string): void {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .owner-name {
   font-weight: 600;
   font-size: 14px;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .stat {
   text-align: center;
   border-radius: var(--lot-radius-sm);
   padding: 6px 4px;
-  background: #f6f8fb;
+  background: var(--lot-surface-2);
 }
 .stat-label {
   font-size: 11px;
-  color: #78909c;
+  color: var(--lot-faint);
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 .stat-value {
   font-size: 15px;
   font-weight: 700;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .owner-list {
   display: flex;
@@ -128,12 +128,12 @@ function selectParcel(parcelNumber: string): void {
   gap: 9px;
   padding: 8px 10px;
   border-radius: var(--lot-radius-sm);
-  background: #f8fafc;
+  background: var(--lot-surface-2);
   cursor: pointer;
   transition: background 0.12s ease;
 }
 .owner-row:hover {
-  background: #eef2f7;
+  background: var(--lot-surface-2);
 }
 .owner-body {
   min-width: 0;
@@ -142,10 +142,10 @@ function selectParcel(parcelNumber: string): void {
 .owner-addr {
   font-weight: 600;
   font-size: 13px;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .owner-meta {
   font-size: 11.5px;
-  color: #5b6b7d;
+  color: var(--lot-muted);
 }
 </style>

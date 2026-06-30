@@ -176,7 +176,7 @@ function restrictions(): DeedRestrictionItem[] {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .deed-list {
@@ -187,8 +187,8 @@ function restrictions(): DeedRestrictionItem[] {
 .deed-row {
   padding: 8px 10px;
   border-radius: var(--lot-radius-sm);
-  background: #fff8f6;
-  border: 1px solid #ffd9cf;
+  background: var(--lot-negative-soft);
+  border: 1px solid var(--lot-negative-soft);
 }
 .deed-head {
   display: flex;
@@ -200,16 +200,16 @@ function restrictions(): DeedRestrictionItem[] {
 }
 .deed-date {
   font-size: 11px;
-  color: #90a4ae;
+  color: var(--lot-faint);
 }
 .deed-text {
   font-size: 13px;
-  color: #1f2933;
+  color: var(--lot-ink);
   margin-top: 4px;
 }
 .deed-cite {
   font-size: 11.5px;
-  color: #78909c;
+  color: var(--lot-faint);
   font-style: italic;
   margin-top: 2px;
 }
@@ -221,7 +221,7 @@ function restrictions(): DeedRestrictionItem[] {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #7b8794;
+  color: var(--lot-faint);
   margin-bottom: 4px;
 }
 .record-row {
@@ -230,23 +230,23 @@ function restrictions(): DeedRestrictionItem[] {
   gap: 6px;
   padding: 6px 10px;
   border-radius: var(--lot-radius-sm);
-  background: #f4f6f8;
+  background: var(--lot-surface-2);
   margin-bottom: 4px;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .record-link {
   display: flex;
   align-items: center;
   gap: 8px;
   text-decoration: none;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .record-link:hover {
   text-decoration: underline;
 }
 .analyze-error {
   font-size: 11.5px;
-  color: #c62828;
+  color: var(--lot-sev-high);
   margin-top: 4px;
 }
 .hidden-input {
@@ -259,16 +259,16 @@ function restrictions(): DeedRestrictionItem[] {
 .record-date,
 .record-price {
   font-size: 11.5px;
-  color: #607d8b;
+  color: var(--lot-faint);
 }
 .records-note {
   font-size: 10.5px;
-  color: #a0aab3;
+  color: var(--lot-faint);
   margin-top: 2px;
 }
 .deed-disclaimer {
   font-size: 11px;
-  color: #90a4ae;
+  color: var(--lot-faint);
   margin-top: 8px;
 }
 </style>

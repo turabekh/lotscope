@@ -170,53 +170,53 @@ function selectNeighbor(parcelNumber: string): void {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .stat {
   text-align: center;
   border-radius: var(--lot-radius-sm);
   padding: 6px 4px;
-  background: #f6f8fb;
+  background: var(--lot-surface-2);
 }
 .stat-label {
   font-size: 11px;
-  color: #78909c;
+  color: var(--lot-faint);
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 .stat-value {
   font-size: 15px;
   font-weight: 700;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .unit-unlock {
   display: flex;
   align-items: flex-start;
   padding: 10px 12px;
   border-radius: var(--lot-radius-sm);
-  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-  border: 1px solid #c5e1a5;
-  color: #2e5e1e;
+  background: linear-gradient(135deg, var(--lot-positive-soft), var(--lot-positive-soft));
+  border: 1px solid var(--lot-positive-soft);
+  color: var(--lot-score-positive);
 }
 .unlock-head {
   font-size: 14px;
 }
 .unlock-head b {
-  color: #2e7d32;
+  color: var(--lot-score-positive);
 }
 .unlock-add {
   margin-left: 6px;
   padding: 0 6px;
   border-radius: 8px;
-  background: #2e7d32;
-  color: #fff;
+  background: var(--lot-score-positive);
+  color: var(--lot-on-accent);
   font-size: 11px;
   font-weight: 700;
 }
 .unlock-sub {
   font-size: 11.5px;
-  color: #5b6b5b;
+  color: var(--lot-faint);
   line-height: 1.35;
   margin-top: 2px;
 }
@@ -231,16 +231,16 @@ function selectNeighbor(parcelNumber: string): void {
   gap: 9px;
   padding: 8px 10px;
   border-radius: var(--lot-radius-sm);
-  background: #f8fafc;
+  background: var(--lot-surface-2);
   border-left: 3px solid transparent;
   cursor: pointer;
   transition: background 0.12s ease;
 }
 .neighbor:hover {
-  background: #eef2f7;
+  background: var(--lot-surface-2);
 }
 .neighbor.candidate {
-  border-left-color: #7b1fa2;
+  border-left-color: var(--lot-accent);
 }
 .neighbor-body {
   min-width: 0;
@@ -249,11 +249,11 @@ function selectNeighbor(parcelNumber: string): void {
 .neighbor-title {
   font-weight: 600;
   font-size: 13px;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .neighbor-meta {
   font-size: 11.5px;
-  color: #5b6b7d;
+  color: var(--lot-muted);
 }
 .neighbor-badge {
   flex-shrink: 0;
@@ -265,7 +265,7 @@ function selectNeighbor(parcelNumber: string): void {
 }
 .reasons li {
   font-size: 12px;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   line-height: 1.4;
   margin-bottom: 3px;
 }

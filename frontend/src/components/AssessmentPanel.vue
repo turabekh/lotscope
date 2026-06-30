@@ -86,7 +86,7 @@ const reason = computed(() => assessment.value?.reasons[0] ?? '')
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .figures {
@@ -99,27 +99,27 @@ const reason = computed(() => assessment.value?.reasons[0] ?? '')
   flex-direction: column;
   padding: 6px 10px;
   border-radius: var(--lot-radius-sm);
-  background: #f4f6f8;
+  background: var(--lot-surface-2);
 }
 .figure-label {
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #7b8794;
+  color: var(--lot-faint);
 }
 .figure-value {
   font-size: 14px;
   font-weight: 700;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .savings {
   display: flex;
   align-items: center;
   font-size: 13px;
   font-weight: 700;
-  color: #1b7a4b;
+  color: var(--lot-score-positive);
   padding: 6px 10px;
   border-radius: var(--lot-radius-sm);
-  background: #eef8f2;
+  background: var(--lot-positive-soft);
 }
 </style>

@@ -68,7 +68,7 @@ const tierStyle = computed(() => (distress.value ? TIER[distress.value.tier] : T
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #5b6b7d;
+  color: var(--lot-muted);
   margin-bottom: 6px;
 }
 .factor-list {
@@ -82,16 +82,16 @@ const tierStyle = computed(() => (distress.value ? TIER[distress.value.tier] : T
   justify-content: space-between;
   padding: 6px 10px;
   border-radius: var(--lot-radius-sm);
-  background: #fbf3f3;
+  background: var(--lot-negative-soft);
 }
 .factor-label {
   font-size: 12.5px;
-  color: #1f2933;
+  color: var(--lot-ink);
 }
 .factor-weight {
   font-size: 11px;
   font-weight: 700;
-  color: #c62828;
+  color: var(--lot-sev-high);
   flex-shrink: 0;
   margin-left: 8px;
 }
