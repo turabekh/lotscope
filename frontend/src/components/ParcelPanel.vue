@@ -12,6 +12,7 @@ import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
+import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { ApiError, api } from '@/lib/api'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
@@ -235,6 +236,8 @@ async function toggleSave(): Promise<void> {
         <DealPanel />
 
         <AssessmentPanel />
+
+        <SubdivisionPanel />
 
         <AssemblagePanel />
 

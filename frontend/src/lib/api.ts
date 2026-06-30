@@ -19,6 +19,7 @@ import type {
   ParcelSearchResponse,
   PlansResponse,
   PortalResponse,
+  SubdivisionResult,
   AdminOverview,
   AdminUserUpdate,
   AdminUsersResponse,
@@ -102,6 +103,9 @@ export const api = {
   },
   getAssessment(parcelNumber: string): Promise<AssessmentResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/assessment`)
+  },
+  getSubdivision(parcelNumber: string): Promise<SubdivisionResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/subdivision`)
   },
   getChecklist(parcelNumber: string): Promise<ParcelChecklist> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/checklist`)

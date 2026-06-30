@@ -320,6 +320,25 @@ export interface AssessmentResult {
   computed_at: string
 }
 
+export type SubdivisionLimitingFactor = 'area' | 'width' | 'both' | 'none'
+
+export interface SubdivisionResult {
+  parcel_number: string
+  district_code: string | null
+  can_subdivide: boolean
+  max_lots: number | null
+  limiting_factor: SubdivisionLimitingFactor | null
+  is_conforming: boolean | null
+  needs_consolidation: boolean
+  lot_area_sqft: number | null
+  lot_width_ft: number | null
+  min_lot_area_sqft: number | null
+  min_lot_width_ft: number | null
+  reasons: string[]
+  sources: unknown[]
+  computed_at: string
+}
+
 export interface DealAssumptions {
   construction_cost_per_sqft: number
   soft_cost_pct: number

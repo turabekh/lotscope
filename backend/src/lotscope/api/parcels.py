@@ -47,6 +47,8 @@ from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.reports.dossier import dossier_filename
 from lotscope.reports.service import build_parcel_dossier
+from lotscope.subdivision.schemas import SubdivisionResult
+from lotscope.subdivision.service import analyze_parcel_subdivision
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict.schemas import VerdictResult
@@ -183,6 +185,16 @@ async def parcel_assessment(
     parcel_number: str, session: SessionDep, current_user: CurrentUserDep
 ) -> AssessmentResult:
     result = await analyze_parcel_assessment(session, parcel_number)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
+
+
+@router.get("/{parcel_number}/subdivision", response_model=SubdivisionResult)
+async def parcel_subdivision(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> SubdivisionResult:
+    result = await analyze_parcel_subdivision(session, parcel_number)
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result
