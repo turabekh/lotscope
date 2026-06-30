@@ -2,13 +2,20 @@
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 
-import type { DeedRestrictionItem } from '@/lib/types'
+import { formatCurrency } from '@/lib/format'
+import type { DeedRestrictionItem, RecordedDeedItem } from '@/lib/types'
 import { useParcelStore } from '@/stores/parcel'
 
 const store = useParcelStore()
 const { deedRestrictions } = storeToRefs(store)
 
-const show = computed(() => (deedRestrictions.value?.count ?? 0) > 0)
+const show = computed(
+  () => (deedRestrictions.value?.count ?? 0) > 0 || (deedRestrictions.value?.deeds.length ?? 0) > 0,
+)
+
+function deeds(): RecordedDeedItem[] {
+  return deedRestrictions.value?.deeds ?? []
+}
 
 const KIND_LABEL: Record<string, string> = {
   use_restriction: 'Use restriction',
@@ -68,6 +75,28 @@ function restrictions(): DeedRestrictionItem[] {
         </div>
       </div>
 
+      <div v-if="deeds().length" class="records">
+        <div class="records-title">Recorded documents</div>
+        <a
+          v-for="deed in deeds()"
+          :key="deed.document_id"
+          class="record-row"
+          :href="deed.record_url ?? undefined"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <q-icon name="description" size="16px" class="q-mr-xs text-blue-grey-5" />
+          <span class="record-type">{{ deed.document_type ?? 'Document' }}</span>
+          <span v-if="deed.recording_date" class="record-date">{{ deed.recording_date }}</span>
+          <span v-if="deed.sale_price" class="record-price">{{
+            formatCurrency(deed.sale_price)
+          }}</span>
+          <q-space />
+          <q-icon name="open_in_new" size="14px" class="text-blue-grey-4" />
+        </a>
+        <div class="records-note">Links open the official PhilaDox record (login may be required).</div>
+      </div>
+
       <div class="deed-disclaimer">
         Informational only — not legal advice. Verify against the recorded deed.
       </div>
@@ -122,6 +151,45 @@ function restrictions(): DeedRestrictionItem[] {
   font-size: 11.5px;
   color: #78909c;
   font-style: italic;
+  margin-top: 2px;
+}
+.records {
+  margin-top: 10px;
+}
+.records-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7b8794;
+  margin-bottom: 4px;
+}
+.record-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--lot-radius-sm);
+  background: #f4f6f8;
+  margin-bottom: 4px;
+  text-decoration: none;
+  color: #1f2933;
+}
+.record-row:hover {
+  background: #e9eef3;
+}
+.record-type {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.record-date,
+.record-price {
+  font-size: 11.5px;
+  color: #607d8b;
+}
+.records-note {
+  font-size: 10.5px;
+  color: #a0aab3;
   margin-top: 2px;
 }
 .deed-disclaimer {

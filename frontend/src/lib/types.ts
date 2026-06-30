@@ -249,10 +249,22 @@ export interface DeedRestrictionItem {
   recording_date: string | null
 }
 
+export interface RecordedDeedItem {
+  document_id: string
+  document_type: string | null
+  recording_date: string | null
+  grantor: string | null
+  grantee: string | null
+  sale_price: number | null
+  analyzed: boolean
+  record_url: string | null
+}
+
 export interface DeedRestrictionsResponse {
   parcel_number: string
   count: number
   restrictions: DeedRestrictionItem[]
+  deeds: RecordedDeedItem[]
 }
 
 export interface NeighborhoodSummary {

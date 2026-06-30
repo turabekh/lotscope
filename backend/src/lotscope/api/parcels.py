@@ -20,6 +20,7 @@ from lotscope.ai.embeddings import Embedder
 from lotscope.ai.schemas import ParcelAnswer
 from lotscope.ai.service import ask_the_parcel
 from lotscope.api.deps import (
+    get_app_settings,
     get_current_user,
     get_embedder,
     get_generator,
@@ -34,6 +35,7 @@ from lotscope.checklist.schemas import ParcelChecklist
 from lotscope.checklist.service import build_parcel_checklist
 from lotscope.compare.schemas import ParcelCompareResponse
 from lotscope.compare.service import MAX_COMPARE_PARCELS, compare_parcels
+from lotscope.core.config import Settings
 from lotscope.core.errors import NotFoundError, QuotaExceededError
 from lotscope.deal.schemas import DealResult
 from lotscope.deal.service import analyze_parcel_deal
@@ -61,6 +63,7 @@ router = APIRouter(prefix="/parcels", tags=["parcels"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 RedisDep = Annotated[Redis, Depends(get_redis)]
+SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 
 _ASK_CACHE_TTL_SECONDS = 86_400
 
@@ -172,12 +175,17 @@ async def parcel_owner_portfolio(
 
 @router.get("/{parcel_number}/deed-restrictions", response_model=DeedRestrictionsResponse)
 async def parcel_deed_restrictions(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    settings: SettingsDep,
 ) -> DeedRestrictionsResponse:
     detail = await get_parcel_detail(session, parcel_number)
     if detail is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    return await get_deed_restrictions(session, parcel_number)
+    return await get_deed_restrictions(
+        session, parcel_number, record_url_template=settings.philadox_document_url_template
+    )
 
 
 @router.get("/{parcel_number}/assessment", response_model=AssessmentResult)

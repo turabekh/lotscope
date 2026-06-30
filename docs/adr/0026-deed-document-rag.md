@@ -46,3 +46,12 @@ Extend ADR-0008 rather than introduce a new datastore. A new `documents` ingesti
 - **Legal/UPL is first-class:** deed interpretation is informational, cited to the document/span, confidence-scored, never presented as a title determination; disclaimer surfaced. Data licensing/ToS for the chosen source must be honored.
 - Option A ships value quickly and de-risks the pipeline; bulk coverage (B/C) becomes a follow-up decision once the pipeline is proven.
 - OCR cost scales with document volume; the pipeline is idempotent per document id and runs as an ARQ job, so re-runs are cheap and bounded.
+
+## Update (2026-06-30) — Phase 3 deed-text source resolved
+
+Open decision 1 (deed-text source) is settled after validating the actual City source. The DOR system is **PhilaDox/iCris**: a paid-subscription web portal ($15/day–$750/yr), watermarked PDFs, **no API or bulk export**, free access limited to name/address search, indexed by name/address/book-page (not OPA parcel). The "OpenDataPhilly PhilaDox" entry only points back to the same paid portal. Bulk harvesting (option B) would require a paid session and almost certainly breaches the City of Philadelphia License / portal ToS, so it is **rejected**.
+
+**Decision: compliant, lazy, per-parcel design.**
+- We already hold **parcel → recorded-document-ID** for free via RTT (`sale.document_id`, ~172k deeds across ~140k parcels). The deed feature surfaces this as a per-parcel **recorded-document index** with grantor/grantee/type/date and a **deep-link to the official PhilaDox record** (`InstrumentID={document_id}&Guest=true`, base URL in `Settings`). We redistribute nothing paywalled; the user retrieves the instrument from the official source themselves.
+- Actual deed **text** (for OCR→extract→embed RAG) is fetched **lazily, per parcel, only on demand**, and only through a **credential- and ToS-gated** `DeedSource` adapter that is **off by default** — or from user-supplied PDFs. A recorded deed is marked `analyzed` once its text has been processed (`deed_document.external_id == sale.document_id`).
+- This keeps citywide coverage for the *index* (compliant, now) while gating the *text* behind a licensed feed, honoring §13. Bulk text acquisition remains blocked on a licensed source; sample/user-provided deeds (option A) exercise the real pipeline in the meantime.

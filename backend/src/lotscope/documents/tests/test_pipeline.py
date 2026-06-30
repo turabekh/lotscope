@@ -13,6 +13,8 @@ from lotscope.documents.service import get_deed_restrictions
 
 pytestmark = pytest.mark.integration
 
+_URL_TEMPLATE = "https://records.test/doc/{document_id}"
+
 
 def _embedding(*leading: float) -> list[float]:
     values = list(leading)
@@ -72,7 +74,9 @@ async def test_process_deed_text_persists_restrictions_and_chunks(db_session: As
     assert count == 1
     assert deed.ocr_status == "extracted"
 
-    restrictions = await get_deed_restrictions(db_session, "000000001")
+    restrictions = await get_deed_restrictions(
+        db_session, "000000001", record_url_template=_URL_TEMPLATE
+    )
     assert restrictions.count == 1
     assert restrictions.restrictions[0].kind == "use_restriction"
     assert restrictions.restrictions[0].document_type == "DEED"
@@ -86,6 +90,30 @@ async def test_process_deed_text_persists_restrictions_and_chunks(db_session: As
     assert doc_count == 1
 
 
+async def test_deed_index_lists_recorded_deeds_with_links(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number) VALUES ('000000050')")
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, document_id, document_type, sale_date, "
+            "grantor, grantee, sale_price) VALUES "
+            "('000000050', '53772373', 'DEED', '2021-05-01', 'SMITH JOHN', 'DOE JANE', 250000)"
+        )
+    )
+    await db_session.flush()
+
+    result = await get_deed_restrictions(
+        db_session, "000000050", record_url_template=_URL_TEMPLATE
+    )
+    assert len(result.deeds) == 1
+    deed = result.deeds[0]
+    assert deed.document_id == "53772373"
+    assert deed.document_type == "DEED"
+    assert deed.analyzed is False
+    assert deed.record_url == "https://records.test/doc/53772373"
+
+
 async def test_process_deed_text_is_idempotent_on_restrictions(db_session: AsyncSession) -> None:
     deed = await _seed_deed(db_session)
     for _ in range(2):
@@ -96,7 +124,9 @@ async def test_process_deed_text_is_idempotent_on_restrictions(db_session: Async
             embedder=_FakeEmbedder(),
             generator=_FakeGenerator(_EXTRACTION),
         )
-    restrictions = await get_deed_restrictions(db_session, "000000001")
+    restrictions = await get_deed_restrictions(
+        db_session, "000000001", record_url_template=_URL_TEMPLATE
+    )
     assert restrictions.count == 1
 
 

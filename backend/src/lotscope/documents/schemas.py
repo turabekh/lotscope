@@ -46,7 +46,19 @@ class DeedRestrictionItem(BaseModel):
     recording_date: date | None
 
 
+class RecordedDeedItem(BaseModel):
+    document_id: str
+    document_type: str | None
+    recording_date: date | None
+    grantor: str | None
+    grantee: str | None
+    sale_price: float | None
+    analyzed: bool
+    record_url: str | None
+
+
 class DeedRestrictionsResponse(BaseModel):
     parcel_number: str
     count: int
     restrictions: list[DeedRestrictionItem]
+    deeds: list[RecordedDeedItem]

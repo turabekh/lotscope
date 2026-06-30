@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     embedding_model: str = "voyage-3"
     embedding_dimensions: int = 1024
     deed_blob_root: str = "data/deeds"
+    philadox_document_url_template: str = (
+        "https://epay.phila-records.com/phillyepay/web/integration/document/"
+        "InstrumentID={document_id}&Guest=true"
+    )
 
     smtp_host: str | None = None
     smtp_port: int = 587
