@@ -1,5 +1,6 @@
 import type {
   AssemblageResult,
+  AssessmentResult,
   BasemapSession,
   BillingCadence,
   CheckoutResponse,
@@ -98,6 +99,9 @@ export const api = {
   },
   getDistress(parcelNumber: string): Promise<DistressResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/distress`)
+  },
+  getAssessment(parcelNumber: string): Promise<AssessmentResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/assessment`)
   },
   getChecklist(parcelNumber: string): Promise<ParcelChecklist> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/checklist`)

@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { ApiError, api } from '@/lib/api'
 import type {
   AssemblageResult,
+  AssessmentResult,
   DealResult,
   DeedRestrictionsResponse,
   DistressResult,
@@ -21,6 +22,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const assemblage = ref<AssemblageResult | null>(null)
   const assemblageLoading = ref(false)
   const distress = ref<DistressResult | null>(null)
+  const assessment = ref<AssessmentResult | null>(null)
   const deal = ref<DealResult | null>(null)
   const dealLoading = ref(false)
   const checklist = ref<ParcelChecklist | null>(null)
@@ -38,6 +40,7 @@ export const useParcelStore = defineStore('parcel', () => {
     envelope.value = null
     assemblage.value = null
     distress.value = null
+    assessment.value = null
     deal.value = null
     checklist.value = null
     ownerPortfolio.value = null
@@ -47,6 +50,7 @@ export const useParcelStore = defineStore('parcel', () => {
       verdict.value = await loadVerdict(parcelNumber)
       void loadAssemblage(parcelNumber)
       void loadDistress(parcelNumber)
+      void loadAssessment(parcelNumber)
       void loadDeal(parcelNumber)
       void loadChecklist(parcelNumber)
       void loadOwnerPortfolio(parcelNumber)
@@ -113,6 +117,15 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
+  async function loadAssessment(parcelNumber: string): Promise<void> {
+    try {
+      const result = await api.getAssessment(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) assessment.value = result
+    } catch {
+      if (detail.value?.parcel_number === parcelNumber) assessment.value = null
+    }
+  }
+
   async function loadDeal(
     parcelNumber: string,
     overrides: { acquisitionPrice?: number | null; targetMargin?: number | null } = {},
@@ -161,6 +174,7 @@ export const useParcelStore = defineStore('parcel', () => {
     envelope.value = null
     assemblage.value = null
     distress.value = null
+    assessment.value = null
     deal.value = null
     checklist.value = null
     ownerPortfolio.value = null
@@ -176,6 +190,7 @@ export const useParcelStore = defineStore('parcel', () => {
     assemblage,
     assemblageLoading,
     distress,
+    assessment,
     deal,
     dealLoading,
     checklist,
@@ -189,6 +204,7 @@ export const useParcelStore = defineStore('parcel', () => {
     loadEnvelope,
     loadAssemblage,
     loadDistress,
+    loadAssessment,
     loadDeal,
     loadChecklist,
     loadOwnerPortfolio,

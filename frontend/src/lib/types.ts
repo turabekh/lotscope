@@ -299,6 +299,27 @@ export interface DistressResult {
   computed_at: string
 }
 
+export type AssessmentStatus = 'over_assessed' | 'fairly_assessed' | 'under_assessed' | 'unknown'
+
+export interface AssessmentResult {
+  parcel_number: string
+  status: AssessmentStatus
+  assessed_market_value: number | null
+  market_estimate: number | null
+  market_low: number | null
+  market_high: number | null
+  gap: number | null
+  gap_pct: number | null
+  over_assessed_amount: number | null
+  estimated_annual_tax_savings: number | null
+  tax_rate: number
+  confidence: 'high' | 'medium' | 'low'
+  reasons: string[]
+  disclaimer: string
+  sources: unknown[]
+  computed_at: string
+}
+
 export interface DealAssumptions {
   construction_cost_per_sqft: number
   soft_cost_pct: number
