@@ -11,6 +11,7 @@ import DealPanel from '@/components/DealPanel.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import HistoricPanel from '@/components/HistoricPanel.vue'
+import MarketPanel from '@/components/MarketPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
@@ -250,6 +251,8 @@ async function toggleSave(): Promise<void> {
         <OwnerPortfolioPanel />
 
         <DistressPanel />
+
+        <MarketPanel />
 
         <DeedRestrictionsPanel />
 

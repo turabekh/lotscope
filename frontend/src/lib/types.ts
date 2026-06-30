@@ -355,6 +355,24 @@ export interface ScenariosResult {
   computed_at: string
 }
 
+export interface MarketContext {
+  parcel_number: string
+  neighborhood: string | null
+  radius_ft: number
+  years: number
+  parcels_nearby: number
+  vacant_nearby: number
+  vacancy_rate: number | null
+  median_assessed_value: number | null
+  recent_sales: number
+  sales_per_year: number | null
+  median_sale_price: number | null
+  permits: number
+  demolitions: number
+  sources: unknown[]
+  computed_at: string
+}
+
 export interface HistoricResult {
   parcel_number: string
   in_historic_district: boolean
