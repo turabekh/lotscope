@@ -49,6 +49,7 @@ def test_clean_parcel_is_all_pass() -> None:
     assert statuses["liens_taxes"] == "pass"
     assert statuses["li"] == "pass"
     assert statuses["flood"] == "pass"
+    assert statuses["access"] == "pass"
     assert statuses["ownership"] == "pass"
     assert statuses["valuation"] == "pass"
     assert statuses["deal"] == "pass"
@@ -59,7 +60,16 @@ def test_clean_parcel_is_all_pass() -> None:
 def test_every_category_always_present() -> None:
     items, _ = build_checklist(_verdict())
     codes = {item.code for item in items}
-    assert codes == {"zoning", "liens_taxes", "li", "flood", "ownership", "valuation", "deal"}
+    assert codes == {
+        "zoning",
+        "liens_taxes",
+        "li",
+        "flood",
+        "access",
+        "ownership",
+        "valuation",
+        "deal",
+    }
 
 
 def test_high_severity_flag_fails_its_category() -> None:
@@ -150,6 +160,22 @@ def test_public_and_estate_flags_combine_in_ownership() -> None:
     assert ownership.status == "warn"
     assert "City owned." in ownership.detail
     assert "Estate owner." in ownership.detail
+
+
+def test_no_street_access_flag_surfaces_in_access_category() -> None:
+    flags = [
+        {
+            "code": "no_street_access",
+            "severity": "low",
+            "label": "No street frontage detected",
+            "detail": "No mapped street within 75 ft of the parcel.",
+            "source": "street_centerline",
+        }
+    ]
+    items, _ = build_checklist(_verdict(risk_flags=flags))
+    access = _item(items, "access")
+    assert access.status == "info"
+    assert access.source == "street_centerline"
 
 
 def test_variance_zoning_warns() -> None:

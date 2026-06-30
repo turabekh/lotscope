@@ -1,6 +1,7 @@
 import pytest
 
 from lotscope.risk.scoring import (
+    AccessSignal,
     LiSignal,
     RiskSignals,
     TaxSignal,
@@ -147,6 +148,29 @@ def test_multiple_owners_flagged() -> None:
 
 def test_missing_title_signal_adds_no_flags() -> None:
     assert _codes(RiskSignals(li=LiSignal(), title=None)) == set()
+
+
+def test_no_street_frontage_is_flagged() -> None:
+    signals = RiskSignals(
+        li=LiSignal(), access=AccessSignal(has_geometry=True, has_street_frontage=False)
+    )
+    flag = next(f for f in assess_risk(signals).flags if f.code == "no_street_access")
+    assert flag.severity == "low"
+    assert flag.source == "street_centerline"
+
+
+def test_street_frontage_is_not_flagged() -> None:
+    signals = RiskSignals(
+        li=LiSignal(), access=AccessSignal(has_geometry=True, has_street_frontage=True)
+    )
+    assert "no_street_access" not in _codes(signals)
+
+
+def test_no_geometry_does_not_flag_access() -> None:
+    signals = RiskSignals(
+        li=LiSignal(), access=AccessSignal(has_geometry=False, has_street_frontage=False)
+    )
+    assert "no_street_access" not in _codes(signals)
 
 
 def test_risk_score_is_capped_at_100() -> None:

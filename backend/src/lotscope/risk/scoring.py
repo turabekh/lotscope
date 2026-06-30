@@ -9,6 +9,7 @@ _WEIGHT: dict[Severity, float] = {"high": 40.0, "medium": 20.0, "low": 10.0, "in
 _HIGH_RISK_FLOOD_ZONES = frozenset({"A", "AE", "AO", "AH", "VE", "V"})
 _TAX_HIGH_DUE = 10000.0
 _TAX_HIGH_YEARS = 3
+STREET_ACCESS_MAX_FT = 75.0
 _ESTATE_RE = re.compile(r"\b(ESTATE OF|HEIRS?|DECEASED|DECD)\b")
 _TRAILING_ESTATE_RE = re.compile(r"\bESTATE\b")
 _REAL_ESTATE_RE = re.compile(r"\bREAL ESTATE\b")
@@ -43,12 +44,19 @@ class TitleSignal:
 
 
 @dataclass(frozen=True)
+class AccessSignal:
+    has_geometry: bool
+    has_street_frontage: bool
+
+
+@dataclass(frozen=True)
 class RiskSignals:
     li: LiSignal
     tax: TaxSignal | None = None
     is_city_owned: bool | None = None
     flood_zones: list[str] = field(default_factory=list)
     title: TitleSignal | None = None
+    access: AccessSignal | None = None
 
 
 @dataclass(frozen=True)
@@ -188,6 +196,20 @@ def _title_flags(title: TitleSignal) -> list[RiskFlag]:
     return flags
 
 
+def _access_flag(access: AccessSignal) -> RiskFlag | None:
+    if not access.has_geometry or access.has_street_frontage:
+        return None
+    return RiskFlag(
+        "no_street_access",
+        "low",
+        "No street frontage detected",
+        f"No mapped street within {STREET_ACCESS_MAX_FT:.0f} ft of the parcel; it may be "
+        "landlocked. Confirm street access, a right-of-way, or an easement before assuming "
+        "by-right development.",
+        "street_centerline",
+    )
+
+
 def _flood_flag(flood_zones: list[str]) -> RiskFlag | None:
     if not flood_zones:
         return None
@@ -234,6 +256,10 @@ def assess_risk(signals: RiskSignals) -> RiskAssessment:
     flood_flag = _flood_flag(signals.flood_zones)
     if flood_flag is not None:
         flags.append(flood_flag)
+    if signals.access is not None:
+        access_flag = _access_flag(signals.access)
+        if access_flag is not None:
+            flags.append(access_flag)
 
     risk_score = min(100.0, sum(_WEIGHT[flag.severity] for flag in flags))
     confidence: Confidence = "high" if signals.tax is not None else "medium"

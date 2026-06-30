@@ -103,6 +103,47 @@ async def test_estate_owner_flag_from_owner_record(db_session: AsyncSession) -> 
     assert flag.source == "parcel"
 
 
+async def test_landlocked_parcel_flagged(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "('000000020', ST_GeomFromText('POLYGON((0 0,0 20,20 20,20 0,0 0))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO street_centerline (external_id, geom_2272) VALUES "
+            "('S-FAR', ST_GeomFromText('LINESTRING(0 200, 20 200)', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel_risk(db_session, "000000020")
+    assert result is not None
+    flag = next(f for f in result.flags if f.code == "no_street_access")
+    assert flag.severity == "low"
+
+
+async def test_parcel_with_frontage_not_flagged(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "('000000021', ST_GeomFromText('POLYGON((0 0,0 20,20 20,20 0,0 0))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO street_centerline (external_id, geom_2272) VALUES "
+            "('S-NEAR', ST_GeomFromText('LINESTRING(0 40, 20 40)', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel_risk(db_session, "000000021")
+    assert result is not None
+    assert "no_street_access" not in _codes(result)
+
+
 async def test_clean_parcel_has_no_flags(db_session: AsyncSession) -> None:
     await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000004')"))
     await db_session.flush()

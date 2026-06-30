@@ -31,6 +31,12 @@ _RISK_CATEGORIES: list[tuple[str, str, frozenset[str], str]] = [
         "Not in a mapped FEMA flood zone.",
     ),
     (
+        "access",
+        "Access & frontage",
+        frozenset({"no_street_access"}),
+        "Street frontage detected; the lot is not landlocked.",
+    ),
+    (
         "ownership",
         "Ownership & title",
         frozenset({"public_ownership", "estate_owner", "multiple_owners"}),
