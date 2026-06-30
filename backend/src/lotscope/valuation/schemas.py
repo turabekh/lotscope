@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class CompResult(BaseModel):
     parcel_number: str
+    address: str | None
     distance_ft: float
     sale_price: float
     sale_date: date | None

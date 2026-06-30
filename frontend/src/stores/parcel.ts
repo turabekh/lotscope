@@ -16,6 +16,7 @@ import type {
   ParcelDetail,
   ScenariosResult,
   SubdivisionResult,
+  ValuationResult,
   VerdictResult,
 } from '@/lib/types'
 
@@ -31,6 +32,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const historic = ref<HistoricResult | null>(null)
   const scenarios = ref<ScenariosResult | null>(null)
   const market = ref<MarketContext | null>(null)
+  const comps = ref<ValuationResult | null>(null)
   const deal = ref<DealResult | null>(null)
   const dealLoading = ref(false)
   const checklist = ref<ParcelChecklist | null>(null)
@@ -53,6 +55,7 @@ export const useParcelStore = defineStore('parcel', () => {
     historic.value = null
     scenarios.value = null
     market.value = null
+    comps.value = null
     deal.value = null
     checklist.value = null
     ownerPortfolio.value = null
@@ -67,6 +70,7 @@ export const useParcelStore = defineStore('parcel', () => {
       void loadHistoric(parcelNumber)
       void loadScenarios(parcelNumber)
       void loadMarket(parcelNumber)
+      void loadComps(parcelNumber)
       void loadDeal(parcelNumber)
       void loadChecklist(parcelNumber)
       void loadOwnerPortfolio(parcelNumber)
@@ -178,6 +182,15 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
+  async function loadComps(parcelNumber: string): Promise<void> {
+    try {
+      const result = await api.getComps(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) comps.value = result
+    } catch {
+      if (detail.value?.parcel_number === parcelNumber) comps.value = null
+    }
+  }
+
   async function loadDeal(
     parcelNumber: string,
     overrides: { acquisitionPrice?: number | null; targetMargin?: number | null } = {},
@@ -231,6 +244,7 @@ export const useParcelStore = defineStore('parcel', () => {
     historic.value = null
     scenarios.value = null
     market.value = null
+    comps.value = null
     deal.value = null
     checklist.value = null
     ownerPortfolio.value = null
@@ -251,6 +265,7 @@ export const useParcelStore = defineStore('parcel', () => {
     historic,
     scenarios,
     market,
+    comps,
     deal,
     dealLoading,
     checklist,
@@ -269,6 +284,7 @@ export const useParcelStore = defineStore('parcel', () => {
     loadHistoric,
     loadScenarios,
     loadMarket,
+    loadComps,
     loadDeal,
     loadChecklist,
     loadOwnerPortfolio,

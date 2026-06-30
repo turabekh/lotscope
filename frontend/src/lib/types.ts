@@ -516,6 +516,7 @@ export interface ParcelSearchResponse {
 
 export interface CompResult {
   parcel_number: string
+  address: string | null
   distance_ft: number
   sale_price: number
   sale_date: string | null

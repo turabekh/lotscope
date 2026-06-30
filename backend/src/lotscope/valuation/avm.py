@@ -21,6 +21,7 @@ class Comp:
     sale_date: date | None
     lot_area_sqft: float | None
     price_per_sqft: float | None
+    address: str | None = None
 
 
 @dataclass(frozen=True)

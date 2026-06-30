@@ -7,6 +7,7 @@ import AskBox from '@/components/AskBox.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import AssessmentPanel from '@/components/AssessmentPanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
+import CompsPanel from '@/components/CompsPanel.vue'
 import DealPanel from '@/components/DealPanel.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
@@ -237,6 +238,8 @@ async function toggleSave(): Promise<void> {
         <ChecklistPanel />
 
         <DealPanel />
+
+        <CompsPanel />
 
         <ScenariosPanel />
 

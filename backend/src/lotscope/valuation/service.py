@@ -21,6 +21,7 @@ _COMPS_SQL = text(
     "  SELECT ST_Centroid(geom_2272) AS pt FROM parcel WHERE parcel_number = :parcel_number"
     ") "
     "SELECT s.parcel_number AS parcel_number, "
+    "       cp.address AS address, "
     "       ST_Distance(subject.pt, ST_Centroid(cp.geom_2272)) AS distance_ft, "
     "       s.sale_price AS sale_price, "
     "       s.sale_date AS sale_date, "
@@ -79,6 +80,7 @@ async def find_comps(
         comps.append(
             Comp(
                 parcel_number=row.parcel_number,
+                address=row.address,
                 distance_ft=float(row.distance_ft),
                 sale_price=sale_price,
                 sale_date=row.sale_date,
@@ -130,6 +132,7 @@ async def value_parcel(
         comps=[
             CompResult(
                 parcel_number=comp.parcel_number,
+                address=comp.address,
                 distance_ft=comp.distance_ft,
                 sale_price=comp.sale_price,
                 sale_date=comp.sale_date,
