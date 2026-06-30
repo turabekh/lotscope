@@ -332,6 +332,29 @@ export interface AssessmentResult {
   computed_at: string
 }
 
+export interface ScenarioItem {
+  units: number
+  by_right: boolean
+  arv: number | null
+  total_cost: number | null
+  profit: number | null
+  margin: number | null
+  roi: number | null
+  max_allowable_offer: number | null
+  deal_score: number | null
+}
+
+export interface ScenariosResult {
+  parcel_number: string
+  by_right_units: number | null
+  recommended_units: number | null
+  scenarios: ScenarioItem[]
+  confidence: 'high' | 'medium' | 'low'
+  reasons: string[]
+  sources: unknown[]
+  computed_at: string
+}
+
 export interface HistoricResult {
   parcel_number: string
   in_historic_district: boolean

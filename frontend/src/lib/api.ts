@@ -20,6 +20,7 @@ import type {
   ParcelSearchResponse,
   PlansResponse,
   PortalResponse,
+  ScenariosResult,
   SubdivisionResult,
   AdminOverview,
   AdminUserUpdate,
@@ -121,6 +122,9 @@ export const api = {
   },
   getHistoric(parcelNumber: string): Promise<HistoricResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/historic`)
+  },
+  getScenarios(parcelNumber: string): Promise<ScenariosResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/scenarios`)
   },
   getChecklist(parcelNumber: string): Promise<ParcelChecklist> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/checklist`)
