@@ -3,12 +3,23 @@ from typing import Any
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.ai.client import StructuredGenerator
+from lotscope.ai.embeddings import Embedder
+from lotscope.core.errors import NotFoundError, ValidationError
 from lotscope.documents.links import philadox_document_url
 from lotscope.documents.models import DeedDocument, DeedRestriction
+from lotscope.documents.pipeline import process_deed_text
 from lotscope.documents.schemas import (
     DeedRestrictionItem,
     DeedRestrictionsResponse,
     RecordedDeedItem,
+)
+from lotscope.documents.storage import BlobStore
+from lotscope.documents.textio import MAX_DEED_BYTES, extract_deed_text
+
+_RECORDED_DEED_SQL = text(
+    "SELECT document_type, sale_date FROM sale "
+    "WHERE parcel_number = :parcel_number AND document_id = :document_id LIMIT 1"
 )
 
 _RECORDED_DEEDS_SQL = text(
@@ -67,4 +78,66 @@ async def get_deed_restrictions(
         count=len(restrictions),
         restrictions=restrictions,
         deeds=deeds,
+    )
+
+
+async def analyze_uploaded_deed(
+    session: AsyncSession,
+    parcel_number: str,
+    document_id: str,
+    data: bytes,
+    content_type: str | None,
+    *,
+    embedder: Embedder,
+    generator: StructuredGenerator,
+    blob_store: BlobStore,
+    record_url_template: str,
+) -> DeedRestrictionsResponse:
+    if not data:
+        raise ValidationError("The uploaded deed file is empty.")
+    if len(data) > MAX_DEED_BYTES:
+        raise ValidationError("The uploaded deed file is too large.")
+
+    recorded = (
+        await session.execute(
+            _RECORDED_DEED_SQL, {"parcel_number": parcel_number, "document_id": document_id}
+        )
+    ).one_or_none()
+    if recorded is None:
+        raise NotFoundError(
+            f"No recorded document {document_id} is on file for parcel {parcel_number}."
+        )
+
+    deed_text = extract_deed_text(data, content_type)
+    if deed_text is None:
+        raise ValidationError(
+            "Could not extract text from the uploaded file. Scanned-image PDFs need OCR, which is "
+            "not enabled here — upload a text-based PDF or a .txt transcript."
+        )
+
+    blob_key = f"{parcel_number}/{document_id}"
+    await blob_store.put(blob_key, data)
+
+    deed = (
+        await session.execute(
+            select(DeedDocument).where(
+                DeedDocument.parcel_number == parcel_number,
+                DeedDocument.external_id == document_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if deed is None:
+        deed = DeedDocument(parcel_number=parcel_number, external_id=document_id)
+        session.add(deed)
+    deed.document_type = recorded.document_type
+    deed.recording_date = recorded.sale_date
+    deed.blob_key = blob_key
+    deed.source = "upload"
+    deed.ocr_status = "ocr_done"
+    await session.flush()
+
+    await process_deed_text(session, deed, deed_text, embedder=embedder, generator=generator)
+    await session.commit()
+    return await get_deed_restrictions(
+        session, parcel_number, record_url_template=record_url_template
     )

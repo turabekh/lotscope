@@ -74,6 +74,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+async function uploadRequest<T>(path: string, body: FormData): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (authToken !== null) headers.authorization = `Bearer ${authToken}`
+  const response = await fetch(`${BASE_URL}${path}`, { method: 'POST', body, headers })
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { detail?: string } | null
+    throw new ApiError(response.status, payload?.detail ?? response.statusText)
+  }
+  return (await response.json()) as T
+}
+
 export const api = {
   search(query: string, limit = 10): Promise<ParcelSearchResponse> {
     return request(`/search?q=${encodeURIComponent(query)}&limit=${limit}`)
@@ -248,6 +259,18 @@ export const api = {
   },
   getOwnerPortfolio(parcelNumber: string): Promise<OwnerPortfolio> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/owner-portfolio`)
+  },
+  analyzeDeed(
+    parcelNumber: string,
+    documentId: string,
+    file: File,
+  ): Promise<DeedRestrictionsResponse> {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest(
+      `/parcels/${encodeURIComponent(parcelNumber)}/deeds/${encodeURIComponent(documentId)}/analyze`,
+      form,
+    )
   },
   getDeedRestrictions(parcelNumber: string): Promise<DeedRestrictionsResponse> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/deed-restrictions`)

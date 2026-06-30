@@ -90,6 +90,70 @@ async def test_process_deed_text_persists_restrictions_and_chunks(db_session: As
     assert doc_count == 1
 
 
+class _FakeBlobStore:
+    def __init__(self) -> None:
+        self.saved: dict[str, bytes] = {}
+
+    async def put(self, key: str, data: bytes) -> str:
+        self.saved[key] = data
+        return key
+
+    async def get(self, key: str) -> bytes:
+        return self.saved[key]
+
+
+async def test_analyze_uploaded_deed_extracts_and_marks_analyzed(db_session: AsyncSession) -> None:
+    from lotscope.documents.service import analyze_uploaded_deed
+
+    await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000060')"))
+    await db_session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, document_id, document_type, sale_date) "
+            "VALUES ('000000060', '53999001', 'DEED', '2023-02-02')"
+        )
+    )
+    await db_session.flush()
+
+    blob = _FakeBlobStore()
+    response = await analyze_uploaded_deed(
+        db_session,
+        "000000060",
+        "53999001",
+        b"No multi-family dwellings permitted on the lot.",
+        "text/plain",
+        embedder=_FakeEmbedder(),
+        generator=_FakeGenerator(_EXTRACTION),
+        blob_store=blob,
+        record_url_template=_URL_TEMPLATE,
+    )
+    assert response.count == 1
+    assert response.restrictions[0].kind == "use_restriction"
+    analyzed = next(d for d in response.deeds if d.document_id == "53999001")
+    assert analyzed.analyzed is True
+    assert blob.saved
+
+
+async def test_analyze_uploaded_deed_rejects_unknown_document(db_session: AsyncSession) -> None:
+    from lotscope.core.errors import NotFoundError
+    from lotscope.documents.service import analyze_uploaded_deed
+
+    await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000061')"))
+    await db_session.flush()
+
+    with pytest.raises(NotFoundError):
+        await analyze_uploaded_deed(
+            db_session,
+            "000000061",
+            "99999999",
+            b"text",
+            "text/plain",
+            embedder=_FakeEmbedder(),
+            generator=_FakeGenerator(_EXTRACTION),
+            blob_store=_FakeBlobStore(),
+            record_url_template=_URL_TEMPLATE,
+        )
+
+
 async def test_deed_index_lists_recorded_deeds_with_links(db_session: AsyncSession) -> None:
     await db_session.execute(
         text("INSERT INTO parcel (parcel_number) VALUES ('000000050')")

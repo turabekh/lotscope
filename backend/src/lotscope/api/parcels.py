@@ -2,7 +2,7 @@ import contextlib
 import hashlib
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -42,7 +42,8 @@ from lotscope.deal.service import analyze_parcel_deal
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
 from lotscope.documents.schemas import DeedRestrictionsResponse
-from lotscope.documents.service import get_deed_restrictions
+from lotscope.documents.service import analyze_uploaded_deed, get_deed_restrictions
+from lotscope.documents.storage import LocalBlobStore
 from lotscope.owners.schemas import OwnerPortfolio
 from lotscope.owners.service import get_owner_portfolio
 from lotscope.parcels.schemas import ParcelDetail
@@ -185,6 +186,33 @@ async def parcel_deed_restrictions(
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return await get_deed_restrictions(
         session, parcel_number, record_url_template=settings.philadox_document_url_template
+    )
+
+
+@router.post(
+    "/{parcel_number}/deeds/{document_id}/analyze", response_model=DeedRestrictionsResponse
+)
+async def analyze_parcel_deed(
+    parcel_number: str,
+    document_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    settings: SettingsDep,
+    embedder: Annotated[Embedder, Depends(get_embedder)],
+    generator: Annotated[StructuredGenerator, Depends(get_generator)],
+    file: Annotated[UploadFile, File()],
+) -> DeedRestrictionsResponse:
+    data = await file.read()
+    return await analyze_uploaded_deed(
+        session,
+        parcel_number,
+        document_id,
+        data,
+        file.content_type,
+        embedder=embedder,
+        generator=generator,
+        blob_store=LocalBlobStore(settings.deed_blob_root),
+        record_url_template=settings.philadox_document_url_template,
     )
 
 
