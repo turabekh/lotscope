@@ -99,7 +99,8 @@ function onSelect(parcelNumber: string): void {
   height: calc(100dvh - 54px);
 }
 .explore-body {
-  height: 100%;
+  height: calc(100vh - 54px);
+  height: calc(100dvh - 54px);
   display: flex;
   flex-direction: column;
   background: var(--lot-bg);
