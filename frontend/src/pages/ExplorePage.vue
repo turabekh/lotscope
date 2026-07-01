@@ -12,37 +12,57 @@ import ParcelPanel from '@/components/ParcelPanel.vue'
 import {
   boundsToPolygon,
   canListViewport,
-  DEFAULT_VIEW_MODE,
+  exploreQuery,
   type ExploreViewMode,
   type MapBounds,
   paneVisibility,
-  readViewMode,
+  readExploreState,
 } from '@/lib/explore'
 import { useAreaSearchStore } from '@/stores/areaSearch'
-import { useFiltersStore } from '@/stores/filters'
+import { USE_CLASS_OPTIONS, type UseClass, useFiltersStore } from '@/stores/filters'
 import { useParcelStore } from '@/stores/parcel'
 
 const store = useParcelStore()
 const { detail } = storeToRefs(store)
 const areaSearch = useAreaSearchStore()
-const { results: areaResults, loading: areaLoading, active: areaActive } = storeToRefs(areaSearch)
+const {
+  results: areaResults,
+  loading: areaLoading,
+  active: areaActive,
+  shape: areaShape,
+  minScore,
+} = storeToRefs(areaSearch)
 const filters = useFiltersStore()
-const { activeCount: buyBoxCount } = storeToRefs(filters)
+const { activeCount: buyBoxCount, vacantOnly, useClasses } = storeToRefs(filters)
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 
-const viewMode = ref<ExploreViewMode>(readViewMode(route.query.view))
+const VALID_CLASSES = USE_CLASS_OPTIONS.map((option) => option.value)
+const initialState = readExploreState(route.query)
+areaShape.value = initialState.shape
+vacantOnly.value = initialState.vacantOnly
+useClasses.value = initialState.useClasses.filter((value): value is UseClass =>
+  VALID_CLASSES.includes(value as UseClass),
+)
+minScore.value = initialState.minScore
+
+const viewMode = ref<ExploreViewMode>(initialState.view)
 const panes = computed(() => paneVisibility(viewMode.value))
 const hasResults = computed(() => areaResults.value.length > 0)
 const showList = computed(() => panes.value.list && hasResults.value)
 const showMap = computed(() => panes.value.map || !hasResults.value)
 
-watch(viewMode, (mode) => {
-  const query = { ...route.query }
-  if (mode === DEFAULT_VIEW_MODE) delete query.view
-  else query.view = mode
-  void router.replace({ query })
+watch([viewMode, areaShape, vacantOnly, useClasses, minScore], () => {
+  void router.replace({
+    query: exploreQuery({
+      view: viewMode.value,
+      shape: areaShape.value,
+      vacantOnly: vacantOnly.value,
+      useClasses: [...useClasses.value],
+      minScore: minScore.value,
+    }),
+  })
 })
 
 const VIEWPORT_DEBOUNCE_MS = 350

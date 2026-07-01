@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest'
 import {
   boundsToPolygon,
   canListViewport,
+  exploreQuery,
+  type ExploreState,
   isExploreViewMode,
   type MapBounds,
   paneVisibility,
+  readExploreState,
   readViewMode,
 } from '@/lib/explore'
 
@@ -51,6 +54,41 @@ describe('canListViewport', () => {
     expect(canListViewport(17.5)).toBe(true)
     expect(canListViewport(14.9)).toBe(false)
     expect(canListViewport(13)).toBe(false)
+  })
+})
+
+describe('explore query codec', () => {
+  it('round-trips a non-default state', () => {
+    const state: ExploreState = {
+      view: 'map',
+      shape: 'polygon',
+      vacantOnly: true,
+      useClasses: ['R', 'C'],
+      minScore: 70,
+    }
+    expect(readExploreState(exploreQuery(state))).toEqual(state)
+  })
+
+  it('omits defaults from the query string', () => {
+    expect(
+      exploreQuery({
+        view: 'split',
+        shape: 'radius',
+        vacantOnly: false,
+        useClasses: [],
+        minScore: null,
+      }),
+    ).toEqual({})
+  })
+
+  it('falls back to defaults for invalid query values', () => {
+    expect(readExploreState({ view: 'x', shape: 'blob', vacant: 'yes', minScore: '999' })).toEqual({
+      view: 'split',
+      shape: 'radius',
+      vacantOnly: false,
+      useClasses: [],
+      minScore: null,
+    })
   })
 })
 
