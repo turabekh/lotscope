@@ -2,7 +2,6 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import AppHeader from '@/components/AppHeader.vue'
 import { ApiError, api } from '@/lib/api'
 import type { ParcelCompareItem } from '@/lib/types'
 import { useCompareStore } from '@/stores/compare'
@@ -103,90 +102,75 @@ watch(() => [...compare.parcelNumbers], load, { immediate: true })
 </script>
 
 <template>
-  <q-layout view="hHh Lpr fFf">
-    <AppHeader title="Compare parcels">
-      <template #actions>
-        <q-btn
-          v-if="compare.count > 0"
-          flat
-          dense
-          no-caps
-          icon="clear_all"
-          label="Clear"
-          @click="compare.clear()"
-        />
-      </template>
-    </AppHeader>
+  <q-page class="q-pa-md">
+    <div class="compare-wrap">
+      <div v-if="compare.count > 0" class="row justify-end q-mb-sm">
+        <q-btn flat dense no-caps icon="clear_all" label="Clear" @click="compare.clear()" />
+      </div>
+      <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders q-mb-md">
+        {{ error }}
+      </q-banner>
 
-    <q-page-container>
-      <q-page class="q-pa-md">
-        <div class="compare-wrap">
-          <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders q-mb-md">
-            {{ error }}
-          </q-banner>
+      <q-inner-loading :showing="loading" color="primary" />
 
-          <q-inner-loading :showing="loading" color="primary" />
-
-          <div v-if="compare.count < 2 && !loading" class="empty">
-            <q-icon name="compare_arrows" size="52px" color="grey-4" />
-            <div class="text-subtitle1 text-grey-7 q-mt-md">Pick at least two lots to compare</div>
-            <div class="text-body2 text-grey-6">
-              Open any parcel on the map and tap “Compare” to add it here (up to four).
-            </div>
-            <q-btn
-              class="q-mt-md"
-              unelevated
-              no-caps
-              color="primary"
-              icon="map"
-              label="Go to map"
-              :to="{ name: 'explore', params: { market: market.active } }"
-            />
-          </div>
-
-          <q-markup-table v-else-if="items.length" flat bordered separator="cell" class="compare-table">
-            <thead>
-              <tr>
-                <th class="metric-col"></th>
-                <th v-for="item in items" :key="item.detail.parcel_number" class="parcel-head">
-                  <div class="addr ellipsis" @click="openParcel(item.detail.parcel_number)">
-                    {{ item.detail.address ?? item.detail.parcel_number }}
-                  </div>
-                  <div class="pn">{{ item.detail.parcel_number }}</div>
-                  <q-btn
-                    flat
-                    dense
-                    round
-                    size="xs"
-                    icon="close"
-                    color="grey-6"
-                    :aria-label="`Remove ${item.detail.parcel_number}`"
-                    @click="removeParcel(item.detail.parcel_number)"
-                  />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in ROWS" :key="row.label" :class="{ emphasis: row.emphasis }">
-                <td class="metric-col">{{ row.label }}</td>
-                <td
-                  v-for="item in items"
-                  :key="item.detail.parcel_number"
-                  class="text-right value-cell"
-                >
-                  {{ row.value(item) }}
-                </td>
-              </tr>
-            </tbody>
-          </q-markup-table>
-
-          <div class="text-caption text-grey-5 q-mt-md">
-            Informational only — estimates from public city data and modeled assumptions, not advice.
-          </div>
+      <div v-if="compare.count < 2 && !loading" class="empty">
+        <q-icon name="compare_arrows" size="52px" color="grey-4" />
+        <div class="text-subtitle1 text-grey-7 q-mt-md">Pick at least two lots to compare</div>
+        <div class="text-body2 text-grey-6">
+          Open any parcel on the map and tap “Compare” to add it here (up to four).
         </div>
-      </q-page>
-    </q-page-container>
-  </q-layout>
+        <q-btn
+          class="q-mt-md"
+          unelevated
+          no-caps
+          color="primary"
+          icon="map"
+          label="Go to map"
+          :to="{ name: 'explore', params: { market: market.active } }"
+        />
+      </div>
+
+      <q-markup-table v-else-if="items.length" flat bordered separator="cell" class="compare-table">
+        <thead>
+          <tr>
+            <th class="metric-col"></th>
+            <th v-for="item in items" :key="item.detail.parcel_number" class="parcel-head">
+              <div class="addr ellipsis" @click="openParcel(item.detail.parcel_number)">
+                {{ item.detail.address ?? item.detail.parcel_number }}
+              </div>
+              <div class="pn">{{ item.detail.parcel_number }}</div>
+              <q-btn
+                flat
+                dense
+                round
+                size="xs"
+                icon="close"
+                color="grey-6"
+                :aria-label="`Remove ${item.detail.parcel_number}`"
+                @click="removeParcel(item.detail.parcel_number)"
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in ROWS" :key="row.label" :class="{ emphasis: row.emphasis }">
+            <td class="metric-col">{{ row.label }}</td>
+            <td
+              v-for="item in items"
+              :key="item.detail.parcel_number"
+              class="text-right value-cell"
+            >
+              {{ row.value(item) }}
+            </td>
+          </tr>
+        </tbody>
+      </q-markup-table>
+
+      <div class="text-caption text-grey-5 q-mt-md">
+        Informational only — estimates from public city data and modeled assumptions, not advice.
+      </div>
+    </div>
+  </q-page>
 </template>
 
 <style scoped>

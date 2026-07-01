@@ -4,7 +4,6 @@ import { useQuasar } from 'quasar'
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import AppHeader from '@/components/AppHeader.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SavedSearchItem, SavedSearchMatchItem, SearchCriteria } from '@/lib/types'
@@ -142,255 +141,248 @@ function asNumber(value: string | number | null): number | null {
 </script>
 
 <template>
-  <q-layout view="hHh Lpr fFf">
-    <AppHeader title="Saved searches" />
+  <q-page class="q-pa-md">
+    <div class="ss-wrap">
+      <div class="text-caption text-grey-7 q-mb-sm row items-center">
+        <q-icon name="saved_search" size="16px" class="q-mr-xs" />
+        {{ used }} saved search<span v-if="used !== 1">es</span
+        ><span v-if="limit !== null">&nbsp;of {{ limit }}</span
+        >. New lots are alerted by email.
+        <q-space />
+        <q-btn
+          v-if="!showForm"
+          unelevated
+          dense
+          no-caps
+          size="sm"
+          color="primary"
+          icon="add"
+          label="New search"
+          :disable="atLimit"
+          @click="showForm = true"
+        />
+      </div>
 
-    <q-page-container>
-      <q-page class="q-pa-md">
-        <div class="ss-wrap">
-          <div class="text-caption text-grey-7 q-mb-sm row items-center">
-            <q-icon name="saved_search" size="16px" class="q-mr-xs" />
-            {{ used }} saved search<span v-if="used !== 1">es</span
-            ><span v-if="limit !== null">&nbsp;of {{ limit }}</span>. New lots are alerted by email.
-            <q-space />
-            <q-btn
-              v-if="!showForm"
-              unelevated
+      <q-banner
+        v-if="atLimit && !showForm"
+        dense
+        class="bg-amber-1 text-amber-9 q-mb-sm rounded-borders"
+      >
+        <template #avatar><q-icon name="lock" color="amber-9" /></template>
+        You've reached your plan's saved-search limit.
+        <template #action>
+          <q-btn flat dense no-caps color="amber-9" label="Upgrade" :to="{ name: 'account' }" />
+        </template>
+      </q-banner>
+
+      <q-card v-if="showForm" flat bordered class="q-pa-md q-mb-md">
+        <div class="text-subtitle2 q-mb-sm">New saved search</div>
+        <q-input v-model="name" outlined dense label="Name" autofocus class="q-mb-sm" />
+
+        <div class="row q-col-gutter-sm">
+          <div class="col-12">
+            <q-select
+              v-model="criteria.zoning_codes"
+              :options="ZONING_PRESETS"
+              outlined
               dense
-              no-caps
-              size="sm"
-              color="primary"
-              icon="add"
-              label="New search"
-              :disable="atLimit"
-              @click="showForm = true"
+              multiple
+              use-chips
+              use-input
+              hide-dropdown-icon
+              new-value-mode="add-unique"
+              label="Zoning codes (e.g. RSA5)"
+            />
+          </div>
+          <div class="col-6 col-sm-3">
+            <q-input v-model="criteria.zip_code" outlined dense label="ZIP" maxlength="10" />
+          </div>
+          <div class="col-6 col-sm-3">
+            <q-input
+              :model-value="criteria.min_market_value"
+              type="number"
+              outlined
+              dense
+              label="Min value $"
+              @update:model-value="(v) => (criteria.min_market_value = asNumber(v))"
+            />
+          </div>
+          <div class="col-6 col-sm-3">
+            <q-input
+              :model-value="criteria.max_market_value"
+              type="number"
+              outlined
+              dense
+              label="Max value $"
+              @update:model-value="(v) => (criteria.max_market_value = asNumber(v))"
+            />
+          </div>
+          <div class="col-6 col-sm-3">
+            <q-input
+              :model-value="criteria.min_lot_area_sqft"
+              type="number"
+              outlined
+              dense
+              label="Min lot sqft"
+              @update:model-value="(v) => (criteria.min_lot_area_sqft = asNumber(v))"
+            />
+          </div>
+          <div class="col-6 col-sm-3">
+            <q-input
+              :model-value="criteria.min_opportunity_score"
+              type="number"
+              outlined
+              dense
+              label="Min opportunity"
+              @update:model-value="(v) => (criteria.min_opportunity_score = asNumber(v))"
+            />
+          </div>
+          <div class="col-6 col-sm-3">
+            <q-input
+              :model-value="criteria.min_distress_score"
+              type="number"
+              outlined
+              dense
+              label="Min distress"
+              @update:model-value="(v) => (criteria.min_distress_score = asNumber(v))"
+            />
+          </div>
+        </div>
+
+        <div class="row items-center q-gutter-md q-mt-xs">
+          <q-toggle v-model="criteria.vacant_only" dense label="Vacant only" color="amber-8" />
+          <q-toggle
+            :model-value="criteria.is_delinquent === true"
+            dense
+            label="Tax-delinquent"
+            color="negative"
+            @update:model-value="(v: boolean) => (criteria.is_delinquent = v ? true : null)"
+          />
+          <q-toggle
+            :model-value="criteria.in_sheriff_sale === true"
+            dense
+            label="Sheriff sale"
+            color="negative"
+            @update:model-value="(v: boolean) => (criteria.in_sheriff_sale = v ? true : null)"
+          />
+          <q-toggle v-model="alertsEnabled" dense label="Email alerts" color="primary" />
+        </div>
+
+        <div class="row justify-end q-gutter-sm q-mt-sm">
+          <q-btn flat dense no-caps color="grey-7" label="Cancel" @click="showForm = false" />
+          <q-btn
+            unelevated
+            dense
+            no-caps
+            color="primary"
+            label="Create"
+            :loading="saving"
+            :disable="name.trim().length === 0"
+            @click="submit"
+          />
+        </div>
+      </q-card>
+
+      <q-inner-loading :showing="loading" color="primary" />
+
+      <div v-if="!loading && searches.length === 0" class="empty">
+        <q-icon name="saved_search" size="48px" color="grey-4" />
+        <div class="text-subtitle1 text-grey-7 q-mt-sm">No saved searches yet</div>
+        <div class="text-body2 text-grey-6">
+          Save a set of criteria and get an email when new matching lots appear.
+        </div>
+      </div>
+
+      <div class="ss-list">
+        <q-card v-for="search in searches" :key="search.id" flat bordered class="lot-card q-pa-sm">
+          <div class="ss-head" @click="toggle(search)">
+            <div class="ss-title">
+              <div class="ss-name ellipsis">
+                {{ search.name }}
+                <q-badge v-if="search.new_count > 0" color="negative" class="q-ml-xs">
+                  {{ search.new_count }} new
+                </q-badge>
+              </div>
+              <div class="ss-meta ellipsis">{{ summarize(search) }}</div>
+            </div>
+            <q-chip dense square color="grey-2" text-color="grey-9" class="q-mr-xs">
+              {{ search.match_count }} match<span v-if="search.match_count !== 1">es</span>
+            </q-chip>
+            <q-icon
+              :name="expandedId === search.id ? 'expand_less' : 'expand_more'"
+              size="20px"
+              color="grey-6"
             />
           </div>
 
-          <q-banner v-if="atLimit && !showForm" dense class="bg-amber-1 text-amber-9 q-mb-sm rounded-borders">
-            <template #avatar><q-icon name="lock" color="amber-9" /></template>
-            You've reached your plan's saved-search limit.
-            <template #action>
-              <q-btn flat dense no-caps color="amber-9" label="Upgrade" :to="{ name: 'account' }" />
-            </template>
-          </q-banner>
-
-          <q-card v-if="showForm" flat bordered class="q-pa-md q-mb-md">
-            <div class="text-subtitle2 q-mb-sm">New saved search</div>
-            <q-input v-model="name" outlined dense label="Name" autofocus class="q-mb-sm" />
-
-            <div class="row q-col-gutter-sm">
-              <div class="col-12">
-                <q-select
-                  v-model="criteria.zoning_codes"
-                  :options="ZONING_PRESETS"
-                  outlined
+          <q-slide-transition>
+            <div v-show="expandedId === search.id">
+              <div class="row items-center q-gutter-sm q-mt-xs q-mb-sm">
+                <q-toggle
+                  :model-value="search.alerts_enabled"
                   dense
-                  multiple
-                  use-chips
-                  use-input
-                  hide-dropdown-icon
-                  new-value-mode="add-unique"
-                  label="Zoning codes (e.g. RSA5)"
+                  size="sm"
+                  label="Email alerts"
+                  color="primary"
+                  @update:model-value="() => toggleAlerts(search)"
                 />
-              </div>
-              <div class="col-6 col-sm-3">
-                <q-input v-model="criteria.zip_code" outlined dense label="ZIP" maxlength="10" />
-              </div>
-              <div class="col-6 col-sm-3">
-                <q-input
-                  :model-value="criteria.min_market_value"
-                  type="number"
-                  outlined
+                <q-btn
+                  flat
                   dense
-                  label="Min value $"
-                  @update:model-value="(v) => (criteria.min_market_value = asNumber(v))"
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  icon="refresh"
+                  label="Check now"
+                  @click="runNow(search)"
                 />
-              </div>
-              <div class="col-6 col-sm-3">
-                <q-input
-                  :model-value="criteria.max_market_value"
-                  type="number"
-                  outlined
+                <q-space />
+                <q-btn
+                  flat
                   dense
-                  label="Max value $"
-                  @update:model-value="(v) => (criteria.max_market_value = asNumber(v))"
-                />
-              </div>
-              <div class="col-6 col-sm-3">
-                <q-input
-                  :model-value="criteria.min_lot_area_sqft"
-                  type="number"
-                  outlined
-                  dense
-                  label="Min lot sqft"
-                  @update:model-value="(v) => (criteria.min_lot_area_sqft = asNumber(v))"
-                />
-              </div>
-              <div class="col-6 col-sm-3">
-                <q-input
-                  :model-value="criteria.min_opportunity_score"
-                  type="number"
-                  outlined
-                  dense
-                  label="Min opportunity"
-                  @update:model-value="(v) => (criteria.min_opportunity_score = asNumber(v))"
-                />
-              </div>
-              <div class="col-6 col-sm-3">
-                <q-input
-                  :model-value="criteria.min_distress_score"
-                  type="number"
-                  outlined
-                  dense
-                  label="Min distress"
-                  @update:model-value="(v) => (criteria.min_distress_score = asNumber(v))"
-                />
-              </div>
-            </div>
-
-            <div class="row items-center q-gutter-md q-mt-xs">
-              <q-toggle v-model="criteria.vacant_only" dense label="Vacant only" color="amber-8" />
-              <q-toggle
-                :model-value="criteria.is_delinquent === true"
-                dense
-                label="Tax-delinquent"
-                color="negative"
-                @update:model-value="(v: boolean) => (criteria.is_delinquent = v ? true : null)"
-              />
-              <q-toggle
-                :model-value="criteria.in_sheriff_sale === true"
-                dense
-                label="Sheriff sale"
-                color="negative"
-                @update:model-value="(v: boolean) => (criteria.in_sheriff_sale = v ? true : null)"
-              />
-              <q-toggle v-model="alertsEnabled" dense label="Email alerts" color="primary" />
-            </div>
-
-            <div class="row justify-end q-gutter-sm q-mt-sm">
-              <q-btn flat dense no-caps color="grey-7" label="Cancel" @click="showForm = false" />
-              <q-btn
-                unelevated
-                dense
-                no-caps
-                color="primary"
-                label="Create"
-                :loading="saving"
-                :disable="name.trim().length === 0"
-                @click="submit"
-              />
-            </div>
-          </q-card>
-
-          <q-inner-loading :showing="loading" color="primary" />
-
-          <div v-if="!loading && searches.length === 0" class="empty">
-            <q-icon name="saved_search" size="48px" color="grey-4" />
-            <div class="text-subtitle1 text-grey-7 q-mt-sm">No saved searches yet</div>
-            <div class="text-body2 text-grey-6">
-              Save a set of criteria and get an email when new matching lots appear.
-            </div>
-          </div>
-
-          <div class="ss-list">
-            <q-card
-              v-for="search in searches"
-              :key="search.id"
-              flat
-              bordered
-              class="lot-card q-pa-sm"
-            >
-              <div class="ss-head" @click="toggle(search)">
-                <div class="ss-title">
-                  <div class="ss-name ellipsis">
-                    {{ search.name }}
-                    <q-badge v-if="search.new_count > 0" color="negative" class="q-ml-xs">
-                      {{ search.new_count }} new
-                    </q-badge>
-                  </div>
-                  <div class="ss-meta ellipsis">{{ summarize(search) }}</div>
-                </div>
-                <q-chip dense square color="grey-2" text-color="grey-9" class="q-mr-xs">
-                  {{ search.match_count }} match<span v-if="search.match_count !== 1">es</span>
-                </q-chip>
-                <q-icon
-                  :name="expandedId === search.id ? 'expand_less' : 'expand_more'"
-                  size="20px"
+                  round
+                  size="sm"
+                  icon="delete_outline"
                   color="grey-6"
+                  aria-label="Delete"
+                  @click="remove(search)"
                 />
               </div>
 
-              <q-slide-transition>
-                <div v-show="expandedId === search.id">
-                  <div class="row items-center q-gutter-sm q-mt-xs q-mb-sm">
-                    <q-toggle
-                      :model-value="search.alerts_enabled"
-                      dense
-                      size="sm"
-                      label="Email alerts"
-                      color="primary"
-                      @update:model-value="() => toggleAlerts(search)"
-                    />
-                    <q-btn
-                      flat
-                      dense
-                      no-caps
-                      size="sm"
-                      color="primary"
-                      icon="refresh"
-                      label="Check now"
-                      @click="runNow(search)"
-                    />
-                    <q-space />
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      size="sm"
-                      icon="delete_outline"
-                      color="grey-6"
-                      aria-label="Delete"
-                      @click="remove(search)"
-                    />
-                  </div>
-
-                  <q-inner-loading :showing="loadingMatches" color="primary" />
-                  <q-list v-if="matches[search.id]" dense bordered class="rounded-borders">
-                    <q-item
-                      v-for="match in matches[search.id]"
-                      :key="match.parcel_number"
-                      clickable
-                      @click="openParcel(match)"
-                    >
-                      <q-item-section>
-                        <q-item-label class="ellipsis">
-                          {{ match.address ?? match.parcel_number }}
-                          <q-badge v-if="match.is_new" color="negative" class="q-ml-xs">new</q-badge>
-                        </q-item-label>
-                        <q-item-label caption>
-                          {{ match.base_zoning_code ?? '—' }}
-                          <span v-if="match.market_value">
-                            · {{ formatCurrency(match.market_value) }}</span
-                          >
-                        </q-item-label>
-                      </q-item-section>
-                      <q-item-section v-if="match.opportunity_score !== null" side>
-                        <q-badge color="primary" outline>{{ match.opportunity_score }}</q-badge>
-                      </q-item-section>
-                    </q-item>
-                    <q-item v-if="matches[search.id]!.length === 0">
-                      <q-item-section class="text-grey-6">No matching lots right now.</q-item-section>
-                    </q-item>
-                  </q-list>
-                </div>
-              </q-slide-transition>
-            </q-card>
-          </div>
-        </div>
-      </q-page>
-    </q-page-container>
-  </q-layout>
+              <q-inner-loading :showing="loadingMatches" color="primary" />
+              <q-list v-if="matches[search.id]" dense bordered class="rounded-borders">
+                <q-item
+                  v-for="match in matches[search.id]"
+                  :key="match.parcel_number"
+                  clickable
+                  @click="openParcel(match)"
+                >
+                  <q-item-section>
+                    <q-item-label class="ellipsis">
+                      {{ match.address ?? match.parcel_number }}
+                      <q-badge v-if="match.is_new" color="negative" class="q-ml-xs">new</q-badge>
+                    </q-item-label>
+                    <q-item-label caption>
+                      {{ match.base_zoning_code ?? '—' }}
+                      <span v-if="match.market_value">
+                        · {{ formatCurrency(match.market_value) }}</span
+                      >
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section v-if="match.opportunity_score !== null" side>
+                    <q-badge color="primary" outline>{{ match.opportunity_score }}</q-badge>
+                  </q-item-section>
+                </q-item>
+                <q-item v-if="matches[search.id]!.length === 0">
+                  <q-item-section class="text-grey-6">No matching lots right now.</q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+          </q-slide-transition>
+        </q-card>
+      </div>
+    </div>
+  </q-page>
 </template>
 
 <style scoped>

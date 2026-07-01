@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 
+import AppShell from '@/components/AppShell.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
 const auth = useAuthStore()
 const theme = useThemeStore()
+const route = useRoute()
 
 theme.init()
+
+const showShell = computed(() => route.meta.requiresAuth === true)
 
 onMounted(() => {
   void auth.restore()
@@ -15,5 +20,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <router-view />
+  <AppShell v-if="showShell">
+    <router-view />
+  </AppShell>
+  <router-view v-else />
 </template>

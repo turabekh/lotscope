@@ -2,7 +2,6 @@
 import { useQuasar } from 'quasar'
 import { computed, ref } from 'vue'
 
-import AppHeader from '@/components/AppHeader.vue'
 import AreaSearchPanel from '@/components/AreaSearchPanel.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 import MapView from '@/components/MapView.vue'
@@ -22,21 +21,7 @@ function onSelect(parcelNumber: string): void {
 </script>
 
 <template>
-  <q-layout view="hHh Lpr fFf">
-    <AppHeader>
-      <template #lead>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          class="lt-md"
-          aria-label="Toggle panel"
-          @click="drawerOpen = !drawerOpen"
-        />
-      </template>
-    </AppHeader>
-
+  <q-layout view="hHh Lpr fFf" container class="explore-layout">
     <q-drawer
       v-model="drawerOpen"
       :width="drawerWidth"
@@ -65,10 +50,13 @@ function onSelect(parcelNumber: string): void {
 </template>
 
 <style scoped>
-.map-page {
-  position: relative;
+.explore-layout {
   height: calc(100vh - 54px);
   height: calc(100dvh - 54px);
+}
+.map-page {
+  position: relative;
+  height: 100%;
   overflow: hidden;
 }
 .drawer-shell {

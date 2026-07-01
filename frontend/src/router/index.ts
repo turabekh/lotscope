@@ -13,6 +13,7 @@ declare module 'vue-router' {
     requiresAuth?: boolean
     requiresAdmin?: boolean
     guestOnly?: boolean
+    title?: string
   }
 }
 
@@ -36,13 +37,13 @@ export const routes: RouteRecordRaw[] = [
     path: '/account',
     name: 'account',
     component: () => import('@/pages/AccountPage.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'Account' },
   },
   {
     path: '/admin',
     name: 'admin',
     component: () => import('@/pages/AdminPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true },
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin console' },
   },
   {
     path: '/:market',
@@ -66,31 +67,31 @@ export const routes: RouteRecordRaw[] = [
     path: '/:market/leads',
     name: 'leads',
     component: () => import('@/pages/LeadsPage.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'Motivated-seller leads' },
   },
   {
     path: '/:market/pipeline',
     name: 'pipeline',
     component: () => import('@/pages/PipelinePage.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'Deal pipeline' },
   },
   {
     path: '/:market/watchlist',
     name: 'watchlist',
     component: () => import('@/pages/WatchlistPage.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'My watchlist' },
   },
   {
     path: '/:market/compare',
     name: 'compare',
     component: () => import('@/pages/ComparePage.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'Compare parcels' },
   },
   {
     path: '/:market/saved-searches',
     name: 'saved-searches',
     component: () => import('@/pages/SavedSearchesPage.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, title: 'Saved searches' },
   },
 ]
 
