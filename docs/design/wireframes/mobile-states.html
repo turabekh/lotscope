@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LotScope — mobile states (wireframe)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<style>
+  :root{
+    --surface-0:#f6f6f3; --surface-1:#efefe9; --surface-2:#ffffff;
+    --border:rgba(0,0,0,.10); --border-strong:rgba(0,0,0,.20);
+    --text-primary:#1b1b19; --text-secondary:#55554f; --text-muted:#8a8a82;
+    --text-accent:#4f46e5; --bg-accent:#eeedfe; --border-accent:#c7c3f5;
+    --text-success:#0f6e56; --bg-success:#e1f5ee;
+    --text-warning:#7a4a0b; --bg-warning:#faeeda; --fill-warning:#ef9f27;
+    --radius:8px;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --surface-0:#161619; --surface-1:#1f1f23; --surface-2:#29292d;
+    --border:rgba(255,255,255,.12); --border-strong:rgba(255,255,255,.22);
+    --text-primary:#f2f2ef; --text-secondary:#b8b8b2; --text-muted:#86867e;
+    --text-accent:#a9a2ec; --bg-accent:rgba(79,70,229,.24); --border-accent:rgba(127,119,221,.5);
+    --text-success:#5dcaa5; --bg-success:rgba(29,158,117,.18);
+    --text-warning:#e7a13a; --bg-warning:rgba(186,117,23,.20); --fill-warning:#ef9f27;
+  }}
+  [data-theme="dark"]{
+    --surface-0:#161619; --surface-1:#1f1f23; --surface-2:#29292d;
+    --border:rgba(255,255,255,.12); --border-strong:rgba(255,255,255,.22);
+    --text-primary:#f2f2ef; --text-secondary:#b8b8b2; --text-muted:#86867e;
+    --text-accent:#a9a2ec; --bg-accent:rgba(79,70,229,.24); --border-accent:rgba(127,119,221,.5);
+    --text-success:#5dcaa5; --bg-success:rgba(29,158,117,.18);
+    --text-warning:#e7a13a; --bg-warning:rgba(186,117,23,.20); --fill-warning:#ef9f27;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-0);color:var(--text-primary);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;padding:28px 20px}
+  .page{max-width:1080px;margin:0 auto}
+  .head{display:flex;align-items:flex-start;gap:16px;margin-bottom:20px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .sub{font-size:13px;color:var(--text-secondary);margin:0}
+  .note{font-size:12px;color:var(--text-muted);margin:4px 0 0}
+  .toggle{margin-left:auto;flex-shrink:0;font-size:12px;color:var(--text-secondary);
+    background:var(--surface-2);border:.5px solid var(--border-strong);border-radius:var(--radius);
+    padding:7px 11px;cursor:pointer}
+  .phones{display:flex;flex-wrap:wrap;gap:24px;justify-content:center}
+  .phone{width:300px}
+  .cap{font-size:12px;color:var(--text-muted);text-align:center;padding:0 0 9px}
+  .frame{border:.5px solid var(--border);border-radius:26px;overflow:hidden;background:var(--surface-2);
+    display:flex;flex-direction:column;height:600px}
+  .tabbar{display:flex;padding:9px 6px 14px;border-top:.5px solid var(--border)}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--text-muted)}
+  .tab i{font-size:20px}
+  .tab span{font-size:11px}
+  .tab.active{color:var(--text-accent)}
+  .lrow{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;
+    border:.5px solid var(--border);border-radius:var(--radius);background:var(--surface-2)}
+  .sc{font-size:12px;font-weight:500;padding:2px 8px;border-radius:var(--radius)}
+  .mkpill{display:flex;align-items:center;gap:5px;padding:5px 9px;border:.5px solid var(--border-accent);
+    border-radius:var(--radius);background:var(--bg-accent)}
+  .seg{display:flex;border:.5px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .seg span{font-size:12px;padding:4px 12px;color:var(--text-secondary)}
+  .seg .on{background:var(--bg-accent);color:var(--text-accent)}
+  .avatar{width:26px;height:26px;border-radius:50%;background:var(--bg-accent);color:var(--text-accent);
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="head">
+    <div>
+      <h1>Mobile states</h1>
+      <p class="sub">Bottom tab bar · header market switcher · list ⇄ map toggle with results sheet · full-screen dossier.</p>
+      <p class="note">Low-fidelity reference schematic. Colors and spacing are illustrative; in-app styling comes from <code>css/tokens.css</code>.</p>
+    </div>
+    <button class="toggle" id="themeBtn" type="button">Toggle light / dark</button>
+  </div>
+
+  <div class="phones">
+
+    <!-- Explore · list -->
+    <div class="phone">
+      <div class="cap">Explore · list</div>
+      <div class="frame">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 10px;border-bottom:.5px solid var(--border)">
+          <div class="mkpill"><i class="ti ti-map-pin" style="font-size:15px;color:var(--text-accent)" aria-hidden="true"></i><span style="font-size:12px;font-weight:500;color:var(--text-accent)">Philadelphia</span><i class="ti ti-chevron-down" style="font-size:13px;color:var(--text-accent)" aria-hidden="true"></i></div>
+          <div style="flex:1"></div>
+          <i class="ti ti-search" style="font-size:19px;color:var(--text-secondary)" aria-hidden="true"></i>
+          <div class="avatar">T</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 10px 8px">
+          <div class="seg"><span class="on">List</span><span>Map</span></div>
+          <div style="flex:1"></div>
+          <span style="font-size:12px;padding:4px 9px;border-radius:var(--radius);border:.5px solid var(--border);color:var(--text-secondary)"><i class="ti ti-adjustments-horizontal" style="font-size:13px;vertical-align:-2px;margin-right:4px" aria-hidden="true"></i>Buy box</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:2px 10px;overflow:hidden">
+          <div class="lrow"><div style="min-width:0"><div style="font-size:13px;font-weight:500">1814 N 2nd St</div><div style="font-size:11px;color:var(--text-muted)">Estate owner</div></div><span class="sc" style="background:var(--bg-success);color:var(--text-success)">86</span></div>
+          <div class="lrow"><div style="min-width:0"><div style="font-size:13px;font-weight:500">2231 Cecil B Moore</div><div style="font-size:11px;color:var(--text-muted)">Absentee</div></div><span class="sc" style="background:var(--bg-success);color:var(--text-success)">79</span></div>
+          <div class="lrow"><div style="min-width:0"><div style="font-size:13px;font-weight:500">644 W Berks St</div><div style="font-size:11px;color:var(--text-muted)">Tax delinquent</div></div><span class="sc" style="background:var(--bg-warning);color:var(--text-warning)">63</span></div>
+          <div class="lrow"><div style="min-width:0"><div style="font-size:13px;font-weight:500">1509 N Marston St</div><div style="font-size:11px;color:var(--text-muted)">Land bank</div></div><span class="sc" style="background:var(--bg-warning);color:var(--text-warning)">58</span></div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><i class="ti ti-home" aria-hidden="true"></i><span>Home</span></div>
+          <div class="tab active"><i class="ti ti-map-search" aria-hidden="true"></i><span>Explore</span></div>
+          <div class="tab"><i class="ti ti-flame" aria-hidden="true"></i><span>Leads</span></div>
+          <div class="tab"><i class="ti ti-dots" aria-hidden="true"></i><span>More</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Explore · map -->
+    <div class="phone">
+      <div class="cap">Explore · map + results sheet</div>
+      <div class="frame">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 10px;border-bottom:.5px solid var(--border)">
+          <div class="mkpill"><i class="ti ti-map-pin" style="font-size:15px;color:var(--text-accent)" aria-hidden="true"></i><span style="font-size:12px;font-weight:500;color:var(--text-accent)">Philadelphia</span><i class="ti ti-chevron-down" style="font-size:13px;color:var(--text-accent)" aria-hidden="true"></i></div>
+          <div style="flex:1"></div>
+          <i class="ti ti-search" style="font-size:19px;color:var(--text-secondary)" aria-hidden="true"></i>
+          <div class="avatar">T</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 10px 8px">
+          <div class="seg"><span>List</span><span class="on">Map</span></div>
+          <div style="flex:1"></div>
+          <span style="font-size:12px;padding:4px 9px;border-radius:var(--radius);border:.5px solid var(--border);color:var(--text-secondary)"><i class="ti ti-vector" style="font-size:13px;vertical-align:-2px;margin-right:4px" aria-hidden="true"></i>Draw</span>
+        </div>
+        <div style="flex:1;position:relative;margin:2px 10px 10px;border:.5px solid var(--border);border-radius:var(--radius);background:var(--surface-0);overflow:hidden">
+          <div style="width:11px;height:11px;border-radius:50%;background:var(--text-accent);position:absolute;top:24%;left:30%"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:var(--text-accent);position:absolute;top:40%;left:56%"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:var(--fill-warning);position:absolute;top:32%;left:70%"></div>
+          <div style="position:absolute;left:10px;right:10px;bottom:10px;background:var(--surface-2);border:.5px solid var(--border);border-radius:14px;padding:10px 11px">
+            <div style="width:30px;height:4px;border-radius:2px;background:var(--border-strong);margin:0 auto 9px"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><div style="min-width:0"><div style="font-size:12px;font-weight:500">1814 N 2nd St</div><div style="font-size:11px;color:var(--text-muted)">Estate · pull up for 1,240</div></div><span class="sc" style="background:var(--bg-success);color:var(--text-success)">86</span></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><i class="ti ti-home" aria-hidden="true"></i><span>Home</span></div>
+          <div class="tab active"><i class="ti ti-map-search" aria-hidden="true"></i><span>Explore</span></div>
+          <div class="tab"><i class="ti ti-flame" aria-hidden="true"></i><span>Leads</span></div>
+          <div class="tab"><i class="ti ti-dots" aria-hidden="true"></i><span>More</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parcel dossier -->
+    <div class="phone">
+      <div class="cap">Parcel dossier · full screen</div>
+      <div class="frame">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 10px;border-bottom:.5px solid var(--border)">
+          <i class="ti ti-chevron-left" style="font-size:20px;color:var(--text-primary)" aria-hidden="true"></i>
+          <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">1814 N 2nd St</div><div style="font-size:11px;color:var(--text-muted)">OPA 88-1420-0031</div></div>
+          <i class="ti ti-bookmark" style="font-size:19px;color:var(--text-secondary)" aria-hidden="true"></i>
+        </div>
+        <div style="padding:12px 10px 0">
+          <div style="display:flex;align-items:center;gap:12px;padding:11px;border:.5px solid var(--border);border-radius:14px">
+            <div style="width:48px;height:48px;border-radius:50%;border:4px solid var(--text-accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500">82</div>
+            <div><div style="font-size:11px;color:var(--text-muted)">Opportunity</div><div style="font-size:13px;font-weight:500">Strong</div></div>
+          </div>
+          <div style="display:flex;gap:7px;margin-top:9px">
+            <div style="flex:1;text-align:center;padding:7px 2px;border-radius:var(--radius);background:var(--surface-1)"><div style="font-size:10px;color:var(--text-muted)">Build</div><div style="font-size:12px;font-weight:500">Yes</div></div>
+            <div style="flex:1;text-align:center;padding:7px 2px;border-radius:var(--radius);background:var(--surface-1)"><div style="font-size:10px;color:var(--text-muted)">Value</div><div style="font-size:12px;font-weight:500">$310k</div></div>
+            <div style="flex:1;text-align:center;padding:7px 2px;border-radius:var(--radius);background:var(--surface-1)"><div style="font-size:10px;color:var(--text-muted)">Risk</div><div style="font-size:12px;font-weight:500;color:var(--text-warning)">Med</div></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;padding:13px 10px 10px;overflow:hidden;border-bottom:.5px solid var(--border);margin-top:11px">
+          <span style="font-size:12px;padding:3px 10px;border-radius:var(--radius);background:var(--bg-accent);color:var(--text-accent);flex-shrink:0">Verdict</span>
+          <span style="font-size:12px;padding:3px 10px;border-radius:var(--radius);border:.5px solid var(--border);color:var(--text-secondary);flex-shrink:0">Deal</span>
+          <span style="font-size:12px;padding:3px 10px;border-radius:var(--radius);border:.5px solid var(--border);color:var(--text-secondary);flex-shrink:0">Land</span>
+          <span style="font-size:12px;padding:3px 7px;color:var(--text-muted);flex-shrink:0;align-self:center">›</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:11px 10px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border-radius:var(--radius);background:var(--surface-1)"><span style="font-size:12px;color:var(--text-secondary)">Zoning</span><span style="font-size:12px;font-weight:500">RSA-5</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border-radius:var(--radius);background:var(--surface-1)"><span style="font-size:12px;color:var(--text-secondary)">Buildable</span><span style="font-size:12px;font-weight:500">1,120 sq ft</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border-radius:var(--radius);background:var(--surface-1)"><span style="font-size:12px;color:var(--text-secondary)">By-right</span><span style="font-size:12px;font-weight:500">1 unit</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<script>
+  (function(){
+    var b=document.getElementById('themeBtn');
+    b.addEventListener('click',function(){
+      var el=document.documentElement;
+      var dark=el.getAttribute('data-theme')==='dark';
+      el.setAttribute('data-theme',dark?'light':'dark');
+    });
+  })();
+</script>
+</body>
+</html>
