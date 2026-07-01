@@ -3,9 +3,11 @@ import { storeToRefs } from 'pinia'
 
 import PricingPlans from '@/components/PricingPlans.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useMarketStore } from '@/stores/market'
 
 const auth = useAuthStore()
 const { isAuthenticated } = storeToRefs(auth)
+const market = useMarketStore()
 
 const features = [
   {
@@ -40,7 +42,14 @@ const features = [
           LotScope <span class="text-weight-light">PHL</span>
         </q-toolbar-title>
         <template v-if="isAuthenticated">
-          <q-btn unelevated color="white" text-color="primary" no-caps label="Open the map" to="/app" />
+          <q-btn
+            unelevated
+            color="white"
+            text-color="primary"
+            no-caps
+            label="Open the map"
+            :to="{ name: 'explore', params: { market: market.active } }"
+          />
         </template>
         <template v-else>
           <q-btn flat no-caps label="Sign in" :to="{ name: 'login' }" />
@@ -69,7 +78,7 @@ const features = [
                 no-caps
                 icon="map"
                 label="Open the map"
-                to="/app"
+                :to="{ name: 'explore', params: { market: market.active } }"
               />
               <template v-else>
                 <q-btn
@@ -131,7 +140,11 @@ const features = [
             color="primary"
             no-caps
             :label="isAuthenticated ? 'Open the map' : 'Get started — it’s free'"
-            :to="isAuthenticated ? '/app' : { name: 'register' }"
+            :to="
+              isAuthenticated
+                ? { name: 'explore', params: { market: market.active } }
+                : { name: 'register' }
+            "
           />
           <div class="text-caption text-grey-6 q-mt-md">
             Informational only — not legal, financial, or real-estate advice. City data is provided

@@ -6,11 +6,13 @@ import { useRouter } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 import { formatCurrency } from '@/lib/format'
 import type { DealItem, DealStage } from '@/lib/types'
+import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 
 const router = useRouter()
 const parcelStore = useParcelStore()
+const market = useMarketStore()
 const pipeline = usePipelineStore()
 const { deals, loading } = storeToRefs(pipeline)
 
@@ -32,7 +34,7 @@ function scoreColor(score: number | null): string {
 
 function openParcel(deal: DealItem): void {
   void parcelStore.select(deal.parcel_number)
-  void router.push('/app')
+  void router.push({ name: 'explore', params: { market: market.active } })
 }
 
 function onDragStart(event: DragEvent, deal: DealItem): void {
@@ -71,7 +73,14 @@ function saveTarget(deal: DealItem, value: number | null): void {
           <div class="text-body2 text-grey-6">
             Open a lot and tap “Add to pipeline” to start tracking a deal.
           </div>
-          <q-btn class="q-mt-md" unelevated no-caps color="primary" label="Browse the map" to="/app" />
+          <q-btn
+            class="q-mt-md"
+            unelevated
+            no-caps
+            color="primary"
+            label="Browse the map"
+            :to="{ name: 'explore', params: { market: market.active } }"
+          />
         </div>
 
         <div v-else class="board">

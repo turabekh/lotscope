@@ -5,10 +5,12 @@ import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
 import { useCompareStore } from '@/stores/compare'
+import { useMarketStore } from '@/stores/market'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useAuthStore()
+const market = useMarketStore()
 const { user, isAuthenticated } = storeToRefs(store)
 const watchlist = useWatchlistStore()
 const { alerts } = storeToRefs(watchlist)
@@ -41,23 +43,23 @@ function goAccount(): void {
 }
 
 function goLeads(): void {
-  void router.push({ name: 'leads' })
+  void router.push({ name: 'leads', params: { market: market.active } })
 }
 
 function goWatchlist(): void {
-  void router.push({ name: 'watchlist' })
+  void router.push({ name: 'watchlist', params: { market: market.active } })
 }
 
 function goPipeline(): void {
-  void router.push({ name: 'pipeline' })
+  void router.push({ name: 'pipeline', params: { market: market.active } })
 }
 
 function goCompare(): void {
-  void router.push({ name: 'compare' })
+  void router.push({ name: 'compare', params: { market: market.active } })
 }
 
 function goSavedSearches(): void {
-  void router.push({ name: 'saved-searches' })
+  void router.push({ name: 'saved-searches', params: { market: market.active } })
 }
 
 function goAdmin(): void {

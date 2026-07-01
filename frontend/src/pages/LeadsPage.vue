@@ -7,10 +7,12 @@ import AppHeader from '@/components/AppHeader.vue'
 import { ApiError, api } from '@/lib/api'
 import type { LeadItem } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
+import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
 
 const router = useRouter()
 const parcelStore = useParcelStore()
+const market = useMarketStore()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
@@ -61,7 +63,7 @@ async function load(): Promise<void> {
 
 function openLead(lead: LeadItem): void {
   void parcelStore.select(lead.parcel_number)
-  void router.push('/app')
+  void router.push({ name: 'explore', params: { market: market.active } })
 }
 
 onMounted(load)

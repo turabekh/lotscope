@@ -21,6 +21,7 @@ import VerdictHero from '@/components/VerdictHero.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { ApiError, api } from '@/lib/api'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
+import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -30,6 +31,7 @@ const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
 const watchlist = useWatchlistStore()
 const pipeline = usePipelineStore()
 const compare = useCompareStore()
+const market = useMarketStore()
 const $q = useQuasar()
 const saving = ref(false)
 const addingDeal = ref(false)
@@ -232,7 +234,7 @@ async function toggleSave(): Promise<void> {
             color="primary"
             icon="view_kanban"
             :label="dealStageLabel"
-            :to="{ name: 'pipeline' }"
+            :to="{ name: 'pipeline', params: { market: market.active } }"
           />
           <q-btn
             :outline="!inCompare"

@@ -5,12 +5,14 @@ import { useRoute } from 'vue-router'
 
 import UserMenu from '@/components/UserMenu.vue'
 import { useCompareStore } from '@/stores/compare'
+import { useMarketStore } from '@/stores/market'
 import { useThemeStore } from '@/stores/theme'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 defineProps<{ title?: string }>()
 
 const route = useRoute()
+const market = useMarketStore()
 const theme = useThemeStore()
 const watchlist = useWatchlistStore()
 const compare = useCompareStore()
@@ -25,7 +27,7 @@ interface NavLink {
 }
 
 const links = computed<NavLink[]>(() => [
-  { label: 'Explore', icon: 'travel_explore', name: 'map' },
+  { label: 'Explore', icon: 'travel_explore', name: 'explore' },
   { label: 'Watchlist', icon: 'bookmark', name: 'watchlist', badge: () => alerts.value },
   { label: 'Pipeline', icon: 'view_kanban', name: 'pipeline' },
   { label: 'Compare', icon: 'compare_arrows', name: 'compare', badge: () => compareCount.value },
@@ -41,7 +43,11 @@ function isActive(name: string): boolean {
     <q-toolbar class="app-toolbar">
       <slot name="lead" />
 
-      <router-link :to="{ name: 'map' }" class="brand" aria-label="LotScope home">
+      <router-link
+        :to="{ name: 'home', params: { market: market.active } }"
+        class="brand"
+        aria-label="LotScope home"
+      >
         <span class="brand-mark">◧</span>
         <span class="brand-name">LotScope <span class="brand-sub">PHL</span></span>
       </router-link>
@@ -64,7 +70,7 @@ function isActive(name: string): boolean {
           :label="link.label"
           class="nav-link"
           :class="{ active: isActive(link.name) }"
-          :to="{ name: link.name }"
+          :to="{ name: link.name, params: { market: market.active } }"
         >
           <q-badge
             v-if="link.badge && link.badge() > 0"

@@ -8,6 +8,7 @@ import AppHeader from '@/components/AppHeader.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SavedSearchItem, SavedSearchMatchItem, SearchCriteria } from '@/lib/types'
+import { useMarketStore } from '@/stores/market'
 import { emptyCriteria, useSavedSearchesStore } from '@/stores/savedSearches'
 import { useParcelStore } from '@/stores/parcel'
 
@@ -18,6 +19,7 @@ const router = useRouter()
 const $q = useQuasar()
 const store = useSavedSearchesStore()
 const parcelStore = useParcelStore()
+const market = useMarketStore()
 const { searches, limit, used, atLimit, loading } = storeToRefs(store)
 
 const showForm = ref(false)
@@ -108,7 +110,7 @@ function remove(search: SavedSearchItem): void {
 
 function openParcel(match: SavedSearchMatchItem): void {
   void parcelStore.select(match.parcel_number)
-  void router.push('/app')
+  void router.push({ name: 'explore', params: { market: market.active } })
 }
 
 function summarize(search: SavedSearchItem): string {

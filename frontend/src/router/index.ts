@@ -1,6 +1,12 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import {
+  createRouter,
+  createWebHistory,
+  type NavigationGuard,
+  type RouteRecordRaw,
+} from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import { DEFAULT_MARKET, isKnownMarket, useMarketStore } from '@/stores/market'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -10,9 +16,8 @@ declare module 'vue-router' {
   }
 }
 
-const routes: RouteRecordRaw[] = [
-  { path: '/', name: 'home', component: () => import('@/pages/LandingPage.vue') },
-  { path: '/app', name: 'map', component: () => import('@/pages/MapPage.vue'), meta: { requiresAuth: true } },
+export const routes: RouteRecordRaw[] = [
+  { path: '/', name: 'landing', component: () => import('@/pages/LandingPage.vue') },
   {
     path: '/login',
     name: 'login',
@@ -34,58 +39,96 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/leads',
-    name: 'leads',
-    component: () => import('@/pages/LeadsPage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/watchlist',
-    name: 'watchlist',
-    component: () => import('@/pages/WatchlistPage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/pipeline',
-    name: 'pipeline',
-    component: () => import('@/pages/PipelinePage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/compare',
-    name: 'compare',
-    component: () => import('@/pages/ComparePage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/saved-searches',
-    name: 'saved-searches',
-    component: () => import('@/pages/SavedSearchesPage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/admin',
     name: 'admin',
     component: () => import('@/pages/AdminPage.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/:market',
+    name: 'market-root',
+    redirect: (to) => ({ name: 'home', params: { market: to.params.market } }),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/:market/home',
+    name: 'home',
+    redirect: (to) => ({ name: 'explore', params: { market: to.params.market } }),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/:market/explore',
+    name: 'explore',
+    component: () => import('@/pages/MapPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/:market/leads',
+    name: 'leads',
+    component: () => import('@/pages/LeadsPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/:market/pipeline',
+    name: 'pipeline',
+    component: () => import('@/pages/PipelinePage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/:market/watchlist',
+    name: 'watchlist',
+    component: () => import('@/pages/WatchlistPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/:market/compare',
+    name: 'compare',
+    component: () => import('@/pages/ComparePage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/:market/saved-searches',
+    name: 'saved-searches',
+    component: () => import('@/pages/SavedSearchesPage.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
+
+export const marketGuard: NavigationGuard = (to) => {
+  const auth = useAuthStore()
+  const market = useMarketStore()
+
+  const marketParam = to.params.market
+  if (marketParam !== undefined && marketParam !== '') {
+    if (!isKnownMarket(marketParam)) {
+      return {
+        name: (to.name as string | undefined) ?? 'home',
+        params: { ...to.params, market: DEFAULT_MARKET },
+        query: to.query,
+        hash: to.hash,
+      }
+    }
+    market.set(marketParam)
+  }
+
+  if (to.meta.requiresAuth && auth.token === null) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.guestOnly && auth.token !== null) {
+    return { name: 'home', params: { market: market.active } }
+  }
+  if (to.meta.requiresAdmin && auth.user !== null && auth.user.role !== 'admin') {
+    return { name: 'home', params: { market: market.active } }
+  }
+  if (to.name === 'landing' && auth.token !== null) {
+    return { name: 'home', params: { market: market.active } }
+  }
+  return true
+}
 
 export const router = createRouter({
   history: createWebHistory(),
   routes,
 })
 
-router.beforeEach((to) => {
-  const auth = useAuthStore()
-  if (to.meta.requiresAuth && auth.token === null) {
-    return { name: 'login', query: { redirect: to.fullPath } }
-  }
-  if (to.meta.guestOnly && auth.token !== null) {
-    return { name: 'map' }
-  }
-  if (to.meta.requiresAdmin && auth.user !== null && auth.user.role !== 'admin') {
-    return { name: 'map' }
-  }
-  return true
-})
+router.beforeEach(marketGuard)

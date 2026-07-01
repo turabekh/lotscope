@@ -6,11 +6,13 @@ import { useRouter } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 import { formatCurrency } from '@/lib/format'
 import type { WatchlistItem } from '@/lib/types'
+import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const router = useRouter()
 const parcelStore = useParcelStore()
+const market = useMarketStore()
 const watchlist = useWatchlistStore()
 const { items, limit, used, loading, alerts } = storeToRefs(watchlist)
 
@@ -35,7 +37,7 @@ function markSeen(item: WatchlistItem): void {
 
 function openParcel(item: WatchlistItem): void {
   void parcelStore.select(item.parcel_number)
-  void router.push('/app')
+  void router.push({ name: 'explore', params: { market: market.active } })
 }
 
 function onTags(item: WatchlistItem, tags: string[]): void {
@@ -85,7 +87,14 @@ function remove(item: WatchlistItem): void {
             <div class="text-body2 text-grey-6">
               Open any lot and tap the bookmark to save it here.
             </div>
-            <q-btn class="q-mt-md" unelevated no-caps color="primary" label="Browse the map" to="/app" />
+            <q-btn
+              class="q-mt-md"
+              unelevated
+              no-caps
+              color="primary"
+              label="Browse the map"
+              :to="{ name: 'explore', params: { market: market.active } }"
+            />
           </div>
 
           <div class="wl-list">

@@ -6,11 +6,13 @@ import AppHeader from '@/components/AppHeader.vue'
 import { ApiError, api } from '@/lib/api'
 import type { ParcelCompareItem } from '@/lib/types'
 import { useCompareStore } from '@/stores/compare'
+import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
 
 const router = useRouter()
 const compare = useCompareStore()
 const parcelStore = useParcelStore()
+const market = useMarketStore()
 
 const items = ref<ParcelCompareItem[]>([])
 const loading = ref(false)
@@ -90,7 +92,7 @@ async function load(): Promise<void> {
 
 function openParcel(parcelNumber: string): void {
   void parcelStore.select(parcelNumber)
-  void router.push('/app')
+  void router.push({ name: 'explore', params: { market: market.active } })
 }
 
 function removeParcel(parcelNumber: string): void {
@@ -131,7 +133,15 @@ watch(() => [...compare.parcelNumbers], load, { immediate: true })
             <div class="text-body2 text-grey-6">
               Open any parcel on the map and tap “Compare” to add it here (up to four).
             </div>
-            <q-btn class="q-mt-md" unelevated no-caps color="primary" icon="map" label="Go to map" to="/app" />
+            <q-btn
+              class="q-mt-md"
+              unelevated
+              no-caps
+              color="primary"
+              icon="map"
+              label="Go to map"
+              :to="{ name: 'explore', params: { market: market.active } }"
+            />
           </div>
 
           <q-markup-table v-else-if="items.length" flat bordered separator="cell" class="compare-table">

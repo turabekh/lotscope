@@ -10,15 +10,21 @@ import {
   USE_CLASS_OPTIONS,
   useFiltersStore,
 } from '@/stores/filters'
+import { useMarketStore } from '@/stores/market'
 
 const store = useFiltersStore()
 const { vacantOnly, useClasses, colorMode, show3d, basemap, activeCount } = storeToRefs(store)
+const market = useMarketStore()
 const $q = useQuasar()
 const router = useRouter()
 const open = ref(!$q.screen.lt.sm)
 
 function saveSearch(): void {
-  void router.push({ name: 'saved-searches', query: vacantOnly.value ? { vacant: '1' } : {} })
+  void router.push({
+    name: 'saved-searches',
+    params: { market: market.active },
+    query: vacantOnly.value ? { vacant: '1' } : {},
+  })
 }
 </script>
 
