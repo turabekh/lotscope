@@ -28,6 +28,9 @@ const router = useRouter()
 
 const viewMode = ref<ExploreViewMode>(readViewMode(route.query.view))
 const panes = computed(() => paneVisibility(viewMode.value))
+const hasResults = computed(() => areaResults.value.length > 0)
+const showList = computed(() => panes.value.list && hasResults.value)
+const showMap = computed(() => panes.value.map || !hasResults.value)
 
 watch(viewMode, (mode) => {
   const query = { ...route.query }
@@ -79,7 +82,7 @@ function onSelect(parcelNumber: string): void {
         </div>
 
         <div class="explore-split">
-          <section v-show="panes.list" class="list-pane">
+          <section v-show="showList" class="list-pane" :class="{ rail: viewMode === 'split' }">
             <ExploreResultsList
               :results="areaResults"
               :selected-parcel="detail?.parcel_number ?? null"
@@ -88,10 +91,14 @@ function onSelect(parcelNumber: string): void {
             />
           </section>
 
-          <section v-show="panes.map" class="map-pane">
+          <section v-show="showMap" class="map-pane">
             <MapView @select="onSelect" />
             <FilterPanel />
             <AreaSearchPanel />
+            <div v-if="!hasResults" class="map-hint">
+              <q-icon name="travel_explore" size="15px" class="q-mr-xs" />
+              Draw an area or set a buy box to list lots.
+            </div>
           </section>
         </div>
       </div>
@@ -115,6 +122,7 @@ function onSelect(parcelNumber: string): void {
   height: calc(100dvh - 54px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--lot-bg);
 }
 .explore-toolbar {
@@ -138,16 +146,40 @@ function onSelect(parcelNumber: string): void {
   flex: 1;
   min-height: 0;
   display: flex;
+  overflow: hidden;
 }
 .list-pane {
   flex: 1;
   min-width: 0;
+}
+.list-pane.rail {
+  flex: 0 0 360px;
+  max-width: 360px;
   border-right: 1px solid var(--lot-border);
 }
 .map-pane {
-  flex: 1.2;
+  flex: 1 1 0;
   min-width: 0;
   position: relative;
+}
+.map-hint {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border-radius: var(--lot-radius-pill);
+  background: var(--lot-surface);
+  border: 1px solid var(--lot-border);
+  box-shadow: var(--lot-shadow-sm);
+  color: var(--lot-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 .dossier-shell {
   background: var(--lot-surface);
