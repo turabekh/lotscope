@@ -21,9 +21,10 @@
   Acceptance: every page reachable from the sidebar; top-nav removed; visuals unchanged (tokens); tests green.
   Delivered: `AppShell` mounts once in `App.vue` (gated on `meta.requiresAuth`, not route nesting) around all authed routes; `AppHeader` deleted and all 8 pages re-homed (`MapPage` keeps its drawer via a nested `container` layout); sidebar nav (existing pages only) + footer Account/Admin; `MarketSwitcher` (URL-driven), `GlobalSearch` (SearchBox reuse → explore), static market-driven `DataCoverageChip`. `CLAUDE.md` §3/§10 point at `ia-and-layout.md`; ADR-0029 Accepted. **Follow-up:** a public per-market dataset-freshness surface (the coverage chip is a static label until then).
 
-- [ ] **Slice 3 — Explore.**
+- [x] **Slice 3 — Explore.** *(shipped: 3a scaffold, split fix, viewport list, 3b-1 list+sync, 3b-2a controls, 3b-2b query params)*
   Goal: turn the map-first page into the synced discovery workspace. Touches: `MapPage` → `ExplorePage` with a list ⇄ map split + List/Map/Split toggle; re-home `FilterPanel`/`AreaSearchPanel`. Reuse: `MapView` unchanged.
   Acceptance: list and map stay in sync; buy box + area search (ADR-0025) work; parity with today's map behavior.
+  Delivered: `MapPage` → `ExplorePage`; List/Map/Split split with a fixed 360px list rail + elastic map (no overflow), rail collapses when empty; the list is **viewport-driven** (updates on pan/zoom, zoom-gated) with two-way row⇄pin sync through `parcelStore.detail`; controls decomposed into a **Buy box** toolbar popover + one compact **MapControlsOverlay** (display + draw), with `FilterPanel`/`AreaSearchPanel` deleted; view + buy box + area shape persisted in query params. **`MapView` deviation from "unchanged":** it gained exactly one pure output — a `boundschange` emit (bounds + zoom) — with no MapLibre/terra-draw logic touched; all viewport policy lives in `ExplorePage`.
 
 - [ ] **Slice 4 — Universal dossier.**
   Goal: decouple the dossier from the map. Touches: `ParcelPanel` → `ParcelDossier` (panel + `/parcel/:market/:id` route); open from map, leads, lists. Reuse: `VerdictHero` and all sub-panels unchanged.
