@@ -26,9 +26,10 @@
   Acceptance: list and map stay in sync; buy box + area search (ADR-0025) work; parity with today's map behavior.
   Delivered: `MapPage` → `ExplorePage`; List/Map/Split split with a fixed 360px list rail + elastic map (no overflow), rail collapses when empty; the list is **viewport-driven** (updates on pan/zoom, zoom-gated) with two-way row⇄pin sync through `parcelStore.detail`; controls decomposed into a **Buy box** toolbar popover + one compact **MapControlsOverlay** (display + draw), with `FilterPanel`/`AreaSearchPanel` deleted; view + buy box + area shape persisted in query params. **`MapView` deviation from "unchanged":** it gained exactly one pure output — a `boundschange` emit (bounds + zoom) — with no MapLibre/terra-draw logic touched; all viewport policy lives in `ExplorePage`.
 
-- [ ] **Slice 4 — Universal dossier.**
+- [x] **Slice 4 — Universal dossier.** *(shipped: 4a extract + route + GlobalSearch, 4b Leads/Watchlist)*
   Goal: decouple the dossier from the map. Touches: `ParcelPanel` → `ParcelDossier` (panel + `/parcel/:market/:id` route); open from map, leads, lists. Reuse: `VerdictHero` and all sub-panels unchanged.
   Acceptance: same panels/tabs; dossier opens from ≥2 surfaces; the deep-link URL renders standalone.
+  Delivered: `ParcelPanel` → `ParcelDossier` (renamed, internals unchanged — already fully store-driven); one body, two wrappers — Explore's right `q-drawer` (overlay, unchanged) and the full-page `ParcelDossierPage` at `/parcel/:market/:id` (fetches on mount, bounded centered frame, not-found via the dossier's own error state). `:market` validated by the Slice-1b guard; lookup by `id` only. Opens from Explore (pin/row overlay), GlobalSearch, Leads, and Watchlist. **Follow-up:** Compare/Pipeline/SavedSearches still open into the Explore overlay — a trivial one-line repoint each onto the dossier route.
 
 - [ ] **Slice 5 — Home + consolidation.**
   Goal: add the daily-driver landing and tidy the section list. Touches: `HomeDashboard` (per-market snapshot from existing data); `ListsPage` (merge Watchlist + Saved searches, ADR-0016/0024); `CompareTray` (retire `/compare`). Reuse: watchlist/savedSearches/compare stores.
