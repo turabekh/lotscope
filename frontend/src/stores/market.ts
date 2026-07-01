@@ -5,6 +5,10 @@ export const MARKETS = ['philadelphia'] as const
 export type Market = (typeof MARKETS)[number]
 export const DEFAULT_MARKET: Market = 'philadelphia'
 
+export const MARKET_LABELS: Record<Market, string> = {
+  philadelphia: 'Philadelphia',
+}
+
 const STORAGE_KEY = 'lotscope.market'
 
 export function isKnownMarket(value: unknown): value is Market {

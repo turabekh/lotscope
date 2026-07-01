@@ -56,7 +56,7 @@ function choose(parcelNumber: string): void {
     >
       <template #prepend><q-icon name="search" /></template>
     </q-input>
-    <q-list v-if="results.length" bordered class="q-mt-xs bg-white">
+    <q-list v-if="results.length" bordered class="q-mt-xs results-list">
       <q-item
         v-for="item in results"
         :key="item.parcel_number"
@@ -72,3 +72,9 @@ function choose(parcelNumber: string): void {
     </q-list>
   </div>
 </template>
+
+<style scoped>
+.results-list {
+  background: var(--lot-surface);
+}
+</style>

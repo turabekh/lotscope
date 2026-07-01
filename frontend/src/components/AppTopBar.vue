@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
+import DataCoverageChip from '@/components/DataCoverageChip.vue'
+import GlobalSearch from '@/components/GlobalSearch.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import { useThemeStore } from '@/stores/theme'
 
@@ -15,11 +17,14 @@ const title = computed(() => route.meta.title ?? '')
   <q-header class="topbar">
     <q-toolbar class="topbar-toolbar">
       <span v-if="title" class="page-title">{{ title }}</span>
+      <GlobalSearch />
       <slot name="lead" />
 
       <q-space />
 
       <slot name="actions" />
+
+      <DataCoverageChip class="q-mr-xs" />
 
       <q-btn
         flat

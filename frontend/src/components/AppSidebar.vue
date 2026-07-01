@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
+import MarketSwitcher from '@/components/MarketSwitcher.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMarketStore } from '@/stores/market'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
@@ -39,8 +40,6 @@ const sections = computed<NavLink[]>(() => [
   },
 ])
 
-const marketLabel = computed(() => market.active.charAt(0).toUpperCase() + market.active.slice(1))
-
 function isActive(name: string): boolean {
   return route.name === name
 }
@@ -57,12 +56,8 @@ function isActive(name: string): boolean {
       <span v-if="!collapsed" class="brand-name">LotScope <span class="brand-sub">PHL</span></span>
     </router-link>
 
-    <div class="market" :class="{ mini: collapsed }">
-      <q-icon name="location_on" size="18px" class="market-pin" />
-      <span v-if="!collapsed" class="market-name">{{ marketLabel }}</span>
-      <q-tooltip v-if="collapsed" anchor="center right" self="center left">{{
-        marketLabel
-      }}</q-tooltip>
+    <div class="switcher-slot" :class="{ mini: collapsed }">
+      <MarketSwitcher :collapsed="collapsed" />
     </div>
 
     <q-list class="nav">
@@ -172,28 +167,8 @@ function isActive(name: string): boolean {
   font-weight: 500;
   color: var(--lot-faint);
 }
-.market {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+.switcher-slot {
   margin-bottom: 10px;
-  border: 1px solid var(--lot-border);
-  border-radius: var(--lot-radius-sm);
-  background: var(--lot-surface-2);
-  color: var(--lot-accent-ink);
-}
-.market.mini {
-  justify-content: center;
-  padding: 8px 0;
-}
-.market-pin {
-  color: var(--lot-accent);
-}
-.market-name {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
 }
 .nav {
   padding: 0;
