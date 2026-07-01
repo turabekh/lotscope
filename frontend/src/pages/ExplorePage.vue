@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AreaSearchPanel from '@/components/AreaSearchPanel.vue'
@@ -10,8 +10,11 @@ import FilterPanel from '@/components/FilterPanel.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelPanel from '@/components/ParcelPanel.vue'
 import {
+  boundsToPolygon,
+  canListViewport,
   DEFAULT_VIEW_MODE,
   type ExploreViewMode,
+  type MapBounds,
   paneVisibility,
   readViewMode,
 } from '@/lib/explore'
@@ -21,7 +24,7 @@ import { useParcelStore } from '@/stores/parcel'
 const store = useParcelStore()
 const { detail } = storeToRefs(store)
 const areaSearch = useAreaSearchStore()
-const { results: areaResults, loading: areaLoading } = storeToRefs(areaSearch)
+const { results: areaResults, loading: areaLoading, active: areaActive } = storeToRefs(areaSearch)
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
@@ -37,6 +40,35 @@ watch(viewMode, (mode) => {
   if (mode === DEFAULT_VIEW_MODE) delete query.view
   else query.view = mode
   void router.replace({ query })
+})
+
+const VIEWPORT_DEBOUNCE_MS = 350
+const belowZoom = ref(true)
+const lastBounds = ref<MapBounds | null>(null)
+let boundsTimer: ReturnType<typeof setTimeout> | undefined
+
+function runViewport(): void {
+  if (areaActive.value || belowZoom.value || lastBounds.value === null) return
+  void areaSearch.searchViewport(boundsToPolygon(lastBounds.value))
+}
+
+function onBounds(bounds: MapBounds): void {
+  lastBounds.value = bounds
+  belowZoom.value = !canListViewport(bounds.zoom)
+  if (boundsTimer) clearTimeout(boundsTimer)
+  boundsTimer = setTimeout(() => {
+    if (areaActive.value) return
+    if (belowZoom.value) areaSearch.clearResults()
+    else runViewport()
+  }, VIEWPORT_DEBOUNCE_MS)
+}
+
+watch(areaActive, (active) => {
+  if (!active) runViewport()
+})
+
+onBeforeUnmount(() => {
+  if (boundsTimer) clearTimeout(boundsTimer)
 })
 
 const VIEW_OPTIONS: { label: string; value: ExploreViewMode; icon: string }[] = [
@@ -92,12 +124,12 @@ function onSelect(parcelNumber: string): void {
           </section>
 
           <section v-show="showMap" class="map-pane">
-            <MapView @select="onSelect" />
+            <MapView @select="onSelect" @boundschange="onBounds" />
             <FilterPanel />
             <AreaSearchPanel />
-            <div v-if="!hasResults" class="map-hint">
-              <q-icon name="travel_explore" size="15px" class="q-mr-xs" />
-              Draw an area or set a buy box to list lots.
+            <div v-if="!hasResults && !areaActive && !areaLoading" class="map-hint">
+              <q-icon :name="belowZoom ? 'zoom_in' : 'search_off'" size="15px" class="q-mr-xs" />
+              {{ belowZoom ? 'Zoom in to list lots in view' : 'No lots in this view' }}
             </div>
           </section>
         </div>

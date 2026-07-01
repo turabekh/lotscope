@@ -117,6 +117,21 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     }
   }
 
+  async function searchViewport(rect: GeoJSON.Polygon): Promise<void> {
+    loading.value = true
+    try {
+      applyResponse(await api.searchArea({ polygon: rect, ...criteria(), limit: RESULT_LIMIT }))
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function clearResults(): void {
+    results.value = []
+    count.value = 0
+    truncated.value = false
+  }
+
   async function searchNeighborhood(name: string): Promise<void> {
     neighborhood.value = name
     loading.value = true
@@ -178,6 +193,8 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     setRadius,
     searchPolygon,
     searchNeighborhood,
+    searchViewport,
+    clearResults,
     rerun,
     reset,
   }

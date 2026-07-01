@@ -11,11 +11,27 @@ import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { api } from '@/lib/api'
+import type { MapBounds } from '@/lib/explore'
 import { useAreaSearchStore } from '@/stores/areaSearch'
 import { useFiltersStore } from '@/stores/filters'
 import { useParcelStore } from '@/stores/parcel'
 
-const emit = defineEmits<{ select: [parcelNumber: string] }>()
+const emit = defineEmits<{
+  select: [parcelNumber: string]
+  boundschange: [bounds: MapBounds]
+}>()
+
+function emitBounds(): void {
+  if (!map) return
+  const b = map.getBounds()
+  emit('boundschange', {
+    north: b.getNorth(),
+    south: b.getSouth(),
+    east: b.getEast(),
+    west: b.getWest(),
+    zoom: map.getZoom(),
+  })
+}
 
 const areaSearch = useAreaSearchStore()
 const {
@@ -307,7 +323,15 @@ function pinImage(head: number, color: string): ImageData {
   ctx.fill(balloon)
 
   ctx.beginPath()
-  ctx.ellipse(cx - radius * 0.26, cy - radius * 0.34, radius * 0.46, radius * 0.3, -0.5, 0, Math.PI * 2)
+  ctx.ellipse(
+    cx - radius * 0.26,
+    cy - radius * 0.34,
+    radius * 0.46,
+    radius * 0.3,
+    -0.5,
+    0,
+    Math.PI * 2,
+  )
   ctx.fillStyle = 'rgba(255, 255, 255, 0.32)'
   ctx.fill()
 
@@ -449,7 +473,9 @@ function circleFeature(): GeoJSON.FeatureCollection {
   }
   return {
     type: 'FeatureCollection',
-    features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } }],
+    features: [
+      { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } },
+    ],
   }
 }
 
@@ -719,8 +745,10 @@ onMounted(() => {
     renderAreaCircle()
     applyAreaResults()
     applyAreaCursor()
+    emitBounds()
   })
   map.on('moveend', scheduleAttributionUpdate)
+  map.on('moveend', emitBounds)
 })
 
 watch(basemap, (id) => {

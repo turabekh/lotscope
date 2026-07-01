@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { isExploreViewMode, paneVisibility, readViewMode } from '@/lib/explore'
+import {
+  boundsToPolygon,
+  canListViewport,
+  isExploreViewMode,
+  type MapBounds,
+  paneVisibility,
+  readViewMode,
+} from '@/lib/explore'
 
 describe('paneVisibility', () => {
   it('split shows both panes', () => {
@@ -35,5 +42,27 @@ describe('isExploreViewMode', () => {
     expect(isExploreViewMode('map')).toBe(true)
     expect(isExploreViewMode('x')).toBe(false)
     expect(isExploreViewMode(null)).toBe(false)
+  })
+})
+
+describe('canListViewport', () => {
+  it('gates viewport listing below the zoom threshold', () => {
+    expect(canListViewport(15)).toBe(true)
+    expect(canListViewport(17.5)).toBe(true)
+    expect(canListViewport(14.9)).toBe(false)
+    expect(canListViewport(13)).toBe(false)
+  })
+})
+
+describe('boundsToPolygon', () => {
+  it('builds a closed rectangle ring from map bounds', () => {
+    const bounds: MapBounds = { north: 40, south: 39, east: -75, west: -76, zoom: 16 }
+    const polygon = boundsToPolygon(bounds)
+    expect(polygon.type).toBe('Polygon')
+    const ring = polygon.coordinates[0]
+    expect(ring).toHaveLength(5)
+    expect(ring[0]).toEqual([-76, 39])
+    expect(ring[2]).toEqual([-75, 40])
+    expect(ring[0]).toEqual(ring[4])
   })
 })
