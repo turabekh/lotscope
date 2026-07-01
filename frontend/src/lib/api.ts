@@ -89,8 +89,10 @@ async function uploadRequest<T>(path: string, body: FormData): Promise<T> {
 }
 
 export const api = {
-  search(query: string, limit = 10): Promise<ParcelSearchResponse> {
-    return request(`/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+  search(query: string, market: string, limit = 10): Promise<ParcelSearchResponse> {
+    return request(
+      `/search?q=${encodeURIComponent(query)}&market=${encodeURIComponent(market)}&limit=${limit}`,
+    )
   },
   getParcel(parcelNumber: string): Promise<ParcelDetail> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}`)

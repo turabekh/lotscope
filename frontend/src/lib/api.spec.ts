@@ -20,11 +20,11 @@ describe('api', () => {
     const fetchMock = mockFetch(200, { query: 'main', results: [] })
     vi.stubGlobal('fetch', fetchMock)
 
-    const result = await api.search('main st')
+    const result = await api.search('main st', 'philadelphia')
 
     expect(result.query).toBe('main')
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/search?q=main%20st&limit=10'),
+      expect.stringContaining('/search?q=main%20st&market=philadelphia&limit=10'),
       expect.anything(),
     )
   })

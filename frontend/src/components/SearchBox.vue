@@ -3,8 +3,11 @@ import { ref } from 'vue'
 
 import { api } from '@/lib/api'
 import type { ParcelSearchResult } from '@/lib/types'
+import { useMarketStore } from '@/stores/market'
 
 const emit = defineEmits<{ select: [parcelNumber: string] }>()
+
+const market = useMarketStore()
 
 const query = ref('')
 const results = ref<ParcelSearchResult[]>([])
@@ -27,7 +30,7 @@ async function runSearch(): Promise<void> {
   }
   loading.value = true
   try {
-    const response = await api.search(term)
+    const response = await api.search(term, market.active)
     results.value = response.results
   } finally {
     loading.value = false

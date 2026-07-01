@@ -2,6 +2,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from lotscope.core.markets import Market
+
 
 class ParcelSearchResult(BaseModel):
     parcel_number: str
@@ -12,6 +14,7 @@ class ParcelSearchResult(BaseModel):
 
 class ParcelSearchResponse(BaseModel):
     query: str
+    market: Market
     results: list[ParcelSearchResult]
 
 

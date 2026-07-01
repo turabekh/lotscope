@@ -516,6 +516,7 @@ export interface ParcelSearchResult {
 
 export interface ParcelSearchResponse {
   query: string
+  market: string
   results: ParcelSearchResult[]
 }
 
