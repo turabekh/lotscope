@@ -4,7 +4,7 @@ Date: 2026-07-01
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -36,5 +36,5 @@ Two existing properties make a structural change cheap rather than a rewrite: th
 - **`MapView` and the dossier sub-panels are reused unchanged** — the change is structural (where things live, how they are scoped), not behavioral.
 - **Enables graceful per-market degradation.** With a scope in place, panels can show "not available in this market" instead of erroring where a dataset is absent (e.g., no vacancy model or open L&I outside Philadelphia), and per-market `dataset_freshness` becomes a visible coverage signal — consistent with the informational/provenance framing (§13; ADR-0007, ADR-0008).
 - **Independent of the component library.** Settling this IA neither commits to nor rules out a future PrimeVue move; it makes that decision easier by isolating which surfaces (the dense tables) would actually benefit.
-- **Deferred:** the cross-market ("all markets") overview and small-multiples; the draggable mobile results peek-sheet (the List/Map toggle is the v1 baseline); Home dashboard contents beyond v1.
+- **Deferred:** the cross-market ("all markets") overview and small-multiples; the draggable mobile results peek-sheet (the List/Map toggle is the v1 baseline); Home dashboard contents beyond v1; a **public per-market dataset-freshness surface** — until it exists the `DataCoverageChip` ships as a static, market-scoped provenance label (freshness is currently admin-only via `/admin/datasets`). This is the natural companion to the graceful per-market degradation described above.
 - **Follow-ups:** update `CLAUDE.md` §3 (repository layout) and §10 (module boundaries) to point at `docs/design/ia-and-layout.md` in the implementing PR, per the rule that a convention change updates `CLAUDE.md` in the same PR.

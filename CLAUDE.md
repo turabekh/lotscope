@@ -85,8 +85,10 @@ If you believe a different tool is genuinely better for a task, raise it in disc
 └── frontend/
     ├── package.json
     └── src/
-        ├── pages/  components/  composables/  stores/  boot/  lib/
+        ├── pages/  components/  composables/  stores/  boot/  lib/  router/
 ```
+
+`components/` hosts the persistent **app shell** — `AppShell` (layout) + `AppSidebar` + `AppTopBar`, with `MarketSwitcher`, `GlobalSearch`, and `DataCoverageChip` — which wraps the authenticated routes; market scope is a first-class URL segment (`/:market/...`) resolved via `stores/market`. The frontend information architecture, layout, and redesign sequence are specified in `docs/design/ia-and-layout.md` (and ADR-0029).
 
 Each backend domain package owns its `models.py`, `schemas.py`, `service.py`, and `tests/`. The `api` layer is thin and only orchestrates services. **Modules talk through service interfaces, never by reaching into another module's internals or models.**
 
@@ -201,6 +203,8 @@ A modular monolith. Dependency direction is inward toward `core/`. Cross-module 
 - `ingestion` writes raw + normalized data; it does not contain business logic beyond normalization and reconciliation.
 - `search` and `ai` are services consumed by `api`; they do not own domain truth.
 - `api` is thin glue. No business logic in routers.
+
+The **frontend** is a market-scoped app shell (persistent sidebar + top bar wrapping the authenticated routes) with jurisdiction as a first-class URL scope; its information architecture and module layout are specified in `docs/design/ia-and-layout.md` (rationale in ADR-0029). Business logic lives in Pinia stores + `lib/`, not components; the shell and dossier are structural, not domain owners.
 
 ---
 

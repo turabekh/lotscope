@@ -16,9 +16,10 @@
   Acceptance: existing flows work under a Philadelphia market segment; tests green.
   Delivered: `market` store (URL > localStorage > default precedence); flattened `/:market/...` routes with `/ → /:market/home → /:market/explore` (home is a temporary redirect until slice 5); URL-authoritative guard that resolves/validates the market before the auth redirect; full link sweep (`map`→`explore` + all hardcoded `/app` literals); `GET /search` market param (unknown → 422, response echoes scope) with `search()` requiring `market`. Split as an isolated rename commit first so the clean `market` name was free.
 
-- [ ] **Slice 2 — App shell.**
+- [x] **Slice 2 — App shell.** *(shipped: 2a shell+re-home, 2b primitives, 2c docs)*
   Goal: replace the top-nav with the persistent shell, re-homing existing pages unchanged. Touches: `AppShell`/`AppSidebar`/`AppTopBar` (refactor `AppHeader`), `MarketSwitcher`, `GlobalSearch`, `DataCoverageChip`. Reuse: all current pages, mounted inside the shell.
   Acceptance: every page reachable from the sidebar; top-nav removed; visuals unchanged (tokens); tests green.
+  Delivered: `AppShell` mounts once in `App.vue` (gated on `meta.requiresAuth`, not route nesting) around all authed routes; `AppHeader` deleted and all 8 pages re-homed (`MapPage` keeps its drawer via a nested `container` layout); sidebar nav (existing pages only) + footer Account/Admin; `MarketSwitcher` (URL-driven), `GlobalSearch` (SearchBox reuse → explore), static market-driven `DataCoverageChip`. `CLAUDE.md` §3/§10 point at `ia-and-layout.md`; ADR-0029 Accepted. **Follow-up:** a public per-market dataset-freshness surface (the coverage chip is a static label until then).
 
 - [ ] **Slice 3 — Explore.**
   Goal: turn the map-first page into the synced discovery workspace. Touches: `MapPage` → `ExplorePage` with a list ⇄ map split + List/Map/Split toggle; re-home `FilterPanel`/`AreaSearchPanel`. Reuse: `MapView` unchanged.
