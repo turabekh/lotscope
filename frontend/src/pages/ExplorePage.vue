@@ -8,7 +8,7 @@ import BuyBoxPanel from '@/components/BuyBoxPanel.vue'
 import ExploreResultsList from '@/components/ExploreResultsList.vue'
 import MapControlsOverlay from '@/components/MapControlsOverlay.vue'
 import MapView from '@/components/MapView.vue'
-import ParcelPanel from '@/components/ParcelPanel.vue'
+import ParcelDossier from '@/components/ParcelDossier.vue'
 import {
   boundsToPolygon,
   canListViewport,
@@ -201,7 +201,7 @@ function onSelect(parcelNumber: string): void {
 
     <q-drawer v-model="drawerOpen" side="right" overlay bordered :width="drawerWidth">
       <div class="column no-wrap fit dossier-shell">
-        <ParcelPanel class="col" />
+        <ParcelDossier class="col" />
       </div>
     </q-drawer>
   </q-layout>

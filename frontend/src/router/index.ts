@@ -93,6 +93,12 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/SavedSearchesPage.vue'),
     meta: { requiresAuth: true, title: 'Saved searches' },
   },
+  {
+    path: '/parcel/:market/:id',
+    name: 'parcel',
+    component: () => import('@/pages/ParcelDossierPage.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 export const marketGuard: NavigationGuard = (to) => {

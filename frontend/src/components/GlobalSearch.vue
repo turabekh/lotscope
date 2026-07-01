@@ -3,15 +3,12 @@ import { useRouter } from 'vue-router'
 
 import SearchBox from '@/components/SearchBox.vue'
 import { useMarketStore } from '@/stores/market'
-import { useParcelStore } from '@/stores/parcel'
 
 const router = useRouter()
 const market = useMarketStore()
-const parcelStore = useParcelStore()
 
 function onSelect(parcelNumber: string): void {
-  void parcelStore.select(parcelNumber)
-  void router.push({ name: 'explore', params: { market: market.active } })
+  void router.push({ name: 'parcel', params: { market: market.active, id: parcelNumber } })
 }
 </script>
 
