@@ -4,9 +4,9 @@ import { useQuasar } from 'quasar'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import AreaSearchPanel from '@/components/AreaSearchPanel.vue'
+import BuyBoxPanel from '@/components/BuyBoxPanel.vue'
 import ExploreResultsList from '@/components/ExploreResultsList.vue'
-import FilterPanel from '@/components/FilterPanel.vue'
+import MapControlsOverlay from '@/components/MapControlsOverlay.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelPanel from '@/components/ParcelPanel.vue'
 import {
@@ -19,12 +19,15 @@ import {
   readViewMode,
 } from '@/lib/explore'
 import { useAreaSearchStore } from '@/stores/areaSearch'
+import { useFiltersStore } from '@/stores/filters'
 import { useParcelStore } from '@/stores/parcel'
 
 const store = useParcelStore()
 const { detail } = storeToRefs(store)
 const areaSearch = useAreaSearchStore()
 const { results: areaResults, loading: areaLoading, active: areaActive } = storeToRefs(areaSearch)
+const filters = useFiltersStore()
+const { activeCount: buyBoxCount } = storeToRefs(filters)
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
@@ -67,8 +70,30 @@ watch(areaActive, (active) => {
   if (!active) runViewport()
 })
 
+const buyBoxKey = computed(() =>
+  JSON.stringify([
+    filters.vacantOnly,
+    [...filters.useClasses],
+    areaSearch.minValue,
+    areaSearch.maxValue,
+    areaSearch.minLotArea,
+    areaSearch.maxLotArea,
+    areaSearch.minScore,
+  ]),
+)
+let criteriaTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(buyBoxKey, () => {
+  if (criteriaTimer) clearTimeout(criteriaTimer)
+  criteriaTimer = setTimeout(() => {
+    if (areaActive.value) void areaSearch.rerun()
+    else runViewport()
+  }, VIEWPORT_DEBOUNCE_MS)
+})
+
 onBeforeUnmount(() => {
   if (boundsTimer) clearTimeout(boundsTimer)
+  if (criteriaTimer) clearTimeout(criteriaTimer)
 })
 
 const VIEW_OPTIONS: { label: string; value: ExploreViewMode; icon: string }[] = [
@@ -98,6 +123,22 @@ function onSelect(parcelNumber: string): void {
       <div class="explore-body">
         <div class="explore-toolbar">
           <span class="toolbar-count lot-numeric">{{ toolbarLabel }}</span>
+          <q-btn
+            outline
+            no-caps
+            dense
+            color="grey-8"
+            icon-right="expand_more"
+            label="Buy box"
+            class="buy-box-btn"
+          >
+            <q-badge v-if="buyBoxCount > 0" color="primary" rounded floating>{{
+              buyBoxCount
+            }}</q-badge>
+            <q-menu anchor="bottom left" self="top left">
+              <BuyBoxPanel />
+            </q-menu>
+          </q-btn>
           <q-space />
           <q-btn-toggle
             v-model="viewMode"
@@ -125,8 +166,7 @@ function onSelect(parcelNumber: string): void {
 
           <section v-show="showMap" class="map-pane">
             <MapView @select="onSelect" @boundschange="onBounds" />
-            <FilterPanel />
-            <AreaSearchPanel />
+            <MapControlsOverlay />
             <div v-if="!hasResults && !areaActive && !areaLoading" class="map-hint">
               <q-icon :name="belowZoom ? 'zoom_in' : 'search_off'" size="15px" class="q-mr-xs" />
               {{ belowZoom ? 'Zoom in to list lots in view' : 'No lots in this view' }}
