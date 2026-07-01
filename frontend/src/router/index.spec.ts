@@ -62,4 +62,21 @@ describe('marketGuard', () => {
     expect(router.currentRoute.value.name).toBe('explore')
     expect(router.currentRoute.value.fullPath).toBe('/philadelphia/explore')
   })
+
+  it('redirects the retired watchlist path to the Lists "lots" tab', async () => {
+    authenticate()
+    const router = makeRouter()
+    await router.push('/philadelphia/watchlist')
+    expect(router.currentRoute.value.name).toBe('lists')
+    expect(router.currentRoute.value.query.tab).toBe('lots')
+  })
+
+  it('redirects the retired saved-searches path to the Lists "searches" tab, preserving query', async () => {
+    authenticate()
+    const router = makeRouter()
+    await router.push('/philadelphia/saved-searches?vacant=1')
+    expect(router.currentRoute.value.name).toBe('lists')
+    expect(router.currentRoute.value.query.tab).toBe('searches')
+    expect(router.currentRoute.value.query.vacant).toBe('1')
+  })
 })

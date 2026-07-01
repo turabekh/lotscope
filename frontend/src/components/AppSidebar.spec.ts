@@ -40,7 +40,7 @@ describe('AppSidebar', () => {
     expect(html).toContain('href="/philadelphia/home"')
     expect(html).toContain('href="/philadelphia/explore"')
     expect(html).toContain('href="/philadelphia/leads"')
-    expect(html).toContain('href="/philadelphia/saved-searches"')
+    expect(html).toContain('href="/philadelphia/lists"')
     expect(html).toContain('href="/account"')
   })
 

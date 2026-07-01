@@ -31,13 +31,7 @@ const sections = computed<NavLink[]>(() => [
   { label: 'Explore', icon: 'travel_explore', name: 'explore' },
   { label: 'Leads', icon: 'sell', name: 'leads' },
   { label: 'Pipeline', icon: 'view_kanban', name: 'pipeline' },
-  { label: 'Watchlist', icon: 'bookmark', name: 'watchlist', badge: () => alerts.value },
-  {
-    label: 'Saved searches',
-    icon: 'saved_search',
-    name: 'saved-searches',
-    badge: () => newTotal.value,
-  },
+  { label: 'Lists', icon: 'bookmark', name: 'lists', badge: () => alerts.value + newTotal.value },
 ])
 
 function isActive(name: string): boolean {

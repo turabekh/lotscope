@@ -76,10 +76,20 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: 'Deal pipeline' },
   },
   {
+    path: '/:market/lists',
+    name: 'lists',
+    component: () => import('@/pages/ListsPage.vue'),
+    meta: { requiresAuth: true, title: 'Lists' },
+  },
+  {
     path: '/:market/watchlist',
     name: 'watchlist',
-    component: () => import('@/pages/WatchlistPage.vue'),
-    meta: { requiresAuth: true, title: 'My watchlist' },
+    redirect: (to) => ({
+      name: 'lists',
+      params: { market: to.params.market },
+      query: { ...to.query, tab: 'lots' },
+    }),
+    meta: { requiresAuth: true },
   },
   {
     path: '/:market/compare',
@@ -90,8 +100,12 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/:market/saved-searches',
     name: 'saved-searches',
-    component: () => import('@/pages/SavedSearchesPage.vue'),
-    meta: { requiresAuth: true, title: 'Saved searches' },
+    redirect: (to) => ({
+      name: 'lists',
+      params: { market: to.params.market },
+      query: { ...to.query, tab: 'searches' },
+    }),
+    meta: { requiresAuth: true },
   },
   {
     path: '/parcel/:market/:id',
