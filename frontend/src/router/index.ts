@@ -60,7 +60,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/:market/explore',
     name: 'explore',
-    component: () => import('@/pages/MapPage.vue'),
+    component: () => import('@/pages/ExplorePage.vue'),
     meta: { requiresAuth: true },
   },
   {
