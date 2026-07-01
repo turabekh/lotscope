@@ -26,6 +26,7 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   const loading = ref(false)
   const results = ref<SpatialParcelResult[]>([])
   const count = ref(0)
+  const total = ref(0)
   const truncated = ref(false)
 
   function criteria(): Partial<AreaSearchRequest> {
@@ -44,6 +45,7 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     neighborhood.value = null
     results.value = []
     count.value = 0
+    total.value = 0
     truncated.value = false
   }
 
@@ -67,10 +69,12 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   function applyResponse(response: {
     results: SpatialParcelResult[]
     count: number
+    total: number
     truncated: boolean
   }): void {
     results.value = response.results
     count.value = response.count
+    total.value = response.total
     truncated.value = response.truncated
   }
 
@@ -129,6 +133,7 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   function clearResults(): void {
     results.value = []
     count.value = 0
+    total.value = 0
     truncated.value = false
   }
 
@@ -183,6 +188,7 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     loading,
     results,
     count,
+    total,
     truncated,
     clear,
     toggle,

@@ -83,83 +83,93 @@ def _result(row: Row[Any], *, with_distance: bool) -> SpatialParcelResult:
     )
 
 
+async def _count(session: AsyncSession, where: str, spatial: str, params: dict[str, Any]) -> int:
+    total = (
+        await session.execute(
+            text(f"SELECT count(*) FROM parcel p {_JOINS} WHERE {where} AND {spatial}"), params
+        )
+    ).scalar_one()
+    return int(total)
+
+
 async def _search_radius(
     session: AsyncSession, request: AreaSearchRequest
-) -> list[SpatialParcelResult]:
+) -> tuple[list[SpatialParcelResult], int]:
     assert request.center is not None
     assert request.radius_m is not None
     radius = min(request.radius_m, MAX_RADIUS_M)
     where, params = _filters_for(request)
-    sql = text(
-        f"SELECT {_SELECT}, "
-        f"ST_Distance(p.geom_4326::geography, {_POINT}) AS distance_m "
-        f"FROM parcel p {_JOINS} "
-        f"WHERE {where} "
-        f"AND ST_DWithin(p.geom_4326::geography, {_POINT}, :radius_m) "
-        "ORDER BY distance_m LIMIT :limit"
-    )
+    params = {**params, "lng": request.center.lng, "lat": request.center.lat, "radius_m": radius}
+    spatial = f"ST_DWithin(p.geom_4326::geography, {_POINT}, :radius_m)"
     rows = (
         await session.execute(
-            sql,
-            {
-                **params,
-                "lng": request.center.lng,
-                "lat": request.center.lat,
-                "radius_m": radius,
-                "limit": request.limit,
-            },
+            text(
+                f"SELECT {_SELECT}, "
+                f"ST_Distance(p.geom_4326::geography, {_POINT}) AS distance_m "
+                f"FROM parcel p {_JOINS} "
+                f"WHERE {where} AND {spatial} "
+                "ORDER BY distance_m LIMIT :limit"
+            ),
+            {**params, "limit": request.limit},
         )
     ).all()
-    return [_result(row, with_distance=True) for row in rows]
+    total = await _count(session, where, spatial, params)
+    return [_result(row, with_distance=True) for row in rows], total
 
 
 async def _search_polygon(
     session: AsyncSession, request: AreaSearchRequest
-) -> list[SpatialParcelResult]:
+) -> tuple[list[SpatialParcelResult], int]:
     polygon = request.polygon
     assert polygon is not None
     if polygon.get("type") not in _POLYGON_TYPES:
         raise ValidationError("polygon must be a GeoJSON Polygon or MultiPolygon geometry.")
     where, params = _filters_for(request)
-    sql = text(
-        f"SELECT {_SELECT} "
-        f"FROM parcel p {_JOINS} "
-        f"WHERE {where} "
-        "AND ST_Intersects(p.geom_4326, ST_SetSRID(ST_GeomFromGeoJSON(:polygon), 4326)) "
-        "ORDER BY pv.opportunity_score DESC NULLS LAST, p.parcel_number LIMIT :limit"
-    )
+    params = {**params, "polygon": json.dumps(polygon)}
+    spatial = "ST_Intersects(p.geom_4326, ST_SetSRID(ST_GeomFromGeoJSON(:polygon), 4326))"
     rows = (
         await session.execute(
-            sql, {**params, "polygon": json.dumps(polygon), "limit": request.limit}
+            text(
+                f"SELECT {_SELECT} "
+                f"FROM parcel p {_JOINS} "
+                f"WHERE {where} AND {spatial} "
+                "ORDER BY pv.opportunity_score DESC NULLS LAST, p.parcel_number LIMIT :limit"
+            ),
+            {**params, "limit": request.limit},
         )
     ).all()
-    return [_result(row, with_distance=False) for row in rows]
+    total = await _count(session, where, spatial, params)
+    return [_result(row, with_distance=False) for row in rows], total
 
 
 async def _search_neighborhood(
     session: AsyncSession, request: AreaSearchRequest
-) -> list[SpatialParcelResult]:
+) -> tuple[list[SpatialParcelResult], int]:
     assert request.neighborhood is not None
     where, params = _filters_for(request)
-    sql = text(
-        f"SELECT {_SELECT} "
-        f"FROM parcel p {_JOINS} "
-        f"WHERE {where} "
-        "AND ST_Intersects(p.geom_4326, "
-        "(SELECT ST_Union(n.geom_4326) FROM neighborhood n WHERE n.name = :neighborhood)) "
-        "ORDER BY pv.opportunity_score DESC NULLS LAST, p.parcel_number LIMIT :limit"
+    params = {**params, "neighborhood": request.neighborhood}
+    spatial = (
+        "ST_Intersects(p.geom_4326, "
+        "(SELECT ST_Union(n.geom_4326) FROM neighborhood n WHERE n.name = :neighborhood))"
     )
     rows = (
         await session.execute(
-            sql, {**params, "neighborhood": request.neighborhood, "limit": request.limit}
+            text(
+                f"SELECT {_SELECT} "
+                f"FROM parcel p {_JOINS} "
+                f"WHERE {where} AND {spatial} "
+                "ORDER BY pv.opportunity_score DESC NULLS LAST, p.parcel_number LIMIT :limit"
+            ),
+            {**params, "limit": request.limit},
         )
     ).all()
-    return [_result(row, with_distance=False) for row in rows]
+    total = await _count(session, where, spatial, params)
+    return [_result(row, with_distance=False) for row in rows], total
 
 
 async def search_area(
     session: AsyncSession, request: AreaSearchRequest
-) -> list[SpatialParcelResult]:
+) -> tuple[list[SpatialParcelResult], int]:
     if request.polygon is not None:
         return await _search_polygon(session, request)
     if request.neighborhood is not None:

@@ -33,9 +33,10 @@ async def search_within_area(
     request: AreaSearchRequest,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> AreaSearchResponse:
-    results = await search_area(session, request)
+    results, total = await search_area(session, request)
     return AreaSearchResponse(
         count=len(results),
-        truncated=len(results) >= request.limit,
+        total=total,
+        truncated=total > len(results),
         results=results,
     )

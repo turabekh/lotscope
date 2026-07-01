@@ -295,6 +295,7 @@ export interface SpatialParcelResult {
 
 export interface AreaSearchResponse {
   count: number
+  total: number
   truncated: boolean
   results: SpatialParcelResult[]
 }

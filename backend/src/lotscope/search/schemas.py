@@ -64,5 +64,6 @@ class SpatialParcelResult(BaseModel):
 
 class AreaSearchResponse(BaseModel):
     count: int
+    total: int
     truncated: bool
     results: list[SpatialParcelResult]

@@ -115,8 +115,9 @@ async def test_radius_returns_near_parcels_ordered_by_distance(db_session: Async
     await _seed(db_session)
 
     request = AreaSearchRequest(center=GeoPoint(lat=39.9500, lng=-75.1600), radius_m=500)
-    results = await search_area(db_session, request)
+    results, total = await search_area(db_session, request)
 
+    assert total == 2
     assert [r.parcel_number for r in results] == ["000000001", "000000002"]
     first, second = results[0], results[1]
     assert first.distance_m is not None
@@ -130,20 +131,22 @@ async def test_radius_returns_near_parcels_ordered_by_distance(db_session: Async
 async def test_radius_respects_vacant_and_zoning_filters(db_session: AsyncSession) -> None:
     await _seed(db_session)
 
-    vacant = await search_area(
+    vacant, vacant_total = await search_area(
         db_session,
         AreaSearchRequest(
             center=GeoPoint(lat=39.9500, lng=-75.1600), radius_m=500, vacant_only=True
         ),
     )
+    assert vacant_total == 1
     assert [r.parcel_number for r in vacant] == ["000000001"]
 
-    zoned = await search_area(
+    zoned, zoned_total = await search_area(
         db_session,
         AreaSearchRequest(
             center=GeoPoint(lat=39.9500, lng=-75.1600), radius_m=500, zoning_codes=["RM1"]
         ),
     )
+    assert zoned_total == 1
     assert [r.parcel_number for r in zoned] == ["000000002"]
 
 
@@ -163,9 +166,16 @@ async def test_polygon_returns_intersecting_parcels(db_session: AsyncSession) ->
             ]
         ],
     }
-    results = await search_area(db_session, AreaSearchRequest(polygon=polygon))
+    results, total = await search_area(db_session, AreaSearchRequest(polygon=polygon))
+    assert total == 2
     assert sorted(r.parcel_number for r in results) == ["000000001", "000000002"]
     assert all(r.distance_m is None for r in results)
+
+    capped, capped_total = await search_area(
+        db_session, AreaSearchRequest(polygon=polygon, limit=1)
+    )
+    assert len(capped) == 1
+    assert capped_total == 2
 
 
 @pytest.mark.integration
@@ -187,12 +197,14 @@ async def test_neighborhood_returns_parcels_inside_boundary(db_session: AsyncSes
     )
     await db_session.flush()
 
-    results = await search_area(db_session, AreaSearchRequest(neighborhood="Test Park"))
+    results, total = await search_area(db_session, AreaSearchRequest(neighborhood="Test Park"))
+    assert total == 2
     assert sorted(r.parcel_number for r in results) == ["000000001", "000000002"]
 
 
 @pytest.mark.integration
 async def test_neighborhood_unknown_name_returns_empty(db_session: AsyncSession) -> None:
     await _seed(db_session)
-    results = await search_area(db_session, AreaSearchRequest(neighborhood="Nowhere"))
+    results, total = await search_area(db_session, AreaSearchRequest(neighborhood="Nowhere"))
     assert results == []
+    assert total == 0

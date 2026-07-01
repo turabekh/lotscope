@@ -42,3 +42,8 @@
 
 - Screenshot the result (Playwright can capture these states) and diff it against the matching wireframe.
 - Resolve and prune the open questions in `ia-and-layout.md` as decisions land.
+
+## Open questions / follow-ups (do NOT build during the redesign)
+
+- **Explore list ordering (fast-follow).** The viewport/area list orders by `opportunity_score DESC` and caps at 200 — i.e. it shows the *top slice by score*, not a representative sample of what's in view. The honest-count fix (Slice 3 follow-up) surfaces the true total and a "showing top N by score" label, but that label must not become a permanent cover for only-ever-showing-the-top: queue **representative ordering or paging** so the list reflects the viewport, not just its highest-scored parcels.
+- **Opportunity-score quantization (verdict-model investigation, post-redesign).** 71% of parcels sit at exactly `62` (42%) or `92` (29%); the model under-discriminates and the score chip can't differentiate dense-area lots. Investigate the score distribution/binning in the verdict engine (ADR-0007 contract) — an ADR-level change, not a UI fix, and out of scope for the redesign.

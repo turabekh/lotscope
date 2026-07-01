@@ -31,6 +31,8 @@ const {
   active: areaActive,
   shape: areaShape,
   minScore,
+  total: areaTotal,
+  truncated: areaTruncated,
 } = storeToRefs(areaSearch)
 const filters = useFiltersStore()
 const { activeCount: buyBoxCount, vacantOnly, useClasses } = storeToRefs(filters)
@@ -122,11 +124,12 @@ const VIEW_OPTIONS: { label: string; value: ExploreViewMode; icon: string }[] = 
   { label: 'Map', value: 'map', icon: 'map' },
 ]
 
-const toolbarLabel = computed(() =>
-  areaResults.value.length > 0
-    ? `${areaResults.value.length} lot${areaResults.value.length === 1 ? '' : 's'} in view`
-    : 'Explore vacant lots',
-)
+const toolbarLabel = computed(() => {
+  const total = areaTotal.value
+  if (total === 0) return 'Explore vacant lots'
+  const base = `${total.toLocaleString()} lot${total === 1 ? '' : 's'} in view`
+  return areaTruncated.value ? `${base} · showing top ${areaResults.value.length} by score` : base
+})
 
 const drawerOpen = ref(false)
 const drawerWidth = computed(() => ($q.screen.lt.sm ? Math.min($q.screen.width - 36, 380) : 430))
