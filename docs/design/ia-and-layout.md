@@ -116,9 +116,9 @@ Driven by the same `$q.screen` mechanism already used to toggle the drawer on `M
 - No new backend data sources or new-market ingestion (separate track; ADR-0004 follow-up).
 - No new analytical features; existing panels are reused as-is.
 
-## Open questions
+## Resolved decisions
 
-- Which four sections belong in the mobile bottom bar — is Pipeline or Lists the fourth, with the other behind More?
-- Carry the `:market` segment in the URL always, or only once more than one market is live? (Recommendation: always, from day one.)
-- Home dashboard v1 contents and priority.
-- Draggable results peek-sheet in v1, or ship the List/Map toggle first and add the sheet after?
+- **Mobile bottom bar (→ slice 6):** Home · Explore · Leads · More, with Pipeline and Lists behind More. Usage-driven; cheap to retune.
+- **`:market` in the URL (✓ slice 1):** always, from day one. `/` redirects to `/:market/home`; an unknown segment normalizes to the default market. Implemented.
+- **Home dashboard v1 (→ slice 5):** read-only, no new backend, existing stores only, in order — (1) what-changed (watchlist alerts + saved-search hits), (2) pipeline value + per-stage counts, (3) leads snapshot (top N by score), (4) coverage / market stats. Ship 1–2 first; 3–4 additive. Empty states point to Explore for new users — never a wall of zeros.
+- **Draggable results peek-sheet (→ slice 6):** ship the List/Map toggle first; add the draggable sheet in a later commit.

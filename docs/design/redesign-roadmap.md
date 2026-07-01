@@ -11,9 +11,10 @@
 
 ## Slices
 
-- [ ] **Slice 1 — Market-scope foundation.**
+- [x] **Slice 1 — Market-scope foundation.** *(shipped: 1a rename, 1b routing, 1c search)*
   Goal: make jurisdiction explicit end-to-end. Touches: new `market` store, the `/:market/...` routing convention, market-scoping `lib/api`. Reuse: everything else unchanged. No visual change.
   Acceptance: existing flows work under a Philadelphia market segment; tests green.
+  Delivered: `market` store (URL > localStorage > default precedence); flattened `/:market/...` routes with `/ → /:market/home → /:market/explore` (home is a temporary redirect until slice 5); URL-authoritative guard that resolves/validates the market before the auth redirect; full link sweep (`map`→`explore` + all hardcoded `/app` literals); `GET /search` market param (unknown → 422, response echoes scope) with `search()` requiring `market`. Split as an isolated rename commit first so the clean `market` name was free.
 
 - [ ] **Slice 2 — App shell.**
   Goal: replace the top-nav with the persistent shell, re-homing existing pages unchanged. Touches: `AppShell`/`AppSidebar`/`AppTopBar` (refactor `AppHeader`), `MarketSwitcher`, `GlobalSearch`, `DataCoverageChip`. Reuse: all current pages, mounted inside the shell.
