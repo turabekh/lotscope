@@ -6,11 +6,9 @@ import { useRouter } from 'vue-router'
 import { formatCurrency } from '@/lib/format'
 import type { WatchlistItem } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
-import { useParcelStore } from '@/stores/parcel'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const router = useRouter()
-const parcelStore = useParcelStore()
 const market = useMarketStore()
 const watchlist = useWatchlistStore()
 const { items, limit, used, loading, alerts } = storeToRefs(watchlist)
@@ -35,8 +33,7 @@ function markSeen(item: WatchlistItem): void {
 }
 
 function openParcel(item: WatchlistItem): void {
-  void parcelStore.select(item.parcel_number)
-  void router.push({ name: 'explore', params: { market: market.active } })
+  void router.push({ name: 'parcel', params: { market: market.active, id: item.parcel_number } })
 }
 
 function onTags(item: WatchlistItem, tags: string[]): void {
