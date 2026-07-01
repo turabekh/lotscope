@@ -2,11 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
-import { formatCurrency } from '@/lib/format'
-import type { SpatialParcelResult } from '@/lib/types'
 import { type AreaShape, useAreaSearchStore } from '@/stores/areaSearch'
-
-const emit = defineEmits<{ select: [parcelNumber: string] }>()
 
 const store = useAreaSearchStore()
 const {
@@ -23,7 +19,6 @@ const {
   maxLotArea,
   minScore,
   loading,
-  results,
   count,
   truncated,
 } = storeToRefs(store)
@@ -80,17 +75,8 @@ function filterNeighborhoods(value: string, update: (callback: () => void) => vo
   })
 }
 
-function pick(result: SpatialParcelResult): void {
-  emit('select', result.parcel_number)
-}
-
 function radiusLabel(meters: number): string {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`
-}
-
-function distanceLabel(meters: number | null): string {
-  if (meters === null) return ''
-  return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`
 }
 </script>
 
@@ -226,41 +212,8 @@ function distanceLabel(meters: number | null): string {
               <span v-else> in this area</span>
               <span v-if="truncated" class="text-grey-6"> (first {{ count }})</span>
             </span>
+            <span class="area-hint-inline">· listed in the left pane</span>
           </div>
-
-          <q-list dense class="area-list lot-scroll">
-            <q-item
-              v-for="result in results"
-              :key="result.parcel_number"
-              clickable
-              @click="pick(result)"
-            >
-              <q-item-section>
-                <q-item-label class="ellipsis">
-                  {{ result.address ?? result.parcel_number }}
-                </q-item-label>
-                <q-item-label caption>
-                  {{ result.base_zoning_code ?? '—' }}
-                  <span v-if="result.is_vacant" class="text-amber-9">· Vacant</span>
-                  <span v-if="result.market_value"> · {{ formatCurrency(result.market_value) }}</span>
-                  <span v-if="result.distance_m !== null" class="text-grey-6">
-                    · {{ distanceLabel(result.distance_m) }}</span
-                  >
-                </q-item-label>
-              </q-item-section>
-              <q-item-section v-if="result.opportunity_score !== null" side>
-                <q-badge color="primary" outline>{{ result.opportunity_score }}</q-badge>
-              </q-item-section>
-            </q-item>
-            <q-item v-if="!loading && results.length === 0">
-              <q-item-section class="text-grey-6">
-                No lots here.
-                <span v-if="shape === 'radius'">Try a larger radius.</span>
-                <span v-else-if="shape === 'neighborhood'">Try another neighborhood.</span>
-                <span v-else>Try a bigger area.</span>
-              </q-item-section>
-            </q-item>
-          </q-list>
         </template>
       </div>
     </q-slide-transition>

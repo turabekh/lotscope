@@ -1,23 +1,40 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import AreaSearchPanel from '@/components/AreaSearchPanel.vue'
+import ExploreResultsList from '@/components/ExploreResultsList.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelPanel from '@/components/ParcelPanel.vue'
-import { type ExploreViewMode, paneVisibility } from '@/lib/explore'
+import {
+  DEFAULT_VIEW_MODE,
+  type ExploreViewMode,
+  paneVisibility,
+  readViewMode,
+} from '@/lib/explore'
 import { useAreaSearchStore } from '@/stores/areaSearch'
 import { useParcelStore } from '@/stores/parcel'
 
 const store = useParcelStore()
+const { detail } = storeToRefs(store)
 const areaSearch = useAreaSearchStore()
-const { results: areaResults } = storeToRefs(areaSearch)
+const { results: areaResults, loading: areaLoading } = storeToRefs(areaSearch)
 const $q = useQuasar()
+const route = useRoute()
+const router = useRouter()
 
-const viewMode = ref<ExploreViewMode>('split')
+const viewMode = ref<ExploreViewMode>(readViewMode(route.query.view))
 const panes = computed(() => paneVisibility(viewMode.value))
+
+watch(viewMode, (mode) => {
+  const query = { ...route.query }
+  if (mode === DEFAULT_VIEW_MODE) delete query.view
+  else query.view = mode
+  void router.replace({ query })
+})
 
 const VIEW_OPTIONS: { label: string; value: ExploreViewMode; icon: string }[] = [
   { label: 'List', value: 'list', icon: 'view_list' },
@@ -63,23 +80,18 @@ function onSelect(parcelNumber: string): void {
 
         <div class="explore-split">
           <section v-show="panes.list" class="list-pane">
-            <div v-if="areaResults.length === 0" class="list-empty">
-              <q-icon name="travel_explore" size="34px" />
-              <div class="list-empty-title">No lots listed yet</div>
-              <div class="list-empty-text">
-                Draw an area or set a buy box on the map to list parcels here.
-              </div>
-            </div>
-            <div v-else class="list-pending">
-              <q-icon name="format_list_bulleted" size="18px" class="q-mr-xs" />
-              {{ areaResults.length }} lots in this area
-            </div>
+            <ExploreResultsList
+              :results="areaResults"
+              :selected-parcel="detail?.parcel_number ?? null"
+              :loading="areaLoading"
+              @select="onSelect"
+            />
           </section>
 
           <section v-show="panes.map" class="map-pane">
             <MapView @select="onSelect" />
             <FilterPanel />
-            <AreaSearchPanel @select="onSelect" />
+            <AreaSearchPanel />
           </section>
         </div>
       </div>
@@ -130,40 +142,12 @@ function onSelect(parcelNumber: string): void {
 .list-pane {
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
-  background: var(--lot-surface);
   border-right: 1px solid var(--lot-border);
 }
 .map-pane {
   flex: 1.2;
   min-width: 0;
   position: relative;
-}
-.list-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 6px;
-  padding: 56px 24px;
-  color: var(--lot-faint);
-}
-.list-empty-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--lot-muted);
-}
-.list-empty-text {
-  font-size: 13px;
-  max-width: 260px;
-}
-.list-pending {
-  display: flex;
-  align-items: center;
-  padding: 14px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--lot-muted);
 }
 .dossier-shell {
   background: var(--lot-surface);
