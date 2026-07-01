@@ -31,7 +31,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const subdivision = ref<SubdivisionResult | null>(null)
   const historic = ref<HistoricResult | null>(null)
   const scenarios = ref<ScenariosResult | null>(null)
-  const market = ref<MarketContext | null>(null)
+  const marketContext = ref<MarketContext | null>(null)
   const comps = ref<ValuationResult | null>(null)
   const deal = ref<DealResult | null>(null)
   const dealLoading = ref(false)
@@ -54,7 +54,7 @@ export const useParcelStore = defineStore('parcel', () => {
     subdivision.value = null
     historic.value = null
     scenarios.value = null
-    market.value = null
+    marketContext.value = null
     comps.value = null
     deal.value = null
     checklist.value = null
@@ -69,7 +69,7 @@ export const useParcelStore = defineStore('parcel', () => {
       void loadSubdivision(parcelNumber)
       void loadHistoric(parcelNumber)
       void loadScenarios(parcelNumber)
-      void loadMarket(parcelNumber)
+      void loadMarketContext(parcelNumber)
       void loadComps(parcelNumber)
       void loadDeal(parcelNumber)
       void loadChecklist(parcelNumber)
@@ -173,12 +173,12 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
-  async function loadMarket(parcelNumber: string): Promise<void> {
+  async function loadMarketContext(parcelNumber: string): Promise<void> {
     try {
-      const result = await api.getMarket(parcelNumber)
-      if (detail.value?.parcel_number === parcelNumber) market.value = result
+      const result = await api.getMarketContext(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) marketContext.value = result
     } catch {
-      if (detail.value?.parcel_number === parcelNumber) market.value = null
+      if (detail.value?.parcel_number === parcelNumber) marketContext.value = null
     }
   }
 
@@ -243,7 +243,7 @@ export const useParcelStore = defineStore('parcel', () => {
     subdivision.value = null
     historic.value = null
     scenarios.value = null
-    market.value = null
+    marketContext.value = null
     comps.value = null
     deal.value = null
     checklist.value = null
@@ -264,7 +264,7 @@ export const useParcelStore = defineStore('parcel', () => {
     subdivision,
     historic,
     scenarios,
-    market,
+    marketContext,
     comps,
     deal,
     dealLoading,
@@ -283,7 +283,7 @@ export const useParcelStore = defineStore('parcel', () => {
     loadSubdivision,
     loadHistoric,
     loadScenarios,
-    loadMarket,
+    loadMarketContext,
     loadComps,
     loadDeal,
     loadChecklist,

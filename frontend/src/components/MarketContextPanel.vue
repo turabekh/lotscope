@@ -5,9 +5,9 @@ import { computed } from 'vue'
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/format'
 import { useParcelStore } from '@/stores/parcel'
 
-const { market } = storeToRefs(useParcelStore())
+const { marketContext } = storeToRefs(useParcelStore())
 
-const show = computed(() => (market.value?.parcels_nearby ?? 0) > 0)
+const show = computed(() => (marketContext.value?.parcels_nearby ?? 0) > 0)
 
 interface Stat {
   label: string
@@ -15,7 +15,7 @@ interface Stat {
 }
 
 const stats = computed<Stat[]>(() => {
-  const m = market.value
+  const m = marketContext.value
   if (m === null) return []
   return [
     { label: 'Sales / yr', value: m.sales_per_year !== null ? formatNumber(m.sales_per_year) : '—' },
@@ -29,18 +29,18 @@ const stats = computed<Stat[]>(() => {
 </script>
 
 <template>
-  <q-card v-if="show && market" flat bordered class="rounded-borders">
+  <q-card v-if="show && marketContext" flat bordered class="rounded-borders">
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="insights" size="18px" class="q-mr-xs" />Market context
         <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
-          Recent activity within {{ formatNumber(market.radius_ft) }} ft over the last
-          {{ market.years }} years: sales velocity, development permits, and vacancy around this
+          Recent activity within {{ formatNumber(marketContext.radius_ft) }} ft over the last
+          {{ marketContext.years }} years: sales velocity, development permits, and vacancy around this
           lot. Informational.
         </q-tooltip>
         <q-space />
-        <span v-if="market.neighborhood" class="nbhd">{{ market.neighborhood }}</span>
+        <span v-if="marketContext.neighborhood" class="nbhd">{{ marketContext.neighborhood }}</span>
       </div>
 
       <div class="grid">
@@ -51,8 +51,8 @@ const stats = computed<Stat[]>(() => {
       </div>
 
       <div class="note">
-        {{ formatNumber(market.parcels_nearby) }} parcels within
-        {{ formatNumber(market.radius_ft) }} ft.
+        {{ formatNumber(marketContext.parcels_nearby) }} parcels within
+        {{ formatNumber(marketContext.radius_ft) }} ft.
       </div>
     </q-card-section>
   </q-card>

@@ -12,7 +12,7 @@ import DealPanel from '@/components/DealPanel.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import HistoricPanel from '@/components/HistoricPanel.vue'
-import MarketPanel from '@/components/MarketPanel.vue'
+import MarketContextPanel from '@/components/MarketContextPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
@@ -45,7 +45,7 @@ const TABS = [
 ]
 
 const dealEmpty = computed(
-  () => !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.market,
+  () => !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.marketContext,
 )
 const riskEmpty = computed(() => !store.distress && !store.ownerPortfolio)
 
@@ -292,7 +292,7 @@ async function toggleSave(): Promise<void> {
             <ScenariosPanel />
             <CompsPanel />
             <AssessmentPanel />
-            <MarketPanel />
+            <MarketContextPanel />
             <div v-if="dealEmpty" class="tab-empty">
               <q-icon name="query_stats" size="26px" />
               <span>No deal, comp, or market data for this lot yet.</span>

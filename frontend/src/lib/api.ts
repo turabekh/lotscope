@@ -124,7 +124,7 @@ export const api = {
   getHistoric(parcelNumber: string): Promise<HistoricResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/historic`)
   },
-  getMarket(parcelNumber: string): Promise<MarketContext> {
+  getMarketContext(parcelNumber: string): Promise<MarketContext> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/market`)
   },
   getScenarios(parcelNumber: string): Promise<ScenariosResult> {
