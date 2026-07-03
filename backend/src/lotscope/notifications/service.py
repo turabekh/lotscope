@@ -1,22 +1,32 @@
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.accounts.models import User
 from lotscope.accounts.security import create_unsubscribe_token
+from lotscope.accounts.tiers import feed_access
 from lotscope.core.config import Settings
 from lotscope.core.logging import get_logger
+from lotscope.feed.service import get_feed
 from lotscope.notifications.digest import (
     DigestChange,
     DigestContent,
     DigestParcel,
+    FeedDigestContent,
+    FeedDigestLine,
+    FeedDigestSearch,
     MatchAlertContent,
     MatchAlertParcel,
     MatchAlertSearch,
     digest_subject,
+    feed_digest_subject,
     match_alert_subject,
     render_digest_html,
     render_digest_text,
+    render_feed_digest_html,
+    render_feed_digest_text,
     render_match_alert_html,
     render_match_alert_text,
 )
@@ -26,6 +36,7 @@ from lotscope.notifications.push import PushExpiredError, PushSender, PushSubscr
 from lotscope.savedsearch.schemas import SavedSearchAlert
 from lotscope.savedsearch.service import (
     alerting_user_ids,
+    list_searches,
     mark_user_notified,
     pending_alerts_for_user,
     run_user_matches,
@@ -275,4 +286,84 @@ async def send_saved_search_alerts(
                 logger.exception("match_alert_failed", user_id=user_id)
 
     logger.info("match_alerts_sent", count=sent)
+    return sent
+
+
+_FEED_DIGEST_WINDOW = timedelta(days=1)
+_FEED_DIGEST_LIMIT = 5
+
+
+async def send_user_feed_digest(
+    session: AsyncSession, sender: EmailSender, settings: Settings, user: User
+) -> bool:
+    since = datetime.now(UTC) - _FEED_DIGEST_WINDOW
+    searches = [s for s in await list_searches(session, user.id) if s.alerts_enabled]
+    digest_searches: list[FeedDigestSearch] = []
+    for search in searches:
+        result = await get_feed(
+            session, criteria=search.criteria, since=since, limit=_FEED_DIGEST_LIMIT
+        )
+        if result.total == 0:
+            continue
+        digest_searches.append(
+            FeedDigestSearch(
+                name=search.name,
+                total=result.total,
+                lines=[
+                    FeedDigestLine(label=item.label, count=item.count) for item in result.summary
+                ],
+            )
+        )
+    if not digest_searches:
+        return False
+
+    content = FeedDigestContent(searches=digest_searches)
+    token = create_unsubscribe_token(settings, user_id=user.id)
+    feed_url = f"{settings.app_base_url.rstrip('/')}/philadelphia/feed"
+    unsubscribe_url = f"{settings.api_base_url.rstrip('/')}/digests/unsubscribe?token={token}"
+    await sender.send(
+        to=user.email,
+        subject=feed_digest_subject(content),
+        html=render_feed_digest_html(
+            content,
+            feed_url=feed_url,
+            unsubscribe_url=unsubscribe_url,
+            postal_address=settings.company_postal_address,
+        ),
+        text=render_feed_digest_text(
+            content,
+            feed_url=feed_url,
+            unsubscribe_url=unsubscribe_url,
+            postal_address=settings.company_postal_address,
+        ),
+    )
+    return True
+
+
+async def send_feed_digests(
+    session_factory: async_sessionmaker[AsyncSession],
+    sender: EmailSender | None,
+    settings: Settings,
+) -> int:
+    logger = get_logger("notifications")
+    if sender is None:
+        logger.info("feed_digest_skipped_unconfigured")
+        return 0
+
+    async with session_factory() as session:
+        user_ids = await alerting_user_ids(session)
+
+    sent = 0
+    for user_id in user_ids:
+        async with session_factory() as session:
+            user = await session.get(User, user_id)
+            if user is None or not user.is_active or not feed_access(user.tier):
+                continue
+            try:
+                if await send_user_feed_digest(session, sender, settings, user):
+                    sent += 1
+            except Exception:
+                logger.exception("feed_digest_failed", user_id=user_id)
+
+    logger.info("feed_digests_sent", count=sent)
     return sent

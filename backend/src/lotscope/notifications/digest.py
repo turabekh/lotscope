@@ -181,3 +181,84 @@ def render_digest_html(
         'style="color:#90a4ae;">Unsubscribe</a>.<br>'
         f"{escape(postal_address)}</div></div></div>"
     )
+
+
+@dataclass(frozen=True)
+class FeedDigestLine:
+    label: str
+    count: int
+
+
+@dataclass(frozen=True)
+class FeedDigestSearch:
+    name: str
+    total: int
+    lines: list[FeedDigestLine] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class FeedDigestContent:
+    searches: list[FeedDigestSearch]
+
+    @property
+    def total_events(self) -> int:
+        return sum(search.total for search in self.searches)
+
+
+def feed_digest_subject(content: FeedDigestContent) -> str:
+    total = content.total_events
+    change = "change" if total == 1 else "changes"
+    return f"{total} {change} in your buy box today"
+
+
+def render_feed_digest_text(
+    content: FeedDigestContent, *, feed_url: str, unsubscribe_url: str, postal_address: str
+) -> str:
+    lines = ["Since yesterday in your buy box:", ""]
+    for search in content.searches:
+        lines.append(f"{search.name} ({search.total})")
+        for line in search.lines:
+            lines.append(f"  - {line.count} {line.label}")
+        lines.append("")
+    lines.append(f"Open your deal feed: {feed_url}")
+    lines.append("")
+    lines.append("Informational only — not legal, financial, or real-estate advice.")
+    lines.append(f"Unsubscribe: {unsubscribe_url}")
+    lines.append(postal_address)
+    return "\n".join(lines)
+
+
+def render_feed_digest_html(
+    content: FeedDigestContent, *, feed_url: str, unsubscribe_url: str, postal_address: str
+) -> str:
+    blocks: list[str] = []
+    for search in content.searches:
+        rows = "".join(
+            f'<div style="padding:3px 0;color:#1f2933;font-size:14px;">'
+            f'<b>{line.count}</b> {escape(line.label)}</div>'
+            for line in search.lines
+        )
+        blocks.append(
+            f'<div style="padding:12px 0;border-bottom:1px solid #eceff1;">'
+            f'<div style="font-weight:600;font-size:15px;color:#1f2933;">'
+            f"{escape(search.name)} "
+            f'<span style="color:#1565c0;">({search.total})</span></div>'
+            f'<div style="margin-top:4px;">{rows}</div></div>'
+        )
+    body = "".join(blocks)
+    return (
+        '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;'
+        'color:#1f2933;">'
+        '<div style="background:#0f4ba8;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;">'
+        '<div style="font-size:18px;font-weight:700;">LotScope PHL</div>'
+        '<div style="font-size:13px;opacity:0.85;">Since yesterday in your buy box</div></div>'
+        f'<div style="padding:8px 20px 16px;border:1px solid #eceff1;border-top:none;">{body}'
+        f'<div style="margin-top:18px;text-align:center;">'
+        f'<a href="{escape(feed_url)}" style="display:inline-block;background:#1565c0;'
+        'color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">'
+        "Open your deal feed</a></div>"
+        '<div style="margin-top:18px;font-size:11px;color:#90a4ae;line-height:1.5;">'
+        "Informational only — not legal, financial, or real-estate advice. "
+        f'<a href="{escape(unsubscribe_url)}" style="color:#90a4ae;">Unsubscribe</a>.<br>'
+        f"{escape(postal_address)}</div></div></div>"
+    )

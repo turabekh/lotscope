@@ -13,6 +13,7 @@ from lotscope.notifications.email import get_email_sender
 from lotscope.notifications.push import get_push_sender
 from lotscope.notifications.service import (
     send_digests,
+    send_feed_digests,
     send_push_alerts,
     send_saved_search_alerts,
 )
@@ -106,6 +107,14 @@ async def send_saved_search_match_alerts(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def send_feed_digest_emails(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    sender = get_email_sender(settings)
+    count = await send_feed_digests(ctx["session_factory"], sender, settings)
+    _logger.info("sent_feed_digests", count=count)
+    return count
+
+
 class WorkerSettings:
     functions: ClassVar = [
         ingest_dataset,
@@ -119,6 +128,7 @@ class WorkerSettings:
         send_daily_digests,
         send_push_notifications,
         send_saved_search_match_alerts,
+        send_feed_digest_emails,
     ]
     on_startup = startup
     on_shutdown = shutdown
@@ -134,4 +144,5 @@ class WorkerSettings:
         cron(send_daily_digests, hour=13, minute=0),
         cron(send_weekly_digests, weekday="mon", hour=13, minute=30),
         cron(send_saved_search_match_alerts, hour=9, minute=0),
+        cron(send_feed_digest_emails, hour=13, minute=15),
     ]
