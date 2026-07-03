@@ -321,6 +321,13 @@ export interface DistressResult {
 
 export type AssessmentStatus = 'over_assessed' | 'fairly_assessed' | 'under_assessed' | 'unknown'
 
+export interface AppealPacketStatus {
+  parcel_number: string
+  entitled: boolean
+  source: string | null
+  packet_credits: number
+}
+
 export interface AssessmentResult {
   parcel_number: string
   status: AssessmentStatus

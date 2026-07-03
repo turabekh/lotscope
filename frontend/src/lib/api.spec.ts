@@ -73,6 +73,24 @@ describe('api', () => {
     )
   })
 
+  it('redeemAppealPacket posts to the packet endpoint', async () => {
+    const fetchMock = mockFetch(200, {
+      parcel_number: '001',
+      entitled: true,
+      source: 'grant',
+      packet_credits: 0,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await api.redeemAppealPacket('001')
+
+    expect(result.entitled).toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/parcels/001/appeal-packet'),
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
   it('throws ApiError with the detail on a failure response', async () => {
     vi.stubGlobal('fetch', mockFetch(404, { detail: 'Parcel not found.' }))
 

@@ -1,4 +1,5 @@
 import type {
+  AppealPacketStatus,
   AssemblageResult,
   AssessmentResult,
   BasemapSession,
@@ -396,6 +397,24 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ pack }),
     })
+  },
+  getAppealPacketStatus(parcelNumber: string): Promise<AppealPacketStatus> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/appeal-packet`)
+  },
+  redeemAppealPacket(parcelNumber: string): Promise<AppealPacketStatus> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/appeal-packet`, { method: 'POST' })
+  },
+  appealPacketCheckout(parcelNumber: string): Promise<CheckoutResponse> {
+    return request('/billing/appeal-packet/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ parcel_number: parcelNumber }),
+    })
+  },
+  downloadAppealPacket(parcelNumber: string): Promise<void> {
+    return downloadFile(
+      `/parcels/${encodeURIComponent(parcelNumber)}/appeal-packet.pdf`,
+      `lotscope-assessment-review-${parcelNumber}.pdf`,
+    )
   },
   getFeed(params: { days?: number; savedSearchId?: number; limit?: number } = {}): Promise<FeedResponse> {
     const query = new URLSearchParams()
