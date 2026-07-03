@@ -702,6 +702,25 @@ export interface SheriffSalesResponse {
   items: SheriffSaleItem[]
 }
 
+export interface AssemblageTopPlay {
+  parcel_number: string
+  address: string | null
+  potential: 'high' | 'medium' | 'low' | 'none'
+  candidate_count: number
+  combined_lot_area_sqft: number | null
+  by_right_units_current: number | null
+  by_right_units_combined: number | null
+  unit_unlock: number | null
+  base_zoning_code: string | null
+  neighborhood: string | null
+}
+
+export interface AssemblageTopResponse {
+  total: number
+  returned: number
+  plays: AssemblageTopPlay[]
+}
+
 export interface PlanInfo {
   tier: string
   name: string

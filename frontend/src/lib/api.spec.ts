@@ -60,6 +60,19 @@ describe('api', () => {
     )
   })
 
+  it('getTopPlays builds the query and returns the feed', async () => {
+    const fetchMock = mockFetch(200, { total: 1, returned: 1, plays: [] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await api.getTopPlays({ zoning: 'RM', limit: 50 })
+
+    expect(result.total).toBe(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/assemblage/top?zoning=RM&limit=50'),
+      expect.anything(),
+    )
+  })
+
   it('throws ApiError with the detail on a failure response', async () => {
     vi.stubGlobal('fetch', mockFetch(404, { detail: 'Parcel not found.' }))
 

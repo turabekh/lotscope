@@ -9,6 +9,7 @@ import type {
   CreditPackKey,
   FeedResponse,
   SheriffSalesResponse,
+  AssemblageTopResponse,
   DealItem,
   DealResult,
   DealStage,
@@ -414,5 +415,15 @@ export const api = {
     if (params.limit != null) query.set('limit', String(params.limit))
     const suffix = query.toString()
     return request(`/sheriff-sales${suffix ? `?${suffix}` : ''}`)
+  },
+  getTopPlays(
+    params: { neighborhood?: string; zoning?: string; limit?: number } = {},
+  ): Promise<AssemblageTopResponse> {
+    const query = new URLSearchParams()
+    if (params.neighborhood != null) query.set('neighborhood', params.neighborhood)
+    if (params.zoning != null) query.set('zoning', params.zoning)
+    if (params.limit != null) query.set('limit', String(params.limit))
+    const suffix = query.toString()
+    return request(`/assemblage/top${suffix ? `?${suffix}` : ''}`)
   },
 }
