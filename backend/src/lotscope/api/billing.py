@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.billing import (
     StripeGateway,
+    credit_grant_from_checkout,
     interpret_event,
     price_id_for_cadence,
 )
@@ -31,6 +32,8 @@ from lotscope.api.deps import (
 )
 from lotscope.core.config import Settings
 from lotscope.core.errors import ValidationError
+from lotscope.skiptrace.models import REASON_PACK_PURCHASE
+from lotscope.skiptrace.service import grant_credits
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 
@@ -112,6 +115,15 @@ async def webhook(
         raise ValidationError("Missing Stripe signature.")
     payload = await request.body()
     event = gateway.parse_event(payload=payload, signature=stripe_signature)
+
+    grant = credit_grant_from_checkout(event)
+    if grant is not None:
+        buyer = await get_user_by_stripe_customer(session, grant.customer_id)
+        if buyer is not None:
+            await grant_credits(session, buyer.id, grant.credits, REASON_PACK_PURCHASE, grant.ref)
+            await session.commit()
+        return {"handled": buyer is not None}
+
     outcome = interpret_event(event)
     if outcome is None:
         return {"handled": False}

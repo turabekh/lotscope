@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     stripe_price_pro_legacy: str | None = None
     stripe_price_investor_monthly: str | None = None
     stripe_price_investor_annual: str | None = None
+    stripe_price_credits_25: str | None = None
+    stripe_price_credits_100: str | None = None
+    stripe_price_credits_500: str | None = None
+    skiptrace_provider: str | None = None
+    skiptrace_api_key: str | None = None
     billing_success_url: str = "http://localhost:5173/account?checkout=success"
     billing_cancel_url: str = "http://localhost:5173/account?checkout=cancel"
     billing_portal_return_url: str = "http://localhost:5173/account"

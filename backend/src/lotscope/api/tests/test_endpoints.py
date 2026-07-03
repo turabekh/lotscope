@@ -407,6 +407,41 @@ async def test_leads_export_streams_csv_for_paid_tier(db_session: AsyncSession) 
 
 
 @pytest.mark.integration
+async def test_skip_trace_is_unavailable_without_a_provider(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'JANE DOE')")
+    )
+    await db_session.flush()
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
+    async with _client(app) as client:
+        resp = await client.post("/parcels/000000001/skip-trace")
+    assert resp.status_code == 503
+
+
+@pytest.mark.integration
+async def test_credits_endpoint_reads_ledger_balance(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'member@example.com', 'x', 'user', 'pro', true)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO credit_ledger (user_id, delta, reason, ref) "
+            "VALUES (1, 100, 'pack_purchase', 'pay_x'), (1, -1, 'skiptrace_burn', 'OK1')"
+        )
+    )
+    await db_session.flush()
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/credits")
+    assert resp.status_code == 200
+    assert resp.json()["balance"] == 99
+
+
+@pytest.mark.integration
 async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(

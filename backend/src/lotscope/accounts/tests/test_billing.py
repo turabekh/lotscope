@@ -1,6 +1,7 @@
 import pytest
 
 from lotscope.accounts.billing import (
+    credit_grant_from_checkout,
     granting_price_ids,
     interpret_event,
     investor_price_ids,
@@ -140,3 +141,47 @@ def test_interpret_subscription_deleted_forces_canceled() -> None:
 
 def test_interpret_ignores_unhandled_event() -> None:
     assert interpret_event({"type": "invoice.paid", "data": {"object": {}}}) is None
+
+
+def test_credit_grant_from_payment_checkout() -> None:
+    grant = credit_grant_from_checkout(
+        {
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "mode": "payment",
+                    "customer": "cus_1",
+                    "payment_intent": "pi_1",
+                    "metadata": {"credits": "100"},
+                }
+            },
+        }
+    )
+    assert grant is not None
+    assert grant.customer_id == "cus_1"
+    assert grant.credits == 100
+    assert grant.ref == "pi_1"
+
+
+def test_credit_grant_ignores_subscription_checkout() -> None:
+    assert (
+        credit_grant_from_checkout(
+            {
+                "type": "checkout.session.completed",
+                "data": {"object": {"mode": "subscription", "customer": "cus_1"}},
+            }
+        )
+        is None
+    )
+
+
+def test_credit_grant_requires_credits_metadata() -> None:
+    assert (
+        credit_grant_from_checkout(
+            {
+                "type": "checkout.session.completed",
+                "data": {"object": {"mode": "payment", "customer": "cus_1", "metadata": {}}},
+            }
+        )
+        is None
+    )

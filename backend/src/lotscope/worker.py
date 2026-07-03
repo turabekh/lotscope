@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 from arq import cron
@@ -15,6 +16,7 @@ from lotscope.notifications.service import (
     send_push_alerts,
     send_saved_search_alerts,
 )
+from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
 from lotscope.verdict.jobs import recompute_all_verdicts
 
@@ -71,6 +73,13 @@ async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def grant_investor_skiptrace_credits(ctx: dict[str, Any]) -> int:
+    month = datetime.now(UTC).strftime("%Y-%m")
+    count = await grant_investor_credits(ctx["session_factory"], month=month)
+    _logger.info("granted_investor_credits", count=count, month=month)
+    return count
+
+
 async def send_weekly_digests(ctx: dict[str, Any]) -> int:
     settings = ctx["settings"]
     sender = get_email_sender(settings)
@@ -105,6 +114,7 @@ class WorkerSettings:
         recompute_vacant_verdicts,
         recompute_distress,
         recompute_vacancy_confidence,
+        grant_investor_skiptrace_credits,
         send_weekly_digests,
         send_daily_digests,
         send_push_notifications,
@@ -118,6 +128,7 @@ class WorkerSettings:
         cron(recompute_vacancy_confidence, hour=6, minute=30),
         cron(recompute_vacant_verdicts, hour=7, minute=0),
         cron(recompute_distress, hour=8, minute=0),
+        cron(grant_investor_skiptrace_credits, day=1, hour=5, minute=0),
         cron(recompute_verdicts, weekday="sun", hour=5, minute=0),
         cron(send_push_notifications, hour=12, minute=0),
         cron(send_daily_digests, hour=13, minute=0),

@@ -125,11 +125,49 @@ def subscription_state_from_object(subscription: dict[str, Any]) -> Subscription
     )
 
 
+@dataclass(frozen=True)
+class CreditGrant:
+    customer_id: str
+    credits: int
+    ref: str
+
+
+def credit_grant_from_checkout(event: dict[str, Any]) -> CreditGrant | None:
+    if event.get("type") != "checkout.session.completed":
+        return None
+    obj = event.get("data", {}).get("object", {})
+    if not isinstance(obj, dict) or obj.get("mode") != "payment":
+        return None
+    customer = obj.get("customer")
+    metadata = obj.get("metadata") or {}
+    credits_raw = metadata.get("credits")
+    if not isinstance(customer, str) or credits_raw is None:
+        return None
+    try:
+        credit_amount = int(credits_raw)
+    except (TypeError, ValueError):
+        return None
+    if credit_amount <= 0:
+        return None
+    ref = obj.get("payment_intent") or obj.get("id")
+    return CreditGrant(customer_id=customer, credits=credit_amount, ref=str(ref))
+
+
 class StripeGateway(Protocol):
     async def create_customer(self, *, email: str, user_id: int) -> str: ...
 
     async def create_checkout_session(
         self, *, customer_id: str, price_id: str, success_url: str, cancel_url: str
+    ) -> str: ...
+
+    async def create_credit_checkout_session(
+        self,
+        *,
+        customer_id: str,
+        price_id: str,
+        credit_amount: int,
+        success_url: str,
+        cancel_url: str,
     ) -> str: ...
 
     async def create_portal_session(self, *, customer_id: str, return_url: str) -> str: ...
@@ -161,6 +199,30 @@ class StripeApiGateway:
                 "success_url": success_url,
                 "cancel_url": cancel_url,
                 "allow_promotion_codes": True,
+            }
+        )
+        if session.url is None:
+            raise ValidationError("Stripe did not return a checkout URL.")
+        return session.url
+
+    async def create_credit_checkout_session(
+        self,
+        *,
+        customer_id: str,
+        price_id: str,
+        credit_amount: int,
+        success_url: str,
+        cancel_url: str,
+    ) -> str:
+        session = await self._client.v1.checkout.sessions.create_async(
+            params={
+                "mode": "payment",
+                "customer": customer_id,
+                "line_items": [{"price": price_id, "quantity": 1}],
+                "success_url": success_url,
+                "cancel_url": cancel_url,
+                "metadata": {"credits": str(credit_amount)},
+                "payment_intent_data": {"metadata": {"credits": str(credit_amount)}},
             }
         )
         if session.url is None:
