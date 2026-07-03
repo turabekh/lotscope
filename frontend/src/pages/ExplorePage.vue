@@ -118,11 +118,24 @@ onBeforeUnmount(() => {
   if (criteriaTimer) clearTimeout(criteriaTimer)
 })
 
-const VIEW_OPTIONS: { label: string; value: ExploreViewMode; icon: string }[] = [
+const isMobile = computed(() => $q.screen.lt.md)
+
+const ALL_VIEW_OPTIONS: { label: string; value: ExploreViewMode; icon: string }[] = [
   { label: 'List', value: 'list', icon: 'view_list' },
   { label: 'Split', value: 'split', icon: 'vertical_split' },
   { label: 'Map', value: 'map', icon: 'map' },
 ]
+const VIEW_OPTIONS = computed(() =>
+  isMobile.value ? ALL_VIEW_OPTIONS.filter((option) => option.value !== 'split') : ALL_VIEW_OPTIONS,
+)
+
+watch(
+  isMobile,
+  (mobile) => {
+    if (mobile && viewMode.value === 'split') viewMode.value = 'list'
+  },
+  { immediate: true },
+)
 
 const toolbarLabel = computed(() => {
   const total = areaTotal.value
@@ -135,6 +148,10 @@ const drawerOpen = ref(false)
 const drawerWidth = computed(() => ($q.screen.lt.sm ? Math.min($q.screen.width - 36, 380) : 430))
 
 function onSelect(parcelNumber: string): void {
+  if (isMobile.value) {
+    void router.push({ name: 'parcel', params: { market: route.params.market, id: parcelNumber } })
+    return
+  }
   void store.select(parcelNumber)
   drawerOpen.value = true
 }
@@ -233,6 +250,10 @@ function onSelect(parcelNumber: string): void {
   font-size: 14px;
   font-weight: 600;
   color: var(--lot-ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .view-toggle {
   font-size: 12px;
