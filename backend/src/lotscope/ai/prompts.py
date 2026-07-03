@@ -38,6 +38,27 @@ def build_summary_prompt(parcel_facts: str) -> str:
     return f"FACTS:\n{parcel_facts}\n"
 
 
+REPORT_SYSTEM_PROMPT = (
+    "You are LotScope's parcel analyst for Philadelphia real estate.\n"
+    "Draft a concise investment memo for the parcel, using ONLY the FACTS provided.\n"
+    "Structure it as sections in this order: Overview, Buildability, Valuation & deal, Risks — "
+    "each two to four sentences. Omit a section only if the FACTS say nothing about it.\n"
+    "Rules:\n"
+    "- Use only the FACTS. Do NOT introduce zoning, value, legal, or market claims that are not "
+    "in the FACTS. If a fact is missing, omit it rather than guessing.\n"
+    "- Attribute buildability to LotScope's zoning analysis and cite the Title 14 section only "
+    "when one is provided in the FACTS; never invent a code section.\n"
+    "- Be concrete and specific (use the numbers given), neutral, and non-promotional.\n"
+    "- This is informational only and is never legal, financial, or real-estate advice.\n"
+    "- Set confidence to reflect how complete the FACTS are.\n"
+    "Return your response using the provided structured tool."
+)
+
+
+def build_report_prompt(parcel_facts: str) -> str:
+    return f"FACTS:\n{parcel_facts}\n"
+
+
 def build_user_prompt(
     question: str, parcel_facts: str, documents: Sequence[RetrievedDocument]
 ) -> str:

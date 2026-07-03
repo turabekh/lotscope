@@ -55,3 +55,50 @@ class ParcelSummaryResult(BaseModel):
     is_informational: bool
     sources: list[dict[str, Any]]
     computed_at: datetime
+
+
+class ReportSection(BaseModel):
+    heading: str = Field(
+        description=(
+            "Short section title, e.g. 'Overview', 'Buildability', 'Valuation & deal', 'Risks'."
+        )
+    )
+    body: str = Field(
+        description="Two to four sentences for this section, using ONLY the provided FACTS."
+    )
+
+
+class ParcelReport(BaseModel):
+    headline: str = Field(
+        description="One-sentence investment thesis for the parcel, drawn only from the FACTS."
+    )
+    sections: list[ReportSection] = Field(
+        description=(
+            "The memo sections in order — Overview, Buildability, Valuation & deal, Risks. "
+            "Omit a section only when the FACTS contain nothing to support it."
+        )
+    )
+    recommendation: str = Field(
+        description=(
+            "A short, neutral, non-promotional next-step read grounded only in the FACTS, "
+            "framed as informational."
+        )
+    )
+    confidence: Literal["high", "medium", "low"] = Field(
+        description="Confidence that reflects how complete the provided FACTS are."
+    )
+    is_informational: Literal[True] = Field(
+        default=True,
+        description="Always true: this is informational, not legal or financial advice.",
+    )
+
+
+class ParcelReportResult(BaseModel):
+    parcel_number: str
+    headline: str
+    sections: list[ReportSection]
+    recommendation: str
+    confidence: Literal["high", "medium", "low"]
+    is_informational: bool
+    sources: list[dict[str, Any]]
+    computed_at: datetime

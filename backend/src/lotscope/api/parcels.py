@@ -17,8 +17,8 @@ from lotscope.accounts.usage import (
 )
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
-from lotscope.ai.schemas import ParcelAnswer, ParcelSummaryResult
-from lotscope.ai.service import ask_the_parcel, summarize_parcel
+from lotscope.ai.schemas import ParcelAnswer, ParcelReportResult, ParcelSummaryResult
+from lotscope.ai.service import ask_the_parcel, draft_parcel_report, summarize_parcel
 from lotscope.api.deps import (
     get_app_settings,
     get_current_user,
@@ -76,6 +76,7 @@ SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 
 _ASK_CACHE_TTL_SECONDS = 86_400
 _SUMMARY_CACHE_TTL_SECONDS = 604_800
+_REPORT_CACHE_TTL_SECONDS = 604_800
 
 
 def _ask_cache_key(parcel_number: str, question: str) -> str:
@@ -252,6 +253,36 @@ async def parcel_summary(
 
     with contextlib.suppress(RedisError):
         await redis.set(cache_key, result.model_dump_json(), ex=_SUMMARY_CACHE_TTL_SECONDS)
+    return result
+
+
+@router.get("/{parcel_number}/report", response_model=ParcelReportResult)
+async def parcel_report(
+    parcel_number: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+    generator: Annotated[StructuredGenerator, Depends(get_generator)],
+) -> ParcelReportResult:
+    if not settings.anthropic_api_key:
+        raise NotFoundError("The AI report is not available.")
+
+    verdict = await get_verdict(session, parcel_number)
+    version = verdict.verdict_version if verdict is not None else "none"
+    cache_key = f"report:{parcel_number}:{version}"
+
+    with contextlib.suppress(RedisError):
+        cached = await redis.get(cache_key)
+        if cached is not None:
+            return ParcelReportResult.model_validate_json(cached)
+
+    result = await draft_parcel_report(session, parcel_number, generator=generator)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+
+    with contextlib.suppress(RedisError):
+        await redis.set(cache_key, result.model_dump_json(), ex=_REPORT_CACHE_TTL_SECONDS)
     return result
 
 

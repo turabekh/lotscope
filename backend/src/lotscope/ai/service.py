@@ -8,8 +8,10 @@ from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.errors import GenerationError, UngroundedAnswerError
 from lotscope.ai.prompts import (
+    REPORT_SYSTEM_PROMPT,
     SUMMARY_SYSTEM_PROMPT,
     SYSTEM_PROMPT,
+    build_report_prompt,
     build_summary_prompt,
     build_user_prompt,
 )
@@ -18,7 +20,13 @@ from lotscope.ai.retrieval import (
     fetch_district_documents,
     search_parcel_documents,
 )
-from lotscope.ai.schemas import ParcelAnswer, ParcelSummary, ParcelSummaryResult
+from lotscope.ai.schemas import (
+    ParcelAnswer,
+    ParcelReport,
+    ParcelReportResult,
+    ParcelSummary,
+    ParcelSummaryResult,
+)
 from lotscope.assessment.schemas import AssessmentResult
 from lotscope.assessment.service import analyze_parcel_assessment
 from lotscope.distress.schemas import DistressResult
@@ -27,6 +35,7 @@ from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.verdict.service import get_verdict
+from lotscope.zoning.service import assess_parcel as assess_zoning
 
 TITLE_14_SOURCE = "title14"
 DEED_SOURCE = "deed"
@@ -36,6 +45,14 @@ _SUMMARY_SOURCES: list[dict[str, Any]] = [
     {"source": "parcel_verdict"},
     {"source": "parcel_distress"},
     {"source": "assessment"},
+]
+
+_REPORT_SOURCES: list[dict[str, Any]] = [
+    {"source": "parcel"},
+    {"source": "parcel_verdict"},
+    {"source": "parcel_distress"},
+    {"source": "assessment"},
+    {"source": "zoning"},
 ]
 
 
@@ -122,6 +139,61 @@ async def summarize_parcel(
         confidence=summary.confidence,
         is_informational=summary.is_informational,
         sources=_SUMMARY_SOURCES,
+        computed_at=datetime.now(UTC),
+    )
+
+
+def _report_facts(
+    detail: ParcelDetail,
+    verdict: VerdictResult | None,
+    distress: DistressResult | None,
+    assessment: AssessmentResult | None,
+    cited_section: str | None,
+) -> str:
+    facts = _summary_facts(detail, verdict, distress, assessment)
+    if verdict is not None and verdict.arv is not None:
+        facts += (
+            f"\nDeal model: ARV {verdict.arv}; estimated profit {verdict.est_profit}; "
+            f"estimated margin {verdict.est_margin}."
+        )
+    if cited_section:
+        facts += f"\nBuildability basis: LotScope zoning analysis cites Title 14 § {cited_section}."
+    return facts
+
+
+async def draft_parcel_report(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    generator: StructuredGenerator,
+) -> ParcelReportResult | None:
+    detail = await get_parcel_detail(session, parcel_number)
+    if detail is None:
+        return None
+
+    verdict = await get_verdict(session, parcel_number)
+    distress = await assess_parcel_distress(session, parcel_number)
+    assessment = await analyze_parcel_assessment(session, parcel_number)
+    buildability = await assess_zoning(session, parcel_number)
+    cited_section = buildability.cited_section if buildability is not None else None
+
+    facts = _report_facts(detail, verdict, distress, assessment, cited_section)
+    raw = await generator.generate(
+        system=REPORT_SYSTEM_PROMPT, user=build_report_prompt(facts), schema=ParcelReport
+    )
+    try:
+        report = ParcelReport.model_validate(raw)
+    except ValidationError as error:
+        raise GenerationError(f"The model returned an invalid report: {error}") from error
+
+    return ParcelReportResult(
+        parcel_number=parcel_number,
+        headline=report.headline,
+        sections=report.sections,
+        recommendation=report.recommendation,
+        confidence=report.confidence,
+        is_informational=report.is_informational,
+        sources=_REPORT_SOURCES,
         computed_at=datetime.now(UTC),
     )
 
