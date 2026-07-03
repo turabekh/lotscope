@@ -50,7 +50,7 @@ const martinUrl = import.meta.env.VITE_MARTIN_URL ?? 'http://localhost:3000'
 const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 
 const parcelStore = useParcelStore()
-const { detail, envelope, assemblage } = storeToRefs(parcelStore)
+const { detail, envelope, assemblage, focusTick } = storeToRefs(parcelStore)
 const ACQUIRABILITY_COLOR: Record<string, string> = {
   same_owner: '#8e24aa',
   city_owned: '#ef6c00',
@@ -566,12 +566,16 @@ function focusSelected(): void {
   if (selected && selected.longitude !== null && selected.latitude !== null) {
     map.flyTo({
       center: [selected.longitude, selected.latitude],
-      zoom: 18.5,
+      zoom: 19.5,
       pitch: show3d.value ? 55 : map.getPitch(),
       duration: 1000,
       essential: true,
     })
   }
+}
+
+function flyHome(): void {
+  map?.flyTo({ center: PHILADELPHIA, zoom: 11.5, pitch: 0, duration: 900, essential: true })
 }
 
 function addParcelLayers(instance: maplibregl.Map): void {
@@ -784,6 +788,7 @@ watch(assemblage, () => {
 })
 
 watch(detail, () => focusSelected())
+watch(focusTick, () => focusSelected())
 
 watch([areaActive, areaShape, areaCenter, areaRadius], () => {
   syncDraw()
@@ -803,6 +808,19 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="container" class="map-root" />
+  <q-btn
+    round
+    unelevated
+    color="white"
+    text-color="grey-9"
+    icon="home"
+    size="sm"
+    class="map-home"
+    aria-label="Back to Philadelphia"
+    @click="flyHome"
+  >
+    <q-tooltip anchor="center right" self="center left">Back to Philadelphia</q-tooltip>
+  </q-btn>
   <div v-if="envelopeCaption" class="envelope-caption">
     <q-icon name="deployed_code" size="16px" class="q-mr-xs" />
     <span>{{ envelopeCaption }}</span>
@@ -816,6 +834,14 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   min-height: 300px;
+}
+.map-home {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  box-shadow: var(--lot-shadow-lg);
+  border: 1px solid var(--lot-border);
 }
 .envelope-caption {
   position: absolute;

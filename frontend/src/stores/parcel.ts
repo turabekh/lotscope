@@ -22,6 +22,7 @@ import type {
 
 export const useParcelStore = defineStore('parcel', () => {
   const detail = ref<ParcelDetail | null>(null)
+  const focusTick = ref(0)
   const verdict = ref<VerdictResult | null>(null)
   const envelope = ref<EnvelopeResult | null>(null)
   const assemblage = ref<AssemblageResult | null>(null)
@@ -253,8 +254,13 @@ export const useParcelStore = defineStore('parcel', () => {
     errorStatus.value = null
   }
 
+  function focusOnMap(): void {
+    focusTick.value += 1
+  }
+
   return {
     detail,
+    focusTick,
     verdict,
     envelope,
     assemblage,
@@ -275,6 +281,7 @@ export const useParcelStore = defineStore('parcel', () => {
     error,
     errorStatus,
     select,
+    focusOnMap,
     refreshVerdict,
     loadEnvelope,
     loadAssemblage,

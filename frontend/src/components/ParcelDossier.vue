@@ -160,7 +160,16 @@ async function toggleSave(): Promise<void> {
       <header class="panel-header">
         <div class="header-row">
           <div class="header-id">
-            <div class="addr ellipsis-2">{{ detail.address ?? detail.parcel_number }}</div>
+            <div
+              class="addr ellipsis-2"
+              role="button"
+              tabindex="0"
+              @click="store.focusOnMap()"
+              @keyup.enter="store.focusOnMap()"
+            >
+              {{ detail.address ?? detail.parcel_number }}
+              <q-tooltip anchor="bottom left" self="top left">Show on map</q-tooltip>
+            </div>
             <div class="pid lot-numeric">Parcel {{ detail.parcel_number }}</div>
           </div>
           <div class="header-actions">
@@ -418,6 +427,12 @@ async function toggleSave(): Promise<void> {
   color: var(--lot-ink);
   line-height: 1.25;
   letter-spacing: -0.01em;
+  cursor: pointer;
+}
+.addr:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 .pid {
   font-size: 12px;
