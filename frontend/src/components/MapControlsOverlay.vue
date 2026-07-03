@@ -6,13 +6,15 @@ import { ref, watch } from 'vue'
 import { type AreaShape, useAreaSearchStore } from '@/stores/areaSearch'
 import { BASEMAP_OPTIONS, COLOR_MODE_OPTIONS, useFiltersStore } from '@/stores/filters'
 
+const props = defineProps<{ embedded?: boolean }>()
+
 const filters = useFiltersStore()
 const { colorMode, show3d, basemap } = storeToRefs(filters)
 const areaSearch = useAreaSearchStore()
 const { active, shape, radiusM, neighborhood, neighborhoods } = storeToRefs(areaSearch)
 const $q = useQuasar()
 
-const open = ref(!$q.screen.lt.sm)
+const open = ref(props.embedded ? true : !$q.screen.lt.sm)
 
 const SHAPE_OPTIONS: { label: string; value: AreaShape; icon: string }[] = [
   { label: 'Radius', value: 'radius', icon: 'radio_button_unchecked' },
@@ -51,12 +53,13 @@ function radiusLabel(meters: number): string {
 </script>
 
 <template>
-  <q-card class="map-controls lot-scroll" flat>
+  <q-card class="map-controls lot-scroll" :class="{ embedded }" flat>
     <div class="mc-header">
-      <q-icon name="tune" size="18px" class="text-primary q-mr-sm" />
+      <q-icon name="map" size="18px" class="text-primary q-mr-sm" />
       <span class="mc-title">Map</span>
       <q-space />
       <q-btn
+        v-if="!embedded"
         flat
         dense
         round
@@ -212,6 +215,26 @@ function radiusLabel(meters: number): string {
   background: var(--lot-surface);
   border: 1px solid var(--lot-border);
   box-shadow: var(--lot-shadow-lg);
+}
+.map-controls.embedded {
+  position: static;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.map-controls.embedded .mc-header {
+  position: static;
+  padding: 4px 2px 10px;
+  border-bottom: 1px solid var(--lot-border);
+  background: transparent;
+}
+.map-controls.embedded .mc-section {
+  padding: 12px 2px;
 }
 .mc-header {
   position: sticky;

@@ -162,7 +162,6 @@ function onSelect(parcelNumber: string): void {
         <div class="explore-split">
           <section class="map-pane">
             <MapView @select="onSelect" @boundschange="onBounds" />
-            <MapControlsOverlay />
             <div v-if="!hasResults && !areaActive && !areaLoading" class="map-hint">
               <q-icon :name="belowZoom ? 'zoom_in' : 'search_off'" size="15px" class="q-mr-xs" />
               {{ belowZoom ? 'Zoom in to list lots in view' : 'No lots in this view' }}
@@ -211,6 +210,7 @@ function onSelect(parcelNumber: string): void {
         <q-scroll-area class="col">
           <div class="q-pa-md">
             <BuyBoxPanel />
+            <MapControlsOverlay embedded />
           </div>
         </q-scroll-area>
       </div>
