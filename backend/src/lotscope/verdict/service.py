@@ -7,6 +7,7 @@ from sqlalchemy import func, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.logging import get_logger
 from lotscope.deal.service import build_deal
 from lotscope.risk.service import assess_parcel_risk
 from lotscope.valuation.service import value_parcel
@@ -14,6 +15,8 @@ from lotscope.verdict.composition import VERDICT_VERSION, ComposedVerdict, compo
 from lotscope.verdict.models import ParcelVerdict
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.zoning.service import assess_parcel as assess_zoning
+
+_logger = get_logger("verdict.service")
 
 _PARCEL_SQL = text(
     "SELECT market_value, base_zoning_code FROM parcel WHERE parcel_number = :parcel_number"
@@ -152,6 +155,12 @@ async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictR
 async def recompute_verdicts(session: AsyncSession, parcel_numbers: Sequence[str]) -> int:
     count = 0
     for parcel_number in parcel_numbers:
-        if await compute_verdict(session, parcel_number) is not None:
-            count += 1
+        try:
+            async with session.begin_nested():
+                if await compute_verdict(session, parcel_number) is not None:
+                    count += 1
+        except Exception as error:
+            _logger.warning(
+                "verdict_recompute_skipped", parcel_number=parcel_number, error=str(error)
+            )
     return count

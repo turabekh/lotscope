@@ -23,12 +23,14 @@ def to_flood_row(feature: ArcGisFeature) -> dict[str, Any] | None:
     if feature.geometry is None or external_id is None:
         return None
     zone = first_present(props, "FLD_ZONE", "fld_zone", "ZONE", "zone")
-    geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
+    geom_4326 = func.ST_MakeValid(
+        func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
+    )
     return {
         "external_id": str(external_id),
         "zone": str(zone) if zone is not None else None,
         "geom_4326": geom_4326,
-        "geom_2272": func.ST_Transform(geom_4326, 2272),
+        "geom_2272": func.ST_MakeValid(func.ST_Transform(geom_4326, 2272)),
         "source": FLOOD_DATASET,
     }
 

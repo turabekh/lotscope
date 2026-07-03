@@ -20,8 +20,13 @@ RCO_LAYER_URL = f"{_ARCGIS_ROOT}/Zoning_RCO/FeatureServer/0/query"
 
 
 def _geom_columns(feature: ArcGisFeature) -> dict[str, Any]:
-    geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
-    return {"geom_4326": geom_4326, "geom_2272": func.ST_Transform(geom_4326, 2272)}
+    geom_4326 = func.ST_MakeValid(
+        func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
+    )
+    return {
+        "geom_4326": geom_4326,
+        "geom_2272": func.ST_MakeValid(func.ST_Transform(geom_4326, 2272)),
+    }
 
 
 def to_overlay_row(feature: ArcGisFeature) -> dict[str, Any] | None:

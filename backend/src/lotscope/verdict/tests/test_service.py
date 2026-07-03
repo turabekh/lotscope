@@ -77,5 +77,35 @@ async def test_recompute_verdicts_batch(db_session: AsyncSession) -> None:
     assert processed == 2
 
 
+async def test_recompute_verdicts_skips_a_failing_parcel(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from lotscope.verdict import service as verdict_service
+
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number) VALUES ('000000001'), ('000000002'), ('000000003')"
+        )
+    )
+    await db_session.flush()
+
+    attempted: list[str] = []
+
+    async def flaky(session: AsyncSession, parcel_number: str) -> object:
+        attempted.append(parcel_number)
+        if parcel_number == "000000002":
+            await session.execute(text("SELECT 1 / 0"))  # poison the subtransaction
+        return object()
+
+    monkeypatch.setattr(verdict_service, "compute_verdict", flaky)
+
+    processed = await verdict_service.recompute_verdicts(
+        db_session, ["000000001", "000000002", "000000003"]
+    )
+    assert processed == 2  # the bad one is skipped, not fatal
+    assert attempted == ["000000001", "000000002", "000000003"]  # all attempted
+    assert await db_session.scalar(text("SELECT 1")) == 1  # session still usable
+
+
 async def test_compute_verdict_returns_none_when_missing(db_session: AsyncSession) -> None:
     assert await compute_verdict(db_session, "999999999") is None
