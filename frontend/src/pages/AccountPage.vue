@@ -5,12 +5,35 @@ import { useRoute, useRouter } from 'vue-router'
 
 import PricingPlans from '@/components/PricingPlans.vue'
 import { ApiError, api } from '@/lib/api'
+import type { CreditPackKey } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
+import { useCreditsStore } from '@/stores/credits'
 import { usePushStore } from '@/stores/push'
 
 const store = useAuthStore()
 const { user, usage } = storeToRefs(store)
+const credits = useCreditsStore()
+const { balance: creditBalance } = storeToRefs(credits)
 const push = usePushStore()
+
+const CREDIT_PACKS: { key: CreditPackKey; credits: number; price: string }[] = [
+  { key: 'small', credits: 25, price: '$12.50' },
+  { key: 'medium', credits: 100, price: '$40' },
+  { key: 'large', credits: 500, price: '$175' },
+]
+const buyingPack = ref<CreditPackKey | null>(null)
+
+async function buyCredits(pack: CreditPackKey): Promise<void> {
+  buyingPack.value = pack
+  try {
+    const { url } = await api.buyCredits(pack)
+    window.location.href = url
+  } catch (cause) {
+    portalError.value = cause instanceof ApiError ? cause.message : 'Could not start checkout.'
+  } finally {
+    buyingPack.value = null
+  }
+}
 const {
   supported: pushSupported,
   enabled: pushEnabled,
@@ -49,6 +72,7 @@ onMounted(async () => {
   await store.refreshUser()
   await store.fetchUsage()
   await push.refresh()
+  await credits.ensureLoaded()
 })
 
 function togglePush(value: boolean): void {
@@ -231,6 +255,38 @@ async function signOut(): Promise<void> {
             :loading="portalLoading"
             @click="manageBilling"
           />
+        </div>
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <div class="row items-center q-mb-sm">
+          <div>
+            <div class="text-subtitle2">Skip-trace credits</div>
+            <div class="text-caption text-grey-7">
+              Spend 1 credit to reveal an owner's phones and emails.
+            </div>
+          </div>
+          <q-space />
+          <q-chip square color="primary" text-color="white" icon="toll">
+            {{ creditBalance ?? 0 }} credits
+          </q-chip>
+        </div>
+        <div class="row q-gutter-sm">
+          <q-btn
+            v-for="pack in CREDIT_PACKS"
+            :key="pack.key"
+            outline
+            no-caps
+            color="primary"
+            :label="`${pack.credits} · ${pack.price}`"
+            :loading="buyingPack === pack.key"
+            @click="buyCredits(pack.key)"
+          />
+        </div>
+        <div class="text-caption text-grey-5 q-mt-xs">
+          People-search data — not for credit, employment, insurance, or tenant-screening use.
         </div>
       </q-card-section>
 

@@ -1,12 +1,42 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { useQuasar } from 'quasar'
+import { computed, ref } from 'vue'
 
+import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
+import type { SkipTraceResult } from '@/lib/types'
+import { useCreditsStore } from '@/stores/credits'
 import { useParcelStore } from '@/stores/parcel'
 
+const $q = useQuasar()
 const store = useParcelStore()
-const { ownerPortfolio } = storeToRefs(store)
+const credits = useCreditsStore()
+const { ownerPortfolio, detail } = storeToRefs(store)
+
+const tracing = ref(false)
+const traceResult = ref<SkipTraceResult | null>(null)
+
+async function skipTrace(): Promise<void> {
+  const parcelNumber = detail.value?.parcel_number
+  if (!parcelNumber) return
+  tracing.value = true
+  try {
+    const result = await api.skipTrace(parcelNumber)
+    traceResult.value = result
+    credits.set(result.credits_remaining)
+    if (result.contacts.phones.length === 0 && result.contacts.emails.length === 0) {
+      $q.notify({ type: 'info', message: 'No contact info found for this owner.' })
+    }
+  } catch (cause) {
+    $q.notify({
+      type: 'negative',
+      message: cause instanceof ApiError ? cause.message : 'Skip trace failed.',
+    })
+  } finally {
+    tracing.value = false
+  }
+}
 
 const show = computed(() => ownerPortfolio.value !== null && ownerPortfolio.value.total_count > 1)
 const moreCount = computed(() => {
@@ -34,6 +64,39 @@ function selectParcel(parcelNumber: string): void {
       </div>
 
       <div class="owner-name ellipsis">{{ ownerPortfolio.owner }}</div>
+
+      <div class="q-mt-xs">
+        <q-btn
+          outline
+          dense
+          no-caps
+          size="sm"
+          color="primary"
+          icon="contact_phone"
+          :label="traceResult ? 'Owner contacts' : 'Skip trace owner (1 credit)'"
+          :loading="tracing"
+          :disable="traceResult !== null"
+          @click="skipTrace"
+        />
+        <div v-if="traceResult" class="trace-card q-mt-xs">
+          <div v-if="traceResult.contacts.phones.length" class="trace-line">
+            <q-icon name="call" size="14px" /> {{ traceResult.contacts.phones.join(', ') }}
+          </div>
+          <div v-if="traceResult.contacts.emails.length" class="trace-line">
+            <q-icon name="mail" size="14px" /> {{ traceResult.contacts.emails.join(', ') }}
+          </div>
+          <div
+            v-if="!traceResult.contacts.phones.length && !traceResult.contacts.emails.length"
+            class="trace-line text-grey-6"
+          >
+            No contact info on record.
+          </div>
+          <div class="trace-note">
+            {{ traceResult.credits_spent === 0 ? 'From your earlier trace.' : '1 credit used.' }}
+            Not for credit, employment, insurance, or tenant-screening use.
+          </div>
+        </div>
+      </div>
 
       <div class="row q-col-gutter-sm q-mt-xs">
         <div class="col-4 stat">
@@ -97,6 +160,21 @@ function selectParcel(parcelNumber: string): void {
   font-weight: 600;
   font-size: 14px;
   color: var(--lot-ink);
+}
+.trace-card {
+  padding: 8px 10px;
+  border-radius: var(--lot-radius-sm);
+  background: var(--lot-surface-2);
+}
+.trace-line {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lot-ink);
+}
+.trace-note {
+  font-size: 10.5px;
+  color: var(--lot-faint);
+  margin-top: 4px;
 }
 .stat {
   text-align: center;

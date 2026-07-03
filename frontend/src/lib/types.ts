@@ -628,6 +628,33 @@ export interface TokenResponse {
 
 export type BillingCadence = 'monthly' | 'annual'
 export type CheckoutTier = 'pro' | 'investor'
+export type CreditPackKey = 'small' | 'medium' | 'large'
+
+export interface SkipTraceContacts {
+  phones: string[]
+  emails: string[]
+}
+
+export interface SkipTraceResult {
+  parcel_number: string
+  owner: string | null
+  contacts: SkipTraceContacts
+  credits_spent: number
+  credits_remaining: number
+  cached: boolean
+}
+
+export interface CreditLedgerItem {
+  delta: number
+  reason: string
+  ref: string | null
+  created_at: string
+}
+
+export interface CreditBalance {
+  balance: number
+  entries: CreditLedgerItem[]
+}
 
 export interface PlanInfo {
   tier: string

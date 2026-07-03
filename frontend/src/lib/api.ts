@@ -5,6 +5,8 @@ import type {
   BillingCadence,
   CheckoutResponse,
   CheckoutTier,
+  CreditBalance,
+  CreditPackKey,
   DealItem,
   DealResult,
   DealStage,
@@ -23,6 +25,7 @@ import type {
   PlansResponse,
   PortalResponse,
   ScenariosResult,
+  SkipTraceResult,
   SubdivisionResult,
   AdminOverview,
   AdminUserUpdate,
@@ -378,5 +381,17 @@ export const api = {
   },
   createPortal(): Promise<PortalResponse> {
     return request('/billing/portal', { method: 'POST' })
+  },
+  getCredits(): Promise<CreditBalance> {
+    return request('/credits')
+  },
+  skipTrace(parcelNumber: string): Promise<SkipTraceResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/skip-trace`, { method: 'POST' })
+  },
+  buyCredits(pack: CreditPackKey): Promise<CheckoutResponse> {
+    return request('/billing/credits/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ pack }),
+    })
   },
 }
