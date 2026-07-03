@@ -46,6 +46,8 @@ const TABS = [
   { name: 'docs', label: 'Docs', icon: 'description' },
 ]
 
+const tabsAlign = computed(() => ($q.screen.lt.md ? 'left' : 'justify'))
+
 const dealEmpty = computed(
   () => !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.marketContext,
 )
@@ -265,7 +267,7 @@ async function toggleSave(): Promise<void> {
           class="dossier-tabs"
           active-color="primary"
           indicator-color="primary"
-          align="justify"
+          :align="tabsAlign"
           narrow-indicator
         >
           <q-tab v-for="t in TABS" :key="t.name" :name="t.name" :icon="t.icon" :label="t.label" />
