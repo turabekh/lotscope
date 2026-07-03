@@ -451,12 +451,29 @@ async function toggleSave(): Promise<void> {
 }
 .dossier-panels {
   background: transparent;
+  container-type: inline-size;
 }
 .tab-pane {
   padding: 4px 0 8px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+@container (min-width: 440px) {
+  .tab-pane {
+    display: block;
+    column-count: 2;
+    column-gap: 12px;
+    gap: 0;
+  }
+  .tab-pane > * {
+    break-inside: avoid;
+    margin-bottom: 12px;
+  }
+  .tab-pane > .tab-foot,
+  .tab-pane > .tab-empty {
+    column-span: all;
+  }
 }
 .tab-foot {
   display: flex;
