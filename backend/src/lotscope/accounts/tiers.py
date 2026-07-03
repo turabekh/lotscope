@@ -103,6 +103,10 @@ def sheriff_calendar_access(tier: str) -> bool:
     return tier in FEED_TIERS
 
 
+def top_plays_access(tier: str) -> bool:
+    return tier in FEED_TIERS
+
+
 Action = Literal["current", "checkout", "contact"]
 
 

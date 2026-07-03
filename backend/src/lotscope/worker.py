@@ -4,10 +4,10 @@ from typing import Any, ClassVar
 from arq import cron
 from arq.connections import RedisSettings
 
+from lotscope.assemblage.jobs import recompute_all_assemblage
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
-from lotscope.assemblage.jobs import recompute_all_assemblage
 from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.jobs import INGEST_JOBS
 from lotscope.ingestion.retention import sweep_retention

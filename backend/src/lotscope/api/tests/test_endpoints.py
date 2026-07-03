@@ -521,6 +521,48 @@ async def test_sheriff_sales_ranked_by_bid_gap_for_paid_tier(db_session: AsyncSe
 
 
 @pytest.mark.integration
+async def test_assemblage_top_is_gated_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/assemblage/top")
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_assemblage_top_ranks_by_unit_unlock(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, address, base_zoning_code) VALUES "
+            "('000000001', '1 A ST', 'RM-1'), ('000000002', '2 B ST', 'RSA-5')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel_assemblage "
+            "(parcel_number, potential, candidate_count, unit_unlock, "
+            "combined_lot_area_sqft, base_zoning_code, neighborhood) VALUES "
+            "('000000001', 'high', 2, 6, 5000, 'RM-1', 'Fishtown'), "
+            "('000000002', 'medium', 1, 1, 3000, 'RSA-5', 'Point Breeze')"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        top = await client.get("/assemblage/top")
+        filtered = await client.get("/assemblage/top?zoning=RSA")
+
+    assert top.status_code == 200
+    body = top.json()
+    assert body["total"] == 2
+    assert [p["parcel_number"] for p in body["plays"]] == ["000000001", "000000002"]
+    assert body["plays"][0]["unit_unlock"] == 6
+
+    assert [p["parcel_number"] for p in filtered.json()["plays"]] == ["000000002"]
+
+
+@pytest.mark.integration
 async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(

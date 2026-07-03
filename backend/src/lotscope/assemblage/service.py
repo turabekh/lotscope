@@ -21,6 +21,8 @@ from lotscope.assemblage.schemas import (
     AdjacentLot,
     AssemblageResult,
     AssemblageSummary,
+    AssemblageTopPlay,
+    AssemblageTopResponse,
     Potential,
 )
 from lotscope.zoning.service import assemblage_unit_estimate
@@ -232,3 +234,60 @@ async def recompute_assemblage(session: AsyncSession, parcel_numbers: Sequence[s
         else:
             await session.execute(_DELETE_ASSEMBLAGE_SQL, {"parcel_number": parcel_number})
     return count
+
+
+_TOP_SELECT = (
+    "SELECT pa.parcel_number, p.address, pa.potential, pa.candidate_count, "
+    "pa.combined_lot_area_sqft, pa.by_right_units_current, pa.by_right_units_combined, "
+    "pa.unit_unlock, pa.base_zoning_code, pa.neighborhood "
+    "FROM parcel_assemblage pa JOIN parcel p ON p.parcel_number = pa.parcel_number"
+)
+
+
+async def top_plays(
+    session: AsyncSession,
+    *,
+    neighborhood: str | None = None,
+    zoning: str | None = None,
+    limit: int = 100,
+) -> AssemblageTopResponse:
+    conditions: list[str] = []
+    params: dict[str, Any] = {"limit": limit}
+    if neighborhood is not None:
+        conditions.append("pa.neighborhood ILIKE :neighborhood")
+        params["neighborhood"] = neighborhood
+    if zoning is not None:
+        conditions.append("pa.base_zoning_code ILIKE :zoning || '%'")
+        params["zoning"] = zoning
+    where = " AND ".join(conditions) if conditions else "TRUE"
+
+    total = await session.scalar(
+        text(f"SELECT count(*) FROM parcel_assemblage pa WHERE {where}"), params
+    )
+    rows = (
+        await session.execute(
+            text(
+                f"{_TOP_SELECT} WHERE {where} "
+                "ORDER BY pa.unit_unlock DESC NULLS LAST, "
+                "pa.combined_lot_area_sqft DESC NULLS LAST, pa.parcel_number "
+                "LIMIT :limit"
+            ),
+            params,
+        )
+    ).all()
+    plays = [
+        AssemblageTopPlay(
+            parcel_number=row.parcel_number,
+            address=row.address,
+            potential=row.potential,
+            candidate_count=row.candidate_count,
+            combined_lot_area_sqft=_as_float(row.combined_lot_area_sqft),
+            by_right_units_current=row.by_right_units_current,
+            by_right_units_combined=row.by_right_units_combined,
+            unit_unlock=row.unit_unlock,
+            base_zoning_code=row.base_zoning_code,
+            neighborhood=row.neighborhood,
+        )
+        for row in rows
+    ]
+    return AssemblageTopResponse(total=int(total or 0), returned=len(plays), plays=plays)

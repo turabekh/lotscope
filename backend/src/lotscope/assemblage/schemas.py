@@ -46,3 +46,22 @@ class AssemblageResult(BaseModel):
     reasons: list[str]
     sources: list[dict[str, Any]]
     computed_at: datetime
+
+
+class AssemblageTopPlay(BaseModel):
+    parcel_number: str
+    address: str | None
+    potential: Potential
+    candidate_count: int
+    combined_lot_area_sqft: float | None
+    by_right_units_current: int | None
+    by_right_units_combined: int | None
+    unit_unlock: int | None
+    base_zoning_code: str | None
+    neighborhood: str | None
+
+
+class AssemblageTopResponse(BaseModel):
+    total: int
+    returned: int
+    plays: list[AssemblageTopPlay]
