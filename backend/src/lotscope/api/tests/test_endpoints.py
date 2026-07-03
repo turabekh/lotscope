@@ -818,6 +818,18 @@ class _FakeGateway:
         self.checkout_args = {"customer_id": customer_id, "price_id": price_id}
         return "https://checkout.test/session"
 
+    async def create_appeal_packet_checkout_session(
+        self,
+        *,
+        customer_id: str,
+        price_id: str,
+        parcel_number: str,
+        success_url: str,
+        cancel_url: str,
+    ) -> str:
+        self.checkout_args = {"price_id": price_id, "parcel_number": parcel_number}
+        return "https://checkout.test/packet"
+
     async def create_portal_session(self, *, customer_id: str, return_url: str) -> str:
         return "https://portal.test/session"
 
@@ -924,6 +936,49 @@ async def test_webhook_activates_pro_tier(db_session: AsyncSession) -> None:
     assert user.tier == "pro"
     assert user.subscription_status == "active"
     assert user.stripe_subscription_id == "sub_1"
+
+
+@pytest.mark.integration
+async def test_webhook_fulfills_appeal_packet_purchase(db_session: AsyncSession) -> None:
+    user = User(
+        email="buyer@example.com", hashed_password="x", tier="free", stripe_customer_id="cus_1"
+    )
+    db_session.add(user)
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'O')")
+    )
+    await db_session.flush()
+
+    event = {
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "id": "cs_1",
+                "mode": "payment",
+                "customer": "cus_1",
+                "payment_intent": "pi_1",
+                "metadata": {"product": "appeal_packet", "parcel_number": "000000001"},
+            }
+        },
+    }
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_app_settings] = _billing_settings
+    app.dependency_overrides[get_stripe_gateway] = lambda: _FakeGateway(event)
+
+    async with _client(app) as client:
+        resp = await client.post(
+            "/billing/webhook", content=b"{}", headers={"Stripe-Signature": "sig"}
+        )
+
+    assert resp.status_code == 200
+    assert resp.json() == {"handled": True}
+    entitled = await db_session.scalar(
+        text(
+            "SELECT source FROM appeal_packet WHERE user_id = :uid AND parcel_number = '000000001'"
+        ),
+        {"uid": user.id},
+    )
+    assert entitled == "purchase"
 
 
 @pytest.mark.integration

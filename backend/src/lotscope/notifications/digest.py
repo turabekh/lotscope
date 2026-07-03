@@ -235,7 +235,7 @@ def render_feed_digest_html(
     for search in content.searches:
         rows = "".join(
             f'<div style="padding:3px 0;color:#1f2933;font-size:14px;">'
-            f'<b>{line.count}</b> {escape(line.label)}</div>'
+            f"<b>{line.count}</b> {escape(line.label)}</div>"
             for line in search.lines
         )
         blocks.append(

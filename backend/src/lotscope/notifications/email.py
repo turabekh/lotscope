@@ -1,5 +1,6 @@
 import asyncio
 import smtplib
+from dataclasses import dataclass
 from email.message import EmailMessage
 from email.utils import formataddr
 from typing import Protocol
@@ -7,8 +8,23 @@ from typing import Protocol
 from lotscope.core.config import Settings
 
 
+@dataclass(frozen=True)
+class EmailAttachment:
+    filename: str
+    content: bytes
+    mime_subtype: str = "pdf"
+
+
 class EmailSender(Protocol):
-    async def send(self, *, to: str, subject: str, html: str, text: str) -> None: ...
+    async def send(
+        self,
+        *,
+        to: str,
+        subject: str,
+        html: str,
+        text: str,
+        attachment: EmailAttachment | None = None,
+    ) -> None: ...
 
 
 class SmtpEmailSender:
@@ -22,13 +38,28 @@ class SmtpEmailSender:
         self._use_tls = settings.smtp_use_tls
         self._from = formataddr((settings.email_from_name, settings.email_from))
 
-    async def send(self, *, to: str, subject: str, html: str, text: str) -> None:
+    async def send(
+        self,
+        *,
+        to: str,
+        subject: str,
+        html: str,
+        text: str,
+        attachment: EmailAttachment | None = None,
+    ) -> None:
         message = EmailMessage()
         message["Subject"] = subject
         message["From"] = self._from
         message["To"] = to
         message.set_content(text)
         message.add_alternative(html, subtype="html")
+        if attachment is not None:
+            message.add_attachment(
+                attachment.content,
+                maintype="application",
+                subtype=attachment.mime_subtype,
+                filename=attachment.filename,
+            )
         await asyncio.to_thread(self._send_sync, message)
 
     def _send_sync(self, message: EmailMessage) -> None:

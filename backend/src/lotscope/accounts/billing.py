@@ -153,6 +153,32 @@ def credit_grant_from_checkout(event: dict[str, Any]) -> CreditGrant | None:
     return CreditGrant(customer_id=customer, credits=credit_amount, ref=str(ref))
 
 
+@dataclass(frozen=True)
+class AppealPacketPurchase:
+    customer_id: str
+    parcel_number: str
+    ref: str
+
+
+def appeal_packet_from_checkout(event: dict[str, Any]) -> AppealPacketPurchase | None:
+    if event.get("type") != "checkout.session.completed":
+        return None
+    obj = event.get("data", {}).get("object", {})
+    if not isinstance(obj, dict) or obj.get("mode") != "payment":
+        return None
+    customer = obj.get("customer")
+    metadata = obj.get("metadata") or {}
+    parcel_number = metadata.get("parcel_number")
+    if (
+        not isinstance(customer, str)
+        or metadata.get("product") != "appeal_packet"
+        or not isinstance(parcel_number, str)
+    ):
+        return None
+    ref = obj.get("payment_intent") or obj.get("id")
+    return AppealPacketPurchase(customer_id=customer, parcel_number=parcel_number, ref=str(ref))
+
+
 class StripeGateway(Protocol):
     async def create_customer(self, *, email: str, user_id: int) -> str: ...
 
@@ -166,6 +192,16 @@ class StripeGateway(Protocol):
         customer_id: str,
         price_id: str,
         credit_amount: int,
+        success_url: str,
+        cancel_url: str,
+    ) -> str: ...
+
+    async def create_appeal_packet_checkout_session(
+        self,
+        *,
+        customer_id: str,
+        price_id: str,
+        parcel_number: str,
         success_url: str,
         cancel_url: str,
     ) -> str: ...
@@ -223,6 +259,31 @@ class StripeApiGateway:
                 "cancel_url": cancel_url,
                 "metadata": {"credits": str(credit_amount)},
                 "payment_intent_data": {"metadata": {"credits": str(credit_amount)}},
+            }
+        )
+        if session.url is None:
+            raise ValidationError("Stripe did not return a checkout URL.")
+        return session.url
+
+    async def create_appeal_packet_checkout_session(
+        self,
+        *,
+        customer_id: str,
+        price_id: str,
+        parcel_number: str,
+        success_url: str,
+        cancel_url: str,
+    ) -> str:
+        metadata = {"product": "appeal_packet", "parcel_number": parcel_number}
+        session = await self._client.v1.checkout.sessions.create_async(
+            params={
+                "mode": "payment",
+                "customer": customer_id,
+                "line_items": [{"price": price_id, "quantity": 1}],
+                "success_url": success_url,
+                "cancel_url": cancel_url,
+                "metadata": metadata,
+                "payment_intent_data": {"metadata": metadata},
             }
         )
         if session.url is None:

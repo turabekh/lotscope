@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     stripe_price_credits_25: str | None = None
     stripe_price_credits_100: str | None = None
     stripe_price_credits_500: str | None = None
+    stripe_price_appeal_packet: str | None = None
     skiptrace_provider: str | None = None
     skiptrace_api_key: str | None = None
     billing_success_url: str = "http://localhost:5173/account?checkout=success"

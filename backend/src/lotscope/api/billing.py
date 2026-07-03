@@ -1,10 +1,12 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.billing import (
     StripeGateway,
+    appeal_packet_from_checkout,
     credit_grant_from_checkout,
     interpret_event,
     price_id_for_cadence,
@@ -30,10 +32,16 @@ from lotscope.api.deps import (
     get_session,
     get_stripe_gateway,
 )
+from lotscope.appeal.delivery import email_appeal_packet
+from lotscope.appeal.service import SOURCE_PURCHASE, record_entitlement
 from lotscope.core.config import Settings
-from lotscope.core.errors import ValidationError
+from lotscope.core.errors import ConfigurationError, ValidationError
+from lotscope.core.logging import get_logger
+from lotscope.notifications.email import get_email_sender
 from lotscope.skiptrace.models import REASON_PACK_PURCHASE
 from lotscope.skiptrace.service import grant_credits
+
+_logger = get_logger("billing")
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 
@@ -87,6 +95,32 @@ async def checkout(
     return CheckoutResponse(url=url)
 
 
+class AppealPacketCheckoutRequest(BaseModel):
+    parcel_number: str = Field(min_length=1, max_length=20)
+
+
+@router.post("/appeal-packet/checkout", response_model=CheckoutResponse)
+async def appeal_packet_checkout(
+    data: AppealPacketCheckoutRequest,
+    user: CurrentUserDep,
+    session: SessionDep,
+    settings: SettingsDep,
+    gateway: GatewayDep,
+) -> CheckoutResponse:
+    if not settings.stripe_price_appeal_packet:
+        raise ConfigurationError("The assessment review packet is not configured for purchase.")
+    customer_id = await ensure_stripe_customer(session, gateway, user)
+    url = await gateway.create_appeal_packet_checkout_session(
+        customer_id=customer_id,
+        price_id=settings.stripe_price_appeal_packet,
+        parcel_number=data.parcel_number,
+        success_url=settings.billing_success_url,
+        cancel_url=settings.billing_cancel_url,
+    )
+    await session.commit()
+    return CheckoutResponse(url=url)
+
+
 @router.post("/portal", response_model=PortalResponse)
 async def portal(
     user: CurrentUserDep,
@@ -115,6 +149,28 @@ async def webhook(
         raise ValidationError("Missing Stripe signature.")
     payload = await request.body()
     event = gateway.parse_event(payload=payload, signature=stripe_signature)
+
+    purchase = appeal_packet_from_checkout(event)
+    if purchase is not None:
+        buyer = await get_user_by_stripe_customer(session, purchase.customer_id)
+        if buyer is not None:
+            await record_entitlement(
+                session,
+                buyer.id,
+                purchase.parcel_number,
+                source=SOURCE_PURCHASE,
+                ref=purchase.ref,
+            )
+            await session.commit()
+            sender = get_email_sender(settings)
+            if sender is not None:
+                try:
+                    await email_appeal_packet(
+                        session, sender, to=buyer.email, parcel_number=purchase.parcel_number
+                    )
+                except Exception as error:  # best-effort; download is the guaranteed path
+                    _logger.warning("appeal_packet_email_failed", error=str(error))
+        return {"handled": buyer is not None}
 
     grant = credit_grant_from_checkout(event)
     if grant is not None:

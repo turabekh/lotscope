@@ -1,6 +1,7 @@
 import pytest
 
 from lotscope.accounts.billing import (
+    appeal_packet_from_checkout,
     credit_grant_from_checkout,
     granting_price_ids,
     interpret_event,
@@ -181,6 +182,44 @@ def test_credit_grant_requires_credits_metadata() -> None:
             {
                 "type": "checkout.session.completed",
                 "data": {"object": {"mode": "payment", "customer": "cus_1", "metadata": {}}},
+            }
+        )
+        is None
+    )
+
+
+def test_appeal_packet_from_payment_checkout() -> None:
+    purchase = appeal_packet_from_checkout(
+        {
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "mode": "payment",
+                    "customer": "cus_1",
+                    "payment_intent": "pi_9",
+                    "metadata": {"product": "appeal_packet", "parcel_number": "000000001"},
+                }
+            },
+        }
+    )
+    assert purchase is not None
+    assert purchase.customer_id == "cus_1"
+    assert purchase.parcel_number == "000000001"
+    assert purchase.ref == "pi_9"
+
+
+def test_appeal_packet_ignores_credit_checkout() -> None:
+    assert (
+        appeal_packet_from_checkout(
+            {
+                "type": "checkout.session.completed",
+                "data": {
+                    "object": {
+                        "mode": "payment",
+                        "customer": "cus_1",
+                        "metadata": {"credits": "25"},
+                    }
+                },
             }
         )
         is None
