@@ -5,17 +5,15 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import BuyBoxPanel from '@/components/BuyBoxPanel.vue'
-import ExploreResultsList from '@/components/ExploreResultsList.vue'
 import MapControlsOverlay from '@/components/MapControlsOverlay.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelDossier from '@/components/ParcelDossier.vue'
 import {
+  DEFAULT_VIEW_MODE,
   boundsToPolygon,
   canListViewport,
   exploreQuery,
-  type ExploreViewMode,
   type MapBounds,
-  paneVisibility,
   readExploreState,
 } from '@/lib/explore'
 import { useAreaSearchStore } from '@/stores/areaSearch'
@@ -49,16 +47,12 @@ useClasses.value = initialState.useClasses.filter((value): value is UseClass =>
 )
 minScore.value = initialState.minScore
 
-const viewMode = ref<ExploreViewMode>(initialState.view)
-const panes = computed(() => paneVisibility(viewMode.value))
 const hasResults = computed(() => areaResults.value.length > 0)
-const showList = computed(() => panes.value.list && hasResults.value)
-const showMap = computed(() => panes.value.map || !hasResults.value)
 
-watch([viewMode, areaShape, vacantOnly, useClasses, minScore], () => {
+watch([areaShape, vacantOnly, useClasses, minScore], () => {
   void router.replace({
     query: exploreQuery({
-      view: viewMode.value,
+      view: DEFAULT_VIEW_MODE,
       shape: areaShape.value,
       vacantOnly: vacantOnly.value,
       useClasses: [...useClasses.value],
@@ -120,23 +114,6 @@ onBeforeUnmount(() => {
 
 const isMobile = computed(() => $q.screen.lt.md)
 
-const ALL_VIEW_OPTIONS: { label: string; value: ExploreViewMode; icon: string }[] = [
-  { label: 'List', value: 'list', icon: 'view_list' },
-  { label: 'Split', value: 'split', icon: 'vertical_split' },
-  { label: 'Map', value: 'map', icon: 'map' },
-]
-const VIEW_OPTIONS = computed(() =>
-  isMobile.value ? ALL_VIEW_OPTIONS.filter((option) => option.value !== 'split') : ALL_VIEW_OPTIONS,
-)
-
-watch(
-  isMobile,
-  (mobile) => {
-    if (mobile && viewMode.value === 'split') viewMode.value = 'list'
-  },
-  { immediate: true },
-)
-
 const toolbarLabel = computed(() => {
   const total = areaTotal.value
   if (total === 0) return 'Explore vacant lots'
@@ -144,16 +121,12 @@ const toolbarLabel = computed(() => {
   return areaTruncated.value ? `${base} · showing top ${areaResults.value.length} by score` : base
 })
 
-const drawerOpen = ref(false)
-const drawerWidth = computed(() => ($q.screen.lt.sm ? Math.min($q.screen.width - 36, 380) : 430))
-
 function onSelect(parcelNumber: string): void {
   if (isMobile.value) {
     void router.push({ name: 'parcel', params: { market: route.params.market, id: parcelNumber } })
     return
   }
   void store.select(parcelNumber)
-  drawerOpen.value = true
 }
 </script>
 
@@ -180,31 +153,10 @@ function onSelect(parcelNumber: string): void {
             </q-menu>
           </q-btn>
           <q-space />
-          <q-btn-toggle
-            v-model="viewMode"
-            :options="VIEW_OPTIONS"
-            no-caps
-            dense
-            unelevated
-            rounded
-            toggle-color="primary"
-            color="grey-2"
-            text-color="grey-9"
-            class="view-toggle"
-          />
         </div>
 
         <div class="explore-split">
-          <section v-show="showList" class="list-pane" :class="{ rail: viewMode === 'split' }">
-            <ExploreResultsList
-              :results="areaResults"
-              :selected-parcel="detail?.parcel_number ?? null"
-              :loading="areaLoading"
-              @select="onSelect"
-            />
-          </section>
-
-          <section v-show="showMap" class="map-pane">
+          <section class="map-pane">
             <MapView @select="onSelect" @boundschange="onBounds" />
             <MapControlsOverlay />
             <div v-if="!hasResults && !areaActive && !areaLoading" class="map-hint">
@@ -212,15 +164,21 @@ function onSelect(parcelNumber: string): void {
               {{ belowZoom ? 'Zoom in to list lots in view' : 'No lots in this view' }}
             </div>
           </section>
+
+          <section v-if="!isMobile" class="dossier-pane column no-wrap dossier-shell">
+            <ParcelDossier v-if="detail" class="col" />
+            <div v-else class="dossier-empty">
+              <q-icon name="ads_click" size="36px" color="grey-4" />
+              <div class="empty-title">Select a lot</div>
+              <div class="empty-sub">
+                Click a lot on the map, or search above, to see its verdict, deal math, land, and
+                risk.
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </q-page-container>
-
-    <q-drawer v-model="drawerOpen" side="right" overlay bordered :width="drawerWidth">
-      <div class="column no-wrap fit dossier-shell">
-        <ParcelDossier class="col" />
-      </div>
-    </q-drawer>
   </q-layout>
 </template>
 
@@ -255,28 +213,42 @@ function onSelect(parcelNumber: string): void {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.view-toggle {
-  font-size: 12px;
-}
 .explore-split {
   flex: 1;
   min-height: 0;
   display: flex;
   overflow: hidden;
 }
-.list-pane {
-  flex: 1;
-  min-width: 0;
-}
-.list-pane.rail {
-  flex: 0 0 360px;
-  max-width: 360px;
-  border-right: 1px solid var(--lot-border);
-}
 .map-pane {
   flex: 1 1 0;
   min-width: 0;
   position: relative;
+}
+.dossier-pane {
+  flex: 0 0 clamp(400px, 32vw, 560px);
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--lot-border);
+}
+.dossier-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 40px 28px;
+}
+.dossier-empty .empty-title {
+  font-weight: 700;
+  color: var(--lot-ink);
+}
+.dossier-empty .empty-sub {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--lot-muted);
+  max-width: 300px;
 }
 .map-hint {
   position: absolute;
