@@ -17,6 +17,8 @@ class ParcelDetail(BaseModel):
     market_value: float | None
     land_value: float | None
     improvement_value: float | None
+    exempt_land: float | None
+    exempt_building: float | None
     assessment_year: int | None
     lot_area_sqft: float | None
     frontage_ft: float | None

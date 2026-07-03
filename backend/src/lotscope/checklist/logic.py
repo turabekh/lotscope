@@ -80,6 +80,19 @@ def _risk_item(
     )
 
 
+def _abatement_item() -> ChecklistItem:
+    return ChecklistItem(
+        code="abatement",
+        category="Liens & taxes",
+        status="info",
+        detail=(
+            "An OPA tax exemption is recorded (possible active abatement) — confirm the "
+            "remaining abatement term with OPA before underwriting carrying costs."
+        ),
+        source="opa_properties_public",
+    )
+
+
 def _zoning_item(verdict: VerdictResult) -> ChecklistItem:
     if verdict.can_build_by_right:
         units = verdict.by_right_units
@@ -174,13 +187,17 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
     )
 
 
-def build_checklist(verdict: VerdictResult) -> tuple[list[ChecklistItem], ChecklistSummary]:
+def build_checklist(
+    verdict: VerdictResult, *, has_abatement: bool = False
+) -> tuple[list[ChecklistItem], ChecklistSummary]:
     flags = verdict.risk_flags
     items = [_zoning_item(verdict)]
     items.extend(
         _risk_item(code, category, flag_codes, clear_detail, flags)
         for code, category, flag_codes, clear_detail in _RISK_CATEGORIES
     )
+    if has_abatement:
+        items.append(_abatement_item())
     items.append(_valuation_item(verdict))
     items.append(_deal_item(verdict))
 

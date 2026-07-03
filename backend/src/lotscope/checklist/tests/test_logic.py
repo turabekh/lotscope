@@ -58,6 +58,19 @@ def test_clean_parcel_is_all_pass() -> None:
     assert summary.failures == 0
 
 
+def test_abatement_item_absent_by_default() -> None:
+    items, _ = build_checklist(_verdict())
+    assert not any(item.code == "abatement" for item in items)
+
+
+def test_abatement_item_present_when_flagged() -> None:
+    items, summary = build_checklist(_verdict(), has_abatement=True)
+    abatement = _item(items, "abatement")
+    assert abatement.category == "Liens & taxes"
+    assert abatement.status == "info"
+    assert summary.ready is True
+
+
 def test_every_category_always_present() -> None:
     items, _ = build_checklist(_verdict())
     codes = {item.code for item in items}

@@ -22,6 +22,8 @@ OPA_COLUMNS = (
     "market_value",
     "taxable_land",
     "taxable_building",
+    "exempt_land",
+    "exempt_building",
     "total_area",
     "frontage",
     "depth",
@@ -39,6 +41,8 @@ class OpaRecord(BaseModel):
     market_value: float | None = None
     taxable_land: float | None = None
     taxable_building: float | None = None
+    exempt_land: float | None = None
+    exempt_building: float | None = None
     total_area: float | None = None
     frontage: float | None = None
     depth: float | None = None
@@ -59,6 +63,8 @@ def to_parcel_row(record: OpaRecord) -> dict[str, Any] | None:
         "market_value": record.market_value,
         "land_value": record.taxable_land,
         "improvement_value": record.taxable_building,
+        "exempt_land": record.exempt_land,
+        "exempt_building": record.exempt_building,
         "lot_area_sqft": record.total_area,
         "frontage_ft": record.frontage,
         "depth_ft": record.depth,

@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import { formatCurrency, formatSqft, formatFeet } from '@/lib/format'
 import type { ParcelDetail } from '@/lib/types'
 
-defineProps<{ detail: ParcelDetail }>()
+const props = defineProps<{ detail: ParcelDetail }>()
+
+const exemptTotal = computed(
+  () => (props.detail.exempt_land ?? 0) + (props.detail.exempt_building ?? 0),
+)
+const hasExemption = computed(() => exemptTotal.value > 0)
 </script>
 
 <template>
@@ -51,6 +58,16 @@ defineProps<{ detail: ParcelDetail }>()
           <q-item-section side class="value">
             {{ formatCurrency(detail.land_value) }} / {{ formatCurrency(detail.improvement_value) }}
           </q-item-section>
+        </q-item>
+        <q-item v-if="hasExemption" class="q-px-none">
+          <q-item-section>
+            Tax exemption
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              An OPA exemption is recorded (possible active abatement). Confirm the remaining
+              abatement term with OPA — informational, not tax advice.
+            </q-tooltip>
+          </q-item-section>
+          <q-item-section side class="value">{{ formatCurrency(exemptTotal) }}</q-item-section>
         </q-item>
       </q-list>
     </q-card-section>

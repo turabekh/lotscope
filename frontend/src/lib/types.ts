@@ -10,6 +10,8 @@ export interface ParcelDetail {
   market_value: number | null
   land_value: number | null
   improvement_value: number | null
+  exempt_land: number | null
+  exempt_building: number | null
   assessment_year: number | null
   lot_area_sqft: number | null
   frontage_ft: number | null

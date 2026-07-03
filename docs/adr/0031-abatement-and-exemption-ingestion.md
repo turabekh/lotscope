@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A9**. Extends ADR-0004 (ingestion) and ADR-0022 (deal methodology).
 
@@ -33,3 +33,9 @@ This is a pure additive-data change: the fields exist upstream, join on the parc
 - The exemption columns are reusable later: if we ever model the abatement's effect on carrying cost in the deal engine (a scored change), that becomes a deliberate verdict-contract change with its own bump — explicitly deferred here.
 - Values are OPA-sourced and cited "as-is" (§13); the checklist item states the buyer must verify the remaining term, not that an abatement is guaranteed to transfer.
 - Edge case respected: `exempt_building > 0` can also arise from non-abatement exemptions (homestead, non-profit). v1 labels it "exemption/possible abatement — verify," not a definitive abatement claim, to avoid over-asserting on ambiguous upstream data.
+
+## Follow-up (2026-07-03): shipped surfaces + deferred deal reason
+
+Shipped as `a1d4e7c2b830` (migration) + loader/schema/UI: `exempt_land`/`exempt_building` on `parcel`, mapped from OPA (`exempt_land`, `exempt_building`), flowing to `ParcelDetail` via `from_attributes`; a pure `has_active_exemption(exempt_land, exempt_building)` helper (`parcels/abatement.py`); a **PropertyFacts** "Tax exemption" row; and an **info** checklist item in the *Liens & taxes* category (threaded into `build_checklist(verdict, has_abatement=...)` from the checklist service, which reads the parcel through `parcels.service` — no verdict flag, no version bump).
+
+**Deferred:** the deal-engine `reasons` note. The deal `reasons` are produced by the pure `analyze_deal` from `DealInputs`; adding an informational abatement string there means threading a flag through `DealInputs`/`build_deal`/two service entry points — disproportionate plumbing across the deal contract for a non-scored note that PropertyFacts and the diligence checklist already surface prominently. Recorded here so the follow-up isn't lost; it can ride the next deal-schema change cheaply.

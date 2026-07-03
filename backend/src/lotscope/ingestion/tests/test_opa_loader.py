@@ -19,6 +19,7 @@ def test_to_parcel_row_normalizes_key_and_maps_fields() -> None:
         owner_1="Jane Doe",
         market_value=250000.0,
         taxable_land=80000.0,
+        exempt_building=120000.0,
         total_area=1200.0,
     )
     row = to_parcel_row(record)
@@ -28,6 +29,8 @@ def test_to_parcel_row_normalizes_key_and_maps_fields() -> None:
     assert row["owner"] == "Jane Doe"
     assert row["market_value"] == 250000.0
     assert row["land_value"] == 80000.0
+    assert row["exempt_building"] == 120000.0
+    assert row["exempt_land"] is None
     assert row["source"] == "opa_properties_public"
 
 

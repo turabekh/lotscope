@@ -50,6 +50,8 @@ class Parcel(Base, TimestampMixin, IngestionMixin):
     market_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
     land_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
     improvement_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    exempt_land: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    exempt_building: Mapped[float | None] = mapped_column(Numeric(14, 2))
     assessment_year: Mapped[int | None]
 
     lot_area_sqft: Mapped[float | None] = mapped_column(Numeric(14, 2))
