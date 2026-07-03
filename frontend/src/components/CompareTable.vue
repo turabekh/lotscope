@@ -6,11 +6,9 @@ import { ApiError, api } from '@/lib/api'
 import type { ParcelCompareItem } from '@/lib/types'
 import { useCompareStore } from '@/stores/compare'
 import { useMarketStore } from '@/stores/market'
-import { useParcelStore } from '@/stores/parcel'
 
 const router = useRouter()
 const compare = useCompareStore()
-const parcelStore = useParcelStore()
 const market = useMarketStore()
 
 const items = ref<ParcelCompareItem[]>([])
@@ -90,94 +88,70 @@ async function load(): Promise<void> {
 }
 
 function openParcel(parcelNumber: string): void {
-  void parcelStore.select(parcelNumber)
-  void router.push({ name: 'explore', params: { market: market.active } })
-}
-
-function removeParcel(parcelNumber: string): void {
-  compare.remove(parcelNumber)
+  void router.push({ name: 'parcel', params: { market: market.active, id: parcelNumber } })
 }
 
 watch(() => [...compare.parcelNumbers], load, { immediate: true })
 </script>
 
 <template>
-  <q-page class="q-pa-md">
-    <div class="compare-wrap">
-      <div v-if="compare.count > 0" class="row justify-end q-mb-sm">
-        <q-btn flat dense no-caps icon="clear_all" label="Clear" @click="compare.clear()" />
-      </div>
-      <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders q-mb-md">
-        {{ error }}
-      </q-banner>
+  <div class="compare-wrap">
+    <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders q-mb-md">
+      {{ error }}
+    </q-banner>
 
-      <q-inner-loading :showing="loading" color="primary" />
+    <q-inner-loading :showing="loading" color="primary" />
 
-      <div v-if="compare.count < 2 && !loading" class="empty">
-        <q-icon name="compare_arrows" size="52px" color="grey-4" />
-        <div class="text-subtitle1 text-grey-7 q-mt-md">Pick at least two lots to compare</div>
-        <div class="text-body2 text-grey-6">
-          Open any parcel on the map and tap “Compare” to add it here (up to four).
-        </div>
-        <q-btn
-          class="q-mt-md"
-          unelevated
-          no-caps
-          color="primary"
-          icon="map"
-          label="Go to map"
-          :to="{ name: 'explore', params: { market: market.active } }"
-        />
-      </div>
-
-      <q-markup-table v-else-if="items.length" flat bordered separator="cell" class="compare-table">
-        <thead>
-          <tr>
-            <th class="metric-col"></th>
-            <th v-for="item in items" :key="item.detail.parcel_number" class="parcel-head">
-              <div class="addr ellipsis" @click="openParcel(item.detail.parcel_number)">
-                {{ item.detail.address ?? item.detail.parcel_number }}
-              </div>
-              <div class="pn">{{ item.detail.parcel_number }}</div>
-              <q-btn
-                flat
-                dense
-                round
-                size="xs"
-                icon="close"
-                color="grey-6"
-                :aria-label="`Remove ${item.detail.parcel_number}`"
-                @click="removeParcel(item.detail.parcel_number)"
-              />
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in ROWS" :key="row.label" :class="{ emphasis: row.emphasis }">
-            <td class="metric-col">{{ row.label }}</td>
-            <td
-              v-for="item in items"
-              :key="item.detail.parcel_number"
-              class="text-right value-cell"
-            >
-              {{ row.value(item) }}
-            </td>
-          </tr>
-        </tbody>
-      </q-markup-table>
-
-      <div class="text-caption text-grey-5 q-mt-md">
-        Informational only — estimates from public city data and modeled assumptions, not advice.
+    <div v-if="compare.count < 2 && !loading" class="empty">
+      <q-icon name="compare_arrows" size="52px" color="grey-4" />
+      <div class="text-subtitle1 text-grey-7 q-mt-md">Pick at least two lots to compare</div>
+      <div class="text-body2 text-grey-6">
+        Open any parcel and tap “Compare” to add it here (up to four).
       </div>
     </div>
-  </q-page>
+
+    <q-markup-table v-else-if="items.length" flat bordered separator="cell" class="compare-table">
+      <thead>
+        <tr>
+          <th class="metric-col"></th>
+          <th v-for="item in items" :key="item.detail.parcel_number" class="parcel-head">
+            <div class="addr ellipsis" @click="openParcel(item.detail.parcel_number)">
+              {{ item.detail.address ?? item.detail.parcel_number }}
+            </div>
+            <div class="pn">{{ item.detail.parcel_number }}</div>
+            <q-btn
+              flat
+              dense
+              round
+              size="xs"
+              icon="close"
+              color="grey-6"
+              :aria-label="`Remove ${item.detail.parcel_number}`"
+              @click="compare.remove(item.detail.parcel_number)"
+            />
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="row in ROWS" :key="row.label" :class="{ emphasis: row.emphasis }">
+          <td class="metric-col">{{ row.label }}</td>
+          <td v-for="item in items" :key="item.detail.parcel_number" class="text-right value-cell">
+            {{ row.value(item) }}
+          </td>
+        </tr>
+      </tbody>
+    </q-markup-table>
+
+    <div class="text-caption text-grey-5 q-mt-md">
+      Informational only — estimates from public city data and modeled assumptions, not advice.
+    </div>
+  </div>
 </template>
 
 <style scoped>
 .compare-wrap {
-  max-width: 980px;
-  margin: 0 auto;
   position: relative;
+  min-height: 120px;
 }
 .compare-table {
   border-radius: var(--lot-radius);
@@ -187,7 +161,7 @@ watch(() => [...compare.parcelNumbers], load, { immediate: true })
   font-weight: 600;
   color: var(--lot-muted);
   white-space: nowrap;
-  background: #f7f9fc;
+  background: var(--lot-surface-2);
   position: sticky;
   left: 0;
 }
@@ -213,7 +187,7 @@ watch(() => [...compare.parcelNumbers], load, { immediate: true })
 }
 tr.emphasis td {
   font-weight: 700;
-  background: #eef4ff;
+  background: var(--lot-accent-soft);
   color: var(--lot-ink);
 }
 .empty {

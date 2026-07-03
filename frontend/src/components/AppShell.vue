@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppTopBar from '@/components/AppTopBar.vue'
+import CompareTray from '@/components/CompareTray.vue'
 
 const open = ref(true)
 const collapsed = ref(false)
@@ -19,6 +20,8 @@ const collapsed = ref(false)
     <q-page-container>
       <slot />
     </q-page-container>
+
+    <CompareTray />
   </q-layout>
 </template>
 

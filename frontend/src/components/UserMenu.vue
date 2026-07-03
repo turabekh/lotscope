@@ -4,7 +4,6 @@ import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
-import { useCompareStore } from '@/stores/compare'
 import { useMarketStore } from '@/stores/market'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -16,8 +15,6 @@ const watchlist = useWatchlistStore()
 const { alerts } = storeToRefs(watchlist)
 const savedSearches = useSavedSearchesStore()
 const { newTotal } = storeToRefs(savedSearches)
-const compare = useCompareStore()
-const { count: compareCount } = storeToRefs(compare)
 const router = useRouter()
 
 const initial = computed(() => (user.value?.email ?? '?').charAt(0).toUpperCase())
@@ -52,10 +49,6 @@ function goWatchlist(): void {
 
 function goPipeline(): void {
   void router.push({ name: 'pipeline', params: { market: market.active } })
-}
-
-function goCompare(): void {
-  void router.push({ name: 'compare', params: { market: market.active } })
 }
 
 function goSavedSearches(): void {
@@ -109,13 +102,6 @@ function goAdmin(): void {
           <q-item-section>Saved searches</q-item-section>
           <q-item-section v-if="newTotal > 0" side>
             <q-badge color="negative" rounded>{{ newTotal }}</q-badge>
-          </q-item-section>
-        </q-item>
-        <q-item v-close-popup clickable @click="goCompare">
-          <q-item-section avatar><q-icon name="compare_arrows" /></q-item-section>
-          <q-item-section>Compare parcels</q-item-section>
-          <q-item-section v-if="compareCount > 0" side>
-            <q-badge color="primary" rounded>{{ compareCount }}</q-badge>
           </q-item-section>
         </q-item>
         <q-item v-close-popup clickable @click="goLeads">

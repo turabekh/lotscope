@@ -94,8 +94,8 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/:market/compare',
     name: 'compare',
-    component: () => import('@/pages/ComparePage.vue'),
-    meta: { requiresAuth: true, title: 'Compare parcels' },
+    redirect: (to) => ({ name: 'explore', params: { market: to.params.market }, query: to.query }),
+    meta: { requiresAuth: true },
   },
   {
     path: '/:market/saved-searches',
