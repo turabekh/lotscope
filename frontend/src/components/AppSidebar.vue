@@ -9,8 +9,8 @@ import { useMarketStore } from '@/stores/market'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
-defineProps<{ collapsed: boolean }>()
-const emit = defineEmits<{ toggle: [] }>()
+withDefaults(defineProps<{ collapsed: boolean; mobile?: boolean }>(), { mobile: false })
+const emit = defineEmits<{ toggle: []; navigate: [] }>()
 
 const route = useRoute()
 const market = useMarketStore()
@@ -50,7 +50,7 @@ function isActive(name: string): boolean {
       <span v-if="!collapsed" class="brand-name">LotScope <span class="brand-sub">PHL</span></span>
     </router-link>
 
-    <div class="switcher-slot" :class="{ mini: collapsed }">
+    <div v-if="!mobile" class="switcher-slot" :class="{ mini: collapsed }">
       <MarketSwitcher :collapsed="collapsed" />
     </div>
 
@@ -64,6 +64,7 @@ function isActive(name: string): boolean {
         active-class="nav-active"
         class="nav-item"
         :to="{ name: item.name, params: { market: market.active } }"
+        @click="emit('navigate')"
       >
         <q-item-section avatar class="nav-avatar">
           <q-icon :name="item.icon" size="21px" />
@@ -94,6 +95,7 @@ function isActive(name: string): boolean {
         active-class="nav-active"
         class="nav-item"
         :to="{ name: 'account' }"
+        @click="emit('navigate')"
       >
         <q-item-section avatar class="nav-avatar"
           ><q-icon name="manage_accounts" size="21px"
@@ -109,6 +111,7 @@ function isActive(name: string): boolean {
         active-class="nav-active"
         class="nav-item"
         :to="{ name: 'admin' }"
+        @click="emit('navigate')"
       >
         <q-item-section avatar class="nav-avatar"
           ><q-icon name="admin_panel_settings" size="21px"
@@ -116,7 +119,7 @@ function isActive(name: string): boolean {
         <q-item-section v-if="!collapsed">Admin</q-item-section>
         <q-tooltip v-if="collapsed" anchor="center right" self="center left">Admin</q-tooltip>
       </q-item>
-      <q-item v-ripple clickable class="nav-item" @click="emit('toggle')">
+      <q-item v-if="!mobile" v-ripple clickable class="nav-item" @click="emit('toggle')">
         <q-item-section avatar class="nav-avatar">
           <q-icon :name="collapsed ? 'chevron_right' : 'chevron_left'" size="21px" />
         </q-item-section>

@@ -1,21 +1,26 @@
 <script setup lang="ts">
+import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import DataCoverageChip from '@/components/DataCoverageChip.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
+import MarketSwitcher from '@/components/MarketSwitcher.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import { useThemeStore } from '@/stores/theme'
 
 const route = useRoute()
 const theme = useThemeStore()
+const $q = useQuasar()
 
-const title = computed(() => route.meta.title ?? '')
+const isMobile = computed(() => $q.screen.lt.md)
+const title = computed(() => (isMobile.value ? '' : (route.meta.title ?? '')))
 </script>
 
 <template>
   <q-header class="topbar">
     <q-toolbar class="topbar-toolbar">
+      <MarketSwitcher v-if="isMobile" variant="pill" class="q-mr-xs" />
       <span v-if="title" class="page-title">{{ title }}</span>
       <GlobalSearch />
       <slot name="lead" />
@@ -24,7 +29,7 @@ const title = computed(() => route.meta.title ?? '')
 
       <slot name="actions" />
 
-      <DataCoverageChip class="q-mr-xs" />
+      <DataCoverageChip v-if="!isMobile" class="q-mr-xs" />
 
       <q-btn
         flat

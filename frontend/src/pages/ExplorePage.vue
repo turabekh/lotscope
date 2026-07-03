@@ -209,12 +209,12 @@ function onSelect(parcelNumber: string): void {
 
 <style scoped>
 .explore-layout {
-  height: calc(100vh - 54px);
-  height: calc(100dvh - 54px);
+  height: calc(100vh - 54px - var(--lot-footer-h, 0px));
+  height: calc(100dvh - 54px - var(--lot-footer-h, 0px));
 }
 .explore-body {
-  height: calc(100vh - 54px);
-  height: calc(100dvh - 54px);
+  height: calc(100vh - 54px - var(--lot-footer-h, 0px));
+  height: calc(100dvh - 54px - var(--lot-footer-h, 0px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
