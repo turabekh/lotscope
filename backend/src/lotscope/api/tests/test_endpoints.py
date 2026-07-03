@@ -563,6 +563,66 @@ async def test_assemblage_top_ranks_by_unit_unlock(db_session: AsyncSession) -> 
 
 
 @pytest.mark.integration
+async def test_appeal_packet_download_requires_entitlement(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'O')")
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/parcels/000000001/appeal-packet.pdf")
+    assert resp.status_code == 403
+
+
+@pytest.mark.integration
+async def test_appeal_packet_redeem_requires_credit(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'O')")
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.post("/parcels/000000001/appeal-packet")
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_appeal_packet_redeem_then_download(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, owner, market_value) "
+            "VALUES ('000000001', 'O', 300000)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'member@example.com', 'x', 'user', 'investor', true)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO credit_ledger (user_id, delta, reason, ref) "
+            "VALUES (1, 1, 'appeal_packet_grant', '2026-07')"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        redeem = await client.post("/parcels/000000001/appeal-packet")
+        download = await client.get("/parcels/000000001/appeal-packet.pdf")
+
+    assert redeem.status_code == 200
+    assert redeem.json()["entitled"] is True
+    assert redeem.json()["source"] == "grant"
+    assert download.status_code == 200
+    assert download.content[:4] == b"%PDF"
+
+
+@pytest.mark.integration
 async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(

@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import QuotaExceededError, ValidationError
 from lotscope.skiptrace.models import (
+    APPEAL_PACKET_REASONS,
+    REASON_APPEAL_PACKET_BURN,
     REASON_SKIPTRACE_BURN,
+    SKIPTRACE_REASONS,
     CreditLedgerEntry,
     SkipTraceResult,
 )
@@ -25,7 +28,8 @@ _OWNER_SQL = text(
     "SELECT owner, owner_key, mailing_address FROM parcel WHERE parcel_number = :parcel_number"
 )
 _BALANCE_SQL = text(
-    "SELECT coalesce(sum(delta), 0) FROM credit_ledger WHERE user_id = :user_id"
+    "SELECT coalesce(sum(delta), 0) FROM credit_ledger "
+    "WHERE user_id = :user_id AND reason = ANY(:reasons)"
 )
 _HAS_TRACED_SQL = text(
     "SELECT EXISTS (SELECT 1 FROM credit_ledger "
@@ -34,7 +38,33 @@ _HAS_TRACED_SQL = text(
 
 
 async def credit_balance(session: AsyncSession, user_id: int) -> int:
-    return int(await session.scalar(_BALANCE_SQL, {"user_id": user_id}) or 0)
+    return int(
+        await session.scalar(_BALANCE_SQL, {"user_id": user_id, "reasons": list(SKIPTRACE_REASONS)})
+        or 0
+    )
+
+
+async def appeal_packet_balance(session: AsyncSession, user_id: int) -> int:
+    return int(
+        await session.scalar(
+            _BALANCE_SQL, {"user_id": user_id, "reasons": list(APPEAL_PACKET_REASONS)}
+        )
+        or 0
+    )
+
+
+async def spend_appeal_packet_credit(session: AsyncSession, user_id: int, ref: str) -> bool:
+    statement = (
+        insert(CreditLedgerEntry)
+        .values(user_id=user_id, delta=-1, reason=REASON_APPEAL_PACKET_BURN, ref=ref)
+        .on_conflict_do_nothing(
+            index_elements=["user_id", "reason", "ref"],
+            index_where=text("reason <> 'skiptrace_burn' AND ref IS NOT NULL"),
+        )
+        .returning(CreditLedgerEntry.id)
+    )
+    inserted = (await session.execute(statement)).scalar_one_or_none()
+    return inserted is not None
 
 
 async def get_credit_balance(

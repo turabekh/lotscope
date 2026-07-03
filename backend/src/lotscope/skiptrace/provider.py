@@ -13,8 +13,9 @@ class SkipTraceContacts:
 class SkipTraceProvider(Protocol):
     name: str
 
-    async def trace(self, *, owner: str | None, mailing_address: str | None) -> SkipTraceContacts:
-        ...
+    async def trace(
+        self, *, owner: str | None, mailing_address: str | None
+    ) -> SkipTraceContacts: ...
 
 
 class NullSkipTraceProvider:

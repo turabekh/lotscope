@@ -114,3 +114,24 @@ async def test_missing_owner_key_raises(db_session: AsyncSession) -> None:
     provider = _FakeProvider([], [])
     with pytest.raises(ValidationError):
         await trace_owner(db_session, provider, 1, "000000001")
+
+
+async def test_packet_and_skiptrace_balances_do_not_cross_contaminate(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.skiptrace.models import REASON_APPEAL_PACKET_GRANT
+    from lotscope.skiptrace.service import appeal_packet_balance, spend_appeal_packet_credit
+
+    await _add_user(db_session, 1)
+    await grant_credits(db_session, 1, 100, REASON_PACK_PURCHASE, "pay_1")
+    await grant_credits(db_session, 1, 1, REASON_APPEAL_PACKET_GRANT, "2026-07")
+    await db_session.flush()
+
+    assert await credit_balance(db_session, 1) == 100
+    assert await appeal_packet_balance(db_session, 1) == 1
+
+    assert await spend_appeal_packet_credit(db_session, 1, "000000001") is True
+    await db_session.flush()
+
+    assert await appeal_packet_balance(db_session, 1) == 0
+    assert await credit_balance(db_session, 1) == 100  # skiptrace balance untouched

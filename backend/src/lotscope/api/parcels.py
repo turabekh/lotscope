@@ -27,6 +27,8 @@ from lotscope.api.deps import (
     get_redis,
     get_session,
 )
+from lotscope.appeal.schemas import AppealPacketStatus
+from lotscope.appeal.service import has_entitlement, packet_status, redeem_packet
 from lotscope.assemblage.schemas import AssemblageResult
 from lotscope.assemblage.service import compute_assemblage
 from lotscope.assessment.schemas import AssessmentResult
@@ -36,7 +38,7 @@ from lotscope.checklist.service import build_parcel_checklist
 from lotscope.compare.schemas import ParcelCompareResponse
 from lotscope.compare.service import MAX_COMPARE_PARCELS, compare_parcels
 from lotscope.core.config import Settings
-from lotscope.core.errors import NotFoundError, QuotaExceededError
+from lotscope.core.errors import ForbiddenError, NotFoundError, QuotaExceededError
 from lotscope.deal.schemas import DealResult, ScenariosResult
 from lotscope.deal.service import analyze_parcel_deal, analyze_parcel_scenarios
 from lotscope.distress.schemas import DistressResult
@@ -52,8 +54,9 @@ from lotscope.owners.schemas import OwnerPortfolio
 from lotscope.owners.service import get_owner_portfolio
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
+from lotscope.reports.appeal_packet import appeal_packet_filename
 from lotscope.reports.dossier import dossier_filename
-from lotscope.reports.service import build_parcel_dossier
+from lotscope.reports.service import build_appeal_packet, build_parcel_dossier
 from lotscope.subdivision.schemas import SubdivisionResult
 from lotscope.subdivision.service import analyze_parcel_subdivision
 from lotscope.valuation.schemas import ValuationResult
@@ -286,6 +289,43 @@ async def parcel_dossier(
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{dossier_filename(parcel_number)}"'
+        },
+    )
+
+
+@router.get("/{parcel_number}/appeal-packet", response_model=AppealPacketStatus)
+async def parcel_appeal_packet_status(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> AppealPacketStatus:
+    return await packet_status(session, current_user.id, parcel_number)
+
+
+@router.post("/{parcel_number}/appeal-packet", response_model=AppealPacketStatus)
+async def redeem_parcel_appeal_packet(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> AppealPacketStatus:
+    detail = await get_parcel_detail(session, parcel_number)
+    if detail is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    status = await redeem_packet(session, current_user.id, parcel_number)
+    await session.commit()
+    return status
+
+
+@router.get("/{parcel_number}/appeal-packet.pdf")
+async def download_parcel_appeal_packet(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> Response:
+    if not await has_entitlement(session, current_user.id, parcel_number):
+        raise ForbiddenError("Purchase or redeem the Assessment Review Packet to download it.")
+    pdf = await build_appeal_packet(session, parcel_number)
+    if pdf is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{appeal_packet_filename(parcel_number)}"'
         },
     )
 

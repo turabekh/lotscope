@@ -1,5 +1,6 @@
 from lotscope.accounts.models import User
 from lotscope.ai.models import Document
+from lotscope.appeal.models import AppealPacketEntitlement
 from lotscope.assemblage.models import ParcelAssemblage
 from lotscope.core.db import Base
 from lotscope.historic.models import HistoricDistrict
@@ -15,6 +16,7 @@ from lotscope.zoning.models import Rco, ZoningDistrict, ZoningOverlay, ZoningSta
 metadata = Base.metadata
 
 __all__ = [
+    "AppealPacketEntitlement",
     "DatasetFreshness",
     "Document",
     "FloodZone",

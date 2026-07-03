@@ -4,6 +4,7 @@ from typing import Any, ClassVar
 from arq import cron
 from arq.connections import RedisSettings
 
+from lotscope.appeal.jobs import grant_investor_appeal_packets
 from lotscope.assemblage.jobs import recompute_all_assemblage
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
@@ -106,6 +107,13 @@ async def grant_investor_skiptrace_credits(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def grant_investor_packet_credits(ctx: dict[str, Any]) -> int:
+    month = datetime.now(UTC).strftime("%Y-%m")
+    count = await grant_investor_appeal_packets(ctx["session_factory"], month=month)
+    _logger.info("granted_investor_packets", count=count, month=month)
+    return count
+
+
 async def send_weekly_digests(ctx: dict[str, Any]) -> int:
     settings = ctx["settings"]
     sender = get_email_sender(settings)
@@ -151,6 +159,7 @@ class WorkerSettings:
         recompute_assemblage,
         recompute_vacancy_confidence,
         grant_investor_skiptrace_credits,
+        grant_investor_packet_credits,
         send_weekly_digests,
         send_daily_digests,
         send_push_notifications,
@@ -168,6 +177,7 @@ class WorkerSettings:
         cron(recompute_distress, hour=8, minute=0),
         cron(recompute_assemblage, hour=8, minute=30),
         cron(grant_investor_skiptrace_credits, day=1, hour=5, minute=0),
+        cron(grant_investor_packet_credits, day=1, hour=5, minute=10),
         cron(recompute_verdicts, weekday="sun", hour=5, minute=0),
         cron(send_push_notifications, hour=12, minute=0),
         cron(send_daily_digests, hour=13, minute=0),
