@@ -28,6 +28,41 @@ class ZoningDistrict(Base, TimestampMixin, IngestionMixin):
     )
 
 
+class ZoningOverlay(Base, TimestampMixin, IngestionMixin):
+    __tablename__ = "zoning_overlay"
+    __table_args__ = (UniqueConstraint("external_id", name="uq_zoning_overlay_external"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    external_id: Mapped[str | None] = mapped_column(String(60), index=True)
+    code: Mapped[str | None] = mapped_column(String(30), index=True)
+    name: Mapped[str | None] = mapped_column(String(255), index=True)
+    code_section: Mapped[str | None] = mapped_column(String(60))
+
+    geom_2272: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=2272, spatial_index=True)
+    )
+    geom_4326: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True)
+    )
+
+
+class Rco(Base, TimestampMixin, IngestionMixin):
+    __tablename__ = "rco"
+    __table_args__ = (UniqueConstraint("external_id", name="uq_rco_external"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    external_id: Mapped[str | None] = mapped_column(String(60), index=True)
+    name: Mapped[str | None] = mapped_column(String(255), index=True)
+    org_type: Mapped[str | None] = mapped_column(String(60))
+
+    geom_2272: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=2272, spatial_index=True)
+    )
+    geom_4326: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True)
+    )
+
+
 class ZoningStandard(Base, TimestampMixin):
     __tablename__ = "zoning_standard"
     __table_args__ = (

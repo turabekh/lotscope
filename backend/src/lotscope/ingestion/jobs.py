@@ -13,6 +13,7 @@ from lotscope.ingestion.loaders import (
     li,
     neighborhoods,
     opa,
+    overlays,
     pwd,
     rtt,
     sheriff,
@@ -121,6 +122,21 @@ async def ingest_sheriff(session_factory: SessionFactory, settings: Settings) ->
     )
 
 
+async def ingest_zoning_overlays(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=overlays.load_zoning_overlays,
+        dataset=overlays.ZONING_OVERLAY_DATASET,
+    )
+
+
+async def ingest_rco(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory, settings, loader=overlays.load_rco, dataset=overlays.RCO_DATASET
+    )
+
+
 async def ingest_zoning(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_arcgis(
         session_factory,
@@ -176,6 +192,8 @@ INGEST_JOBS: dict[str, Job] = {
     "li_demolitions": ingest_li_demolitions,
     "sheriff": ingest_sheriff,
     "zoning": ingest_zoning,
+    "zoning_overlays": ingest_zoning_overlays,
+    "rco": ingest_rco,
     "vacancy": ingest_vacancy,
     "flood": ingest_flood,
     "neighborhoods": ingest_neighborhoods,

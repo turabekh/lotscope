@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A8** (Phase 5) — existing PRD §5.3 scope, never built. Replicates the historic-district overlay pattern (ADR-0028) for two new geometry layers and bumps the verdict to **v6**. Sibling of ADR-0041 (A7, same phase).
 

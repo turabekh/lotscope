@@ -51,6 +51,8 @@ Base: `https://data-phl.opendata.arcgis.com`
 | Historic districts | Overlay / review impacts. |
 | Council districts, neighborhoods / RCOs | Boundaries, notification requirements. |
 | Street Centerline | Street network (~41k LineString segments); basis for the landlocked / no-street-access flag (ADR-0027). `Street_Centerline` FeatureServer; key `seg_id`, name `stname`. |
+| Zoning Overlays | Title 14 overlay districts (~193 polygons) → `overlay_district` verdict flag (ADR-0040). `Zoning_Overlays` FeatureServer; key `objectid`, `overlay_symbol` (code), `overlay_name`, `code_section`. Resolution via `ST_Intersects`. |
+| Zoning RCO | Registered Community Organization boundaries (~233 polygons) → `rco` verdict flag / variance-meeting requirement (ADR-0040). `Zoning_RCO` FeatureServer; key `objectid`, `organization_name`, `org_type`. **Contact PII fields (primary_name/email/phone) are deliberately NOT ingested** (§13). |
 
 ## Sheriff sales (A4 · ADR-0038)
 
