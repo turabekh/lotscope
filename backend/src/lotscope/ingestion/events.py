@@ -36,7 +36,6 @@ def event_label(code: str) -> str:
 class TaxSnapshot:
     is_delinquent: bool | None
     total_due: float | None
-    in_sheriff_sale: bool | None
 
 
 @dataclass(frozen=True)
@@ -63,6 +62,25 @@ def diff_assessment(
         SEVERITY_LOW,
         {"market_value": old_market_value},
         {"market_value": new_market_value},
+    )
+
+
+def sheriff_sale_event(
+    case_number: str,
+    sale_date: str | None,
+    sale_type: str | None,
+    opening_bid: float | None,
+) -> EventDraft:
+    return EventDraft(
+        CODE_SHERIFF_SALE,
+        SEVERITY_HIGH,
+        None,
+        {
+            "case_number": case_number,
+            "sale_date": sale_date,
+            "sale_type": sale_type,
+            "opening_bid": opening_bid,
+        },
     )
 
 
@@ -93,15 +111,6 @@ def diff_tax(old: TaxSnapshot | None, new: TaxSnapshot) -> list[EventDraft]:
     if old is None:
         return []
     drafts: list[EventDraft] = []
-    if _became_true(old.in_sheriff_sale, new.in_sheriff_sale):
-        drafts.append(
-            EventDraft(
-                CODE_SHERIFF_SALE,
-                SEVERITY_HIGH,
-                {"in_sheriff_sale": old.in_sheriff_sale},
-                {"in_sheriff_sale": new.in_sheriff_sale},
-            )
-        )
     if _became_true(old.is_delinquent, new.is_delinquent):
         drafts.append(
             EventDraft(

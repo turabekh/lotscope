@@ -89,6 +89,7 @@ class Settings(BaseSettings):
 
     carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
     arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
+    sheriff_sale_csv_path: str | None = None
 
     rtt_min_sale_date: str = "2021-01-01"
     li_min_event_date: str = "2023-01-01"

@@ -15,11 +15,13 @@ from lotscope.ingestion.loaders import (
     opa,
     pwd,
     rtt,
+    sheriff,
     streets,
     tax,
     vacancy,
     zoning,
 )
+from lotscope.ingestion.loaders.sheriff import CsvSheriffSource, load_sheriff
 from lotscope.ingestion.runner import run_loader
 
 SessionFactory = async_sessionmaker[AsyncSession]
@@ -108,6 +110,17 @@ async def ingest_li_demolitions(session_factory: SessionFactory, settings: Setti
     )
 
 
+async def ingest_sheriff(session_factory: SessionFactory, settings: Settings) -> int:
+    if not settings.sheriff_sale_csv_path:
+        return 0
+    source = CsvSheriffSource(settings.sheriff_sale_csv_path)
+    return await run_loader(
+        session_factory,
+        lambda session: load_sheriff(session, source),
+        dataset=sheriff.SHERIFF_DATASET,
+    )
+
+
 async def ingest_zoning(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_arcgis(
         session_factory,
@@ -161,6 +174,7 @@ INGEST_JOBS: dict[str, Job] = {
     "li_violations": ingest_li_violations,
     "li_permits": ingest_li_permits,
     "li_demolitions": ingest_li_demolitions,
+    "sheriff": ingest_sheriff,
     "zoning": ingest_zoning,
     "vacancy": ingest_vacancy,
     "flood": ingest_flood,

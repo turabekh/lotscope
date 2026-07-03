@@ -10,45 +10,57 @@ from lotscope.ingestion.events import (
     CODE_NEW_PERMIT,
     CODE_SHERIFF_SALE,
     CODE_TAX_UP,
+    SEVERITY_HIGH,
     SEVERITY_LOW,
     TaxSnapshot,
     classify_li_event,
     diff_assessment,
     diff_tax,
     new_deed_event,
+    sheriff_sale_event,
 )
 
 
-def _snap(delinquent: bool | None, total_due: float | None, sheriff: bool | None) -> TaxSnapshot:
-    return TaxSnapshot(is_delinquent=delinquent, total_due=total_due, in_sheriff_sale=sheriff)
+def _snap(delinquent: bool | None, total_due: float | None) -> TaxSnapshot:
+    return TaxSnapshot(is_delinquent=delinquent, total_due=total_due)
 
 
 def test_no_prior_core_row_emits_nothing() -> None:
-    assert diff_tax(None, _snap(True, 5000, True)) == []
+    assert diff_tax(None, _snap(True, 5000)) == []
 
 
 def test_unchanged_emits_nothing() -> None:
-    same = _snap(True, 5000, False)
+    same = _snap(True, 5000)
     assert diff_tax(same, same) == []
 
 
-def test_new_sheriff_sale_and_delinquency_emit_high_events() -> None:
-    old = _snap(False, 0, False)
-    new = _snap(True, 5000, True)
-    codes = {d.code for d in diff_tax(old, new)}
-    assert CODE_SHERIFF_SALE in codes
+def test_new_delinquency_and_rising_due_emit_events() -> None:
+    codes = {d.code for d in diff_tax(_snap(False, 0), _snap(True, 5000))}
     assert CODE_DELINQUENT in codes
     assert CODE_TAX_UP in codes
 
 
 def test_rising_total_due_alone_emits_tax_up() -> None:
-    drafts = diff_tax(_snap(True, 1000, False), _snap(True, 3000, False))
+    drafts = diff_tax(_snap(True, 1000), _snap(True, 3000))
     assert [d.code for d in drafts] == [CODE_TAX_UP]
     assert drafts[0].new_value == {"total_due": 3000}
 
 
-def test_cleared_flag_does_not_emit() -> None:
-    assert diff_tax(_snap(True, 5000, True), _snap(False, 5000, False)) == []
+def test_cleared_delinquency_does_not_emit() -> None:
+    assert diff_tax(_snap(True, 5000), _snap(False, 5000)) == []
+
+
+def test_sheriff_sale_event_builds_high_severity_draft() -> None:
+    draft = sheriff_sale_event("BW-1", "2026-08-05", "mortgage", 12000.0)
+    assert draft.code == CODE_SHERIFF_SALE
+    assert draft.severity == SEVERITY_HIGH
+    assert draft.old_value is None
+    assert draft.new_value == {
+        "case_number": "BW-1",
+        "sale_date": "2026-08-05",
+        "sale_type": "mortgage",
+        "opening_bid": 12000.0,
+    }
 
 
 @pytest.mark.parametrize(

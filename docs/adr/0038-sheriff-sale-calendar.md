@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A4** (Phase 4). Depends on ADR-0036 (raw→staging→merge + `parcel_event`) and ADR-0037 (Deal Feed read model); extends §5.5 risk/due-diligence, ADR-0015 (distress index) and ADR-0017 (change taxonomy — the `sheriff_sale` code); tier-gated per ADR-0030; nav slot per ADR-0029.
 

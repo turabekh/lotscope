@@ -52,6 +52,14 @@ Base: `https://data-phl.opendata.arcgis.com`
 | Council districts, neighborhoods / RCOs | Boundaries, notification requirements. |
 | Street Centerline | Street network (~41k LineString segments); basis for the landlocked / no-street-access flag (ADR-0027). `Street_Centerline` FeatureServer; key `seg_id`, name `stname`. |
 
+## Sheriff sales (A4 · ADR-0038)
+
+Philadelphia Sheriff's Office real-estate sale lists (tax + mortgage foreclosure) — the dated auction calendar. Upstream is **CivilView** (`https://salesweb.civilview.com/Sales/SalesSearch?countyId=60`): server-rendered HTML list + per-property detail pages, CSV-exportable. Each row carries **Book & Writ (case number)**, **OPA #**, address, plaintiff, sale type, status, sale date, opening bid. The consumer-facing `phillysheriff.com/services/list-of-properties/` is a bot-protected Bid4Assets/CivilView embed — not an acquisition target.
+
+Acquisition is decoupled from the record contract (`SheriffSaleRecord`) behind a `SheriffSource` interface. The **CSV/file adapter** (`CsvSheriffSource`, `SHERIFF_SALE_CSV_PATH`) is the default and the operational fallback; the live CivilView HTML scraper is a follow-up behind the same interface. Loader is staged (raw→staging→merge, ADR-0036): a new case emits a dated `sheriff_sale` event.
+
+**Reconciliation:** OPA # → `normalize_account` → `parcel_number`; rows with no resolvable OPA are retained in `raw` but skipped from core/events (address-match is a follow-up). CSV columns expected by `CsvSheriffSource`: `case_number, opa_number, address, sale_type, status, sale_date, opening_bid, plaintiff`.
+
 ## Publicly-owned / Land Bank
 
 City-owned property and Land Bank / PHDC inventory — flags publicly-owned lots and disposition status. Current authoritative source to be located and pinned during ingestion.

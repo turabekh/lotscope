@@ -35,6 +35,26 @@ class TaxStatus(Base, TimestampMixin, IngestionMixin):
     as_of_date: Mapped[date | None] = mapped_column(Date)
 
 
+class SheriffSale(Base, TimestampMixin, IngestionMixin):
+    __tablename__ = "sheriff_sale"
+    __table_args__ = (
+        Index("ix_sheriff_sale_parcel_date", "parcel_number", "sale_date"),
+        Index("ix_sheriff_sale_date", "sale_date"),
+        UniqueConstraint("case_number", name="uq_sheriff_sale_case"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    parcel_number: Mapped[str] = mapped_column(
+        String(20), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
+    )
+    case_number: Mapped[str] = mapped_column(String(60), nullable=False)
+    sale_type: Mapped[str | None] = mapped_column(String(30))
+    sale_date: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str | None] = mapped_column(String(40))
+    opening_bid: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    plaintiff: Mapped[str | None] = mapped_column(Text)
+
+
 class LiEvent(Base, TimestampMixin, IngestionMixin):
     __tablename__ = "li_event"
     __table_args__ = (

@@ -10,6 +10,7 @@ from lotscope.ingestion.events import (
     diff_assessment,
     diff_tax,
     new_deed_event,
+    sheriff_sale_event,
 )
 from lotscope.ingestion.models import ParcelEvent
 
@@ -17,13 +18,12 @@ TAX_DATASET = "tax_delinquency"
 LI_DATASET = "li"
 OPA_DATASET = "opa"
 RTT_DATASET = "rtt"
+SHERIFF_DATASET = "sheriff"
 
 _STAGING_JOIN_SQL = text(
     "SELECT s.parcel_number, "
     "s.is_delinquent AS s_delinquent, s.total_due AS s_total_due, "
-    "s.in_sheriff_sale AS s_sheriff, "
     "c.is_delinquent AS c_delinquent, c.total_due AS c_total_due, "
-    "c.in_sheriff_sale AS c_sheriff, "
     "(c.parcel_number IS NOT NULL) AS has_core "
     "FROM staging.tax s "
     "LEFT JOIN tax_status c ON c.parcel_number = s.parcel_number "
@@ -61,7 +61,6 @@ async def merge_tax(session: AsyncSession, ingest_run_id: int) -> MergeResult:
             TaxSnapshot(
                 is_delinquent=row.c_delinquent,
                 total_due=_as_float(row.c_total_due),
-                in_sheriff_sale=row.c_sheriff,
             )
             if row.has_core
             else None
@@ -69,7 +68,6 @@ async def merge_tax(session: AsyncSession, ingest_run_id: int) -> MergeResult:
         new = TaxSnapshot(
             is_delinquent=row.s_delinquent,
             total_due=_as_float(row.s_total_due),
-            in_sheriff_sale=row.s_sheriff,
         )
         for draft in diff_tax(old, new):
             session.add(
@@ -248,4 +246,61 @@ async def merge_rtt(session: AsyncSession, ingest_run_id: int) -> MergeResult:
         await session.flush()
 
     await session.execute(_UPSERT_RTT_SQL, {"ingest_run_id": ingest_run_id})
+    return MergeResult(merged_rows=len(rows), event_count=events)
+
+
+_SHERIFF_SEEN_SQL = text("SELECT EXISTS (SELECT 1 FROM sheriff_sale)")
+
+_SHERIFF_JOIN_SQL = text(
+    "SELECT s.parcel_number, s.case_number, s.sale_type, s.sale_date, s.opening_bid, "
+    "(c.id IS NOT NULL) AS row_exists "
+    "FROM staging.sheriff_sale s "
+    "LEFT JOIN sheriff_sale c ON c.case_number = s.case_number "
+    "WHERE s.ingest_run_id = :ingest_run_id"
+)
+
+_UPSERT_SHERIFF_SQL = text(
+    "INSERT INTO sheriff_sale "
+    "(parcel_number, case_number, sale_type, sale_date, status, opening_bid, "
+    "plaintiff, source, updated_at) "
+    "SELECT parcel_number, case_number, sale_type, sale_date, status, opening_bid, "
+    "plaintiff, source, now() "
+    "FROM staging.sheriff_sale WHERE ingest_run_id = :ingest_run_id "
+    "ON CONFLICT (case_number) DO UPDATE SET "
+    "parcel_number = excluded.parcel_number, sale_type = excluded.sale_type, "
+    "sale_date = excluded.sale_date, status = excluded.status, "
+    "opening_bid = excluded.opening_bid, plaintiff = excluded.plaintiff, updated_at = now()"
+)
+
+
+async def merge_sheriff(session: AsyncSession, ingest_run_id: int) -> MergeResult:
+    dataset_seen = bool(await session.scalar(_SHERIFF_SEEN_SQL))
+    rows = (await session.execute(_SHERIFF_JOIN_SQL, {"ingest_run_id": ingest_run_id})).all()
+
+    events = 0
+    if dataset_seen:
+        for row in rows:
+            if row.row_exists:
+                continue
+            draft = sheriff_sale_event(
+                row.case_number,
+                row.sale_date.isoformat() if row.sale_date else None,
+                row.sale_type,
+                _as_float(row.opening_bid),
+            )
+            session.add(
+                ParcelEvent(
+                    parcel_number=row.parcel_number,
+                    dataset=SHERIFF_DATASET,
+                    code=draft.code,
+                    severity=draft.severity,
+                    old_value=draft.old_value,
+                    new_value=draft.new_value,
+                    ingest_run_id=ingest_run_id,
+                )
+            )
+            events += 1
+        await session.flush()
+
+    await session.execute(_UPSERT_SHERIFF_SQL, {"ingest_run_id": ingest_run_id})
     return MergeResult(merged_rows=len(rows), event_count=events)

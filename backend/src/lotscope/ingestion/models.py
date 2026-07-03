@@ -136,6 +136,21 @@ class StagingRtt(Base):
     source: Mapped[str | None] = mapped_column(String(120))
 
 
+class StagingSheriffSale(Base):
+    __tablename__ = "sheriff_sale"
+    __table_args__ = ({"schema": "staging"},)
+
+    case_number: Mapped[str] = mapped_column(String(60), primary_key=True)
+    ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    parcel_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    sale_type: Mapped[str | None] = mapped_column(String(30))
+    sale_date: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str | None] = mapped_column(String(40))
+    opening_bid: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    plaintiff: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str | None] = mapped_column(String(120))
+
+
 class StagingLiEvent(Base):
     __tablename__ = "li_event"
     __table_args__ = ({"schema": "staging"},)
