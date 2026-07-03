@@ -1,7 +1,9 @@
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import func, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +16,7 @@ from lotscope.assemblage.logic import (
     is_candidate,
     summarize,
 )
+from lotscope.assemblage.models import ParcelAssemblage
 from lotscope.assemblage.schemas import (
     AdjacentLot,
     AssemblageResult,
@@ -169,3 +172,63 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
         build_reasons(target, signals),
         computed_at,
     )
+
+
+_META_SQL = text(
+    "SELECT p.base_zoning_code, "
+    "(SELECT n.name FROM neighborhood n "
+    " WHERE p.geom_2272 IS NOT NULL AND ST_Contains(n.geom_2272, ST_Centroid(p.geom_2272)) "
+    " LIMIT 1) AS neighborhood "
+    "FROM parcel p WHERE p.parcel_number = :parcel_number"
+)
+_DELETE_ASSEMBLAGE_SQL = text("DELETE FROM parcel_assemblage WHERE parcel_number = :parcel_number")
+
+
+def _unit_unlock(summary: AssemblageSummary) -> int | None:
+    current = summary.by_right_units_current
+    combined = summary.by_right_units_combined
+    if current is None or combined is None:
+        return None
+    return combined - current
+
+
+async def _persist_assemblage(
+    session: AsyncSession, parcel_number: str, result: AssemblageResult, meta: Row[Any] | None
+) -> None:
+    values: dict[str, Any] = {
+        "parcel_number": parcel_number,
+        "potential": result.potential,
+        "candidate_count": result.summary.candidate_count,
+        "combined_lot_area_sqft": result.summary.combined_lot_area_sqft,
+        "by_right_units_current": result.summary.by_right_units_current,
+        "by_right_units_combined": result.summary.by_right_units_combined,
+        "unit_unlock": _unit_unlock(result.summary),
+        "base_zoning_code": meta.base_zoning_code if meta is not None else None,
+        "neighborhood": meta.neighborhood if meta is not None else None,
+        "sources": result.sources,
+        "computed_at": result.computed_at,
+    }
+    statement = insert(ParcelAssemblage).values(values)
+    assignments: dict[str, Any] = {
+        column: statement.excluded[column] for column in values if column != "parcel_number"
+    }
+    assignments["updated_at"] = func.now()
+    statement = statement.on_conflict_do_update(index_elements=["parcel_number"], set_=assignments)
+    await session.execute(statement)
+
+
+async def recompute_assemblage(session: AsyncSession, parcel_numbers: Sequence[str]) -> int:
+    count = 0
+    for parcel_number in parcel_numbers:
+        result = await compute_assemblage(session, parcel_number)
+        if result is None:
+            continue
+        if result.summary.candidate_count >= 1:
+            meta = (
+                await session.execute(_META_SQL, {"parcel_number": parcel_number})
+            ).one_or_none()
+            await _persist_assemblage(session, parcel_number, result, meta)
+            count += 1
+        else:
+            await session.execute(_DELETE_ASSEMBLAGE_SQL, {"parcel_number": parcel_number})
+    return count

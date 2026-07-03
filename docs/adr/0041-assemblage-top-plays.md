@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A7** (Phase 5). Promotes the existing on-demand assemblage engine (ADR-0013/0014) into a nightly-precomputed, ranked citywide feed. Sibling of ADR-0040 (A8, same phase).
 

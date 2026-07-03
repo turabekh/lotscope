@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed recompute-verdicts recompute-distress recompute-vacancy ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -46,6 +46,9 @@ recompute-distress: ## Recompute the motivated-seller distress index for every p
 
 recompute-vacancy: ## Recompute the vacancy-confidence cross-check for every vacant parcel
 	cd $(BACKEND) && uv run python -m lotscope.vacancy.jobs
+
+recompute-assemblage: ## Recompute assemblage Top Plays for every vacant parcel
+	cd $(BACKEND) && uv run python -m lotscope.assemblage.jobs
 
 vapid-keys: ## Generate a VAPID keypair for web push (copy into .env)
 	cd $(BACKEND) && uv run python -m lotscope.notifications.vapid_keys

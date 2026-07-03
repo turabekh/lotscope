@@ -1,5 +1,6 @@
 from lotscope.accounts.models import User
 from lotscope.ai.models import Document
+from lotscope.assemblage.models import ParcelAssemblage
 from lotscope.core.db import Base
 from lotscope.historic.models import HistoricDistrict
 from lotscope.ingestion.models import DatasetFreshness
@@ -21,6 +22,7 @@ __all__ = [
     "LiEvent",
     "Neighborhood",
     "Parcel",
+    "ParcelAssemblage",
     "ParcelVerdict",
     "Rco",
     "Sale",

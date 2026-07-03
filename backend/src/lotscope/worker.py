@@ -7,6 +7,7 @@ from arq.connections import RedisSettings
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.assemblage.jobs import recompute_all_assemblage
 from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.jobs import INGEST_JOBS
 from lotscope.ingestion.retention import sweep_retention
@@ -86,6 +87,12 @@ async def recompute_distress(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def recompute_assemblage(ctx: dict[str, Any]) -> int:
+    count = await recompute_all_assemblage(ctx["session_factory"])
+    _logger.info("recomputed_assemblage", plays=count)
+    return count
+
+
 async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
     count = await recompute_all_vacancy_confidence(ctx["session_factory"])
     _logger.info("recomputed_vacancy_confidence", count=count)
@@ -141,6 +148,7 @@ class WorkerSettings:
         recompute_verdicts,
         recompute_vacant_verdicts,
         recompute_distress,
+        recompute_assemblage,
         recompute_vacancy_confidence,
         grant_investor_skiptrace_credits,
         send_weekly_digests,
@@ -158,6 +166,7 @@ class WorkerSettings:
         cron(recompute_vacancy_confidence, hour=6, minute=30),
         cron(recompute_vacant_verdicts, hour=7, minute=0),
         cron(recompute_distress, hour=8, minute=0),
+        cron(recompute_assemblage, hour=8, minute=30),
         cron(grant_investor_skiptrace_credits, day=1, hour=5, minute=0),
         cron(recompute_verdicts, weekday="sun", hour=5, minute=0),
         cron(send_push_notifications, hour=12, minute=0),
