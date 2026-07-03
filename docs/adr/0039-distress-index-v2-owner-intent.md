@@ -57,3 +57,12 @@ Both factors flow through `score_distress().factors`, so `DistressPanel` renders
 - **Tenure is a proxy, labeled as one.** Deed-only `max(sale_date)` can be reset by a non-arm's-length transfer; the factor label and this ADR say so, and the ADR-0032 hygiene refinement is the named follow-up.
 - **Cost is contained.** All work is in `distress` (+ one owner-aggregation query reusing `owner_key`); one small migration; no new dependency, no new dataset, no contract change beyond adding a nullable column.
 - **Deferred:** arm's-length hygiene on tenure (ADR-0032), any tenure/portfolio weights beyond the two above, and surfacing tenure as a standalone dossier chip.
+
+## Update — 2026-07-04
+
+The two named follow-ups are now implemented:
+
+- **Arm's-length tenure hygiene (ADR-0032 floor).** The tenure subquery (`_TENURE_JOIN`, and the correlated tenure expression in `_LEADS_SQL`) now excludes nominal deeds — `sale_price IS NULL OR sale_price >= 1000`, mirroring the comp-hygiene consideration floor — so an intra-family $1 transfer no longer resets the tenure clock and mask a long-held absentee. NULL-price deeds are kept (unknown consideration, conservative). Tested: an old real sale plus a recent $1 transfer still scores `long_tenure`.
+- **Long-tenure lead factor.** `_lead_top_factors` now emits `Long-held (~N yrs)` for absentee owners past the `_LONG_TENURE_YEARS` threshold, closing the gap where the v2 plan listed it but the leads query never exposed tenure. The tenure value is a parcel-correlated, index-backed scalar subquery, so the leads list pays no full-table aggregation.
+
+Both are pure `distress`-module changes; scores shift only where a nominal transfer previously masked tenure, so a `parcel_distress` recompute follows.

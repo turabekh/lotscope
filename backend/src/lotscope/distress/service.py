@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.distress.models import ParcelDistress
 from lotscope.distress.schemas import DistressFactor, DistressResult, LeadItem
 from lotscope.distress.scoring import (
+    _LONG_TENURE_YEARS,
     DISTRESS_VERSION,
     DistressSignals,
     is_absentee,
@@ -24,9 +25,12 @@ _SOURCES: list[dict[str, Any]] = [
     {"source": "sale"},
 ]
 
+_ARMS_LENGTH_MIN_PRICE = 1000
+
 _TENURE_JOIN = (
     "LEFT JOIN (SELECT parcel_number, max(sale_date) AS last_sale_date FROM sale "
     "WHERE sale_date IS NOT NULL AND document_type ILIKE '%DEED%' "
+    f"AND (sale_price IS NULL OR sale_price >= {_ARMS_LENGTH_MIN_PRICE}) "
     "AND parcel_number = {filter} GROUP BY parcel_number) sl "
     "ON sl.parcel_number = p.parcel_number"
 )
@@ -96,9 +100,14 @@ _BULK_SIGNALS_SQL = text(
 )
 
 _LEADS_SQL = text(
-    "SELECT p.parcel_number, p.address, p.owner, p.base_zoning_code, p.is_vacant, p.market_value, "
-    "ts.total_due, ts.in_sheriff_sale, pd.score, "
-    "(tired.owner_key IS NOT NULL) AS is_tired_landlord "
+    "SELECT p.parcel_number, p.address, p.mailing_address, p.owner, p.base_zoning_code, "
+    "p.is_vacant, p.market_value, ts.total_due, ts.in_sheriff_sale, pd.score, "
+    "(tired.owner_key IS NOT NULL) AS is_tired_landlord, "
+    "(SELECT (CURRENT_DATE - max(s.sale_date))::float / 365.25 FROM sale s "
+    "WHERE s.parcel_number = p.parcel_number AND s.sale_date IS NOT NULL "
+    "AND s.document_type ILIKE '%DEED%' "
+    f"AND (s.sale_price IS NULL OR s.sale_price >= {_ARMS_LENGTH_MIN_PRICE})) "
+    "AS years_since_last_sale "
     "FROM parcel_distress pd "
     "JOIN parcel p ON p.parcel_number = pd.parcel_number "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
@@ -250,6 +259,12 @@ def _lead_top_factors(row: Row[Any]) -> list[str]:
         factors.append("Sheriff sale")
     if row.is_tired_landlord:
         factors.append("Tired landlord")
+    if (
+        is_absentee(row.address, row.mailing_address)
+        and row.years_since_last_sale is not None
+        and row.years_since_last_sale >= _LONG_TENURE_YEARS
+    ):
+        factors.append(f"Long-held (~{int(row.years_since_last_sale)} yrs)")
     if row.total_due:
         factors.append(f"${float(row.total_due):,.0f} owed")
     if row.is_vacant:

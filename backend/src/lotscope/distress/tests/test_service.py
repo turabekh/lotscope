@@ -51,14 +51,24 @@ async def _open_violation(session: AsyncSession, parcel_number: str, external_id
 
 
 async def _deed(
-    session: AsyncSession, parcel_number: str, document_id: str, sale_date: str
+    session: AsyncSession,
+    parcel_number: str,
+    document_id: str,
+    sale_date: str,
+    *,
+    sale_price: float | None = None,
 ) -> None:
     await session.execute(
         text(
-            "INSERT INTO sale (parcel_number, document_id, document_type, sale_date) "
-            "VALUES (:pn, :doc, 'DEED', :d)"
+            "INSERT INTO sale (parcel_number, document_id, document_type, sale_date, sale_price) "
+            "VALUES (:pn, :doc, 'DEED', :d, :price)"
         ),
-        {"pn": parcel_number, "doc": document_id, "d": date.fromisoformat(sale_date)},
+        {
+            "pn": parcel_number,
+            "doc": document_id,
+            "d": date.fromisoformat(sale_date),
+            "price": sale_price,
+        },
     )
 
 
@@ -156,6 +166,29 @@ async def test_recent_deed_does_not_add_long_tenure(db_session: AsyncSession) ->
     result = await assess_parcel_distress(db_session, "000000011")
     assert result is not None
     assert "long_tenure" not in {f.code for f in result.factors}
+
+
+async def test_nominal_transfer_does_not_reset_long_tenure(db_session: AsyncSession) -> None:
+    await _parcel(db_session, "000000012", address="12 A ST", mailing="99 ZZ AVE, NEW YORK NY")
+    await _deed(db_session, "000000012", "REAL", "2003-01-01", sale_price=185000)
+    await _deed(db_session, "000000012", "NOMINAL", "2025-01-01", sale_price=1)
+    await db_session.flush()
+
+    result = await assess_parcel_distress(db_session, "000000012")
+    assert result is not None
+    assert "long_tenure" in {f.code for f in result.factors}
+
+
+async def test_leads_surface_long_held_absentee(db_session: AsyncSession) -> None:
+    await _parcel(db_session, "000000030", address="30 A ST", mailing="99 ZZ AVE, NEW YORK NY")
+    await _deed(db_session, "000000030", "REAL", "2003-01-01", sale_price=185000)
+    await _deed(db_session, "000000030", "NOMINAL", "2025-01-01", sale_price=1)
+    await db_session.flush()
+    await recompute_distress(db_session, ["000000030"])
+
+    leads = await find_leads(db_session, limit=50, min_score=1)
+    lead = next(item for item in leads if item.parcel_number == "000000030")
+    assert any(factor.startswith("Long-held") for factor in lead.top_factors)
 
 
 async def test_tired_landlord_scores_across_the_owner_portfolio(db_session: AsyncSession) -> None:
