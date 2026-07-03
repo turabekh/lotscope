@@ -9,6 +9,7 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.jobs import INGEST_JOBS
+from lotscope.ingestion.retention import sweep_retention
 from lotscope.notifications.email import get_email_sender
 from lotscope.notifications.push import get_push_sender
 from lotscope.notifications.service import (
@@ -48,6 +49,23 @@ async def ingest_all(ctx: dict[str, Any]) -> int:
     for name in INGEST_JOBS:
         total += await ingest_dataset(ctx, name)
     return total
+
+
+async def sweep_ingestion_retention(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    async with ctx["session_factory"]() as session:
+        result = await sweep_retention(
+            session,
+            raw_retention_days=settings.raw_retention_days,
+            event_retention_months=settings.event_retention_months,
+        )
+        await session.commit()
+    _logger.info(
+        "swept_ingestion_retention",
+        raw_deleted=result.raw_deleted,
+        events_deleted=result.events_deleted,
+    )
+    return result.raw_deleted + result.events_deleted
 
 
 async def recompute_verdicts(ctx: dict[str, Any]) -> int:
@@ -119,6 +137,7 @@ class WorkerSettings:
     functions: ClassVar = [
         ingest_dataset,
         ingest_all,
+        sweep_ingestion_retention,
         recompute_verdicts,
         recompute_vacant_verdicts,
         recompute_distress,
@@ -134,6 +153,7 @@ class WorkerSettings:
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     cron_jobs: ClassVar = [
+        cron(sweep_ingestion_retention, hour=2, minute=0),
         cron(ingest_all, hour=4, minute=0),
         cron(recompute_vacancy_confidence, hour=6, minute=30),
         cron(recompute_vacant_verdicts, hour=7, minute=0),

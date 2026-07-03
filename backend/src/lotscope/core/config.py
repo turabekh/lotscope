@@ -93,6 +93,9 @@ class Settings(BaseSettings):
     rtt_min_sale_date: str = "2021-01-01"
     li_min_event_date: str = "2023-01-01"
 
+    raw_retention_days: int = 90
+    event_retention_months: int = 18
+
     http_timeout_seconds: float = 30.0
     http_max_retries: int = 3
     http_backoff_seconds: float = 0.5

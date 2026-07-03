@@ -11,14 +11,18 @@ def _cron_names() -> set[str]:
 
 def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
     assert _cron_names() == {
+        "sweep_ingestion_retention",
         "ingest_all",
+        "recompute_vacancy_confidence",
         "recompute_vacant_verdicts",
         "recompute_verdicts",
         "recompute_distress",
+        "grant_investor_skiptrace_credits",
         "send_daily_digests",
         "send_weekly_digests",
         "send_push_notifications",
         "send_saved_search_match_alerts",
+        "send_feed_digest_emails",
     }
 
 
