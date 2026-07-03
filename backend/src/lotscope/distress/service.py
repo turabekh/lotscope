@@ -70,9 +70,43 @@ _LEADS_SQL = text(
     "LIMIT CAST(:limit AS integer)"
 )
 
+_LEADS_EXPORT_SQL = text(
+    "SELECT p.parcel_number, p.address, p.owner, p.mailing_address, p.zip_code, "
+    "p.base_zoning_code, p.is_vacant, p.market_value, ts.total_due, ts.in_sheriff_sale, pd.score "
+    "FROM parcel_distress pd "
+    "JOIN parcel p ON p.parcel_number = pd.parcel_number "
+    "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
+    "WHERE pd.score >= CAST(:min_score AS integer) "
+    "AND coalesce(p.is_city_owned, false) = false "
+    "AND (NOT CAST(:vacant_only AS boolean) OR coalesce(p.is_vacant, false)) "
+    "AND (CAST(:zip_code AS text) IS NULL OR p.zip_code = CAST(:zip_code AS text)) "
+    "ORDER BY pd.score DESC, coalesce(ts.total_due, 0) DESC, p.parcel_number "
+    "LIMIT CAST(:limit AS integer)"
+)
+
+LEADS_EXPORT_HEADER: list[str] = [
+    "parcel_number",
+    "address",
+    "owner",
+    "mailing_address",
+    "zip_code",
+    "zoning",
+    "vacant",
+    "assessed_value",
+    "distress_score",
+    "total_due",
+    "in_sheriff_sale",
+]
+
 
 def _as_float(value: Any) -> float | None:
     return float(value) if value is not None else None
+
+
+def _yes_no(value: Any) -> str:
+    if value is None:
+        return ""
+    return "Yes" if value else "No"
 
 
 def _signals(row: Row[Any]) -> DistressSignals:
@@ -179,6 +213,45 @@ async def find_leads(
     ).all()
     signals = await get_deal_signals(session, [row.parcel_number for row in rows])
     return [_lead_item(row, signals.get(row.parcel_number)) for row in rows]
+
+
+async def export_leads(
+    session: AsyncSession,
+    *,
+    row_limit: int,
+    min_score: int = 1,
+    vacant_only: bool = False,
+    zip_code: str | None = None,
+) -> list[tuple[Any, ...]]:
+    if row_limit <= 0:
+        return []
+    rows = (
+        await session.execute(
+            _LEADS_EXPORT_SQL,
+            {
+                "limit": row_limit,
+                "min_score": min_score,
+                "vacant_only": vacant_only,
+                "zip_code": zip_code,
+            },
+        )
+    ).all()
+    return [
+        (
+            row.parcel_number,
+            row.address,
+            row.owner,
+            row.mailing_address,
+            row.zip_code,
+            row.base_zoning_code,
+            _yes_no(row.is_vacant),
+            _as_float(row.market_value),
+            int(row.score),
+            _as_float(row.total_due),
+            _yes_no(row.in_sheriff_sale),
+        )
+        for row in rows
+    ]
 
 
 def _lead_item(row: Row[Any], signal: DealSignal | None) -> LeadItem:

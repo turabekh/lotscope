@@ -15,6 +15,12 @@ MATCH_SELECT = (
     "round(pv.opportunity_score)::int AS opportunity_score"
 )
 
+MATCH_EXPORT_SELECT = (
+    "p.parcel_number, p.address, p.owner, p.mailing_address, p.zip_code, "
+    "p.base_zoning_code, p.is_vacant, p.market_value, "
+    "round(pv.opportunity_score)::int AS opportunity_score"
+)
+
 MATCH_ORDER = "ORDER BY pv.opportunity_score DESC NULLS LAST, p.parcel_number"
 
 
@@ -65,6 +71,15 @@ def build_match_sql(criteria: SearchCriteria) -> tuple[str, dict[str, Any]]:
     where, params = build_where(criteria)
     sql = (
         f"SELECT {MATCH_SELECT} {MATCH_BASE} WHERE {where} {MATCH_ORDER} "
+        "LIMIT CAST(:match_limit AS integer)"
+    )
+    return sql, params
+
+
+def build_match_export_sql(criteria: SearchCriteria) -> tuple[str, dict[str, Any]]:
+    where, params = build_where(criteria)
+    sql = (
+        f"SELECT {MATCH_EXPORT_SELECT} {MATCH_BASE} WHERE {where} {MATCH_ORDER} "
         "LIMIT CAST(:match_limit AS integer)"
     )
     return sql, params

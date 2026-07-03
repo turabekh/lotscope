@@ -7,7 +7,11 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import NotFoundError, QuotaExceededError
-from lotscope.savedsearch.matching import build_match_sql, new_match_numbers
+from lotscope.savedsearch.matching import (
+    build_match_export_sql,
+    build_match_sql,
+    new_match_numbers,
+)
 from lotscope.savedsearch.models import SavedSearch, SavedSearchMatch
 from lotscope.savedsearch.schemas import (
     SavedSearchAlert,
@@ -20,6 +24,18 @@ from lotscope.savedsearch.schemas import (
 )
 
 MAX_MATCHES_PER_SEARCH = 500
+
+SAVED_SEARCH_EXPORT_HEADER: list[str] = [
+    "parcel_number",
+    "address",
+    "owner",
+    "mailing_address",
+    "zip_code",
+    "zoning",
+    "vacant",
+    "assessed_value",
+    "opportunity_score",
+]
 
 _DETAIL_MATCH_SQL = text(
     "SELECT m.parcel_number, m.first_seen_at, m.notified, "
@@ -39,6 +55,12 @@ def _criteria(search: SavedSearch) -> SearchCriteria:
 
 def _as_float(value: Any) -> float | None:
     return float(value) if value is not None else None
+
+
+def _yes_no(value: Any) -> str:
+    if value is None:
+        return ""
+    return "Yes" if value else "No"
 
 
 def _match_item(row: Row[Any]) -> SavedSearchMatchItem:
@@ -208,6 +230,31 @@ async def get_search(session: AsyncSession, user_id: int, search_id: int) -> Sav
     new_count = sum(1 for match in matches if match.is_new)
     base = _item(search, len(matches), new_count)
     return SavedSearchDetail(**base.model_dump(), matches=matches)
+
+
+async def export_search_matches(
+    session: AsyncSession, user_id: int, search_id: int, *, row_limit: int
+) -> list[tuple[Any, ...]]:
+    search = await _get_owned(session, user_id, search_id)
+    if row_limit <= 0:
+        return []
+    sql, params = build_match_export_sql(_criteria(search))
+    params["match_limit"] = row_limit
+    rows = (await session.execute(text(sql), params)).all()
+    return [
+        (
+            row.parcel_number,
+            row.address,
+            row.owner,
+            row.mailing_address,
+            row.zip_code,
+            row.base_zoning_code,
+            _yes_no(row.is_vacant),
+            _as_float(row.market_value),
+            row.opportunity_score,
+        )
+        for row in rows
+    ]
 
 
 async def refresh_search(session: AsyncSession, user_id: int, search_id: int) -> SavedSearchDetail:

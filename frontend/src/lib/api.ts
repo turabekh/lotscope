@@ -89,6 +89,24 @@ async function uploadRequest<T>(path: string, body: FormData): Promise<T> {
   return (await response.json()) as T
 }
 
+async function downloadFile(path: string, filename: string): Promise<void> {
+  const headers: Record<string, string> = {}
+  if (authToken !== null) headers.authorization = `Bearer ${authToken}`
+  const response = await fetch(`${BASE_URL}${path}`, { headers })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { detail?: string } | null
+    throw new ApiError(response.status, body?.detail ?? response.statusText)
+  }
+  const url = URL.createObjectURL(await response.blob())
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 export const api = {
   search(query: string, market: string, limit = 10): Promise<ParcelSearchResponse> {
     return request(
@@ -172,6 +190,16 @@ export const api = {
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
+  },
+  exportLeads(params: { minScore?: number; vacantOnly?: boolean; zipCode?: string }): Promise<void> {
+    const query = new URLSearchParams()
+    if (params.minScore != null) query.set('min_score', String(params.minScore))
+    if (params.vacantOnly) query.set('vacant_only', 'true')
+    if (params.zipCode) query.set('zip_code', params.zipCode)
+    return downloadFile(`/leads/export?${query.toString()}`, 'lotscope-leads.csv')
+  },
+  exportSavedSearch(id: number): Promise<void> {
+    return downloadFile(`/saved-searches/${id}/export`, `lotscope-search-${id}.csv`)
   },
   getLeads(params: {
     minScore?: number

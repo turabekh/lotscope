@@ -45,6 +45,20 @@ SAVED_SEARCH_LIMITS: dict[str, int | None] = {
     "enterprise": None,
 }
 
+EXPORT_MONTHLY_LIMITS: dict[str, int | None] = {
+    "free": 0,
+    "pro": 10,
+    "investor": None,
+    "enterprise": None,
+}
+
+EXPORT_ROW_LIMITS: dict[str, int] = {
+    "free": 0,
+    "pro": 2000,
+    "investor": 10000,
+    "enterprise": 10000,
+}
+
 
 def ask_daily_limit(tier: str) -> int | None:
     return ASK_DAILY_LIMITS.get(tier, ASK_DAILY_LIMITS[_DEFAULT_TIER])
@@ -68,6 +82,14 @@ def saved_search_limit(tier: str) -> int | None:
 
 def parcel_view_daily_limit(tier: str) -> int | None:
     return PARCEL_VIEW_DAILY_LIMITS.get(tier, PARCEL_VIEW_DAILY_LIMITS[_DEFAULT_TIER])
+
+
+def export_monthly_limit(tier: str) -> int | None:
+    return EXPORT_MONTHLY_LIMITS.get(tier, EXPORT_MONTHLY_LIMITS[_DEFAULT_TIER])
+
+
+def export_row_limit(tier: str) -> int:
+    return EXPORT_ROW_LIMITS.get(tier, EXPORT_ROW_LIMITS[_DEFAULT_TIER])
 
 
 Action = Literal["current", "checkout", "contact"]

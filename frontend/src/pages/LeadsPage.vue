@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
@@ -60,6 +60,25 @@ async function load(): Promise<void> {
 
 function openLead(lead: LeadItem): void {
   void router.push({ name: 'parcel', params: { market: market.active, id: lead.parcel_number } })
+}
+
+const isFree = computed(() => (user.value?.tier ?? 'free') === 'free')
+const exporting = ref(false)
+
+async function exportCsv(): Promise<void> {
+  exporting.value = true
+  error.value = null
+  try {
+    await api.exportLeads({
+      minScore: minScore.value,
+      vacantOnly: vacantOnly.value,
+      zipCode: zipCode.value.trim() || undefined,
+    })
+  } catch (cause) {
+    error.value = cause instanceof ApiError ? cause.message : 'Could not export leads.'
+  } finally {
+    exporting.value = false
+  }
 }
 
 onMounted(load)
@@ -123,6 +142,33 @@ onMounted(load)
             class="q-ml-xs"
           />
         </template>
+        <q-space />
+        <q-btn
+          v-if="isFree"
+          outline
+          dense
+          no-caps
+          size="sm"
+          color="primary"
+          icon="lock"
+          label="Export CSV"
+          :to="{ name: 'account' }"
+        >
+          <q-tooltip>CSV export is a Pro feature — upgrade to download your leads.</q-tooltip>
+        </q-btn>
+        <q-btn
+          v-else
+          outline
+          dense
+          no-caps
+          size="sm"
+          color="primary"
+          icon="download"
+          label="Export CSV"
+          :loading="exporting"
+          :disable="leads.length === 0"
+          @click="exportCsv"
+        />
       </div>
 
       <q-inner-loading :showing="loading" color="primary" />

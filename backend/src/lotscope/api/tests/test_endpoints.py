@@ -59,6 +59,12 @@ class _FakeRedis:
         self.store[key] = value
         return value
 
+    async def decr(self, key: str) -> int:
+        current = self.store.get(key, 0)
+        value = (current if isinstance(current, int) else 0) - 1
+        self.store[key] = value
+        return value
+
     async def expire(self, key: str, ttl: int) -> bool:
         return True
 
@@ -354,6 +360,50 @@ async def test_leads_endpoint_ranks_and_caps_by_tier(db_session: AsyncSession) -
     assert body["limit"] == 8
     assert body["leads"][0]["parcel_number"] == "000000001"
     assert body["leads"][0]["score"] == 80
+
+
+def _fake_pro_user() -> User:
+    user = _fake_user()
+    user.tier = "pro"
+    return user
+
+
+@pytest.mark.integration
+async def test_leads_export_is_blocked_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/leads/export")
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_leads_export_streams_csv_for_paid_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, owner, address, mailing_address, is_vacant) "
+            "VALUES ('000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
+            "in_sheriff_sale) VALUES ('000000001', true, 25000, 5, true)"
+        )
+    )
+    await db_session.flush()
+    await recompute_distress(db_session, ["000000001"])
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.get("/leads/export?min_score=30")
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    body = resp.text
+    assert "mailing_address" in body.splitlines()[0]
+    assert "99 ZZ AVE, NEW YORK NY" in body
+    assert "Fair Housing" in body
 
 
 @pytest.mark.integration

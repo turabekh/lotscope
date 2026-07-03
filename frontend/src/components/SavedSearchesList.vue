@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SavedSearchItem, SavedSearchMatchItem, SearchCriteria } from '@/lib/types'
+import { useAuthStore } from '@/stores/auth'
 import { useMarketStore } from '@/stores/market'
 import { emptyCriteria, useSavedSearchesStore } from '@/stores/savedSearches'
 
@@ -17,7 +18,11 @@ const router = useRouter()
 const $q = useQuasar()
 const store = useSavedSearchesStore()
 const market = useMarketStore()
+const auth = useAuthStore()
 const { searches, limit, used, atLimit, loading } = storeToRefs(store)
+
+const isFree = computed(() => (auth.user?.tier ?? 'free') === 'free')
+const exportingId = ref<number | null>(null)
 
 const showForm = ref(false)
 const saving = ref(false)
@@ -98,6 +103,20 @@ async function runNow(search: SavedSearchItem): Promise<void> {
 
 async function toggleAlerts(search: SavedSearchItem): Promise<void> {
   await store.setAlerts(search.id, !search.alerts_enabled)
+}
+
+async function exportCsv(search: SavedSearchItem): Promise<void> {
+  exportingId.value = search.id
+  try {
+    await api.exportSavedSearch(search.id)
+  } catch (cause) {
+    $q.notify({
+      type: 'negative',
+      message: cause instanceof ApiError ? cause.message : 'Could not export this search.',
+    })
+  } finally {
+    exportingId.value = null
+  }
 }
 
 function remove(search: SavedSearchItem): void {
@@ -331,6 +350,31 @@ function asNumber(value: string | number | null): number | null {
                 icon="refresh"
                 label="Check now"
                 @click="runNow(search)"
+              />
+              <q-btn
+                v-if="isFree"
+                flat
+                dense
+                no-caps
+                size="sm"
+                color="primary"
+                icon="lock"
+                label="Export CSV"
+                :to="{ name: 'account' }"
+              >
+                <q-tooltip>CSV export is a Pro feature — upgrade to download.</q-tooltip>
+              </q-btn>
+              <q-btn
+                v-else
+                flat
+                dense
+                no-caps
+                size="sm"
+                color="primary"
+                icon="download"
+                label="Export CSV"
+                :loading="exportingId === search.id"
+                @click="exportCsv(search)"
               />
               <q-space />
               <q-btn
