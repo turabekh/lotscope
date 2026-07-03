@@ -103,3 +103,24 @@ async def test_load_li_violations_is_idempotent(db_session: AsyncSession) -> Non
 
     count = await db_session.scalar(text("SELECT count(*) FROM li_event WHERE external_id = 'V-9'"))
     assert count == 1
+
+
+@pytest.mark.integration
+async def test_load_li_violations_emits_event_for_new_row_on_second_run(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.ingestion.loaders.li import load_li_violations
+
+    runs = [[[_violation(1, "V-9")]], [[_violation(1, "V-9"), _violation(2, "V-10")]]]
+    for pages in runs:
+        handler = _RowsHandler(pages)
+        async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
+            await load_li_violations(db_session, carto, page_size=500)
+        await db_session.flush()
+
+    events = (
+        await db_session.execute(
+            text("SELECT code, new_value->>'external_id' AS ext FROM parcel_event ORDER BY id")
+        )
+    ).all()
+    assert [(e.code, e.ext) for e in events] == [("danger", "V-10")]

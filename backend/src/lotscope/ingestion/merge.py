@@ -4,10 +4,11 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.ingestion.events import TaxSnapshot, diff_tax
+from lotscope.ingestion.events import TaxSnapshot, classify_li_event, diff_tax
 from lotscope.ingestion.models import ParcelEvent
 
 TAX_DATASET = "tax_delinquency"
+LI_DATASET = "li"
 
 _STAGING_JOIN_SQL = text(
     "SELECT s.parcel_number, "
@@ -78,4 +79,60 @@ async def merge_tax(session: AsyncSession, ingest_run_id: int) -> MergeResult:
 
     await session.flush()
     await session.execute(_UPSERT_CORE_SQL, {"ingest_run_id": ingest_run_id})
+    return MergeResult(merged_rows=len(rows), event_count=events)
+
+
+_LI_JOIN_SQL = text(
+    "SELECT s.parcel_number, s.event_type, s.external_id, "
+    "s.is_unsafe, s.is_imminently_dangerous, (c.id IS NOT NULL) AS row_exists "
+    "FROM staging.li_event s "
+    "LEFT JOIN li_event c ON c.event_type = s.event_type AND c.external_id = s.external_id "
+    "WHERE s.ingest_run_id = :ingest_run_id"
+)
+
+_LI_TYPE_SEEN_SQL = text(
+    "SELECT EXISTS (SELECT 1 FROM li_event WHERE event_type = :event_type)"
+)
+
+_UPSERT_LI_SQL = text(
+    "INSERT INTO li_event "
+    "(parcel_number, external_id, event_type, status, event_date, description, "
+    "is_unsafe, is_imminently_dangerous, source, created_at, updated_at) "
+    "SELECT parcel_number, external_id, event_type, status, event_date, description, "
+    "is_unsafe, is_imminently_dangerous, source, now(), now() "
+    "FROM staging.li_event WHERE ingest_run_id = :ingest_run_id "
+    "ON CONFLICT (event_type, external_id) DO UPDATE SET "
+    "status = excluded.status, event_date = excluded.event_date, "
+    "description = excluded.description, is_unsafe = excluded.is_unsafe, "
+    "is_imminently_dangerous = excluded.is_imminently_dangerous, updated_at = now()"
+)
+
+
+async def merge_li(session: AsyncSession, ingest_run_id: int, event_type: str) -> MergeResult:
+    type_seen = bool(await session.scalar(_LI_TYPE_SEEN_SQL, {"event_type": event_type}))
+    rows = (await session.execute(_LI_JOIN_SQL, {"ingest_run_id": ingest_run_id})).all()
+
+    events = 0
+    if type_seen:
+        for row in rows:
+            if row.row_exists:
+                continue
+            draft = classify_li_event(row.event_type, row.is_unsafe, row.is_imminently_dangerous)
+            if draft is None:
+                continue
+            session.add(
+                ParcelEvent(
+                    parcel_number=row.parcel_number,
+                    dataset=LI_DATASET,
+                    code=draft.code,
+                    severity=draft.severity,
+                    old_value=draft.old_value,
+                    new_value={"event_type": row.event_type, "external_id": row.external_id},
+                    ingest_run_id=ingest_run_id,
+                )
+            )
+            events += 1
+        await session.flush()
+
+    await session.execute(_UPSERT_LI_SQL, {"ingest_run_id": ingest_run_id})
     return MergeResult(merged_rows=len(rows), event_count=events)

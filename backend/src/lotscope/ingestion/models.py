@@ -97,3 +97,19 @@ class StagingTax(Base):
     lien_count: Mapped[int | None] = mapped_column(Integer)
     in_sheriff_sale: Mapped[bool | None] = mapped_column(Boolean)
     as_of_date: Mapped[date | None] = mapped_column(Date)
+
+
+class StagingLiEvent(Base):
+    __tablename__ = "li_event"
+    __table_args__ = ({"schema": "staging"},)
+
+    event_type: Mapped[str] = mapped_column(String(60), primary_key=True)
+    external_id: Mapped[str] = mapped_column(String(60), primary_key=True)
+    ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    parcel_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str | None] = mapped_column(String(60))
+    event_date: Mapped[date | None] = mapped_column(Date)
+    description: Mapped[str | None] = mapped_column(Text)
+    is_unsafe: Mapped[bool | None] = mapped_column(Boolean)
+    is_imminently_dangerous: Mapped[bool | None] = mapped_column(Boolean)
+    source: Mapped[str | None] = mapped_column(String(120))

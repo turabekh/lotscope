@@ -4,9 +4,14 @@ from typing import Any
 CODE_SHERIFF_SALE = "sheriff_sale"
 CODE_DELINQUENT = "delinquent"
 CODE_TAX_UP = "tax_up"
+CODE_LI_NEW = "li_new"
+CODE_DANGER = "danger"
+CODE_NEW_PERMIT = "new_permit"
+CODE_NEW_DEMO = "new_demo"
 
 SEVERITY_HIGH = "high"
 SEVERITY_MEDIUM = "medium"
+SEVERITY_LOW = "low"
 
 
 @dataclass(frozen=True)
@@ -26,6 +31,20 @@ class EventDraft:
 
 def _became_true(old: bool | None, new: bool | None) -> bool:
     return bool(new) and not bool(old)
+
+
+def classify_li_event(
+    event_type: str, is_unsafe: bool | None, is_imminently_dangerous: bool | None
+) -> EventDraft | None:
+    if event_type == "violation":
+        if is_unsafe or is_imminently_dangerous:
+            return EventDraft(CODE_DANGER, SEVERITY_HIGH, None, {"event_type": event_type})
+        return EventDraft(CODE_LI_NEW, SEVERITY_MEDIUM, None, {"event_type": event_type})
+    if event_type == "permit":
+        return EventDraft(CODE_NEW_PERMIT, SEVERITY_LOW, None, {"event_type": event_type})
+    if event_type == "demolition":
+        return EventDraft(CODE_NEW_DEMO, SEVERITY_HIGH, None, {"event_type": event_type})
+    return None
 
 
 def diff_tax(old: TaxSnapshot | None, new: TaxSnapshot) -> list[EventDraft]:

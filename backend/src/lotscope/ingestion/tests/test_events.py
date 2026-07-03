@@ -1,8 +1,15 @@
+import pytest
+
 from lotscope.ingestion.events import (
+    CODE_DANGER,
     CODE_DELINQUENT,
+    CODE_LI_NEW,
+    CODE_NEW_DEMO,
+    CODE_NEW_PERMIT,
     CODE_SHERIFF_SALE,
     CODE_TAX_UP,
     TaxSnapshot,
+    classify_li_event,
     diff_tax,
 )
 
@@ -37,3 +44,25 @@ def test_rising_total_due_alone_emits_tax_up() -> None:
 
 def test_cleared_flag_does_not_emit() -> None:
     assert diff_tax(_snap(True, 5000, True), _snap(False, 5000, False)) == []
+
+
+@pytest.mark.parametrize(
+    ("event_type", "unsafe", "dangerous", "expected"),
+    [
+        ("violation", False, False, CODE_LI_NEW),
+        ("violation", True, False, CODE_DANGER),
+        ("violation", False, True, CODE_DANGER),
+        ("permit", None, None, CODE_NEW_PERMIT),
+        ("demolition", None, None, CODE_NEW_DEMO),
+    ],
+)
+def test_classify_li_event(
+    event_type: str, unsafe: bool | None, dangerous: bool | None, expected: str
+) -> None:
+    draft = classify_li_event(event_type, unsafe, dangerous)
+    assert draft is not None
+    assert draft.code == expected
+
+
+def test_classify_li_event_unknown_type_is_none() -> None:
+    assert classify_li_event("inspection", None, None) is None

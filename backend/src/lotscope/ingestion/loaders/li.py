@@ -1,16 +1,20 @@
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.carto import CartoClient
+from lotscope.ingestion.merge import merge_li
+from lotscope.ingestion.models import IngestRun, StagingLiEvent
 from lotscope.ingestion.parsing import parse_iso_date
+from lotscope.ingestion.raw import write_raw
 from lotscope.ingestion.reconciliation import normalize_account
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
-from lotscope.risk.models import LiEvent
 
 LI_KEY_COLUMN = "cartodb_id"
 
@@ -124,17 +128,41 @@ def to_demolition_event_row(record: DemolitionRecord) -> dict[str, Any] | None:
     }
 
 
+def _staging_row(row: dict[str, Any], run_id: int, dataset: str) -> dict[str, Any]:
+    return {
+        "event_type": row["event_type"],
+        "external_id": row["external_id"],
+        "ingest_run_id": run_id,
+        "parcel_number": row["parcel_number"],
+        "status": row.get("status"),
+        "event_date": row.get("event_date"),
+        "description": row.get("description"),
+        "is_unsafe": row.get("is_unsafe"),
+        "is_imminently_dangerous": row.get("is_imminently_dangerous"),
+        "source": dataset,
+    }
+
+
 async def _run_li_loader(
     session: AsyncSession,
     carto: CartoClient,
     *,
     dataset: str,
+    event_type: str,
     columns: tuple[str, ...],
     record_model: type[BaseModel],
     row_factory: Callable[[Any], dict[str, Any] | None],
     page_size: int,
     where: str | None,
 ) -> int:
+    run = IngestRun(dataset=dataset)
+    session.add(run)
+    await session.flush()
+    await session.execute(
+        text("DELETE FROM staging.li_event WHERE event_type = :event_type"),
+        {"event_type": event_type},
+    )
+
     total = 0
     async for page in carto.paginate_by_key(
         table=dataset,
@@ -143,20 +171,42 @@ async def _run_li_loader(
         page_size=page_size,
         where=where,
     ):
-        rows = [
-            row
-            for row in (row_factory(record_model.model_validate(raw)) for raw in page)
-            if row is not None
-        ]
-        if not rows:
+        mapped: list[dict[str, Any]] = []
+        raw_rows: list[dict[str, Any]] = []
+        for raw in page:
+            row = row_factory(record_model.model_validate(raw))
+            if row is None:
+                continue
+            mapped.append(row)
+            raw_rows.append(
+                {
+                    "ingest_run_id": run.id,
+                    "dataset": dataset,
+                    "natural_key": row["external_id"],
+                    "payload": dict(raw),
+                }
+            )
+        if not mapped:
             continue
         parcel_stubs = [
             {"parcel_number": parcel_number, "source": dataset}
-            for parcel_number in {row["parcel_number"] for row in rows}
+            for parcel_number in {row["parcel_number"] for row in mapped}
         ]
         await insert_ignore(session, Parcel, parcel_stubs, index_elements=["parcel_number"])
-        await upsert(session, LiEvent, rows, index_elements=["event_type", "external_id"])
-        total += len(rows)
+        staging_rows = [_staging_row(row, run.id, dataset) for row in mapped]
+        await upsert(
+            session, StagingLiEvent, staging_rows, index_elements=["event_type", "external_id"]
+        )
+        await write_raw(session, raw_rows)
+        total += len(mapped)
+
+    result = await merge_li(session, run.id, event_type)
+    run.status = "success"
+    run.finished_at = datetime.now(UTC)
+    run.raw_rows = total
+    run.merged_rows = result.merged_rows
+    run.event_count = result.event_count
+    await session.flush()
     await record_freshness(session, dataset, status="success", success=True, row_count=total)
     return total
 
@@ -172,6 +222,7 @@ async def load_li_violations(
         session,
         carto,
         dataset=LI_VIOLATIONS_DATASET,
+        event_type="violation",
         columns=LI_VIOLATIONS_COLUMNS,
         record_model=ViolationRecord,
         row_factory=to_violation_event_row,
@@ -191,6 +242,7 @@ async def load_li_permits(
         session,
         carto,
         dataset=LI_PERMITS_DATASET,
+        event_type="permit",
         columns=LI_PERMITS_COLUMNS,
         record_model=PermitRecord,
         row_factory=to_permit_event_row,
@@ -210,6 +262,7 @@ async def load_li_demolitions(
         session,
         carto,
         dataset=LI_DEMOLITIONS_DATASET,
+        event_type="demolition",
         columns=LI_DEMOLITIONS_COLUMNS,
         record_model=DemolitionRecord,
         row_factory=to_demolition_event_row,

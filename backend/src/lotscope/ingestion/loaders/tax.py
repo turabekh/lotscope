@@ -1,18 +1,17 @@
-from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy import text
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.merge import merge_tax
-from lotscope.ingestion.models import IngestRun, RawRecord, StagingTax
+from lotscope.ingestion.models import IngestRun, StagingTax
+from lotscope.ingestion.raw import write_raw
 from lotscope.ingestion.reconciliation import normalize_account
 from lotscope.ingestion.service import record_freshness
-from lotscope.ingestion.upsert import batch_by_bind_limit, insert_ignore, upsert
+from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
 
 TAX_DATASET = "real_estate_tax_delinquencies"
@@ -45,11 +44,6 @@ def to_tax_row(record: TaxRecord) -> dict[str, Any] | None:
         "is_delinquent": (record.total_due or 0) > 0,
         "source": TAX_DATASET,
     }
-
-
-async def _write_raw(session: AsyncSession, rows: Sequence[dict[str, Any]]) -> None:
-    for batch in batch_by_bind_limit(rows):
-        await session.execute(pg_insert(RawRecord).values(list(batch)))
 
 
 async def load_tax(
@@ -106,7 +100,7 @@ async def load_tax(
             for row in mapped
         ]
         await upsert(session, StagingTax, staging_rows, index_elements=["parcel_number"])
-        await _write_raw(session, raw_rows)
+        await write_raw(session, raw_rows)
         total += len(mapped)
 
     result = await merge_tax(session, run.id)
