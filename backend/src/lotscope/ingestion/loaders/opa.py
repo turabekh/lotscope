@@ -1,13 +1,17 @@
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.carto import CartoClient
+from lotscope.ingestion.merge import merge_opa
+from lotscope.ingestion.models import IngestRun, StagingOpa
+from lotscope.ingestion.raw import write_raw
 from lotscope.ingestion.reconciliation import normalize_account
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
-from lotscope.parcels.models import Parcel
 
 OPA_DATASET = "opa_properties_public"
 OPA_KEY_COLUMN = "parcel_number"
@@ -72,6 +76,12 @@ def to_parcel_row(record: OpaRecord) -> dict[str, Any] | None:
     }
 
 
+def _staging_row(row: dict[str, Any], run_id: int) -> dict[str, Any]:
+    staged = {key: value for key, value in row.items() if key != "source"}
+    staged["ingest_run_id"] = run_id
+    return staged
+
+
 async def load_opa(
     session: AsyncSession,
     carto: CartoClient,
@@ -79,6 +89,11 @@ async def load_opa(
     page_size: int = 5000,
     where: str | None = None,
 ) -> int:
+    run = IngestRun(dataset=OPA_DATASET)
+    session.add(run)
+    await session.flush()
+    await session.execute(text("DELETE FROM staging.opa"))
+
     total = 0
     async for page in carto.paginate_by_key(
         table=OPA_DATASET,
@@ -87,13 +102,34 @@ async def load_opa(
         page_size=page_size,
         where=where,
     ):
-        rows = [
-            row
-            for row in (to_parcel_row(OpaRecord.model_validate(raw)) for raw in page)
-            if row is not None
-        ]
-        if rows:
-            await upsert(session, Parcel, rows, index_elements=["parcel_number"])
-            total += len(rows)
+        mapped: list[dict[str, Any]] = []
+        raw_rows: list[dict[str, Any]] = []
+        for raw in page:
+            row = to_parcel_row(OpaRecord.model_validate(raw))
+            if row is None:
+                continue
+            mapped.append(row)
+            raw_rows.append(
+                {
+                    "ingest_run_id": run.id,
+                    "dataset": OPA_DATASET,
+                    "natural_key": row["parcel_number"],
+                    "payload": dict(raw),
+                }
+            )
+        if not mapped:
+            continue
+        staging_rows = [_staging_row(row, run.id) for row in mapped]
+        await upsert(session, StagingOpa, staging_rows, index_elements=["parcel_number"])
+        await write_raw(session, raw_rows)
+        total += len(mapped)
+
+    result = await merge_opa(session, run.id, source=OPA_DATASET)
+    run.status = "success"
+    run.finished_at = datetime.now(UTC)
+    run.raw_rows = total
+    run.merged_rows = result.merged_rows
+    run.event_count = result.event_count
+    await session.flush()
     await record_freshness(session, OPA_DATASET, status="success", success=True, row_count=total)
     return total

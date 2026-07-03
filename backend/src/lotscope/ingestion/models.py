@@ -99,6 +99,28 @@ class StagingTax(Base):
     as_of_date: Mapped[date | None] = mapped_column(Date)
 
 
+class StagingOpa(Base):
+    __tablename__ = "opa"
+    __table_args__ = ({"schema": "staging"},)
+
+    parcel_number: Mapped[str] = mapped_column(String(20), primary_key=True)
+    ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    address: Mapped[str | None] = mapped_column(String(255))
+    zip_code: Mapped[str | None] = mapped_column(String(20))
+    owner: Mapped[str | None] = mapped_column(String(255))
+    mailing_address: Mapped[str | None] = mapped_column(String(255))
+    land_use: Mapped[str | None] = mapped_column(String(120))
+    base_zoning_code: Mapped[str | None] = mapped_column(String(20))
+    market_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    land_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    improvement_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    exempt_land: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    exempt_building: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    lot_area_sqft: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    frontage_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    depth_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
+
+
 class StagingLiEvent(Base):
     __tablename__ = "li_event"
     __table_args__ = ({"schema": "staging"},)

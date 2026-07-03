@@ -4,11 +4,17 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.ingestion.events import TaxSnapshot, classify_li_event, diff_tax
+from lotscope.ingestion.events import (
+    TaxSnapshot,
+    classify_li_event,
+    diff_assessment,
+    diff_tax,
+)
 from lotscope.ingestion.models import ParcelEvent
 
 TAX_DATASET = "tax_delinquency"
 LI_DATASET = "li"
+OPA_DATASET = "opa"
 
 _STAGING_JOIN_SQL = text(
     "SELECT s.parcel_number, "
@@ -135,4 +141,59 @@ async def merge_li(session: AsyncSession, ingest_run_id: int, event_type: str) -
         await session.flush()
 
     await session.execute(_UPSERT_LI_SQL, {"ingest_run_id": ingest_run_id})
+    return MergeResult(merged_rows=len(rows), event_count=events)
+
+
+_OPA_JOIN_SQL = text(
+    "SELECT s.parcel_number, s.market_value AS s_market_value, "
+    "c.market_value AS c_market_value, (c.parcel_number IS NOT NULL) AS has_core "
+    "FROM staging.opa s "
+    "LEFT JOIN parcel c ON c.parcel_number = s.parcel_number "
+    "WHERE s.ingest_run_id = :ingest_run_id"
+)
+
+_UPSERT_OPA_SQL = text(
+    "INSERT INTO parcel "
+    "(parcel_number, address, zip_code, owner, mailing_address, land_use, base_zoning_code, "
+    "market_value, land_value, improvement_value, exempt_land, exempt_building, "
+    "lot_area_sqft, frontage_ft, depth_ft, source, updated_at) "
+    "SELECT parcel_number, address, zip_code, owner, mailing_address, land_use, base_zoning_code, "
+    "market_value, land_value, improvement_value, exempt_land, exempt_building, "
+    "lot_area_sqft, frontage_ft, depth_ft, :source, now() "
+    "FROM staging.opa WHERE ingest_run_id = :ingest_run_id "
+    "ON CONFLICT (parcel_number) DO UPDATE SET "
+    "address = excluded.address, zip_code = excluded.zip_code, owner = excluded.owner, "
+    "mailing_address = excluded.mailing_address, land_use = excluded.land_use, "
+    "base_zoning_code = excluded.base_zoning_code, market_value = excluded.market_value, "
+    "land_value = excluded.land_value, improvement_value = excluded.improvement_value, "
+    "exempt_land = excluded.exempt_land, exempt_building = excluded.exempt_building, "
+    "lot_area_sqft = excluded.lot_area_sqft, frontage_ft = excluded.frontage_ft, "
+    "depth_ft = excluded.depth_ft, updated_at = now()"
+)
+
+
+async def merge_opa(session: AsyncSession, ingest_run_id: int, *, source: str) -> MergeResult:
+    rows = (await session.execute(_OPA_JOIN_SQL, {"ingest_run_id": ingest_run_id})).all()
+
+    events = 0
+    for row in rows:
+        old = _as_float(row.c_market_value) if row.has_core else None
+        draft = diff_assessment(old, _as_float(row.s_market_value))
+        if draft is None:
+            continue
+        session.add(
+            ParcelEvent(
+                parcel_number=row.parcel_number,
+                dataset=OPA_DATASET,
+                code=draft.code,
+                severity=draft.severity,
+                old_value=draft.old_value,
+                new_value=draft.new_value,
+                ingest_run_id=ingest_run_id,
+            )
+        )
+        events += 1
+
+    await session.flush()
+    await session.execute(_UPSERT_OPA_SQL, {"ingest_run_id": ingest_run_id, "source": source})
     return MergeResult(merged_rows=len(rows), event_count=events)

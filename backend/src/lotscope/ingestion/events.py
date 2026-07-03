@@ -8,6 +8,7 @@ CODE_LI_NEW = "li_new"
 CODE_DANGER = "danger"
 CODE_NEW_PERMIT = "new_permit"
 CODE_NEW_DEMO = "new_demo"
+CODE_ASSESSMENT = "assessment"
 
 SEVERITY_HIGH = "high"
 SEVERITY_MEDIUM = "medium"
@@ -21,6 +22,7 @@ EVENT_LABELS: dict[str, str] = {
     CODE_DANGER: "Dangerous / unsafe",
     CODE_NEW_PERMIT: "New permit",
     CODE_NEW_DEMO: "New demolition",
+    CODE_ASSESSMENT: "Assessment change",
 }
 
 
@@ -45,6 +47,21 @@ class EventDraft:
 
 def _became_true(old: bool | None, new: bool | None) -> bool:
     return bool(new) and not bool(old)
+
+
+def diff_assessment(
+    old_market_value: float | None, new_market_value: float | None
+) -> EventDraft | None:
+    if old_market_value is None or new_market_value is None:
+        return None
+    if old_market_value == new_market_value:
+        return None
+    return EventDraft(
+        CODE_ASSESSMENT,
+        SEVERITY_LOW,
+        {"market_value": old_market_value},
+        {"market_value": new_market_value},
+    )
 
 
 def classify_li_event(

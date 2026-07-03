@@ -1,6 +1,7 @@
 import pytest
 
 from lotscope.ingestion.events import (
+    CODE_ASSESSMENT,
     CODE_DANGER,
     CODE_DELINQUENT,
     CODE_LI_NEW,
@@ -10,6 +11,7 @@ from lotscope.ingestion.events import (
     CODE_TAX_UP,
     TaxSnapshot,
     classify_li_event,
+    diff_assessment,
     diff_tax,
 )
 
@@ -66,3 +68,18 @@ def test_classify_li_event(
 
 def test_classify_li_event_unknown_type_is_none() -> None:
     assert classify_li_event("inspection", None, None) is None
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected_code"),
+    [
+        (None, 100000.0, None),
+        (100000.0, None, None),
+        (100000.0, 100000.0, None),
+        (100000.0, 80000.0, CODE_ASSESSMENT),
+        (100000.0, 130000.0, CODE_ASSESSMENT),
+    ],
+)
+def test_diff_assessment(old: float | None, new: float | None, expected_code: str | None) -> None:
+    draft = diff_assessment(old, new)
+    assert (draft.code if draft else None) == expected_code

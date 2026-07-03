@@ -2,7 +2,7 @@ from typing import Any
 
 import httpx
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.config import Settings
@@ -96,3 +96,33 @@ async def test_load_opa_is_idempotent(db_session: AsyncSession) -> None:
         select(func.count()).select_from(Parcel).where(Parcel.parcel_number == "000000021")
     )
     assert count == 1
+
+
+@pytest.mark.integration
+async def test_load_opa_emits_assessment_event_on_value_change(db_session: AsyncSession) -> None:
+    from lotscope.ingestion.loaders.opa import load_opa
+
+    runs = [
+        [[{"parcel_number": "11", "owner_1": "A", "market_value": 100000.0}]],
+        [[{"parcel_number": "11", "owner_1": "A", "market_value": 80000.0}]],
+    ]
+    for pages in runs:
+        handler = _RowsHandler(pages)
+        async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
+            await load_opa(db_session, carto, page_size=50)
+        await db_session.flush()
+
+    events = (
+        await db_session.execute(
+            text(
+                "SELECT code, new_value->>'market_value' AS mv FROM parcel_event "
+                "WHERE parcel_number = '000000011'"
+            )
+        )
+    ).all()
+    assert [(e.code, e.mv) for e in events] == [("assessment", "80000.0")]
+
+    market_value = await db_session.scalar(
+        text("SELECT market_value FROM parcel WHERE parcel_number = '000000011'")
+    )
+    assert float(market_value) == 80000
