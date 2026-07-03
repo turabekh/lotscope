@@ -10,6 +10,7 @@ import ChecklistPanel from '@/components/ChecklistPanel.vue'
 import CompsPanel from '@/components/CompsPanel.vue'
 import DealPanel from '@/components/DealPanel.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
+import ReportPanel from '@/components/ReportPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import HistoricPanel from '@/components/HistoricPanel.vue'
 import MarketContextPanel from '@/components/MarketContextPanel.vue'
@@ -351,6 +352,7 @@ async function toggleSave(): Promise<void> {
           </q-tab-panel>
 
           <q-tab-panel name="docs" class="tab-pane">
+            <ReportPanel :parcel-number="detail.parcel_number" />
             <DeedRestrictionsPanel />
             <AskBox :parcel-number="detail.parcel_number" />
           </q-tab-panel>

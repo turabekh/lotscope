@@ -342,6 +342,22 @@ export interface ParcelSummaryResult {
   computed_at: string
 }
 
+export interface ReportSection {
+  heading: string
+  body: string
+}
+
+export interface ParcelReportResult {
+  parcel_number: string
+  headline: string
+  sections: ReportSection[]
+  recommendation: string
+  confidence: 'high' | 'medium' | 'low'
+  is_informational: boolean
+  sources: Array<Record<string, unknown>>
+  computed_at: string
+}
+
 export interface AssessmentResult {
   parcel_number: string
   status: AssessmentStatus
