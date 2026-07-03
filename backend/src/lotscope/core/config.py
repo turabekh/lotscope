@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-6"
+    anthropic_summary_model: str = "claude-haiku-4-5-20251001"
 
     voyage_api_key: str | None = None
     voyage_url: str = "https://api.voyageai.com/v1/embeddings"

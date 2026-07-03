@@ -4,7 +4,7 @@ Date: 2026-07-04
 
 ## Status
 
-Proposed
+Accepted
 
 Delivers PRD §5.2 "AI plain-language summary" (Differentiator) — the last unbuilt Differentiator in the parcel dossier. Extends the `ai` module (ADR-0009-era Ask-the-Parcel) and reuses the structured-output client; independent of the monetization amendment.
 
@@ -32,7 +32,7 @@ Per §9 (cheaper/faster model for summaries), a configurable `anthropic_summary_
 
 ### Access, framing, dormancy
 
-Informational-only framing is baked into the schema (`is_informational`) and surfaced in the UI (§9/§13). If `anthropic_api_key` is unset the endpoint returns 404 and the dossier panel hides — the feature is **dormant, never blocking**, like the other AI surfaces. Access/gating is the one open product decision (see below).
+Informational-only framing is baked into the schema (`is_informational`) and surfaced in the UI (§9/§13). If `anthropic_api_key` is unset the endpoint returns 404 and the dossier panel hides — the feature is **dormant, never blocking**, like the other AI surfaces. The summary is **ungated** (visible to every authenticated user, including Free — it's a top-of-funnel credibility feature); cost is governed entirely by the per-verdict-version cache plus the existing per-tier parcel-view limits, so no separate AI gate or daily meter is added.
 
 ### Frontend
 

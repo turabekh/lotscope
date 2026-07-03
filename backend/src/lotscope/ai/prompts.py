@@ -18,6 +18,26 @@ SYSTEM_PROMPT = (
 )
 
 
+SUMMARY_PROMPT_VERSION = "parcel-summary-v1"
+
+SUMMARY_SYSTEM_PROMPT = (
+    "You are LotScope's parcel analyst for Philadelphia real estate.\n"
+    "Write ONE short paragraph (3-5 sentences) that reads like a savvy investor's plain-English "
+    "take on the parcel, using ONLY the FACTS provided.\n"
+    "Rules:\n"
+    "- Use only the FACTS. Do NOT introduce zoning, value, legal, or market claims that are not "
+    "in the FACTS. If a fact is missing, omit it rather than guessing.\n"
+    "- Be concrete and specific (use the numbers given), neutral, and non-promotional.\n"
+    "- This is informational only and is never legal, financial, or real-estate advice.\n"
+    "- Set confidence to reflect how complete the FACTS are.\n"
+    "Return your response using the provided structured tool."
+)
+
+
+def build_summary_prompt(parcel_facts: str) -> str:
+    return f"FACTS:\n{parcel_facts}\n"
+
+
 def build_user_prompt(
     question: str, parcel_facts: str, documents: Sequence[RetrievedDocument]
 ) -> str:

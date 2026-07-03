@@ -45,6 +45,11 @@ def get_generator(request: Request) -> StructuredGenerator:
     return AnthropicGenerator(get_app_settings(request))
 
 
+def get_summary_generator(request: Request) -> StructuredGenerator:
+    settings = get_app_settings(request)
+    return AnthropicGenerator(settings, model=settings.anthropic_summary_model, max_tokens=512)
+
+
 def get_stripe_gateway(request: Request) -> StripeGateway:
     return StripeApiGateway(get_app_settings(request))
 

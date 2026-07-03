@@ -22,6 +22,7 @@ from lotscope.api.deps import (
     get_redis,
     get_session,
     get_stripe_gateway,
+    get_summary_generator,
 )
 from lotscope.core.config import Settings
 from lotscope.distress.service import recompute_distress
@@ -936,6 +937,62 @@ async def test_webhook_activates_pro_tier(db_session: AsyncSession) -> None:
     assert user.tier == "pro"
     assert user.subscription_status == "active"
     assert user.stripe_subscription_id == "sub_1"
+
+
+class _FakeSummaryGenerator:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def generate(self, *, system: str, user: str, schema: Any) -> dict[str, Any]:
+        self.calls += 1
+        return {"summary": "A vacant RSA-5 lot.", "confidence": "medium", "is_informational": True}
+
+
+@pytest.mark.integration
+async def test_summary_dormant_without_api_key(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_summary_generator] = lambda: _FakeSummaryGenerator()
+    app.dependency_overrides[get_app_settings] = lambda: Settings(
+        _env_file=None, secret_key="test-secret-key-that-is-at-least-32-bytes-long"
+    )
+    async with _client(app) as client:
+        resp = await client.get("/parcels/000000001/summary")
+    assert resp.status_code == 404
+
+
+@pytest.mark.integration
+async def test_summary_endpoint_returns_and_caches(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+    )
+    await db_session.flush()
+
+    generator = _FakeSummaryGenerator()
+    fake_redis = _FakeRedis()
+    app = _app_with_session(db_session)
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_redis] = lambda: fake_redis
+    app.dependency_overrides[get_summary_generator] = lambda: generator
+    app.dependency_overrides[get_app_settings] = lambda: Settings(
+        _env_file=None,
+        secret_key="test-secret-key-that-is-at-least-32-bytes-long",
+        anthropic_api_key="test-key",
+    )
+
+    async with _client(app) as client:
+        first = await client.get("/parcels/000000001/summary")
+        second = await client.get("/parcels/000000001/summary")
+
+    assert first.status_code == 200
+    assert first.json()["summary"] == "A vacant RSA-5 lot."
+    assert first.json()["is_informational"] is True
+    assert second.status_code == 200
+    assert generator.calls == 1  # second call served from cache
 
 
 @pytest.mark.integration

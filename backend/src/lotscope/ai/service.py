@@ -1,16 +1,28 @@
+from datetime import UTC, datetime
+from typing import Any
+
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.errors import GenerationError, UngroundedAnswerError
-from lotscope.ai.prompts import SYSTEM_PROMPT, build_user_prompt
+from lotscope.ai.prompts import (
+    SUMMARY_SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
+    build_summary_prompt,
+    build_user_prompt,
+)
 from lotscope.ai.retrieval import (
     embed_and_search,
     fetch_district_documents,
     search_parcel_documents,
 )
-from lotscope.ai.schemas import ParcelAnswer
+from lotscope.ai.schemas import ParcelAnswer, ParcelSummary, ParcelSummaryResult
+from lotscope.assessment.schemas import AssessmentResult
+from lotscope.assessment.service import analyze_parcel_assessment
+from lotscope.distress.schemas import DistressResult
+from lotscope.distress.service import assess_parcel_distress
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.verdict.schemas import VerdictResult
@@ -18,6 +30,13 @@ from lotscope.verdict.service import get_verdict
 
 TITLE_14_SOURCE = "title14"
 DEED_SOURCE = "deed"
+
+_SUMMARY_SOURCES: list[dict[str, Any]] = [
+    {"source": "parcel"},
+    {"source": "parcel_verdict"},
+    {"source": "parcel_distress"},
+    {"source": "assessment"},
+]
 
 
 def _parcel_facts(detail: ParcelDetail, verdict: VerdictResult | None) -> str:
@@ -33,6 +52,78 @@ def _parcel_facts(detail: ParcelDetail, verdict: VerdictResult | None) -> str:
             f"by_right_units={verdict.by_right_units}; risk_score={verdict.risk_score}."
         )
     return "\n".join(lines)
+
+
+def _summary_facts(
+    detail: ParcelDetail,
+    verdict: VerdictResult | None,
+    distress: DistressResult | None,
+    assessment: AssessmentResult | None,
+) -> str:
+    lines = [
+        f"Address: {detail.address or 'unknown'}; parcel {detail.parcel_number}.",
+        f"Zoning: {detail.base_zoning_code or 'unknown'}; "
+        f"land use: {detail.land_use or 'unknown'}.",
+        f"Lot area: {detail.lot_area_sqft} sqft; vacant: {detail.is_vacant}; "
+        f"city-owned: {detail.is_city_owned}.",
+        f"Assessed value: {detail.market_value}.",
+    ]
+    if verdict is not None:
+        lines.append(
+            f"Verdict: opportunity score {verdict.opportunity_score}/100; "
+            f"buildable by-right: {verdict.can_build_by_right}; by-right units: "
+            f"{verdict.by_right_units}; estimated land value "
+            f"{verdict.value_estimate_low}-{verdict.value_estimate_high}; "
+            f"max allowable offer {verdict.max_allowable_offer}; deal score "
+            f"{verdict.deal_score}; underpriced: {verdict.is_underpriced}; "
+            f"risk score {verdict.risk_score}."
+        )
+        flags = [str(flag.get("label", "")) for flag in verdict.risk_flags][:4]
+        if flags:
+            lines.append(f"Top risk flags: {', '.join(flags)}.")
+    if distress is not None and distress.factors:
+        factors = ", ".join(factor.label for factor in distress.factors[:4])
+        lines.append(f"Distress score {distress.score}/100 ({distress.tier}): {factors}.")
+    if assessment is not None and assessment.status != "unknown":
+        lines.append(
+            f"Assessment: {assessment.status.replace('_', ' ')}; modeled market value "
+            f"{assessment.market_estimate}; estimated annual tax savings if appealed "
+            f"{assessment.estimated_annual_tax_savings}."
+        )
+    return "\n".join(lines)
+
+
+async def summarize_parcel(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    generator: StructuredGenerator,
+) -> ParcelSummaryResult | None:
+    detail = await get_parcel_detail(session, parcel_number)
+    if detail is None:
+        return None
+
+    verdict = await get_verdict(session, parcel_number)
+    distress = await assess_parcel_distress(session, parcel_number)
+    assessment = await analyze_parcel_assessment(session, parcel_number)
+
+    facts = _summary_facts(detail, verdict, distress, assessment)
+    raw = await generator.generate(
+        system=SUMMARY_SYSTEM_PROMPT, user=build_summary_prompt(facts), schema=ParcelSummary
+    )
+    try:
+        summary = ParcelSummary.model_validate(raw)
+    except ValidationError as error:
+        raise GenerationError(f"The model returned an invalid summary: {error}") from error
+
+    return ParcelSummaryResult(
+        parcel_number=parcel_number,
+        summary=summary.summary,
+        confidence=summary.confidence,
+        is_informational=summary.is_informational,
+        sources=_SUMMARY_SOURCES,
+        computed_at=datetime.now(UTC),
+    )
 
 
 async def ask_the_parcel(

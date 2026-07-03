@@ -17,8 +17,8 @@ from lotscope.accounts.usage import (
 )
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
-from lotscope.ai.schemas import ParcelAnswer
-from lotscope.ai.service import ask_the_parcel
+from lotscope.ai.schemas import ParcelAnswer, ParcelSummaryResult
+from lotscope.ai.service import ask_the_parcel, summarize_parcel
 from lotscope.api.deps import (
     get_app_settings,
     get_current_user,
@@ -26,6 +26,7 @@ from lotscope.api.deps import (
     get_generator,
     get_redis,
     get_session,
+    get_summary_generator,
 )
 from lotscope.appeal.schemas import AppealPacketStatus
 from lotscope.appeal.service import has_entitlement, packet_status, redeem_packet
@@ -74,6 +75,7 @@ RedisDep = Annotated[Redis, Depends(get_redis)]
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 
 _ASK_CACHE_TTL_SECONDS = 86_400
+_SUMMARY_CACHE_TTL_SECONDS = 604_800
 
 
 def _ask_cache_key(parcel_number: str, question: str) -> str:
@@ -221,6 +223,36 @@ async def analyze_parcel_deed(
         blob_store=LocalBlobStore(settings.deed_blob_root),
         record_url_template=settings.philadox_document_url_template,
     )
+
+
+@router.get("/{parcel_number}/summary", response_model=ParcelSummaryResult)
+async def parcel_summary(
+    parcel_number: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+    generator: Annotated[StructuredGenerator, Depends(get_summary_generator)],
+) -> ParcelSummaryResult:
+    if not settings.anthropic_api_key:
+        raise NotFoundError("The AI summary is not available.")
+
+    verdict = await get_verdict(session, parcel_number)
+    version = verdict.verdict_version if verdict is not None else "none"
+    cache_key = f"summary:{parcel_number}:{version}"
+
+    with contextlib.suppress(RedisError):
+        cached = await redis.get(cache_key)
+        if cached is not None:
+            return ParcelSummaryResult.model_validate_json(cached)
+
+    result = await summarize_parcel(session, parcel_number, generator=generator)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+
+    with contextlib.suppress(RedisError):
+        await redis.set(cache_key, result.model_dump_json(), ex=_SUMMARY_CACHE_TTL_SECONDS)
+    return result
 
 
 @router.get("/{parcel_number}/assessment", response_model=AssessmentResult)

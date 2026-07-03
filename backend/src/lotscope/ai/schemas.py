@@ -1,4 +1,5 @@
-from typing import Literal
+from datetime import datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -29,3 +30,28 @@ class ParcelAnswer(BaseModel):
         default=True,
         description="Always true: this is informational, not legal or financial advice.",
     )
+
+
+class ParcelSummary(BaseModel):
+    summary: str = Field(
+        description=(
+            "One short paragraph (3-5 sentences), plain-English read of this parcel for an "
+            "investor or builder, using ONLY the provided FACTS."
+        )
+    )
+    confidence: Literal["high", "medium", "low"] = Field(
+        description="Confidence that reflects how complete the provided FACTS are."
+    )
+    is_informational: Literal[True] = Field(
+        default=True,
+        description="Always true: this is informational, not legal or financial advice.",
+    )
+
+
+class ParcelSummaryResult(BaseModel):
+    parcel_number: str
+    summary: str
+    confidence: Literal["high", "medium", "low"]
+    is_informational: bool
+    sources: list[dict[str, Any]]
+    computed_at: datetime
