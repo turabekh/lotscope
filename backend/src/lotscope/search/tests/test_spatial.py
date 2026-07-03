@@ -81,6 +81,24 @@ def test_build_filters_omits_unset_criteria() -> None:
     assert params == {"min_score": 70}
 
 
+def test_build_filters_investor_criteria() -> None:
+    where, params = build_filters(
+        vacant_only=False,
+        zoning_codes=[],
+        min_distress_score=40,
+        delinquent_only=True,
+        sheriff_sale_only=True,
+        underpriced_only=True,
+        by_right_only=True,
+    )
+    assert "pd.score >= :min_distress" in where
+    assert "coalesce(ts.is_delinquent, false) = true" in where
+    assert "coalesce(ts.in_sheriff_sale, false) = true" in where
+    assert "coalesce(pv.is_underpriced, false) = true" in where
+    assert "coalesce(pv.can_build_by_right, false) = true" in where
+    assert params == {"min_distress": 40}
+
+
 def _square(lng: float, lat: float, size: float = 0.0001) -> str:
     points = [
         (lng - size, lat - size),
@@ -208,3 +226,29 @@ async def test_neighborhood_unknown_name_returns_empty(db_session: AsyncSession)
     results, total = await search_area(db_session, AreaSearchRequest(neighborhood="Nowhere"))
     assert results == []
     assert total == 0
+
+
+@pytest.mark.integration
+async def test_area_search_distress_and_delinquent_filters(db_session: AsyncSession) -> None:
+    await _seed(db_session)  # parcels 000000001 (RSA5, vacant) & ...002 within radius
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel_distress (parcel_number, score, tier) "
+            "VALUES ('000000001', 70, 'high')"
+        )
+    )
+    await db_session.execute(
+        text("INSERT INTO tax_status (parcel_number, is_delinquent) VALUES ('000000001', true)")
+    )
+    await db_session.flush()
+
+    center = GeoPoint(lat=39.9500, lng=-75.1600)
+    distressed, _ = await search_area(
+        db_session, AreaSearchRequest(center=center, radius_m=500, min_distress_score=50)
+    )
+    assert [r.parcel_number for r in distressed] == ["000000001"]
+
+    delinquent, _ = await search_area(
+        db_session, AreaSearchRequest(center=center, radius_m=500, delinquent_only=True)
+    )
+    assert [r.parcel_number for r in delinquent] == ["000000001"]

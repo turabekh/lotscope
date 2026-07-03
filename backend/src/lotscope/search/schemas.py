@@ -35,6 +35,11 @@ class AreaSearchRequest(BaseModel):
     min_market_value: float | None = Field(default=None, ge=0)
     max_market_value: float | None = Field(default=None, ge=0)
     min_opportunity_score: int | None = Field(default=None, ge=0, le=100)
+    min_distress_score: int | None = Field(default=None, ge=0, le=100)
+    delinquent_only: bool = False
+    sheriff_sale_only: bool = False
+    underpriced_only: bool = False
+    by_right_only: bool = False
     limit: int = Field(default=200, ge=1, le=500)
 
     @model_validator(mode="after")

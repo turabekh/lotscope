@@ -95,6 +95,11 @@ const buyBoxKey = computed(() =>
     areaSearch.minLotArea,
     areaSearch.maxLotArea,
     areaSearch.minScore,
+    areaSearch.minDistress,
+    areaSearch.delinquentOnly,
+    areaSearch.sheriffSaleOnly,
+    areaSearch.underpricedOnly,
+    areaSearch.byRightOnly,
   ]),
 )
 let criteriaTimer: ReturnType<typeof setTimeout> | undefined

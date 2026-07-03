@@ -23,6 +23,11 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   const minLotArea = ref<number | null>(null)
   const maxLotArea = ref<number | null>(null)
   const minScore = ref<number | null>(null)
+  const minDistress = ref<number | null>(null)
+  const delinquentOnly = ref(false)
+  const sheriffSaleOnly = ref(false)
+  const underpricedOnly = ref(false)
+  const byRightOnly = ref(false)
   const loading = ref(false)
   const results = ref<SpatialParcelResult[]>([])
   const count = ref(0)
@@ -36,6 +41,11 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     if (minLotArea.value !== null) c.min_lot_area_sqft = minLotArea.value
     if (maxLotArea.value !== null) c.max_lot_area_sqft = maxLotArea.value
     if (minScore.value !== null) c.min_opportunity_score = minScore.value
+    if (minDistress.value !== null) c.min_distress_score = minDistress.value
+    if (delinquentOnly.value) c.delinquent_only = true
+    if (sheriffSaleOnly.value) c.sheriff_sale_only = true
+    if (underpricedOnly.value) c.underpriced_only = true
+    if (byRightOnly.value) c.by_right_only = true
     return c
   }
 
@@ -169,6 +179,11 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     minLotArea.value = null
     maxLotArea.value = null
     minScore.value = null
+    minDistress.value = null
+    delinquentOnly.value = false
+    sheriffSaleOnly.value = false
+    underpricedOnly.value = false
+    byRightOnly.value = false
     clear()
   }
 
@@ -185,6 +200,11 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     minLotArea,
     maxLotArea,
     minScore,
+    minDistress,
+    delinquentOnly,
+    sheriffSaleOnly,
+    underpricedOnly,
+    byRightOnly,
     loading,
     results,
     count,

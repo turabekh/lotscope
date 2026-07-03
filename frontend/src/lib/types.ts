@@ -225,6 +225,11 @@ export interface AreaSearchRequest {
   min_market_value?: number
   max_market_value?: number
   min_opportunity_score?: number
+  min_distress_score?: number
+  delinquent_only?: boolean
+  sheriff_sale_only?: boolean
+  underpriced_only?: boolean
+  by_right_only?: boolean
   limit?: number
 }
 

@@ -17,7 +17,11 @@ _SELECT = (
     "ST_X(ST_PointOnSurface(p.geom_4326)) AS lng, "
     "ST_Y(ST_PointOnSurface(p.geom_4326)) AS lat"
 )
-_JOINS = "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number"
+_JOINS = (
+    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
+    "LEFT JOIN parcel_distress pd ON pd.parcel_number = p.parcel_number "
+    "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number"
+)
 _POINT = "ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography"
 
 
@@ -30,6 +34,11 @@ def build_filters(
     min_market_value: float | None = None,
     max_market_value: float | None = None,
     min_opportunity_score: int | None = None,
+    min_distress_score: int | None = None,
+    delinquent_only: bool = False,
+    sheriff_sale_only: bool = False,
+    underpriced_only: bool = False,
+    by_right_only: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     conditions = ["p.geom_4326 IS NOT NULL"]
     params: dict[str, Any] = {}
@@ -53,6 +62,17 @@ def build_filters(
     if min_opportunity_score is not None:
         conditions.append("pv.opportunity_score >= :min_score")
         params["min_score"] = min_opportunity_score
+    if min_distress_score is not None:
+        conditions.append("pd.score >= :min_distress")
+        params["min_distress"] = min_distress_score
+    if delinquent_only:
+        conditions.append("coalesce(ts.is_delinquent, false) = true")
+    if sheriff_sale_only:
+        conditions.append("coalesce(ts.in_sheriff_sale, false) = true")
+    if underpriced_only:
+        conditions.append("coalesce(pv.is_underpriced, false) = true")
+    if by_right_only:
+        conditions.append("coalesce(pv.can_build_by_right, false) = true")
     return " AND ".join(conditions), params
 
 
@@ -65,6 +85,11 @@ def _filters_for(request: AreaSearchRequest) -> tuple[str, dict[str, Any]]:
         min_market_value=request.min_market_value,
         max_market_value=request.max_market_value,
         min_opportunity_score=request.min_opportunity_score,
+        min_distress_score=request.min_distress_score,
+        delinquent_only=request.delinquent_only,
+        sheriff_sale_only=request.sheriff_sale_only,
+        underpriced_only=request.underpriced_only,
+        by_right_only=request.by_right_only,
     )
 
 

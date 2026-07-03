@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAreaSearchStore } from '@/stores/areaSearch'
@@ -9,16 +10,48 @@ import { useMarketStore } from '@/stores/market'
 const filters = useFiltersStore()
 const { vacantOnly, useClasses } = storeToRefs(filters)
 const areaSearch = useAreaSearchStore()
-const { minValue, maxValue, minLotArea, maxLotArea, minScore } = storeToRefs(areaSearch)
+const {
+  minValue,
+  maxValue,
+  minLotArea,
+  maxLotArea,
+  minScore,
+  minDistress,
+  delinquentOnly,
+  sheriffSaleOnly,
+  underpricedOnly,
+  byRightOnly,
+} = storeToRefs(areaSearch)
 const market = useMarketStore()
 const router = useRouter()
 
-const numRefs = { minValue, maxValue, minLotArea, maxLotArea, minScore }
+const numRefs = { minValue, maxValue, minLotArea, maxLotArea }
 
 function onNum(field: keyof typeof numRefs, value: string | number | null): void {
   const parsed = value === null || value === '' ? null : Number(value)
   numRefs[field].value = parsed !== null && Number.isFinite(parsed) ? parsed : null
 }
+
+function onSlider(target: 'score' | 'distress', value: number): void {
+  const clean = value > 0 ? value : null
+  if (target === 'score') minScore.value = clean
+  else minDistress.value = clean
+}
+
+const activeCount = computed(() => {
+  let n = 0
+  if (vacantOnly.value) n += 1
+  if (useClasses.value.length > 0) n += 1
+  if (minValue.value !== null || maxValue.value !== null) n += 1
+  if (minLotArea.value !== null || maxLotArea.value !== null) n += 1
+  if (minScore.value !== null) n += 1
+  if (minDistress.value !== null) n += 1
+  if (delinquentOnly.value) n += 1
+  if (sheriffSaleOnly.value) n += 1
+  if (underpricedOnly.value) n += 1
+  if (byRightOnly.value) n += 1
+  return n
+})
 
 function reset(): void {
   vacantOnly.value = false
@@ -28,6 +61,11 @@ function reset(): void {
   minLotArea.value = null
   maxLotArea.value = null
   minScore.value = null
+  minDistress.value = null
+  delinquentOnly.value = false
+  sheriffSaleOnly.value = false
+  underpricedOnly.value = false
+  byRightOnly.value = false
 }
 
 function saveAlert(): void {
@@ -42,7 +80,59 @@ function saveAlert(): void {
 <template>
   <div class="buy-box">
     <div class="bb-section">
-      <q-toggle v-model="vacantOnly" label="Vacant lots only" dense color="amber-8" />
+      <div class="bb-label">Signals</div>
+      <div class="bb-chips">
+        <q-chip
+          clickable
+          dense
+          :color="vacantOnly ? 'amber-8' : 'grey-2'"
+          :text-color="vacantOnly ? 'white' : 'grey-9'"
+          icon="grass"
+          @click="vacantOnly = !vacantOnly"
+        >
+          Vacant
+        </q-chip>
+        <q-chip
+          clickable
+          dense
+          :color="delinquentOnly ? 'primary' : 'grey-2'"
+          :text-color="delinquentOnly ? 'white' : 'grey-9'"
+          icon="receipt_long"
+          @click="delinquentOnly = !delinquentOnly"
+        >
+          Tax delinquent
+        </q-chip>
+        <q-chip
+          clickable
+          dense
+          :color="sheriffSaleOnly ? 'primary' : 'grey-2'"
+          :text-color="sheriffSaleOnly ? 'white' : 'grey-9'"
+          icon="gavel"
+          @click="sheriffSaleOnly = !sheriffSaleOnly"
+        >
+          Sheriff sale
+        </q-chip>
+        <q-chip
+          clickable
+          dense
+          :color="underpricedOnly ? 'positive' : 'grey-2'"
+          :text-color="underpricedOnly ? 'white' : 'grey-9'"
+          icon="trending_down"
+          @click="underpricedOnly = !underpricedOnly"
+        >
+          Underpriced
+        </q-chip>
+        <q-chip
+          clickable
+          dense
+          :color="byRightOnly ? 'primary' : 'grey-2'"
+          :text-color="byRightOnly ? 'white' : 'grey-9'"
+          icon="check_circle"
+          @click="byRightOnly = !byRightOnly"
+        >
+          By-right
+        </q-chip>
+      </div>
     </div>
 
     <div class="bb-section">
@@ -64,7 +154,34 @@ function saveAlert(): void {
     </div>
 
     <div class="bb-section">
-      <div class="bb-label">Buy box</div>
+      <div class="bb-slider-head">
+        <span class="bb-label">Min opportunity score</span>
+        <span class="bb-slider-val">{{ minScore ?? 'Any' }}</span>
+      </div>
+      <q-slider
+        :model-value="minScore ?? 0"
+        :min="0"
+        :max="100"
+        :step="5"
+        color="primary"
+        @update:model-value="(v) => onSlider('score', v ?? 0)"
+      />
+      <div class="bb-slider-head q-mt-sm">
+        <span class="bb-label">Min distress score</span>
+        <span class="bb-slider-val">{{ minDistress ?? 'Any' }}</span>
+      </div>
+      <q-slider
+        :model-value="minDistress ?? 0"
+        :min="0"
+        :max="100"
+        :step="5"
+        color="deep-orange"
+        @update:model-value="(v) => onSlider('distress', v ?? 0)"
+      />
+    </div>
+
+    <div class="bb-section">
+      <div class="bb-label">Value & size</div>
       <div class="bb-grid">
         <q-input
           :model-value="minValue"
@@ -98,15 +215,6 @@ function saveAlert(): void {
           label="Max sq ft"
           @update:model-value="(value) => onNum('maxLotArea', value)"
         />
-        <q-input
-          :model-value="minScore"
-          type="number"
-          outlined
-          dense
-          label="Min score"
-          class="bb-wide"
-          @update:model-value="(value) => onNum('minScore', value)"
-        />
       </div>
     </div>
 
@@ -129,7 +237,8 @@ function saveAlert(): void {
         size="sm"
         color="grey-7"
         icon="restart_alt"
-        label="Reset"
+        :label="activeCount > 0 ? `Reset (${activeCount})` : 'Reset'"
+        :disable="activeCount === 0"
         @click="reset"
       />
     </div>
@@ -138,12 +247,14 @@ function saveAlert(): void {
 
 <style scoped>
 .buy-box {
-  width: 320px;
-  max-width: 92vw;
+  width: 100%;
 }
 .bb-section {
-  padding: 12px 14px;
+  padding: 12px 2px;
   border-bottom: 1px solid var(--lot-border);
+}
+.bb-section:last-of-type {
+  border-bottom: none;
 }
 .bb-label {
   font-weight: 700;
@@ -158,18 +269,29 @@ function saveAlert(): void {
   flex-wrap: wrap;
   gap: 6px;
 }
+.bb-slider-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.bb-slider-head .bb-label {
+  margin-bottom: 0;
+}
+.bb-slider-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lot-ink);
+}
 .bb-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-.bb-wide {
-  grid-column: 1 / -1;
-}
 .bb-footer {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px 0 2px;
 }
 .dot {
   display: inline-block;
