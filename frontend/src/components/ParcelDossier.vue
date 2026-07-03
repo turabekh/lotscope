@@ -48,6 +48,12 @@ const TABS = [
 
 const tabsAlign = computed(() => ($q.screen.lt.md ? 'left' : 'justify'))
 
+const LOW_VACANCY_CONFIDENCE = 0.5
+const lowVacancyConfidence = computed(() => {
+  const confidence = detail.value?.vacancy_confidence
+  return confidence != null && confidence < LOW_VACANCY_CONFIDENCE
+})
+
 const dealEmpty = computed(
   () => !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.marketContext,
 )
@@ -178,11 +184,20 @@ async function toggleSave(): Promise<void> {
               height, and setbacks.
             </q-tooltip>
           </q-chip>
-          <q-chip v-if="detail.is_vacant" dense square color="amber-8" text-color="white" icon="grass">
-            Vacant
+          <q-chip
+            v-if="detail.is_vacant"
+            dense
+            square
+            :color="lowVacancyConfidence ? 'amber-6' : 'amber-8'"
+            text-color="white"
+            icon="grass"
+          >
+            Vacant<span v-if="lowVacancyConfidence" class="q-ml-xs">· low confidence</span>
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
               Flagged by the city's Vacant Property Indicators model as a likely-vacant lot —
-              LotScope's core inventory.
+              LotScope's core inventory.<template v-if="lowVacancyConfidence">
+                Corroborating signals are weak (e.g. a recent permit or an assessed structure), so
+                treat this as low confidence.</template>
             </q-tooltip>
           </q-chip>
           <q-chip

@@ -15,6 +15,7 @@ from lotscope.notifications.service import (
     send_push_alerts,
     send_saved_search_alerts,
 )
+from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
 from lotscope.verdict.jobs import recompute_all_verdicts
 
 _logger = get_logger("worker")
@@ -64,6 +65,12 @@ async def recompute_distress(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
+    count = await recompute_all_vacancy_confidence(ctx["session_factory"])
+    _logger.info("recomputed_vacancy_confidence", count=count)
+    return count
+
+
 async def send_weekly_digests(ctx: dict[str, Any]) -> int:
     settings = ctx["settings"]
     sender = get_email_sender(settings)
@@ -97,6 +104,7 @@ class WorkerSettings:
         recompute_verdicts,
         recompute_vacant_verdicts,
         recompute_distress,
+        recompute_vacancy_confidence,
         send_weekly_digests,
         send_daily_digests,
         send_push_notifications,
@@ -107,6 +115,7 @@ class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     cron_jobs: ClassVar = [
         cron(ingest_all, hour=4, minute=0),
+        cron(recompute_vacancy_confidence, hour=6, minute=30),
         cron(recompute_vacant_verdicts, hour=7, minute=0),
         cron(recompute_distress, hour=8, minute=0),
         cron(recompute_verdicts, weekday="sun", hour=5, minute=0),

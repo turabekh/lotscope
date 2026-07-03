@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A11**. Extends the Vacant Property Indicators ingest and `parcel.vacancy_confidence`.
 
