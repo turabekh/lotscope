@@ -113,6 +113,7 @@ onBeforeUnmount(() => {
 })
 
 const isMobile = computed(() => $q.screen.lt.md)
+const filtersOpen = ref(false)
 
 const toolbarLabel = computed(() => {
   const total = areaTotal.value
@@ -136,23 +137,21 @@ function onSelect(parcelNumber: string): void {
       <div class="explore-body">
         <div class="explore-toolbar">
           <span class="toolbar-count lot-numeric">{{ toolbarLabel }}</span>
+          <q-space />
           <q-btn
             outline
             no-caps
             dense
             color="grey-8"
-            icon-right="expand_more"
-            label="Buy box"
-            class="buy-box-btn"
+            icon="tune"
+            label="Filters"
+            class="filters-btn"
+            @click="filtersOpen = true"
           >
             <q-badge v-if="buyBoxCount > 0" color="primary" rounded floating>{{
               buyBoxCount
             }}</q-badge>
-            <q-menu anchor="bottom left" self="top left">
-              <BuyBoxPanel />
-            </q-menu>
           </q-btn>
-          <q-space />
         </div>
 
         <div class="explore-split">
@@ -179,6 +178,38 @@ function onSelect(parcelNumber: string): void {
         </div>
       </div>
     </q-page-container>
+
+    <q-drawer
+      v-model="filtersOpen"
+      side="left"
+      overlay
+      bordered
+      :width="340"
+      class="filters-drawer"
+    >
+      <div class="column no-wrap fit">
+        <div class="filters-head">
+          <q-icon name="tune" size="18px" class="q-mr-sm" />
+          <span class="filters-title">Filters</span>
+          <q-badge v-if="buyBoxCount > 0" color="primary" class="q-ml-sm">{{ buyBoxCount }}</q-badge>
+          <q-space />
+          <q-btn
+            flat
+            dense
+            round
+            size="sm"
+            icon="close"
+            aria-label="Close filters"
+            @click="filtersOpen = false"
+          />
+        </div>
+        <q-scroll-area class="col">
+          <div class="q-pa-md">
+            <BuyBoxPanel />
+          </div>
+        </q-scroll-area>
+      </div>
+    </q-drawer>
   </q-layout>
 </template>
 
@@ -212,6 +243,21 @@ function onSelect(parcelNumber: string): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.filters-btn {
+  flex: 0 0 auto;
+}
+.filters-drawer .filters-head {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 16px;
+  border-bottom: 1px solid var(--lot-border);
+  flex: 0 0 auto;
+}
+.filters-drawer .filters-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--lot-ink);
 }
 .explore-split {
   flex: 1;

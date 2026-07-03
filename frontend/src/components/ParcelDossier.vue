@@ -163,19 +163,73 @@ async function toggleSave(): Promise<void> {
             <div class="addr ellipsis-2">{{ detail.address ?? detail.parcel_number }}</div>
             <div class="pid lot-numeric">Parcel {{ detail.parcel_number }}</div>
           </div>
-          <q-btn
-            round
-            unelevated
-            :color="isSaved ? 'amber-7' : 'grey-3'"
-            :text-color="isSaved ? 'white' : 'grey-8'"
-            :icon="isSaved ? 'bookmark' : 'bookmark_border'"
-            size="sm"
-            :loading="saving"
-            :aria-label="isSaved ? 'Remove from watchlist' : 'Save to watchlist'"
-            @click="toggleSave"
-          >
-            <q-tooltip>{{ isSaved ? 'Saved — click to remove' : 'Save to watchlist' }}</q-tooltip>
-          </q-btn>
+          <div class="header-actions">
+            <q-btn
+              v-if="!currentDeal"
+              flat
+              dense
+              round
+              size="sm"
+              color="primary"
+              icon="add_task"
+              :loading="addingDeal"
+              aria-label="Add to pipeline"
+              @click="addToPipeline"
+            >
+              <q-tooltip>Add to pipeline</q-tooltip>
+            </q-btn>
+            <q-btn
+              v-else
+              flat
+              dense
+              round
+              size="sm"
+              color="primary"
+              icon="view_kanban"
+              :aria-label="dealStageLabel"
+              :to="{ name: 'pipeline', params: { market: market.active } }"
+            >
+              <q-tooltip>In pipeline · {{ dealStageLabel }}</q-tooltip>
+            </q-btn>
+            <q-btn
+              flat
+              dense
+              round
+              size="sm"
+              :color="inCompare ? 'primary' : 'grey-8'"
+              icon="compare_arrows"
+              :aria-label="inCompare ? 'In compare' : 'Add to compare'"
+              @click="toggleCompare"
+            >
+              <q-tooltip>{{ inCompare ? 'In compare — click to remove' : 'Add to compare' }}</q-tooltip>
+            </q-btn>
+            <q-btn
+              flat
+              dense
+              round
+              size="sm"
+              color="grey-8"
+              icon="picture_as_pdf"
+              :loading="downloadingDossier"
+              aria-label="Download PDF dossier"
+              @click="downloadDossier"
+            >
+              <q-tooltip>Download PDF dossier</q-tooltip>
+            </q-btn>
+            <q-btn
+              round
+              unelevated
+              :color="isSaved ? 'amber-7' : 'grey-3'"
+              :text-color="isSaved ? 'white' : 'grey-8'"
+              :icon="isSaved ? 'bookmark' : 'bookmark_border'"
+              size="sm"
+              :loading="saving"
+              :aria-label="isSaved ? 'Remove from watchlist' : 'Save to watchlist'"
+              @click="toggleSave"
+            >
+              <q-tooltip>{{ isSaved ? 'Saved — click to remove' : 'Save to watchlist' }}</q-tooltip>
+            </q-btn>
+          </div>
         </div>
         <div class="chips">
           <q-chip dense square color="primary" text-color="white" class="text-weight-medium">
@@ -218,81 +272,35 @@ async function toggleSave(): Promise<void> {
         </div>
       </header>
 
+      <q-tabs
+        v-model="tab"
+        dense
+        no-caps
+        class="dossier-tabs"
+        active-color="primary"
+        indicator-color="primary"
+        :align="tabsAlign"
+        narrow-indicator
+      >
+        <q-tab v-for="t in TABS" :key="t.name" :name="t.name" :icon="t.icon" :label="t.label" />
+      </q-tabs>
+
       <div class="panel-body lot-scroll">
         <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders">
           {{ error }}
         </q-banner>
 
-        <VerdictHero v-if="verdict" :verdict="verdict" />
-        <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
-          <template #avatar><q-icon name="info" color="grey-7" /></template>
-          No verdict yet.
-          <template #action>
-            <q-btn flat dense color="primary" label="Compute" @click="store.refreshVerdict()" />
-          </template>
-        </q-banner>
-
-        <SnapshotPanel :parcel-number="detail.parcel_number" />
-
-        <div class="actions">
-          <q-btn
-            v-if="!currentDeal"
-            outline
-            no-caps
-            dense
-            color="primary"
-            icon="add_task"
-            label="Pipeline"
-            :loading="addingDeal"
-            @click="addToPipeline"
-          />
-          <q-btn
-            v-else
-            flat
-            no-caps
-            dense
-            color="primary"
-            icon="view_kanban"
-            :label="dealStageLabel"
-            :to="{ name: 'pipeline', params: { market: market.active } }"
-          />
-          <q-btn
-            :outline="!inCompare"
-            :unelevated="inCompare"
-            no-caps
-            dense
-            :color="inCompare ? 'primary' : 'grey-8'"
-            icon="compare_arrows"
-            :label="inCompare ? 'In compare' : 'Compare'"
-            @click="toggleCompare"
-          />
-          <q-btn
-            outline
-            no-caps
-            dense
-            color="grey-8"
-            icon="picture_as_pdf"
-            label="PDF"
-            :loading="downloadingDossier"
-            @click="downloadDossier"
-          />
-        </div>
-
-        <q-tabs
-          v-model="tab"
-          dense
-          no-caps
-          class="dossier-tabs"
-          active-color="primary"
-          indicator-color="primary"
-          :align="tabsAlign"
-          narrow-indicator
-        >
-          <q-tab v-for="t in TABS" :key="t.name" :name="t.name" :icon="t.icon" :label="t.label" />
-        </q-tabs>
-
         <q-tab-panels v-model="tab" animated keep-alive class="dossier-panels">
           <q-tab-panel name="verdict" class="tab-pane">
+            <VerdictHero v-if="verdict" :verdict="verdict" />
+            <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
+              <template #avatar><q-icon name="info" color="grey-7" /></template>
+              No verdict yet.
+              <template #action>
+                <q-btn flat dense color="primary" label="Compute" @click="store.refreshVerdict()" />
+              </template>
+            </q-banner>
+            <SnapshotPanel :parcel-number="detail.parcel_number" />
             <VerdictPanel v-if="verdict" :verdict="verdict" />
             <ChecklistPanel />
             <div class="tab-foot">
@@ -402,6 +410,12 @@ async function toggleSave(): Promise<void> {
   min-width: 0;
   flex: 1;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
+}
 .addr {
   font-size: 17px;
   font-weight: 700;
@@ -434,46 +448,21 @@ async function toggleSave(): Promise<void> {
   flex-direction: column;
   gap: 12px;
 }
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 .dossier-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: var(--lot-bg);
+  flex: 0 0 auto;
+  background: var(--lot-surface);
   border-bottom: 1px solid var(--lot-border);
-  margin: 0 -12px;
-  padding: 0 6px;
+  padding: 0 8px;
   color: var(--lot-muted);
 }
 .dossier-panels {
   background: transparent;
-  container-type: inline-size;
 }
 .tab-pane {
   padding: 4px 0 8px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-@container (min-width: 440px) {
-  .tab-pane {
-    display: block;
-    column-count: 2;
-    column-gap: 12px;
-    gap: 0;
-  }
-  .tab-pane > * {
-    break-inside: avoid;
-    margin-bottom: 12px;
-  }
-  .tab-pane > .tab-foot,
-  .tab-pane > .tab-empty {
-    column-span: all;
-  }
 }
 .tab-foot {
   display: flex;
