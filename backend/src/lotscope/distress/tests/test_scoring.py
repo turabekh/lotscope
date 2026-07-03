@@ -67,6 +67,42 @@ def test_dangerous_outranks_plain_violations() -> None:
     assert "li_violations" not in codes
 
 
+def test_long_tenure_requires_absentee() -> None:
+    resident = score_distress(DistressSignals(years_since_last_sale=20))
+    assert resident.score == 0
+
+    absentee = score_distress(DistressSignals(is_absentee_owner=True, years_since_last_sale=20))
+    codes = {f.code for f in absentee.factors}
+    assert "long_tenure" in codes
+    assert absentee.score == 15  # absentee 10 + long_tenure 5
+
+
+def test_short_tenure_does_not_add_long_tenure() -> None:
+    result = score_distress(DistressSignals(is_absentee_owner=True, years_since_last_sale=5))
+    codes = {f.code for f in result.factors}
+    assert "long_tenure" not in codes
+    assert result.score == 10  # absentee only
+
+
+def test_tired_landlord_adds_portfolio_distress() -> None:
+    result = score_distress(DistressSignals(is_tired_landlord=True))
+    codes = {f.code for f in result.factors}
+    assert "portfolio_distress" in codes
+    assert result.score == 10
+
+
+def test_city_owned_excludes_owner_intent_factors() -> None:
+    result = score_distress(
+        DistressSignals(
+            is_city_owned=True,
+            is_absentee_owner=True,
+            years_since_last_sale=30,
+            is_tired_landlord=True,
+        )
+    )
+    assert result.score == 0
+
+
 def test_is_absentee_heuristic() -> None:
     assert is_absentee("123 MAIN ST", "456 ELSEWHERE AVE, NEW YORK NY") is True
     assert is_absentee("123 MAIN ST", "123 Main St, Philadelphia PA 19100") is False

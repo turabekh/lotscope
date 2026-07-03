@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A6** (Phase 4). Extends ADR-0015 (motivated-seller distress index) with two owner-intent dimensions and bumps the scorer to **v2**. Reads the `sale` table (RTT comps) and `parcel.owner_key` (the reconciled owner identity used by the `owners` module).
 

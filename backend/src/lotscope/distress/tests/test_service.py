@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +8,7 @@ from lotscope.distress.service import (
     assess_parcel_distress,
     find_leads,
     recompute_distress,
+    tired_landlord_owner_keys,
 )
 
 pytestmark = pytest.mark.integration
@@ -17,21 +20,45 @@ async def _parcel(
     *,
     address: str,
     mailing: str,
+    owner: str = "OWNER",
     is_vacant: bool = False,
     is_city_owned: bool = False,
 ) -> None:
     await session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner, address, mailing_address, zip_code, "
-            "is_vacant, is_city_owned) VALUES (:pn, 'OWNER', :addr, :mail, '19140', :vac, :city)"
+            "is_vacant, is_city_owned) VALUES (:pn, :owner, :addr, :mail, '19140', :vac, :city)"
         ),
         {
             "pn": parcel_number,
+            "owner": owner,
             "addr": address,
             "mail": mailing,
             "vac": is_vacant,
             "city": is_city_owned,
         },
+    )
+
+
+async def _open_violation(session: AsyncSession, parcel_number: str, external_id: str) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO li_event (parcel_number, event_type, external_id, status) "
+            "VALUES (:pn, 'violation', :xid, 'OPEN')"
+        ),
+        {"pn": parcel_number, "xid": external_id},
+    )
+
+
+async def _deed(
+    session: AsyncSession, parcel_number: str, document_id: str, sale_date: str
+) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, document_id, document_type, sale_date) "
+            "VALUES (:pn, :doc, 'DEED', :d)"
+        ),
+        {"pn": parcel_number, "doc": document_id, "d": date.fromisoformat(sale_date)},
     )
 
 
@@ -107,6 +134,61 @@ async def test_leads_rank_and_exclude(db_session: AsyncSession) -> None:
     parcel = await assess_parcel_distress(db_session, "000000001")
     assert parcel is not None
     assert top.score == parcel.score  # precomputed lead score and live per-parcel scorer agree
+
+
+async def test_long_tenure_absentee_from_old_deed(db_session: AsyncSession) -> None:
+    await _parcel(db_session, "000000010", address="10 A ST", mailing="99 ZZ AVE, NEW YORK NY")
+    await _deed(db_session, "000000010", "D-10", "2005-01-01")
+    await db_session.flush()
+
+    result = await assess_parcel_distress(db_session, "000000010")
+    assert result is not None
+    assert result.version == "v2"
+    assert {f.code for f in result.factors} >= {"absentee", "long_tenure"}
+    assert result.score == 15  # absentee 10 + long_tenure 5
+
+
+async def test_recent_deed_does_not_add_long_tenure(db_session: AsyncSession) -> None:
+    await _parcel(db_session, "000000011", address="11 A ST", mailing="99 ZZ AVE, NEW YORK NY")
+    await _deed(db_session, "000000011", "D-11", "2023-01-01")
+    await db_session.flush()
+
+    result = await assess_parcel_distress(db_session, "000000011")
+    assert result is not None
+    assert "long_tenure" not in {f.code for f in result.factors}
+
+
+async def test_tired_landlord_scores_across_the_owner_portfolio(db_session: AsyncSession) -> None:
+    for index in range(3):
+        await _parcel(
+            db_session,
+            f"00000002{index}",
+            address=f"{index} T ST",
+            mailing=f"{index} T ST, PHILADELPHIA PA",
+            owner="TIRED LLC",
+        )
+    for parcel, external_id in [
+        ("000000020", "V1"),
+        ("000000020", "V2"),
+        ("000000021", "V3"),
+        ("000000021", "V4"),
+        ("000000022", "V5"),
+    ]:
+        await _open_violation(db_session, parcel, external_id)
+    await db_session.flush()
+
+    tired = await tired_landlord_owner_keys(db_session)
+    assert len(tired) == 1
+
+    live = await assess_parcel_distress(db_session, "000000020")
+    assert live is not None
+    assert "portfolio_distress" in {f.code for f in live.factors}
+
+    await recompute_distress(db_session, ["000000020"], tired)
+    leads = await find_leads(db_session, limit=50, min_score=1)
+    lead = next(item for item in leads if item.parcel_number == "000000020")
+    assert lead.score == 15  # open violations 5 + portfolio_distress 10
+    assert "Tired landlord" in lead.top_factors
 
 
 async def test_recompute_distress_is_idempotent(db_session: AsyncSession) -> None:

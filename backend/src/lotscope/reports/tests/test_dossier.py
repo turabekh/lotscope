@@ -107,6 +107,7 @@ def test_full_dossier_renders_all_sections() -> None:
         parcel_number="000000001",
         score=60,
         tier="high",
+        version="v2",
         factors=[DistressFactor(code="sheriff_sale", label="Sheriff-sale exposure", weight=30)],
         sources=[],
         computed_at=_NOW,

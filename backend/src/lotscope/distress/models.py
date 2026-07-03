@@ -15,3 +15,4 @@ class ParcelDistress(Base, TimestampMixin, ProvenanceMixin):
     )
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     tier: Mapped[str] = mapped_column(String(20), nullable=False)
+    version: Mapped[str] = mapped_column(String(20), nullable=False, server_default="v2")

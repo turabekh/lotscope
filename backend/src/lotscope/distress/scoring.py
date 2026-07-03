@@ -3,6 +3,8 @@ from typing import Literal
 
 Tier = Literal["high", "medium", "low", "none"]
 
+DISTRESS_VERSION = "v2"
+
 _SHERIFF_SALE_WEIGHT = 30
 _DELINQUENT_WEIGHT = 15
 _SEVERE_DELINQUENT_WEIGHT = 15
@@ -12,9 +14,12 @@ _VIOLATION_WEIGHT = 5
 _DEMOLITION_WEIGHT = 5
 _VACANT_WEIGHT = 10
 _ABSENTEE_WEIGHT = 10
+_LONG_TENURE_WEIGHT = 5
+_PORTFOLIO_DISTRESS_WEIGHT = 10
 
 _SEVERE_DUE = 10000.0
 _SEVERE_YEARS = 3
+_LONG_TENURE_YEARS = 15.0
 _HIGH_TIER = 60
 _MEDIUM_TIER = 30
 
@@ -33,6 +38,8 @@ class DistressSignals:
     is_vacant: bool = False
     is_absentee_owner: bool = False
     is_city_owned: bool = False
+    years_since_last_sale: float | None = None
+    is_tired_landlord: bool = False
 
 
 @dataclass(frozen=True)
@@ -106,6 +113,27 @@ def score_distress(signals: DistressSignals) -> DistressAssessment:
         factors.append(
             DistressFactor(
                 "absentee", "Absentee owner (out-of-area mailing address)", _ABSENTEE_WEIGHT
+            )
+        )
+    if (
+        signals.is_absentee_owner
+        and signals.years_since_last_sale is not None
+        and signals.years_since_last_sale >= _LONG_TENURE_YEARS
+    ):
+        held_years = int(signals.years_since_last_sale)
+        factors.append(
+            DistressFactor(
+                "long_tenure",
+                f"Long-tenured absentee owner (~{held_years} yrs)",
+                _LONG_TENURE_WEIGHT,
+            )
+        )
+    if signals.is_tired_landlord:
+        factors.append(
+            DistressFactor(
+                "portfolio_distress",
+                "Tired landlord (portfolio-wide violations)",
+                _PORTFOLIO_DISTRESS_WEIGHT,
             )
         )
 

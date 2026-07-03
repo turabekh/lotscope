@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
-from lotscope.distress.service import recompute_distress
+from lotscope.distress.service import recompute_distress, tired_landlord_owner_keys
 
 _PARCEL_NUMBERS_SQL = text("SELECT parcel_number FROM parcel ORDER BY parcel_number")
 _DEFAULT_BATCH_SIZE = 1000
@@ -26,12 +26,13 @@ async def recompute_all_distress(
     async with session_factory() as session:
         result = await session.execute(_PARCEL_NUMBERS_SQL)
         parcel_numbers = [row[0] for row in result]
+        tired_owners = await tired_landlord_owner_keys(session)
 
     logger = get_logger("distress.jobs")
     total = 0
     for chunk in _chunks(parcel_numbers, batch_size):
         async with session_factory() as session:
-            total += await recompute_distress(session, chunk)
+            total += await recompute_distress(session, chunk, tired_owners)
             await session.commit()
         logger.info("distress_progress", done=total, of=len(parcel_numbers))
     return total
