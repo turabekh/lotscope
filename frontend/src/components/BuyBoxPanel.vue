@@ -25,12 +25,39 @@ const {
 const market = useMarketStore()
 const router = useRouter()
 
-const numRefs = { minValue, maxValue, minLotArea, maxLotArea }
+const VALUE_MAX = 1_000_000
+const AREA_MAX = 15_000
 
-function onNum(field: keyof typeof numRefs, value: string | number | null): void {
-  const parsed = value === null || value === '' ? null : Number(value)
-  numRefs[field].value = parsed !== null && Number.isFinite(parsed) ? parsed : null
+function money(v: number): string {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(v % 1_000_000 === 0 ? 0 : 1)}M`
+  if (v >= 1000) return `$${Math.round(v / 1000)}k`
+  return `$${v}`
 }
+
+const valueRange = computed<{ min: number; max: number }>({
+  get: () => ({ min: minValue.value ?? 0, max: maxValue.value ?? VALUE_MAX }),
+  set: (r) => {
+    minValue.value = r.min <= 0 ? null : r.min
+    maxValue.value = r.max >= VALUE_MAX ? null : r.max
+  },
+})
+const areaRange = computed<{ min: number; max: number }>({
+  get: () => ({ min: minLotArea.value ?? 0, max: maxLotArea.value ?? AREA_MAX }),
+  set: (r) => {
+    minLotArea.value = r.min <= 0 ? null : r.min
+    maxLotArea.value = r.max >= AREA_MAX ? null : r.max
+  },
+})
+const valueLabel = computed(() =>
+  minValue.value === null && maxValue.value === null
+    ? 'Any'
+    : `${money(minValue.value ?? 0)} – ${maxValue.value === null ? `${money(VALUE_MAX)}+` : money(maxValue.value)}`,
+)
+const areaLabel = computed(() =>
+  minLotArea.value === null && maxLotArea.value === null
+    ? 'Any'
+    : `${(minLotArea.value ?? 0).toLocaleString()} – ${maxLotArea.value === null ? `${AREA_MAX.toLocaleString()}+` : maxLotArea.value.toLocaleString()} sq ft`,
+)
 
 function onSlider(target: 'score' | 'distress', value: number): void {
   const clean = value > 0 ? value : null
@@ -181,41 +208,30 @@ function saveAlert(): void {
     </div>
 
     <div class="bb-section">
-      <div class="bb-label">Value & size</div>
-      <div class="bb-grid">
-        <q-input
-          :model-value="minValue"
-          type="number"
-          outlined
-          dense
-          label="Min $"
-          @update:model-value="(value) => onNum('minValue', value)"
-        />
-        <q-input
-          :model-value="maxValue"
-          type="number"
-          outlined
-          dense
-          label="Max $"
-          @update:model-value="(value) => onNum('maxValue', value)"
-        />
-        <q-input
-          :model-value="minLotArea"
-          type="number"
-          outlined
-          dense
-          label="Min sq ft"
-          @update:model-value="(value) => onNum('minLotArea', value)"
-        />
-        <q-input
-          :model-value="maxLotArea"
-          type="number"
-          outlined
-          dense
-          label="Max sq ft"
-          @update:model-value="(value) => onNum('maxLotArea', value)"
-        />
+      <div class="bb-slider-head">
+        <span class="bb-label">Market value</span>
+        <span class="bb-slider-val">{{ valueLabel }}</span>
       </div>
+      <q-range
+        v-model="valueRange"
+        :min="0"
+        :max="VALUE_MAX"
+        :step="25000"
+        color="primary"
+        class="bb-range"
+      />
+      <div class="bb-slider-head q-mt-md">
+        <span class="bb-label">Lot area</span>
+        <span class="bb-slider-val">{{ areaLabel }}</span>
+      </div>
+      <q-range
+        v-model="areaRange"
+        :min="0"
+        :max="AREA_MAX"
+        :step="500"
+        color="primary"
+        class="bb-range"
+      />
     </div>
 
     <div class="bb-footer">
@@ -283,10 +299,8 @@ function saveAlert(): void {
   font-weight: 700;
   color: var(--lot-ink);
 }
-.bb-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.bb-range {
+  padding: 0 6px;
 }
 .bb-footer {
   display: flex;
