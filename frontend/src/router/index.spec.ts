@@ -39,12 +39,12 @@ describe('marketGuard', () => {
     expect(useMarketStore().active).toBe('philadelphia')
   })
 
-  it('redirects the bare market root through home to explore', async () => {
+  it('redirects the bare market root to the market home dashboard', async () => {
     authenticate()
     const router = makeRouter()
     await router.push('/philadelphia')
-    expect(router.currentRoute.value.name).toBe('explore')
-    expect(router.currentRoute.value.fullPath).toBe('/philadelphia/explore')
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(router.currentRoute.value.fullPath).toBe('/philadelphia/home')
   })
 
   it('sets the active market from a valid market segment', async () => {
@@ -59,8 +59,8 @@ describe('marketGuard', () => {
     authenticate()
     const router = makeRouter()
     await router.push('/')
-    expect(router.currentRoute.value.name).toBe('explore')
-    expect(router.currentRoute.value.fullPath).toBe('/philadelphia/explore')
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(router.currentRoute.value.fullPath).toBe('/philadelphia/home')
   })
 
   it('redirects the retired watchlist path to the Lists "lots" tab', async () => {

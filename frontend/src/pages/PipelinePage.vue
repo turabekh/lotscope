@@ -6,11 +6,9 @@ import { useRouter } from 'vue-router'
 import { formatCurrency } from '@/lib/format'
 import type { DealItem, DealStage } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
-import { useParcelStore } from '@/stores/parcel'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 
 const router = useRouter()
-const parcelStore = useParcelStore()
 const market = useMarketStore()
 const pipeline = usePipelineStore()
 const { deals, loading } = storeToRefs(pipeline)
@@ -32,8 +30,7 @@ function scoreColor(score: number | null): string {
 }
 
 function openParcel(deal: DealItem): void {
-  void parcelStore.select(deal.parcel_number)
-  void router.push({ name: 'explore', params: { market: market.active } })
+  void router.push({ name: 'parcel', params: { market: market.active, id: deal.parcel_number } })
 }
 
 function onDragStart(event: DragEvent, deal: DealItem): void {

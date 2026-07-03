@@ -54,7 +54,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/:market/home',
     name: 'home',
-    redirect: (to) => ({ name: 'explore', params: { market: to.params.market } }),
+    component: () => import('@/pages/HomePage.vue'),
     meta: { requiresAuth: true },
   },
   {
