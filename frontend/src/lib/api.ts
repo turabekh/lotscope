@@ -4,6 +4,7 @@ import type {
   BasemapSession,
   BillingCadence,
   CheckoutResponse,
+  CheckoutTier,
   DealItem,
   DealResult,
   DealStage,
@@ -341,8 +342,11 @@ export const api = {
   getPlans(): Promise<PlansResponse> {
     return request('/billing/plans')
   },
-  createCheckout(cadence: BillingCadence): Promise<CheckoutResponse> {
-    return request('/billing/checkout', { method: 'POST', body: JSON.stringify({ cadence }) })
+  createCheckout(tier: CheckoutTier, cadence: BillingCadence): Promise<CheckoutResponse> {
+    return request('/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ tier, cadence }),
+    })
   },
   createPortal(): Promise<PortalResponse> {
     return request('/billing/portal', { method: 'POST' })

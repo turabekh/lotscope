@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 Phase 0 pricing. Extends ADR-0010 (billing) and ADR-0009 (accounts).
 

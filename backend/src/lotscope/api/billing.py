@@ -72,7 +72,7 @@ async def checkout(
     settings: SettingsDep,
     gateway: GatewayDep,
 ) -> CheckoutResponse:
-    price_id = price_id_for_cadence(settings, data.cadence)
+    price_id = price_id_for_cadence(settings, data.tier, data.cadence)
     customer_id = await ensure_stripe_customer(session, gateway, user)
     url = await gateway.create_checkout_session(
         customer_id=customer_id,

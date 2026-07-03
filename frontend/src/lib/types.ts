@@ -625,6 +625,7 @@ export interface TokenResponse {
 }
 
 export type BillingCadence = 'monthly' | 'annual'
+export type CheckoutTier = 'pro' | 'investor'
 
 export interface PlanInfo {
   tier: string

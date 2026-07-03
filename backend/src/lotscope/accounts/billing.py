@@ -10,8 +10,9 @@ from lotscope.core.config import Settings
 from lotscope.core.errors import ConfigurationError, ValidationError
 
 Cadence = Literal["monthly", "annual"]
+CheckoutTier = Literal["pro", "investor"]
 
-_PRO_GRANTING_STATUSES = frozenset({"active", "trialing", "past_due"})
+_GRANTING_STATUSES = frozenset({"active", "trialing", "past_due"})
 _HANDLED_EVENTS = frozenset(
     {
         "checkout.session.completed",
@@ -22,30 +23,68 @@ _HANDLED_EVENTS = frozenset(
 )
 
 
+def _parse_price_list(raw: str | None) -> frozenset[str]:
+    if not raw:
+        return frozenset()
+    return frozenset(token.strip() for token in raw.split(",") if token.strip())
+
+
 def pro_price_ids(settings: Settings) -> frozenset[str]:
-    return frozenset(
+    current = frozenset(
         price
         for price in (settings.stripe_price_pro_monthly, settings.stripe_price_pro_annual)
         if price
     )
+    return current | _parse_price_list(settings.stripe_price_pro_legacy)
 
 
-def price_id_for_cadence(settings: Settings, cadence: Cadence) -> str:
-    price = (
-        settings.stripe_price_pro_monthly
-        if cadence == "monthly"
-        else settings.stripe_price_pro_annual
+def investor_price_ids(settings: Settings) -> frozenset[str]:
+    return frozenset(
+        price
+        for price in (
+            settings.stripe_price_investor_monthly,
+            settings.stripe_price_investor_annual,
+        )
+        if price
     )
+
+
+def granting_price_ids(settings: Settings) -> tuple[tuple[str, frozenset[str]], ...]:
+    return (
+        ("investor", investor_price_ids(settings)),
+        ("pro", pro_price_ids(settings)),
+    )
+
+
+def _cadence_price(settings: Settings, tier: CheckoutTier, cadence: Cadence) -> str | None:
+    prices: dict[tuple[CheckoutTier, Cadence], str | None] = {
+        ("pro", "monthly"): settings.stripe_price_pro_monthly,
+        ("pro", "annual"): settings.stripe_price_pro_annual,
+        ("investor", "monthly"): settings.stripe_price_investor_monthly,
+        ("investor", "annual"): settings.stripe_price_investor_annual,
+    }
+    return prices[(tier, cadence)]
+
+
+def price_id_for_cadence(settings: Settings, tier: CheckoutTier, cadence: Cadence) -> str:
+    price = _cadence_price(settings, tier, cadence)
     if not price:
-        raise ConfigurationError(f"No Stripe price configured for the {cadence} Pro plan.")
+        raise ConfigurationError(
+            f"No Stripe price configured for the {cadence} {tier.capitalize()} plan."
+        )
     return price
 
 
 def tier_for_subscription(
-    status: str | None, price_id: str | None, granting_price_ids: frozenset[str]
+    status: str | None,
+    price_id: str | None,
+    granting: tuple[tuple[str, frozenset[str]], ...],
 ) -> str:
-    if status in _PRO_GRANTING_STATUSES and price_id is not None and price_id in granting_price_ids:
-        return "pro"
+    if status not in _GRANTING_STATUSES or price_id is None:
+        return "free"
+    for tier, price_ids in granting:
+        if price_id in price_ids:
+            return tier
     return "free"
 
 

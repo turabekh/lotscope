@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.accounts.billing import (
     StripeGateway,
     SubscriptionState,
-    pro_price_ids,
+    granting_price_ids,
     tier_for_subscription,
 )
 from lotscope.accounts.models import User
@@ -65,4 +65,4 @@ async def ensure_stripe_customer(session: AsyncSession, gateway: StripeGateway, 
 def apply_subscription_state(settings: Settings, user: User, state: SubscriptionState) -> None:
     user.stripe_subscription_id = state.subscription_id
     user.subscription_status = state.status
-    user.tier = tier_for_subscription(state.status, state.price_id, pro_price_ids(settings))
+    user.tier = tier_for_subscription(state.status, state.price_id, granting_price_ids(settings))

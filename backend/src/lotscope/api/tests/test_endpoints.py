@@ -570,7 +570,7 @@ async def test_billing_plans_public_lists_catalog() -> None:
     assert resp.status_code == 200
     body = resp.json()
     tiers = [plan["tier"] for plan in body["plans"]]
-    assert tiers == ["free", "pro", "enterprise"]
+    assert tiers == ["free", "pro", "investor", "enterprise"]
     assert all(plan["is_current"] is False for plan in body["plans"])
     assert body["contact_url"]
 

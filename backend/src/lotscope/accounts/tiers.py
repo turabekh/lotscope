@@ -6,36 +6,42 @@ _DEFAULT_TIER = "free"
 ASK_DAILY_LIMITS: dict[str, int | None] = {
     "free": 10,
     "pro": 200,
+    "investor": None,
     "enterprise": None,
 }
 
 PARCEL_VIEW_DAILY_LIMITS: dict[str, int | None] = {
     "free": 4,
     "pro": None,
+    "investor": None,
     "enterprise": None,
 }
 
 LEAD_LIST_LIMITS: dict[str, int] = {
     "free": 8,
     "pro": 200,
+    "investor": 1000,
     "enterprise": 1000,
 }
 
 WATCHLIST_LIMITS: dict[str, int | None] = {
     "free": 25,
     "pro": None,
+    "investor": None,
     "enterprise": None,
 }
 
 PIPELINE_LIMITS: dict[str, int | None] = {
     "free": 10,
     "pro": None,
+    "investor": None,
     "enterprise": None,
 }
 
 SAVED_SEARCH_LIMITS: dict[str, int | None] = {
     "free": 1,
     "pro": 50,
+    "investor": None,
     "enterprise": None,
 }
 
@@ -95,15 +101,29 @@ PLAN_CATALOG: tuple[PlanCatalogEntry, ...] = (
     PlanCatalogEntry(
         tier="pro",
         name="Pro",
-        tagline="Unlimited research for serious investors and builders.",
-        price_monthly_cents=2900,
-        price_annual_cents=29000,
+        tagline="Full research for serious investors and builders.",
+        price_monthly_cents=9900,
+        price_annual_cents=99000,
         action="checkout",
         highlights=(
             "Unlimited parcel verdicts",
             "200 AI questions per day",
             "Full comps, risk flags, and value ranges",
-            "Priority recompute",
+            "200 motivated-seller leads",
+        ),
+    ),
+    PlanCatalogEntry(
+        tier="investor",
+        name="Investor",
+        tagline="The lead-gen machine: credits, exports, and the deal feed.",
+        price_monthly_cents=24900,
+        price_annual_cents=249000,
+        action="checkout",
+        highlights=(
+            "Everything in Pro",
+            "Unlimited AI questions",
+            "1,000 leads with CSV export",
+            "Daily deal feed and skip-trace credits",
         ),
     ),
     PlanCatalogEntry(

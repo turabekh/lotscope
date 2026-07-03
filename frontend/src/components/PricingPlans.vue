@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
-import type { BillingCadence, PlanInfo } from '@/lib/types'
+import type { BillingCadence, CheckoutTier, PlanInfo } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -64,7 +64,7 @@ const ctaFor = computed(() => {
       return { label: 'Contact sales', color: 'dark', disabled: false }
     }
     if (plan.action === 'checkout') {
-      return { label: 'Upgrade to Pro', color: 'primary', disabled: false }
+      return { label: `Upgrade to ${plan.name}`, color: 'primary', disabled: false }
     }
     return { label: 'Get started', color: 'primary', disabled: false }
   }
@@ -91,7 +91,7 @@ async function activate(plan: PlanInfo): Promise<void> {
       window.location.href = url
       return
     }
-    const { url } = await api.createCheckout(cadence.value)
+    const { url } = await api.createCheckout(plan.tier as CheckoutTier, cadence.value)
     window.location.href = url
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Could not start checkout.'
@@ -189,8 +189,13 @@ async function activate(plan: PlanInfo): Promise<void> {
 }
 .plan-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
+}
+@media (max-width: 1100px) {
+  .plan-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 .plan-card {
   display: flex;

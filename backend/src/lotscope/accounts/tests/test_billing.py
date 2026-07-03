@@ -1,7 +1,9 @@
 import pytest
 
 from lotscope.accounts.billing import (
+    granting_price_ids,
     interpret_event,
+    investor_price_ids,
     price_id_for_cadence,
     pro_price_ids,
     subscription_state_from_object,
@@ -10,13 +12,13 @@ from lotscope.accounts.billing import (
 from lotscope.core.config import Settings
 from lotscope.core.errors import ConfigurationError
 
-_PRO = frozenset({"price_monthly", "price_annual"})
-
 
 def _settings(**overrides: object) -> Settings:
     base: dict[str, object] = {
-        "stripe_price_pro_monthly": "price_monthly",
-        "stripe_price_pro_annual": "price_annual",
+        "stripe_price_pro_monthly": "price_pro_monthly",
+        "stripe_price_pro_annual": "price_pro_annual",
+        "stripe_price_investor_monthly": "price_inv_monthly",
+        "stripe_price_investor_annual": "price_inv_annual",
     }
     base.update(overrides)
     return Settings(**base)  # type: ignore[arg-type]
@@ -25,35 +27,48 @@ def _settings(**overrides: object) -> Settings:
 @pytest.mark.parametrize(
     ("status", "price_id", "expected"),
     [
-        ("active", "price_monthly", "pro"),
-        ("trialing", "price_annual", "pro"),
-        ("past_due", "price_monthly", "pro"),
-        ("canceled", "price_monthly", "free"),
-        ("unpaid", "price_monthly", "free"),
+        ("active", "price_pro_monthly", "pro"),
+        ("trialing", "price_pro_annual", "pro"),
+        ("past_due", "price_pro_monthly", "pro"),
+        ("active", "price_inv_monthly", "investor"),
+        ("trialing", "price_inv_annual", "investor"),
+        ("active", "price_pro_legacy_29", "pro"),
+        ("canceled", "price_pro_monthly", "free"),
+        ("unpaid", "price_inv_monthly", "free"),
         ("active", "unknown_price", "free"),
         ("active", None, "free"),
-        (None, "price_monthly", "free"),
+        (None, "price_pro_monthly", "free"),
     ],
 )
 def test_tier_for_subscription(status: str | None, price_id: str | None, expected: str) -> None:
-    assert tier_for_subscription(status, price_id, _PRO) == expected
+    settings = _settings(stripe_price_pro_legacy="price_pro_legacy_29")
+    assert tier_for_subscription(status, price_id, granting_price_ids(settings)) == expected
 
 
-def test_pro_price_ids_ignores_unset() -> None:
-    settings = _settings(stripe_price_pro_annual=None)
-    assert pro_price_ids(settings) == frozenset({"price_monthly"})
+def test_pro_price_ids_include_legacy_and_ignore_unset() -> None:
+    settings = _settings(
+        stripe_price_pro_annual=None,
+        stripe_price_pro_legacy="legacy_a, legacy_b",
+    )
+    assert pro_price_ids(settings) == frozenset({"price_pro_monthly", "legacy_a", "legacy_b"})
 
 
-def test_price_id_for_cadence() -> None:
+def test_investor_price_ids() -> None:
+    assert investor_price_ids(_settings()) == frozenset({"price_inv_monthly", "price_inv_annual"})
+
+
+def test_price_id_for_cadence_resolves_by_tier() -> None:
     settings = _settings()
-    assert price_id_for_cadence(settings, "monthly") == "price_monthly"
-    assert price_id_for_cadence(settings, "annual") == "price_annual"
+    assert price_id_for_cadence(settings, "pro", "monthly") == "price_pro_monthly"
+    assert price_id_for_cadence(settings, "pro", "annual") == "price_pro_annual"
+    assert price_id_for_cadence(settings, "investor", "monthly") == "price_inv_monthly"
+    assert price_id_for_cadence(settings, "investor", "annual") == "price_inv_annual"
 
 
 def test_price_id_for_cadence_unconfigured_raises() -> None:
-    settings = _settings(stripe_price_pro_annual=None)
+    settings = _settings(stripe_price_investor_annual=None)
     with pytest.raises(ConfigurationError):
-        price_id_for_cadence(settings, "annual")
+        price_id_for_cadence(settings, "investor", "annual")
 
 
 def test_subscription_state_extracts_price_from_nested_object() -> None:

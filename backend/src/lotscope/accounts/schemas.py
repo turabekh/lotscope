@@ -53,6 +53,7 @@ class UsageResponse(BaseModel):
 
 
 class CheckoutRequest(BaseModel):
+    tier: Literal["pro", "investor"] = "pro"
     cadence: Literal["monthly", "annual"] = "monthly"
 
 
