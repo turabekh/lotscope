@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A1** (Phase 1). Resolves amendment open question #1 (provider). Extends ADR-0010/0030 (billing/tiers), ADR-0018/0019 (dormant-provider pattern), and the `owners` module.
 
