@@ -121,6 +121,21 @@ class StagingOpa(Base):
     depth_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
 
 
+class StagingRtt(Base):
+    __tablename__ = "rtt"
+    __table_args__ = ({"schema": "staging"},)
+
+    parcel_number: Mapped[str] = mapped_column(String(20), primary_key=True)
+    document_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    document_type: Mapped[str | None] = mapped_column(String(60))
+    sale_date: Mapped[date | None] = mapped_column(Date)
+    sale_price: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    grantor: Mapped[str | None] = mapped_column(Text)
+    grantee: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str | None] = mapped_column(String(120))
+
+
 class StagingLiEvent(Base):
     __tablename__ = "li_event"
     __table_args__ = ({"schema": "staging"},)

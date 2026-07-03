@@ -9,12 +9,14 @@ from lotscope.ingestion.events import (
     classify_li_event,
     diff_assessment,
     diff_tax,
+    new_deed_event,
 )
 from lotscope.ingestion.models import ParcelEvent
 
 TAX_DATASET = "tax_delinquency"
 LI_DATASET = "li"
 OPA_DATASET = "opa"
+RTT_DATASET = "rtt"
 
 _STAGING_JOIN_SQL = text(
     "SELECT s.parcel_number, "
@@ -96,9 +98,7 @@ _LI_JOIN_SQL = text(
     "WHERE s.ingest_run_id = :ingest_run_id"
 )
 
-_LI_TYPE_SEEN_SQL = text(
-    "SELECT EXISTS (SELECT 1 FROM li_event WHERE event_type = :event_type)"
-)
+_LI_TYPE_SEEN_SQL = text("SELECT EXISTS (SELECT 1 FROM li_event WHERE event_type = :event_type)")
 
 _UPSERT_LI_SQL = text(
     "INSERT INTO li_event "
@@ -196,4 +196,56 @@ async def merge_opa(session: AsyncSession, ingest_run_id: int, *, source: str) -
 
     await session.flush()
     await session.execute(_UPSERT_OPA_SQL, {"ingest_run_id": ingest_run_id, "source": source})
+    return MergeResult(merged_rows=len(rows), event_count=events)
+
+
+_RTT_SEEN_SQL = text("SELECT EXISTS (SELECT 1 FROM sale)")
+
+_RTT_JOIN_SQL = text(
+    "SELECT s.parcel_number, s.document_id, s.sale_price, "
+    "(c.id IS NOT NULL) AS row_exists "
+    "FROM staging.rtt s "
+    "LEFT JOIN sale c ON c.parcel_number = s.parcel_number AND c.document_id = s.document_id "
+    "WHERE s.ingest_run_id = :ingest_run_id"
+)
+
+_UPSERT_RTT_SQL = text(
+    "INSERT INTO sale "
+    "(parcel_number, document_id, document_type, sale_date, sale_price, "
+    "grantor, grantee, source, updated_at) "
+    "SELECT parcel_number, document_id, document_type, sale_date, sale_price, "
+    "grantor, grantee, source, now() "
+    "FROM staging.rtt WHERE ingest_run_id = :ingest_run_id "
+    "ON CONFLICT (parcel_number, document_id) DO UPDATE SET "
+    "document_type = excluded.document_type, sale_date = excluded.sale_date, "
+    "sale_price = excluded.sale_price, grantor = excluded.grantor, "
+    "grantee = excluded.grantee, updated_at = now()"
+)
+
+
+async def merge_rtt(session: AsyncSession, ingest_run_id: int) -> MergeResult:
+    dataset_seen = bool(await session.scalar(_RTT_SEEN_SQL))
+    rows = (await session.execute(_RTT_JOIN_SQL, {"ingest_run_id": ingest_run_id})).all()
+
+    events = 0
+    if dataset_seen:
+        for row in rows:
+            if row.row_exists:
+                continue
+            draft = new_deed_event(row.document_id, _as_float(row.sale_price))
+            session.add(
+                ParcelEvent(
+                    parcel_number=row.parcel_number,
+                    dataset=RTT_DATASET,
+                    code=draft.code,
+                    severity=draft.severity,
+                    old_value=draft.old_value,
+                    new_value=draft.new_value,
+                    ingest_run_id=ingest_run_id,
+                )
+            )
+            events += 1
+        await session.flush()
+
+    await session.execute(_UPSERT_RTT_SQL, {"ingest_run_id": ingest_run_id})
     return MergeResult(merged_rows=len(rows), event_count=events)

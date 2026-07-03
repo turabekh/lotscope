@@ -116,3 +116,28 @@ async def test_load_rtt_is_idempotent_on_document(db_session: AsyncSession) -> N
         select(func.count()).select_from(Sale).where(Sale.document_id == "DOC-9")
     )
     assert count == 1
+
+
+@pytest.mark.integration
+async def test_load_rtt_emits_new_deed_for_new_document(db_session: AsyncSession) -> None:
+    from lotscope.ingestion.loaders.rtt import load_rtt
+
+    runs = [
+        [[_rtt_row(1, "DOC-1", 100000.0)]],
+        [[_rtt_row(1, "DOC-1", 100000.0), _rtt_row(2, "DOC-2", 200000.0)]],
+    ]
+    for pages in runs:
+        handler = _RowsHandler(pages)
+        async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
+            await load_rtt(db_session, carto, page_size=500)
+        await db_session.flush()
+
+    events = (
+        await db_session.execute(
+            text(
+                "SELECT code, new_value->>'document_id' AS doc FROM parcel_event "
+                "WHERE parcel_number = '001234567' ORDER BY id"
+            )
+        )
+    ).all()
+    assert [(e.code, e.doc) for e in events] == [("new_deed", "DOC-2")]

@@ -1,15 +1,19 @@
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.carto import CartoClient
+from lotscope.ingestion.merge import merge_rtt
+from lotscope.ingestion.models import IngestRun, StagingRtt
 from lotscope.ingestion.parsing import parse_iso_date
+from lotscope.ingestion.raw import write_raw
 from lotscope.ingestion.reconciliation import normalize_account
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
-from lotscope.valuation.models import Sale
 
 RTT_DATASET = "rtt_summary"
 RTT_KEY_COLUMN = "cartodb_id"
@@ -52,6 +56,20 @@ def to_sale_row(record: RttRecord) -> dict[str, Any] | None:
     }
 
 
+def _staging_row(row: dict[str, Any], run_id: int) -> dict[str, Any]:
+    return {
+        "parcel_number": row["parcel_number"],
+        "document_id": row["document_id"],
+        "ingest_run_id": run_id,
+        "document_type": row.get("document_type"),
+        "sale_date": row.get("sale_date"),
+        "sale_price": row.get("sale_price"),
+        "grantor": row.get("grantor"),
+        "grantee": row.get("grantee"),
+        "source": row["source"],
+    }
+
+
 async def load_rtt(
     session: AsyncSession,
     carto: CartoClient,
@@ -59,6 +77,11 @@ async def load_rtt(
     page_size: int = 5000,
     where: str | None = None,
 ) -> int:
+    run = IngestRun(dataset=RTT_DATASET)
+    session.add(run)
+    await session.flush()
+    await session.execute(text("DELETE FROM staging.rtt"))
+
     total = 0
     async for page in carto.paginate_by_key(
         table=RTT_DATASET,
@@ -67,19 +90,41 @@ async def load_rtt(
         page_size=page_size,
         where=where,
     ):
-        sales = [
-            row
-            for row in (to_sale_row(RttRecord.model_validate(raw)) for raw in page)
-            if row is not None
-        ]
-        if not sales:
+        mapped: list[dict[str, Any]] = []
+        raw_rows: list[dict[str, Any]] = []
+        for raw in page:
+            row = to_sale_row(RttRecord.model_validate(raw))
+            if row is None:
+                continue
+            mapped.append(row)
+            raw_rows.append(
+                {
+                    "ingest_run_id": run.id,
+                    "dataset": RTT_DATASET,
+                    "natural_key": row["document_id"],
+                    "payload": dict(raw),
+                }
+            )
+        if not mapped:
             continue
         parcel_stubs = [
             {"parcel_number": parcel_number, "source": RTT_DATASET}
-            for parcel_number in {sale["parcel_number"] for sale in sales}
+            for parcel_number in {row["parcel_number"] for row in mapped}
         ]
         await insert_ignore(session, Parcel, parcel_stubs, index_elements=["parcel_number"])
-        await upsert(session, Sale, sales, index_elements=["parcel_number", "document_id"])
-        total += len(sales)
+        staging_rows = [_staging_row(row, run.id) for row in mapped]
+        await upsert(
+            session, StagingRtt, staging_rows, index_elements=["parcel_number", "document_id"]
+        )
+        await write_raw(session, raw_rows)
+        total += len(mapped)
+
+    result = await merge_rtt(session, run.id)
+    run.status = "success"
+    run.finished_at = datetime.now(UTC)
+    run.raw_rows = total
+    run.merged_rows = result.merged_rows
+    run.event_count = result.event_count
+    await session.flush()
     await record_freshness(session, RTT_DATASET, status="success", success=True, row_count=total)
     return total

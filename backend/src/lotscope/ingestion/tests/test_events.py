@@ -5,14 +5,17 @@ from lotscope.ingestion.events import (
     CODE_DANGER,
     CODE_DELINQUENT,
     CODE_LI_NEW,
+    CODE_NEW_DEED,
     CODE_NEW_DEMO,
     CODE_NEW_PERMIT,
     CODE_SHERIFF_SALE,
     CODE_TAX_UP,
+    SEVERITY_LOW,
     TaxSnapshot,
     classify_li_event,
     diff_assessment,
     diff_tax,
+    new_deed_event,
 )
 
 
@@ -68,6 +71,14 @@ def test_classify_li_event(
 
 def test_classify_li_event_unknown_type_is_none() -> None:
     assert classify_li_event("inspection", None, None) is None
+
+
+def test_new_deed_event_builds_low_severity_draft() -> None:
+    draft = new_deed_event("DOC-1", 150000.0)
+    assert draft.code == CODE_NEW_DEED
+    assert draft.severity == SEVERITY_LOW
+    assert draft.old_value is None
+    assert draft.new_value == {"document_id": "DOC-1", "sale_price": 150000.0}
 
 
 @pytest.mark.parametrize(

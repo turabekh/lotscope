@@ -8,6 +8,7 @@ CODE_LI_NEW = "li_new"
 CODE_DANGER = "danger"
 CODE_NEW_PERMIT = "new_permit"
 CODE_NEW_DEMO = "new_demo"
+CODE_NEW_DEED = "new_deed"
 CODE_ASSESSMENT = "assessment"
 
 SEVERITY_HIGH = "high"
@@ -22,6 +23,7 @@ EVENT_LABELS: dict[str, str] = {
     CODE_DANGER: "Dangerous / unsafe",
     CODE_NEW_PERMIT: "New permit",
     CODE_NEW_DEMO: "New demolition",
+    CODE_NEW_DEED: "New deed",
     CODE_ASSESSMENT: "Assessment change",
 }
 
@@ -61,6 +63,15 @@ def diff_assessment(
         SEVERITY_LOW,
         {"market_value": old_market_value},
         {"market_value": new_market_value},
+    )
+
+
+def new_deed_event(document_id: str, sale_price: float | None) -> EventDraft:
+    return EventDraft(
+        CODE_NEW_DEED,
+        SEVERITY_LOW,
+        None,
+        {"document_id": document_id, "sale_price": sale_price},
     )
 
 
