@@ -237,3 +237,27 @@ def test_unprofitable_deal_warns() -> None:
 def test_unmodelable_deal_is_info() -> None:
     items, _ = build_checklist(_verdict(max_allowable_offer=None))
     assert _item(items, "deal").status == "info"
+
+
+def test_overlay_and_rco_flags_surface_in_overlays_category() -> None:
+    flags = [
+        {
+            "code": "overlay_district",
+            "severity": "low",
+            "label": "Zoning overlay district",
+            "detail": "Parcel is in overlay /NCA — check Title 14 §14-500 series.",
+            "source": "zoning_overlays",
+        },
+        {
+            "code": "rco",
+            "severity": "low",
+            "label": "Registered Community Organization",
+            "detail": "RCO: Test RCO — community meeting required for variances.",
+            "source": "zoning_rco",
+        },
+    ]
+    items, _ = build_checklist(_verdict(risk_flags=flags))
+    overlays = _item(items, "overlays")
+    assert overlays.status == "info"
+    assert "/NCA" in overlays.detail
+    assert "Test RCO" in overlays.detail

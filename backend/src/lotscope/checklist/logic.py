@@ -45,8 +45,9 @@ _RISK_CATEGORIES: list[tuple[str, str, frozenset[str], str]] = [
     (
         "overlays",
         "Historic & overlays",
-        frozenset({"historic_district"}),
-        "Not in a Philadelphia Register historic district; no Historical Commission review.",
+        frozenset({"historic_district", "overlay_district", "rco"}),
+        "Not in a historic district, zoning overlay, or RCO; no extra design review or "
+        "community-meeting requirement.",
     ),
 ]
 

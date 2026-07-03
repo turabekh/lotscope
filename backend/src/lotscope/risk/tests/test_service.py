@@ -201,3 +201,34 @@ async def test_clean_parcel_has_no_flags(db_session: AsyncSession) -> None:
 
 async def test_missing_parcel_returns_none(db_session: AsyncSession) -> None:
     assert await assess_parcel_risk(db_session, "999999999") is None
+
+
+@pytest.mark.integration
+async def test_overlay_and_rco_intersection_flagged(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "('000000030', ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO zoning_overlay (external_id, name, geom_2272) VALUES "
+            "('O-1', '/NCA Overlay', ST_GeomFromText('POLYGON((5 5,5 20,20 20,20 5,5 5))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO rco (external_id, name, geom_2272) VALUES "
+            "('R-1', 'Test RCO', ST_GeomFromText('POLYGON((1 1,1 30,30 30,30 1,1 1))', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel_risk(db_session, "000000030")
+    assert result is not None
+    flags = {flag.code: flag for flag in result.flags}
+    assert "overlay_district" in flags
+    assert "/NCA Overlay" in flags["overlay_district"].detail
+    assert "rco" in flags
+    assert "Test RCO" in flags["rco"].detail

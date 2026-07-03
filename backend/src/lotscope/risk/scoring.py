@@ -56,6 +56,16 @@ class HistoricSignal:
 
 
 @dataclass(frozen=True)
+class OverlaySignal:
+    overlay_names: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class RcoSignal:
+    rco_names: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class RiskSignals:
     li: LiSignal
     tax: TaxSignal | None = None
@@ -64,6 +74,8 @@ class RiskSignals:
     title: TitleSignal | None = None
     access: AccessSignal | None = None
     historic: HistoricSignal | None = None
+    overlays: OverlaySignal | None = None
+    rco: RcoSignal | None = None
 
 
 @dataclass(frozen=True)
@@ -232,6 +244,34 @@ def _historic_flag(historic: HistoricSignal) -> RiskFlag | None:
     )
 
 
+def _overlay_flag(overlays: OverlaySignal) -> RiskFlag | None:
+    if not overlays.overlay_names:
+        return None
+    names = ", ".join(overlays.overlay_names)
+    return RiskFlag(
+        "overlay_district",
+        "low",
+        "Zoning overlay district",
+        f"Parcel is in overlay {names} — check Title 14 §14-500 series for modified "
+        "standards that can change what is buildable by-right.",
+        "zoning_overlays",
+    )
+
+
+def _rco_flag(rco: RcoSignal) -> RiskFlag | None:
+    if not rco.rco_names:
+        return None
+    names = ", ".join(rco.rco_names)
+    return RiskFlag(
+        "rco",
+        "low",
+        "Registered Community Organization",
+        f"RCO: {names} — a community meeting is required before a zoning variance or "
+        "special exception.",
+        "zoning_rco",
+    )
+
+
 def _flood_flag(flood_zones: list[str]) -> RiskFlag | None:
     if not flood_zones:
         return None
@@ -286,6 +326,14 @@ def assess_risk(signals: RiskSignals) -> RiskAssessment:
         historic_flag = _historic_flag(signals.historic)
         if historic_flag is not None:
             flags.append(historic_flag)
+    if signals.overlays is not None:
+        overlay_flag = _overlay_flag(signals.overlays)
+        if overlay_flag is not None:
+            flags.append(overlay_flag)
+    if signals.rco is not None:
+        rco_flag = _rco_flag(signals.rco)
+        if rco_flag is not None:
+            flags.append(rco_flag)
 
     risk_score = min(100.0, sum(_WEIGHT[flag.severity] for flag in flags))
     confidence: Confidence = "high" if signals.tax is not None else "medium"

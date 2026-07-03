@@ -15,6 +15,8 @@ from lotscope.risk.scoring import (
     AccessSignal,
     HistoricSignal,
     LiSignal,
+    OverlaySignal,
+    RcoSignal,
     RiskSignals,
     TaxSignal,
     TitleSignal,
@@ -62,6 +64,16 @@ _HISTORIC_SQL = text(
     "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL "
     "ORDER BY hd.name LIMIT 1"
 )
+_OVERLAY_SQL = text(
+    "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
+    "JOIN zoning_overlay zo ON ST_Intersects(zo.geom_2272, p.geom_2272) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL AND zo.name IS NOT NULL"
+)
+_RCO_SQL = text(
+    "SELECT array_agg(DISTINCT r.name ORDER BY r.name) AS names FROM parcel p "
+    "JOIN rco r ON ST_Intersects(r.geom_2272, p.geom_2272) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL AND r.name IS NOT NULL"
+)
 
 _CHECKED_SOURCES = (
     "tax_status",
@@ -69,6 +81,8 @@ _CHECKED_SOURCES = (
     "flood_zone",
     "street_centerline",
     "historicdistricts_local",
+    "zoning_overlays",
+    "zoning_rco",
     "parcel",
 )
 
@@ -119,6 +133,16 @@ async def _historic_signal(session: AsyncSession, parcel_number: str) -> Histori
     return HistoricSignal(in_district=name is not None, district_name=name)
 
 
+async def _overlay_signal(session: AsyncSession, parcel_number: str) -> OverlaySignal:
+    names = await session.scalar(_OVERLAY_SQL, {"parcel_number": parcel_number})
+    return OverlaySignal(overlay_names=tuple(names or ()))
+
+
+async def _rco_signal(session: AsyncSession, parcel_number: str) -> RcoSignal:
+    names = await session.scalar(_RCO_SQL, {"parcel_number": parcel_number})
+    return RcoSignal(rco_names=tuple(names or ()))
+
+
 async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskResult | None:
     parcel = (await session.execute(_PARCEL_SQL, {"parcel_number": parcel_number})).one_or_none()
     if parcel is None:
@@ -136,6 +160,10 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
         if parcel.has_geometry
         else HistoricSignal(in_district=False)
     )
+    overlays = (
+        await _overlay_signal(session, parcel_number) if parcel.has_geometry else OverlaySignal()
+    )
+    rco = await _rco_signal(session, parcel_number) if parcel.has_geometry else RcoSignal()
     assessment = assess_risk(
         RiskSignals(
             li=li,
@@ -145,6 +173,8 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
             title=TitleSignal(owner=parcel.owner),
             access=AccessSignal(has_geometry=parcel.has_geometry, has_street_frontage=has_frontage),
             historic=historic,
+            overlays=overlays,
+            rco=rco,
         )
     )
     return RiskResult(

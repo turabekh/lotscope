@@ -4,6 +4,8 @@ from lotscope.risk.scoring import (
     AccessSignal,
     HistoricSignal,
     LiSignal,
+    OverlaySignal,
+    RcoSignal,
     RiskSignals,
     TaxSignal,
     TitleSignal,
@@ -207,3 +209,24 @@ def test_risk_score_is_capped_at_100() -> None:
         flood_zones=["AE"],
     )
     assert assess_risk(signals).risk_score == 100.0
+
+
+def test_overlay_district_flag_lists_names() -> None:
+    signals = RiskSignals(li=LiSignal(), overlays=OverlaySignal(overlay_names=("/NCA", "/CTR")))
+    flag = next(f for f in assess_risk(signals).flags if f.code == "overlay_district")
+    assert flag.severity == "low"
+    assert "/NCA" in flag.detail
+    assert "/CTR" in flag.detail
+
+
+def test_rco_flag_lists_name() -> None:
+    signals = RiskSignals(li=LiSignal(), rco=RcoSignal(rco_names=("Girard Estate Neighbors",)))
+    flag = next(f for f in assess_risk(signals).flags if f.code == "rco")
+    assert flag.severity == "low"
+    assert "Girard Estate Neighbors" in flag.detail
+
+
+def test_no_overlay_or_rco_when_empty() -> None:
+    codes = _codes(RiskSignals(li=LiSignal(), overlays=OverlaySignal(), rco=RcoSignal()))
+    assert "overlay_district" not in codes
+    assert "rco" not in codes
