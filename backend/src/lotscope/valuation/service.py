@@ -4,7 +4,13 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.valuation.avm import Comp, estimate_land_value, land_use_class, price_per_sqft
+from lotscope.valuation.avm import (
+    Comp,
+    estimate_land_value,
+    is_related_party,
+    land_use_class,
+    price_per_sqft,
+)
 from lotscope.valuation.schemas import CompResult, ValuationResult
 
 DEFAULT_RADIUS_FT = 1500.0
@@ -25,6 +31,8 @@ _COMPS_SQL = text(
     "       ST_Distance(subject.pt, ST_Centroid(cp.geom_2272)) AS distance_ft, "
     "       s.sale_price AS sale_price, "
     "       s.sale_date AS sale_date, "
+    "       s.grantor AS grantor, "
+    "       s.grantee AS grantee, "
     "       cp.lot_area_sqft AS lot_area_sqft "
     "FROM sale s "
     "JOIN parcel cp ON cp.parcel_number = s.parcel_number "
@@ -59,7 +67,7 @@ async def find_comps(
     vacant_only: bool = True,
     since: date | None = None,
     use_class: str | None = None,
-) -> list[Comp]:
+) -> tuple[list[Comp], int]:
     cutoff = since if since is not None else date.today() - timedelta(days=365 * years)
     rows = await session.execute(
         _COMPS_SQL,
@@ -74,7 +82,11 @@ async def find_comps(
         },
     )
     comps: list[Comp] = []
+    related_party_excluded = 0
     for row in rows:
+        if is_related_party(row.grantor, row.grantee):
+            related_party_excluded += 1
+            continue
         sale_price = float(row.sale_price)
         lot_area = _as_float(row.lot_area_sqft)
         comps.append(
@@ -88,7 +100,7 @@ async def find_comps(
                 price_per_sqft=price_per_sqft(sale_price, lot_area),
             )
         )
-    return comps
+    return comps, related_party_excluded
 
 
 async def value_parcel(
@@ -108,8 +120,9 @@ async def value_parcel(
 
     use_class = land_use_class(subject.base_zoning_code) if segment_by_use_class else None
     comps: list[Comp] = []
+    related_party_excluded = 0
     if subject.has_geometry:
-        comps = await find_comps(
+        comps, related_party_excluded = await find_comps(
             session,
             parcel_number,
             radius_ft=radius_ft,
@@ -119,7 +132,11 @@ async def value_parcel(
             use_class=use_class,
         )
 
-    estimate = estimate_land_value(_as_float(subject.lot_area_sqft), comps)
+    estimate = estimate_land_value(
+        _as_float(subject.lot_area_sqft),
+        comps,
+        related_party_excluded=related_party_excluded,
+    )
     return ValuationResult(
         parcel_number=parcel_number,
         estimate=estimate.estimate,

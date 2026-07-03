@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A10**. Extends ADR-0007-era valuation and the AVM (`valuation/`).
 

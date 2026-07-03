@@ -108,7 +108,7 @@ async def analyze_parcel_scenarios(
     envelope = await compute_envelope(session, parcel_number)
 
     use_class = land_use_class(subject.base_zoning_code)
-    finished_comps = await find_comps(
+    finished_comps, _ = await find_comps(
         session, parcel_number, radius_ft=radius_ft, years=years, vacant_only=False,
         use_class=use_class,
     )
@@ -198,7 +198,7 @@ async def build_deal(
     envelope = await compute_envelope(session, parcel_number)
 
     use_class = land_use_class(base_zoning_code)
-    finished_comps = await find_comps(
+    finished_comps, _ = await find_comps(
         session,
         parcel_number,
         radius_ft=radius_ft,

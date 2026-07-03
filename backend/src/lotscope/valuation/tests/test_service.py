@@ -32,6 +32,8 @@ async def _add_comp(
     price: float,
     vacant: bool = True,
     zoning: str | None = None,
+    grantor: str | None = None,
+    grantee: str | None = None,
 ) -> None:
     geom = (
         f"POLYGON(({offset_ft} 0,{offset_ft} 5,{offset_ft + 5} 5,{offset_ft + 5} 0,{offset_ft} 0))"
@@ -45,10 +47,17 @@ async def _add_comp(
     )
     await session.execute(
         text(
-            "INSERT INTO sale (parcel_number, document_id, sale_price, sale_date) "
-            "VALUES (:pn, :doc, :price, '2025-01-01')"
+            "INSERT INTO sale "
+            "(parcel_number, document_id, sale_price, sale_date, grantor, grantee) "
+            "VALUES (:pn, :doc, :price, '2025-01-01', :grantor, :grantee)"
         ),
-        {"pn": parcel_number, "doc": f"DOC-{parcel_number}", "price": price},
+        {
+            "pn": parcel_number,
+            "doc": f"DOC-{parcel_number}",
+            "price": price,
+            "grantor": grantor,
+            "grantee": grantee,
+        },
     )
 
 
@@ -80,6 +89,36 @@ async def test_value_parcel_excludes_far_and_non_vacant_comps(db_session: AsyncS
     assert result is not None
     assert result.comp_count == 1
     assert result.comps[0].parcel_number == "000000010"
+
+
+async def test_value_parcel_excludes_related_party_sales(db_session: AsyncSession) -> None:
+    await _add_subject(db_session, "000000001", 2000)
+    for index in range(4):
+        await _add_comp(
+            db_session,
+            f"0000001{index}",
+            offset_ft=50 * (index + 1),
+            area=1000,
+            price=100000,
+            grantor=f"SELLER PERSON{index}",
+            grantee=f"BUYER OTHER{index}",
+        )
+    await _add_comp(
+        db_session,
+        "000000020",
+        offset_ft=60,
+        area=1000,
+        price=10000,
+        grantor="NGUYEN MINH",
+        grantee="NGUYEN LAN",
+    )
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+    assert result is not None
+    assert result.comp_count == 4
+    assert "000000020" not in {comp.parcel_number for comp in result.comps}
+    assert any("related-party" in reason.lower() for reason in result.reasons)
 
 
 async def test_value_parcel_segments_comps_by_use_class(db_session: AsyncSession) -> None:

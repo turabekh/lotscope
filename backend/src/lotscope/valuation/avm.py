@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from datetime import date
 from statistics import mean, median, pstdev, quantiles
@@ -11,6 +12,47 @@ _MEDIUM_MIN_COMPS = 3
 _MEDIUM_MAX_CV = 0.5
 _MIN_COMPS_FOR_TRIM = 4
 _IQR_FENCE = 1.5
+
+_MIN_NAME_TOKEN_LEN = 3
+_NAME_STOPWORDS = frozenset(
+    {
+        "JR",
+        "SR",
+        "II",
+        "III",
+        "IV",
+        "LLC",
+        "INC",
+        "CO",
+        "CORP",
+        "LP",
+        "LLP",
+        "LTD",
+        "TRUST",
+        "TRUSTEE",
+        "TRUSTEES",
+        "ESTATE",
+        "ETAL",
+        "THE",
+        "AND",
+    }
+)
+_NAME_TOKEN_RE = re.compile(r"[A-Z]+")
+
+
+def _name_tokens(name: str | None) -> frozenset[str]:
+    if not name:
+        return frozenset()
+    tokens = _NAME_TOKEN_RE.findall(name.upper())
+    return frozenset(
+        token
+        for token in tokens
+        if len(token) >= _MIN_NAME_TOKEN_LEN and token not in _NAME_STOPWORDS
+    )
+
+
+def is_related_party(grantor: str | None, grantee: str | None) -> bool:
+    return bool(_name_tokens(grantor) & _name_tokens(grantee))
 
 
 @dataclass(frozen=True)
@@ -94,7 +136,12 @@ def _unknown(comp_count: int, reason: str) -> ValuationEstimate:
     )
 
 
-def estimate_land_value(subject_area_sqft: float | None, comps: list[Comp]) -> ValuationEstimate:
+def estimate_land_value(
+    subject_area_sqft: float | None,
+    comps: list[Comp],
+    *,
+    related_party_excluded: int = 0,
+) -> ValuationEstimate:
     if subject_area_sqft is None or subject_area_sqft <= 0:
         return _unknown(len(comps), "Subject lot area is unknown; cannot estimate land value.")
 
@@ -121,6 +168,11 @@ def estimate_land_value(subject_area_sqft: float | None, comps: list[Comp]) -> V
     if trimmed:
         reasons.append(
             f"Excluded {trimmed} price-per-sqft outlier(s) beyond the interquartile fence."
+        )
+    if related_party_excluded:
+        reasons.append(
+            f"Excluded {related_party_excluded} likely related-party sale(s) "
+            "sharing an owner surname."
         )
     return ValuationEstimate(
         estimate=float(estimate),

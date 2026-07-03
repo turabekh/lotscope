@@ -5,6 +5,7 @@ import pytest
 from lotscope.valuation.avm import (
     Comp,
     estimate_land_value,
+    is_related_party,
     land_use_class,
     price_per_sqft,
     trim_outlier_rates,
@@ -115,3 +116,40 @@ def test_estimate_trims_per_sqft_outlier_to_tighten_range() -> None:
     assert result.comp_count == 6
     assert any("outlier" in reason.lower() for reason in result.reasons)
     assert result.confidence == "high"
+
+
+@pytest.mark.parametrize(
+    ("grantor", "grantee", "expected"),
+    [
+        ("SMITH JOHN", "SMITH JANE", True),
+        ("SMITH JOHN JR", "SMITH JOHN SR", True),
+        ("SMITH JOHN & SMITH JANE", "SMITH JANE", True),
+        ("THE ABC TRUST", "ABC HOLDINGS LLC", True),
+        ("JOHNSON MARY", "WILLIAMS ROBERT", False),
+        ("ACME LLC", "BETA INC", False),
+        ("A B", "A B", False),
+        (None, "SMITH JOHN", False),
+        ("SMITH JOHN", None, False),
+        ("", "", False),
+    ],
+)
+def test_is_related_party(grantor: str | None, grantee: str | None, expected: bool) -> None:
+    assert is_related_party(grantor, grantee) is expected
+
+
+def test_is_related_party_is_symmetric_and_self_related() -> None:
+    a, b = "OCONNOR PATRICK", "SULLIVAN ERIN"
+    assert is_related_party(a, b) == is_related_party(b, a)
+    assert is_related_party(a, a) is True
+
+
+def test_estimate_reports_related_party_exclusions() -> None:
+    comps = [_comp(rate) for rate in (98, 100, 101, 99)]
+    result = estimate_land_value(2000.0, comps, related_party_excluded=2)
+    assert any("related-party" in reason.lower() for reason in result.reasons)
+
+
+def test_estimate_omits_related_party_reason_when_none_excluded() -> None:
+    comps = [_comp(rate) for rate in (98, 100, 101, 99)]
+    result = estimate_land_value(2000.0, comps)
+    assert not any("related-party" in reason.lower() for reason in result.reasons)
