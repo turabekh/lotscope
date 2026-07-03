@@ -166,31 +166,27 @@ async function toggleSave(): Promise<void> {
           <div class="header-actions">
             <q-btn
               v-if="!currentDeal"
-              flat
+              outline
               dense
-              round
+              no-caps
               size="sm"
               color="primary"
               icon="add_task"
+              label="Pipeline"
               :loading="addingDeal"
-              aria-label="Add to pipeline"
               @click="addToPipeline"
-            >
-              <q-tooltip>Add to pipeline</q-tooltip>
-            </q-btn>
+            />
             <q-btn
               v-else
               flat
               dense
-              round
+              no-caps
               size="sm"
               color="primary"
               icon="view_kanban"
-              :aria-label="dealStageLabel"
+              :label="dealStageLabel"
               :to="{ name: 'pipeline', params: { market: market.active } }"
-            >
-              <q-tooltip>In pipeline · {{ dealStageLabel }}</q-tooltip>
-            </q-btn>
+            />
             <q-btn
               flat
               dense
