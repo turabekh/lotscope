@@ -1,7 +1,27 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel
+
+
+class SheriffSaleItem(BaseModel):
+    parcel_number: str
+    address: str | None
+    case_number: str
+    sale_type: str | None
+    sale_date: date | None
+    status: str | None
+    opening_bid: float | None
+    plaintiff: str | None
+    max_allowable_offer: float | None
+    bid_gap: float | None
+    opportunity_score: int | None
+
+
+class SheriffSaleCalendar(BaseModel):
+    total: int
+    returned: int
+    items: list[SheriffSaleItem]
 
 
 class RiskFlagSchema(BaseModel):

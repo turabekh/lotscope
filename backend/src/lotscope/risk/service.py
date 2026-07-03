@@ -1,10 +1,15 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.risk.schemas import RiskFlagSchema, RiskResult
+from lotscope.risk.schemas import (
+    RiskFlagSchema,
+    RiskResult,
+    SheriffSaleCalendar,
+    SheriffSaleItem,
+)
 from lotscope.risk.scoring import (
     STREET_ACCESS_MAX_FT,
     AccessSignal,
@@ -160,3 +165,71 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
         sources=[{"source": source} for source in _CHECKED_SOURCES],
         computed_at=computed_at,
     )
+
+
+_SHERIFF_SELECT = (
+    "SELECT ss.parcel_number, p.address, ss.case_number, ss.sale_type, ss.sale_date, "
+    "ss.status, ss.opening_bid, ss.plaintiff, pv.max_allowable_offer, "
+    "(pv.max_allowable_offer - ss.opening_bid) AS bid_gap, "
+    "round(pv.opportunity_score)::int AS opportunity_score "
+    "FROM sheriff_sale ss "
+    "JOIN parcel p ON p.parcel_number = ss.parcel_number "
+    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = ss.parcel_number"
+)
+
+
+async def list_sheriff_sales(
+    session: AsyncSession,
+    *,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    zip_code: str | None = None,
+    limit: int = 200,
+) -> SheriffSaleCalendar:
+    conditions: list[str] = []
+    params: dict[str, Any] = {"limit": limit}
+    if date_from is not None:
+        conditions.append("ss.sale_date >= :date_from")
+        params["date_from"] = date_from
+    if date_to is not None:
+        conditions.append("ss.sale_date <= :date_to")
+        params["date_to"] = date_to
+    if zip_code is not None:
+        conditions.append("p.zip_code = :zip_code")
+        params["zip_code"] = zip_code
+    where = " AND ".join(conditions) if conditions else "TRUE"
+
+    total = await session.scalar(
+        text(
+            f"SELECT count(*) FROM sheriff_sale ss JOIN parcel p "
+            f"ON p.parcel_number = ss.parcel_number WHERE {where}"
+        ),
+        params,
+    )
+    rows = (
+        await session.execute(
+            text(
+                f"{_SHERIFF_SELECT} WHERE {where} "
+                "ORDER BY bid_gap DESC NULLS LAST, ss.sale_date ASC NULLS LAST, ss.id "
+                "LIMIT :limit"
+            ),
+            params,
+        )
+    ).all()
+    items = [
+        SheriffSaleItem(
+            parcel_number=row.parcel_number,
+            address=row.address,
+            case_number=row.case_number,
+            sale_type=row.sale_type,
+            sale_date=row.sale_date,
+            status=row.status,
+            opening_bid=_as_float(row.opening_bid),
+            plaintiff=row.plaintiff,
+            max_allowable_offer=_as_float(row.max_allowable_offer),
+            bid_gap=_as_float(row.bid_gap),
+            opportunity_score=row.opportunity_score,
+        )
+        for row in rows
+    ]
+    return SheriffSaleCalendar(total=int(total or 0), returned=len(items), items=items)

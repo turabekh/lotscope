@@ -475,6 +475,52 @@ async def test_feed_lists_recent_events_for_paid_tier(db_session: AsyncSession) 
 
 
 @pytest.mark.integration
+async def test_sheriff_sales_is_gated_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/sheriff-sales")
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_sheriff_sales_ranked_by_bid_gap_for_paid_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, owner) VALUES "
+            "('000000001', 'A'), ('000000002', 'B')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel_verdict "
+            "(parcel_number, verdict_version, max_allowable_offer, opportunity_score) VALUES "
+            "('000000001', 't', 50000, 80), ('000000002', 't', 30000, 60)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale "
+            "(parcel_number, case_number, sale_date, status, opening_bid) VALUES "
+            "('000000001', 'BW-A', '2026-08-05', 'Open', 10000), "
+            "('000000002', 'BW-B', '2026-08-06', 'Open', 25000)"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.get("/sheriff-sales")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    assert [item["case_number"] for item in body["items"]] == ["BW-A", "BW-B"]
+    assert body["items"][0]["bid_gap"] == 40000.0
+    assert body["items"][0]["opportunity_score"] == 80
+
+
+@pytest.mark.integration
 async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
