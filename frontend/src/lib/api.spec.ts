@@ -47,6 +47,19 @@ describe('api', () => {
     )
   })
 
+  it('getSheriffSales builds the query and returns the calendar', async () => {
+    const fetchMock = mockFetch(200, { total: 1, returned: 1, items: [] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await api.getSheriffSales({ zip: '19146', limit: 50 })
+
+    expect(result.total).toBe(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/sheriff-sales?zip=19146&limit=50'),
+      expect.anything(),
+    )
+  })
+
   it('throws ApiError with the detail on a failure response', async () => {
     vi.stubGlobal('fetch', mockFetch(404, { detail: 'Parcel not found.' }))
 

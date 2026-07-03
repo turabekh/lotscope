@@ -8,6 +8,7 @@ import type {
   CreditBalance,
   CreditPackKey,
   FeedResponse,
+  SheriffSalesResponse,
   DealItem,
   DealResult,
   DealStage,
@@ -402,5 +403,16 @@ export const api = {
     if (params.limit != null) query.set('limit', String(params.limit))
     const suffix = query.toString()
     return request(`/feed${suffix ? `?${suffix}` : ''}`)
+  },
+  getSheriffSales(
+    params: { from?: string; to?: string; zip?: string; limit?: number } = {},
+  ): Promise<SheriffSalesResponse> {
+    const query = new URLSearchParams()
+    if (params.from != null) query.set('from', params.from)
+    if (params.to != null) query.set('to', params.to)
+    if (params.zip != null) query.set('zip', params.zip)
+    if (params.limit != null) query.set('limit', String(params.limit))
+    const suffix = query.toString()
+    return request(`/sheriff-sales${suffix ? `?${suffix}` : ''}`)
   },
 }

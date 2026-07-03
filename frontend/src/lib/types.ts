@@ -682,6 +682,26 @@ export interface FeedResponse {
   events: FeedEvent[]
 }
 
+export interface SheriffSaleItem {
+  parcel_number: string
+  address: string | null
+  case_number: string
+  sale_type: string | null
+  sale_date: string | null
+  status: string | null
+  opening_bid: number | null
+  plaintiff: string | null
+  max_allowable_offer: number | null
+  bid_gap: number | null
+  opportunity_score: number | null
+}
+
+export interface SheriffSalesResponse {
+  total: number
+  returned: number
+  items: SheriffSaleItem[]
+}
+
 export interface PlanInfo {
   tier: string
   name: string
