@@ -4,7 +4,7 @@ Date: 2026-07-04
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 feature **A5** (Phase 6) — the last amendment feature. Extends §5.10 (reports) and the owner-side revenue lines. Reuses the `assessment` engine, the fpdf2 renderer (ADR-0021), the Stripe one-time-checkout + webhook fulfillment (ADR-0030), the credit ledger (ADR-0035), and email (ADR-0018).
 

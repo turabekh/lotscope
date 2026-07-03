@@ -201,8 +201,7 @@ def render_dossier_pdf(
             0,
             5,
             _s(
-                f"{summary.passed} clear, {summary.warnings} to check, "
-                f"{summary.failures} issue(s)."
+                f"{summary.passed} clear, {summary.warnings} to check, {summary.failures} issue(s)."
             ),
             new_x=XPos.LMARGIN,
             new_y=YPos.NEXT,
