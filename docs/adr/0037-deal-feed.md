@@ -51,3 +51,9 @@ The feed is only as rich as the datasets on the staged path (ADR-0036). Today th
 - **Tier discovery vs gate**: the sidebar item is visible to Free (so they see what they're missing) but the page/API gate — a deliberate upgrade surface, same pattern as exports.
 - **First-release coverage is tax-only** until more loaders migrate; the summary will look thin until then. Acceptable and honest (the page states its window and counts); it also creates the incentive to keep migrating loaders.
 - **Deferred**: web-push for feed events (amendment open Q#4 — stays in-app + email for v1; ADR-0019 infra exists if we revisit); inline buy-box criteria on the feed beyond a saved search (v1 uses a saved search or whole-market); per-event read/dismiss state; feed for non-Philadelphia markets (single-market today).
+
+## Follow-up (2026-07-03): API + page shipped; Investor email pending
+
+Shipped: `GET /feed?days=&saved_search_id=&limit=` (Pro+ via `feed_access`), a `feed/` read-model module reusing `savedsearch.matching.build_where` verbatim (summary counts + capped, honest-counted event list), and a market-scoped **Feed page** at `/:market/feed` (sidebar item `bolt`, day-window + saved-search filter, rows deep-link to the dossier, Free sees an upgrade wall). Event code→label lives in `ingestion/events.py` as the single source of truth. Live coverage: tax (`delinquent`, `tax_up`) + L&I (`danger`, `li_new`, `new_permit`, `new_demo`) as those loaders are on the staged path.
+
+**Pending (next slice):** the **Investor daily email digest** — a worker cron reusing the ADR-0018 SMTP machinery + the `send_saved_search_alerts` per-user pattern (24h window, union of each Investor's alert-enabled saved-search criteria). Separated as its own slice to avoid rushing notifications wiring; the in-app feed is the daily driver and stands alone.

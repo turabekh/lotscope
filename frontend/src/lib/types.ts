@@ -656,6 +656,32 @@ export interface CreditBalance {
   entries: CreditLedgerItem[]
 }
 
+export interface FeedSummaryItem {
+  code: string
+  label: string
+  count: number
+}
+
+export interface FeedEvent {
+  parcel_number: string
+  address: string | null
+  code: string
+  label: string
+  severity: 'high' | 'medium' | 'low'
+  detected_at: string
+  old_value: Record<string, unknown> | null
+  new_value: Record<string, unknown> | null
+  opportunity_score: number | null
+}
+
+export interface FeedResponse {
+  since: string
+  total: number
+  returned: number
+  summary: FeedSummaryItem[]
+  events: FeedEvent[]
+}
+
 export interface PlanInfo {
   tier: string
   name: string

@@ -442,6 +442,39 @@ async def test_credits_endpoint_reads_ledger_balance(db_session: AsyncSession) -
 
 
 @pytest.mark.integration
+async def test_feed_is_gated_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/feed")
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_feed_lists_recent_events_for_paid_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, owner, is_vacant) VALUES ('000000001', 'O', true)")
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel_event (parcel_number, dataset, code, severity) "
+            "VALUES ('000000001', 'tax_delinquency', 'delinquent', 'high')"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.get("/feed?days=1")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["summary"][0]["code"] == "delinquent"
+    assert body["events"][0]["parcel_number"] == "000000001"
+
+
+@pytest.mark.integration
 async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(

@@ -92,6 +92,13 @@ def export_row_limit(tier: str) -> int:
     return EXPORT_ROW_LIMITS.get(tier, EXPORT_ROW_LIMITS[_DEFAULT_TIER])
 
 
+FEED_TIERS = frozenset({"pro", "investor", "enterprise"})
+
+
+def feed_access(tier: str) -> bool:
+    return tier in FEED_TIERS
+
+
 Action = Literal["current", "checkout", "contact"]
 
 

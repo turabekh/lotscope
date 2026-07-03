@@ -232,6 +232,12 @@ async def get_search(session: AsyncSession, user_id: int, search_id: int) -> Sav
     return SavedSearchDetail(**base.model_dump(), matches=matches)
 
 
+async def criteria_for(
+    session: AsyncSession, user_id: int, search_id: int
+) -> SearchCriteria:
+    return _criteria(await _get_owned(session, user_id, search_id))
+
+
 async def export_search_matches(
     session: AsyncSession, user_id: int, search_id: int, *, row_limit: int
 ) -> list[tuple[Any, ...]]:

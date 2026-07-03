@@ -11,6 +11,7 @@ from lotscope.api.billing import router as billing_router
 from lotscope.api.digests import router as digests_router
 from lotscope.api.errors import register_exception_handlers
 from lotscope.api.exports import router as exports_router
+from lotscope.api.feed import router as feed_router
 from lotscope.api.health import router as health_router
 from lotscope.api.layers import router as layers_router
 from lotscope.api.leads import router as leads_router
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(leads_router)
     app.include_router(exports_router)
     app.include_router(skiptrace_router)
+    app.include_router(feed_router)
     app.include_router(maps_router)
     app.include_router(watchlist_router)
     app.include_router(digests_router)

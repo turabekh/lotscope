@@ -13,6 +13,20 @@ SEVERITY_HIGH = "high"
 SEVERITY_MEDIUM = "medium"
 SEVERITY_LOW = "low"
 
+EVENT_LABELS: dict[str, str] = {
+    CODE_SHERIFF_SALE: "Sheriff sale",
+    CODE_DELINQUENT: "New delinquency",
+    CODE_TAX_UP: "Tax balance rose",
+    CODE_LI_NEW: "New L&I violation",
+    CODE_DANGER: "Dangerous / unsafe",
+    CODE_NEW_PERMIT: "New permit",
+    CODE_NEW_DEMO: "New demolition",
+}
+
+
+def event_label(code: str) -> str:
+    return EVENT_LABELS.get(code, code)
+
 
 @dataclass(frozen=True)
 class TaxSnapshot:

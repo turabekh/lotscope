@@ -7,6 +7,7 @@ import type {
   CheckoutTier,
   CreditBalance,
   CreditPackKey,
+  FeedResponse,
   DealItem,
   DealResult,
   DealStage,
@@ -393,5 +394,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ pack }),
     })
+  },
+  getFeed(params: { days?: number; savedSearchId?: number; limit?: number } = {}): Promise<FeedResponse> {
+    const query = new URLSearchParams()
+    if (params.days != null) query.set('days', String(params.days))
+    if (params.savedSearchId != null) query.set('saved_search_id', String(params.savedSearchId))
+    if (params.limit != null) query.set('limit', String(params.limit))
+    const suffix = query.toString()
+    return request(`/feed${suffix ? `?${suffix}` : ''}`)
   },
 }
