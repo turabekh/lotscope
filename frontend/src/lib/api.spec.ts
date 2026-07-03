@@ -91,6 +91,26 @@ describe('api', () => {
     )
   })
 
+  it('getParcelSummary reads the summary endpoint', async () => {
+    const fetchMock = mockFetch(200, {
+      parcel_number: '001',
+      summary: 'A vacant lot.',
+      confidence: 'medium',
+      is_informational: true,
+      sources: [],
+      computed_at: '2026-07-04T00:00:00Z',
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await api.getParcelSummary('001')
+
+    expect(result.summary).toBe('A vacant lot.')
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/parcels/001/summary'),
+      expect.anything(),
+    )
+  })
+
   it('throws ApiError with the detail on a failure response', async () => {
     vi.stubGlobal('fetch', mockFetch(404, { detail: 'Parcel not found.' }))
 

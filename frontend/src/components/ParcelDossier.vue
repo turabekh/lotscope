@@ -16,6 +16,7 @@ import MarketContextPanel from '@/components/MarketContextPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
+import SnapshotPanel from '@/components/SnapshotPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import VerdictHero from '@/components/VerdictHero.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
@@ -230,6 +231,8 @@ async function toggleSave(): Promise<void> {
             <q-btn flat dense color="primary" label="Compute" @click="store.refreshVerdict()" />
           </template>
         </q-banner>
+
+        <SnapshotPanel :parcel-number="detail.parcel_number" />
 
         <div class="actions">
           <q-btn

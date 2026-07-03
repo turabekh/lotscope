@@ -3,6 +3,7 @@ import type {
   AssemblageResult,
   AssessmentResult,
   BasemapSession,
+  ParcelSummaryResult,
   BillingCadence,
   CheckoutResponse,
   CheckoutTier,
@@ -142,6 +143,9 @@ export const api = {
   },
   getDistress(parcelNumber: string): Promise<DistressResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/distress`)
+  },
+  getParcelSummary(parcelNumber: string): Promise<ParcelSummaryResult> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/summary`)
   },
   getAssessment(parcelNumber: string): Promise<AssessmentResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/assessment`)

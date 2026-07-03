@@ -328,6 +328,15 @@ export interface AppealPacketStatus {
   packet_credits: number
 }
 
+export interface ParcelSummaryResult {
+  parcel_number: string
+  summary: string
+  confidence: 'high' | 'medium' | 'low'
+  is_informational: boolean
+  sources: Array<Record<string, unknown>>
+  computed_at: string
+}
+
 export interface AssessmentResult {
   parcel_number: string
   status: AssessmentStatus
