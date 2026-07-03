@@ -4,7 +4,7 @@ Date: 2026-07-03
 
 ## Status
 
-Proposed
+Accepted
 
 Gates PRD-amendment-01 **D1** (Phase 2) and unblocks **A2 Deal Feed**. Supersedes ADR-0004's "raw capture deferred"; extends ADR-0017 (watchlist-change taxonomy).
 
