@@ -188,7 +188,7 @@ function onSelect(parcelNumber: string): void {
       side="left"
       overlay
       bordered
-      :width="340"
+      :width="400"
       class="filters-drawer"
     >
       <div class="column no-wrap fit">
