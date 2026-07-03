@@ -72,7 +72,7 @@ const expanded = ref(false)
 <style scoped>
 .compare-tray {
   position: fixed;
-  bottom: 16px;
+  bottom: calc(16px + var(--lot-footer-h, 0px) + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   z-index: 3000;
