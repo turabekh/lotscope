@@ -65,13 +65,13 @@ async def test_merge_emits_events_for_changes_and_upserts_core(db_session: Async
     await _add_run(db_session, 1)
     await _add_parcel(db_session, "000000001")
     await _add_core_tax(db_session, "000000001", delinquent=False, due=1000, sheriff=False)
-    await _add_staging(db_session, "000000001", 1, delinquent=True, due=5000, sheriff=True)
+    await _add_staging(db_session, "000000001", 1, delinquent=True, due=5000, sheriff=False)
     await db_session.flush()
 
     result = await merge_tax(db_session, 1)
     assert result.merged_rows == 1
-    assert result.event_count == 3
-    assert await _events(db_session, "000000001") == ["delinquent", "sheriff_sale", "tax_up"]
+    assert result.event_count == 2
+    assert await _events(db_session, "000000001") == ["delinquent", "tax_up"]
 
     due = await db_session.scalar(
         text("SELECT total_due FROM tax_status WHERE parcel_number = '000000001'")

@@ -90,3 +90,25 @@ async def test_load_tax_is_idempotent(db_session: AsyncSession) -> None:
         text("SELECT count(*) FROM tax_status WHERE parcel_number = '001234567'")
     )
     assert count == 1
+
+
+@pytest.mark.integration
+async def test_load_tax_emits_event_on_second_run_change(db_session: AsyncSession) -> None:
+    from lotscope.ingestion.loaders.tax import load_tax
+
+    runs = [
+        [[{"cartodb_id": 1, "opa_number": "1234567", "total_due": 100.0}]],
+        [[{"cartodb_id": 1, "opa_number": "1234567", "total_due": 500.0}]],
+    ]
+    for pages in runs:
+        handler = _RowsHandler(pages)
+        async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
+            await load_tax(db_session, carto, page_size=500)
+        await db_session.flush()
+
+    codes = (
+        await db_session.execute(
+            text("SELECT code FROM parcel_event WHERE parcel_number = '001234567' ORDER BY code")
+        )
+    ).scalars().all()
+    assert codes == ["tax_up"]
