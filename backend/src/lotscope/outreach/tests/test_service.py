@@ -90,6 +90,23 @@ async def test_render_letter_campaign_none_without_recipients(db_session: AsyncS
 
 
 @pytest.mark.integration
+async def test_recipients_dedupe_by_owner_keeps_top_scored(db_session: AsyncSession) -> None:
+    await _seed_lead(db_session, "000000001", owner="ACME LLC", mailing="PO Box 9", score=90)
+    await _seed_lead(db_session, "000000002", owner="acme llc", mailing="po box 9", score=60)
+    await _seed_lead(db_session, "000000003", owner="Other Owner", mailing="PO Box 8", score=70)
+    await db_session.flush()
+
+    deduped = await list_mail_recipients(db_session, row_limit=100, min_score=1, one_per_owner=True)
+    owners = sorted(r.owner for r in deduped)
+    assert owners == ["ACME LLC", "Other Owner"]
+    acme = next(r for r in deduped if r.owner == "ACME LLC")
+    assert acme.parcel_number == "000000001"
+
+    all_rows = await list_mail_recipients(db_session, row_limit=100, min_score=1)
+    assert len(all_rows) == 3
+
+
+@pytest.mark.integration
 async def test_render_letter_campaign_respects_row_limit(db_session: AsyncSession) -> None:
     for i in range(1, 4):
         await _seed_lead(db_session, f"00000000{i}", owner=f"Owner {i}", mailing=f"PO Box {i}")

@@ -85,6 +85,7 @@ const mailerOpen = ref(false)
 const fromName = ref('')
 const fromContact = ref('')
 const message = ref('')
+const onePerOwner = ref(true)
 const generatingLetters = ref(false)
 
 const canGenerate = computed(
@@ -102,6 +103,7 @@ async function generateLetters(): Promise<void> {
       minScore: minScore.value,
       vacantOnly: vacantOnly.value,
       zipCode: zipCode.value.trim() || undefined,
+      onePerOwner: onePerOwner.value,
     })
     mailerOpen.value = false
   } catch (cause) {
@@ -263,6 +265,12 @@ onMounted(load)
               label="Custom message (optional)"
               hint="Leave blank for the default. Use {owner}, {property_address}, {parcel_number}."
               maxlength="4000"
+            />
+            <q-toggle
+              v-model="onePerOwner"
+              dense
+              color="deep-purple-6"
+              label="One letter per owner (skip duplicate owners)"
             />
             <div class="text-caption text-grey-6">
               You are the sender and are responsible for compliance with direct-mail and Fair

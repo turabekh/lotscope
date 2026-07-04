@@ -156,6 +156,7 @@ async def list_mail_recipients(
     min_score: int = 1,
     vacant_only: bool = False,
     zip_code: str | None = None,
+    one_per_owner: bool = False,
 ) -> list[MailRecipient]:
     if row_limit <= 0:
         return []
@@ -171,11 +172,17 @@ async def list_mail_recipients(
         )
     ).all()
     recipients: list[MailRecipient] = []
+    seen_owners: set[tuple[str, str]] = set()
     for row in rows:
         owner = (row.owner or "").strip()
         mailing_address = (row.mailing_address or "").strip()
         if not owner or not mailing_address:
             continue
+        if one_per_owner:
+            key = (owner.casefold(), mailing_address.casefold())
+            if key in seen_owners:
+                continue
+            seen_owners.add(key)
         recipients.append(
             MailRecipient(
                 parcel_number=row.parcel_number,

@@ -8,3 +8,4 @@ class MailMergeRequest(BaseModel):
     min_score: int = Field(default=30, ge=1, le=100)
     vacant_only: bool = False
     zip_code: str | None = Field(default=None, max_length=10)
+    one_per_owner: bool = True

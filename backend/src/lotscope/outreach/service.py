@@ -55,6 +55,7 @@ async def render_letter_campaign(
         min_score=request.min_score,
         vacant_only=request.vacant_only,
         zip_code=request.zip_code,
+        one_per_owner=request.one_per_owner,
     )
     if not recipients:
         return None

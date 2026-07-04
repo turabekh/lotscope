@@ -233,6 +233,7 @@ export const api = {
     minScore?: number
     vacantOnly?: boolean
     zipCode?: string
+    onePerOwner?: boolean
   }): Promise<void> {
     return downloadFile('/outreach/letters', 'lotscope-outreach-letters.pdf', {
       from_name: params.fromName,
@@ -241,6 +242,7 @@ export const api = {
       min_score: params.minScore,
       vacant_only: params.vacantOnly,
       zip_code: params.zipCode,
+      one_per_owner: params.onePerOwner,
     })
   },
   getLeads(params: {
