@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import OutreachMailerDialog, { type MailerFields } from '@/components/OutreachMailerDialog.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { WatchlistItem } from '@/lib/types'
@@ -19,26 +20,18 @@ const { user } = storeToRefs(useAuthStore())
 const isFree = computed(() => (user.value?.tier ?? 'free') === 'free')
 
 const mailerOpen = ref(false)
-const fromName = ref('')
-const fromContact = ref('')
-const message = ref('')
-const onePerOwner = ref(true)
 const generatingLetters = ref(false)
 const mailerError = ref<string | null>(null)
 
-const canGenerate = computed(
-  () => fromName.value.trim().length > 0 && fromContact.value.trim().length > 0,
-)
-
-async function generateLetters(): Promise<void> {
+async function generateLetters(fields: MailerFields): Promise<void> {
   generatingLetters.value = true
   mailerError.value = null
   try {
     await api.generateWatchlistLetters({
-      fromName: fromName.value.trim(),
-      fromContact: fromContact.value.trim(),
-      message: message.value.trim() || undefined,
-      onePerOwner: onePerOwner.value,
+      fromName: fields.fromName,
+      fromContact: fields.fromContact,
+      message: fields.message || undefined,
+      onePerOwner: fields.onePerOwner,
     })
     mailerOpen.value = false
   } catch (cause) {
@@ -132,66 +125,13 @@ function remove(item: WatchlistItem): void {
       />
     </div>
 
-    <q-dialog v-model="mailerOpen">
-      <q-card style="min-width: 380px; max-width: 460px">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Mail your watchlist</div>
-          <div class="text-body2 text-grey-7">
-            A print-ready PDF — one personalized purchase-interest letter per owner on your
-            watchlist ({{ used }} saved).
-          </div>
-        </q-card-section>
-        <q-card-section class="column q-gutter-sm">
-          <q-input v-model="fromName" outlined dense label="Your name *" maxlength="120" autofocus />
-          <q-input
-            v-model="fromContact"
-            outlined
-            dense
-            type="textarea"
-            autogrow
-            label="Return address / contact *"
-            hint="Shown as the sender and signature block"
-            maxlength="400"
-          />
-          <q-input
-            v-model="message"
-            outlined
-            dense
-            type="textarea"
-            autogrow
-            label="Custom message (optional)"
-            hint="Leave blank for the default. Use {owner}, {property_address}, {parcel_number}."
-            maxlength="4000"
-          />
-          <q-toggle
-            v-model="onePerOwner"
-            dense
-            color="deep-purple-6"
-            label="One letter per owner (skip duplicate owners)"
-          />
-          <q-banner v-if="mailerError" dense class="bg-red-1 text-negative rounded-borders">
-            {{ mailerError }}
-          </q-banner>
-          <div class="text-caption text-grey-6">
-            You are the sender and are responsible for compliance with direct-mail and Fair Housing
-            rules. Informational only.
-          </div>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat no-caps label="Cancel" color="grey-7" @click="mailerOpen = false" />
-          <q-btn
-            unelevated
-            no-caps
-            color="deep-purple-6"
-            icon="download"
-            label="Generate PDF"
-            :loading="generatingLetters"
-            :disable="!canGenerate"
-            @click="generateLetters"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <OutreachMailerDialog
+      v-model="mailerOpen"
+      :subtitle="`One personalized purchase-interest letter per owner on your watchlist (${used} saved).`"
+      :submitting="generatingLetters"
+      :error-message="mailerError"
+      @submit="generateLetters"
+    />
 
     <q-inner-loading :showing="loading" color="primary" />
 
