@@ -1,0 +1,12 @@
+parcelphl.online {
+	encode gzip
+	handle_path /api/* {
+		reverse_proxy api:8000
+	}
+	handle_path /tiles/* {
+		reverse_proxy martin:3000
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}
