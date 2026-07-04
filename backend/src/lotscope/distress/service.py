@@ -8,7 +8,13 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.distress.models import ParcelDistress
-from lotscope.distress.schemas import DistressFactor, DistressResult, LeadItem, MailRecipient
+from lotscope.distress.schemas import (
+    DistressFactor,
+    DistressResult,
+    LeadItem,
+    MailRecipient,
+    build_mail_recipients,
+)
 from lotscope.distress.scoring import (
     _LONG_TENURE_YEARS,
     DISTRESS_VERSION,
@@ -171,27 +177,7 @@ async def list_mail_recipients(
             },
         )
     ).all()
-    recipients: list[MailRecipient] = []
-    seen_owners: set[tuple[str, str]] = set()
-    for row in rows:
-        owner = (row.owner or "").strip()
-        mailing_address = (row.mailing_address or "").strip()
-        if not owner or not mailing_address:
-            continue
-        if one_per_owner:
-            key = (owner.casefold(), mailing_address.casefold())
-            if key in seen_owners:
-                continue
-            seen_owners.add(key)
-        recipients.append(
-            MailRecipient(
-                parcel_number=row.parcel_number,
-                property_address=row.address,
-                owner=owner,
-                mailing_address=mailing_address,
-            )
-        )
-    return recipients
+    return build_mail_recipients(rows, one_per_owner=one_per_owner)
 
 
 def _as_float(value: Any) -> float | None:

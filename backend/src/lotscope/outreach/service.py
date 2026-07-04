@@ -4,8 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.distress.schemas import MailRecipient
 from lotscope.distress.service import list_mail_recipients
-from lotscope.outreach.schemas import LetterFields, MailMergeRequest, WatchlistMailRequest
+from lotscope.outreach.schemas import LetterFields, MailMergeRequest
 from lotscope.reports.mailer import Letter, render_letters_pdf
+from lotscope.savedsearch.service import list_mail_recipients as list_saved_search_recipients
 from lotscope.watchlist.service import list_mail_recipients as list_watchlist_recipients
 
 DEFAULT_MESSAGE = (
@@ -76,9 +77,23 @@ async def render_letter_campaign(
 
 
 async def render_watchlist_campaign(
-    session: AsyncSession, user_id: int, request: WatchlistMailRequest
+    session: AsyncSession, user_id: int, request: LetterFields
 ) -> bytes | None:
     recipients = await list_watchlist_recipients(
         session, user_id, one_per_owner=request.one_per_owner
+    )
+    return _render(request, recipients)
+
+
+async def render_saved_search_campaign(
+    session: AsyncSession,
+    user_id: int,
+    search_id: int,
+    request: LetterFields,
+    *,
+    row_limit: int,
+) -> bytes | None:
+    recipients = await list_saved_search_recipients(
+        session, user_id, search_id, row_limit=row_limit, one_per_owner=request.one_per_owner
     )
     return _render(request, recipients)

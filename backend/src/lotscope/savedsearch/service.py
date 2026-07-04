@@ -7,6 +7,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import NotFoundError, QuotaExceededError
+from lotscope.distress.schemas import MailRecipient, build_mail_recipients
 from lotscope.savedsearch.matching import (
     build_match_export_sql,
     build_match_sql,
@@ -232,9 +233,7 @@ async def get_search(session: AsyncSession, user_id: int, search_id: int) -> Sav
     return SavedSearchDetail(**base.model_dump(), matches=matches)
 
 
-async def criteria_for(
-    session: AsyncSession, user_id: int, search_id: int
-) -> SearchCriteria:
+async def criteria_for(session: AsyncSession, user_id: int, search_id: int) -> SearchCriteria:
     return _criteria(await _get_owned(session, user_id, search_id))
 
 
@@ -261,6 +260,23 @@ async def export_search_matches(
         )
         for row in rows
     ]
+
+
+async def list_mail_recipients(
+    session: AsyncSession,
+    user_id: int,
+    search_id: int,
+    *,
+    row_limit: int,
+    one_per_owner: bool = False,
+) -> list[MailRecipient]:
+    search = await _get_owned(session, user_id, search_id)
+    if row_limit <= 0:
+        return []
+    sql, params = build_match_export_sql(_criteria(search))
+    params["match_limit"] = row_limit
+    rows = (await session.execute(text(sql), params)).all()
+    return build_mail_recipients(rows, one_per_owner=one_per_owner)
 
 
 async def refresh_search(session: AsyncSession, user_id: int, search_id: int) -> SavedSearchDetail:

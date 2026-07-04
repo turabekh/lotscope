@@ -4,6 +4,7 @@ import { useQuasar } from 'quasar'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import OutreachMailerDialog, { type MailerFields } from '@/components/OutreachMailerDialog.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SavedSearchItem, SavedSearchMatchItem, SearchCriteria } from '@/lib/types'
@@ -23,6 +24,35 @@ const { searches, limit, used, atLimit, loading } = storeToRefs(store)
 
 const isFree = computed(() => (auth.user?.tier ?? 'free') === 'free')
 const exportingId = ref<number | null>(null)
+
+const mailerSearchId = ref<number | null>(null)
+const generatingLetters = ref(false)
+const mailerError = ref<string | null>(null)
+const mailerOpen = computed({
+  get: () => mailerSearchId.value !== null,
+  set: (value: boolean) => {
+    if (!value) mailerSearchId.value = null
+  },
+})
+
+async function generateLetters(fields: MailerFields): Promise<void> {
+  if (mailerSearchId.value === null) return
+  generatingLetters.value = true
+  mailerError.value = null
+  try {
+    await api.generateSavedSearchLetters(mailerSearchId.value, {
+      fromName: fields.fromName,
+      fromContact: fields.fromContact,
+      message: fields.message || undefined,
+      onePerOwner: fields.onePerOwner,
+    })
+    mailerSearchId.value = null
+  } catch (cause) {
+    mailerError.value = cause instanceof ApiError ? cause.message : 'Could not generate letters.'
+  } finally {
+    generatingLetters.value = false
+  }
+}
 
 const showForm = ref(false)
 const saving = ref(false)
@@ -376,6 +406,30 @@ function asNumber(value: string | number | null): number | null {
                 :loading="exportingId === search.id"
                 @click="exportCsv(search)"
               />
+              <q-btn
+                v-if="isFree"
+                flat
+                dense
+                no-caps
+                size="sm"
+                color="deep-purple-6"
+                icon="lock"
+                label="Mail letters"
+                :to="{ name: 'account' }"
+              >
+                <q-tooltip>Direct-mail letters are a Pro feature — upgrade to generate.</q-tooltip>
+              </q-btn>
+              <q-btn
+                v-else
+                flat
+                dense
+                no-caps
+                size="sm"
+                color="deep-purple-6"
+                icon="mail"
+                label="Mail letters"
+                @click="mailerSearchId = search.id"
+              />
               <q-space />
               <q-btn
                 flat
@@ -421,6 +475,14 @@ function asNumber(value: string | number | null): number | null {
         </q-slide-transition>
       </q-card>
     </div>
+
+    <OutreachMailerDialog
+      v-model="mailerOpen"
+      subtitle="One personalized purchase-interest letter per owner matching this saved search."
+      :submitting="generatingLetters"
+      :error-message="mailerError"
+      @submit="generateLetters"
+    />
   </div>
 </template>
 

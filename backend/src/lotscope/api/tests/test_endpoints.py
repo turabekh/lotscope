@@ -485,6 +485,47 @@ async def test_outreach_watchlist_letters_streams_pdf_for_paid_tier(
 
 
 @pytest.mark.integration
+async def test_outreach_saved_search_letters_streams_pdf_for_paid_tier(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.savedsearch.schemas import SavedSearchCreate, SearchCriteria
+    from lotscope.savedsearch.service import create_search
+
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'ss@example.com', 'x', 'user', 'pro', true)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, address, base_zoning_code, is_vacant, "
+            "is_city_owned, market_value, owner, mailing_address) "
+            "VALUES ('000000001', '1 A ST', 'RSA-5', true, false, 50000, 'OWNER', '99 ZZ AVE')"
+        )
+    )
+    await db_session.flush()
+    search = await create_search(
+        db_session,
+        1,
+        SavedSearchCreate(name="Vacant", criteria=SearchCriteria(vacant_only=True)),
+        limit=None,
+    )
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.post(
+            f"/outreach/letters/saved-search/{search.id}",
+            json={"from_name": "Sam Buyer", "from_contact": "555-0100"},
+        )
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.content[:4] == b"%PDF"
+
+
+@pytest.mark.integration
 async def test_outreach_watchlist_letters_blocked_for_free_tier(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
