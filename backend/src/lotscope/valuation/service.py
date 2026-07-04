@@ -41,6 +41,9 @@ _COMPS_SQL = text(
     "  AND s.parcel_number <> :parcel_number "
     "  AND s.sale_price >= :min_price "
     "  AND s.sale_date >= :since "
+    "  AND (s.document_id IS NULL OR NOT EXISTS ("
+    "    SELECT 1 FROM sale s2 WHERE s2.document_id = s.document_id "
+    "    AND s2.parcel_number <> s.parcel_number)) "
     "  AND (NOT :vacant_only OR cp.is_vacant IS TRUE) "
     "  AND ((:use_class)::text IS NULL OR CASE left(upper(cp.base_zoning_code), 1) "
     "         WHEN 'R' THEN 'residential' WHEN 'C' THEN 'commercial' "
@@ -166,6 +169,7 @@ async def value_parcel(
                 "radius_ft": radius_ft,
                 "years": years,
                 "use_class": use_class,
+                "package_deeds_excluded": True,
             }
         ],
         computed_at=computed_at,

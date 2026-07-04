@@ -61,6 +61,52 @@ async def _add_comp(
     )
 
 
+async def _add_vacant_parcel(
+    session: AsyncSession, parcel_number: str, *, offset_ft: float, area: float
+) -> None:
+    geom = (
+        f"POLYGON(({offset_ft} 0,{offset_ft} 5,{offset_ft + 5} 5,{offset_ft + 5} 0,{offset_ft} 0))"
+    )
+    await session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, geom_2272) "
+            "VALUES (:pn, :area, TRUE, ST_GeomFromText(:geom, 2272))"
+        ),
+        {"pn": parcel_number, "area": area, "geom": geom},
+    )
+
+
+async def _add_sale(
+    session: AsyncSession, parcel_number: str, *, document_id: str | None, price: float
+) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, document_id, sale_price, sale_date) "
+            "VALUES (:pn, :doc, :price, '2025-01-01')"
+        ),
+        {"pn": parcel_number, "doc": document_id, "price": price},
+    )
+
+
+async def test_value_parcel_excludes_package_deed_comps(db_session: AsyncSession) -> None:
+    await _add_subject(db_session, "000000001", 2000)
+    for index, parcel_number in enumerate(["000000010", "000000011", "000000012"]):
+        await _add_vacant_parcel(db_session, parcel_number, offset_ft=50 * (index + 1), area=1000)
+        await _add_sale(db_session, parcel_number, document_id="PKG-1", price=600000)
+    await _add_vacant_parcel(db_session, "000000020", offset_ft=250, area=1000)
+    await _add_sale(db_session, "000000020", document_id="DOC-020", price=100000)
+    await _add_vacant_parcel(db_session, "000000030", offset_ft=300, area=1000)
+    await _add_sale(db_session, "000000030", document_id=None, price=100000)
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+    assert result is not None
+    assert {comp.parcel_number for comp in result.comps} == {"000000020", "000000030"}
+    assert result.comp_count == 2
+    assert result.estimate == 200000.0
+    assert result.sources[0]["package_deeds_excluded"] is True
+
+
 async def test_value_parcel_estimates_from_nearby_comps(db_session: AsyncSession) -> None:
     await _add_subject(db_session, "000000001", 2000)
     for index in range(5):
