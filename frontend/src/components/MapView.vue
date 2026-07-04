@@ -653,7 +653,7 @@ function addParcelLayers(instance: maplibregl.Map): void {
     type: 'fill',
     source: 'parcels',
     'source-layer': 'parcels',
-    paint: { 'fill-color': '#1565c0', 'fill-opacity': 0.4 },
+    paint: { 'fill-color': '#1e88e5', 'fill-opacity': 0.12 },
     filter: EMPTY_PARCEL_FILTER,
   })
   instance.addLayer({
@@ -661,7 +661,7 @@ function addParcelLayers(instance: maplibregl.Map): void {
     type: 'line',
     source: 'parcels',
     'source-layer': 'parcels',
-    paint: { 'line-color': '#0d47a1', 'line-width': 2 },
+    paint: { 'line-color': '#1e88e5', 'line-width': 2.5 },
     filter: EMPTY_PARCEL_FILTER,
   })
 
