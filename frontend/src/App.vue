@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 import AppShell from '@/components/AppShell.vue'
@@ -14,8 +14,22 @@ theme.init()
 
 const showShell = computed(() => route.meta.requiresAuth === true)
 
-onMounted(() => {
-  void auth.restore()
+const REFRESH_INTERVAL_MS = 30 * 60 * 1000
+let refreshTimer: ReturnType<typeof setInterval> | undefined
+
+function rollSession(): void {
+  if (document.visibilityState === 'visible') void auth.refresh()
+}
+
+onMounted(async () => {
+  await auth.restore()
+  refreshTimer = setInterval(rollSession, REFRESH_INTERVAL_MS)
+  document.addEventListener('visibilitychange', rollSession)
+})
+
+onUnmounted(() => {
+  if (refreshTimer !== undefined) clearInterval(refreshTimer)
+  document.removeEventListener('visibilitychange', rollSession)
 })
 </script>
 

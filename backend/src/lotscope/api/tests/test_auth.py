@@ -50,6 +50,25 @@ async def test_register_login_me_flow(db_session: AsyncSession) -> None:
     assert unauthenticated.status_code == 401
 
 
+async def test_refresh_issues_a_new_token_for_valid_session(db_session: AsyncSession) -> None:
+    async with _client(_app(db_session)) as client:
+        await client.post(
+            "/auth/register", json={"email": "r@example.com", "password": "hunter2-strong"}
+        )
+        logged_in = await client.post(
+            "/auth/login", json={"email": "r@example.com", "password": "hunter2-strong"}
+        )
+        token = logged_in.json()["access_token"]
+        refreshed = await client.post(
+            "/auth/refresh", headers={"Authorization": f"Bearer {token}"}
+        )
+        unauthenticated = await client.post("/auth/refresh")
+
+    assert refreshed.status_code == 200
+    assert refreshed.json()["access_token"]
+    assert unauthenticated.status_code == 401
+
+
 async def test_login_rejects_bad_credentials(db_session: AsyncSession) -> None:
     async with _client(_app(db_session)) as client:
         await client.post(

@@ -43,6 +43,14 @@ async def login(data: LoginRequest, session: SessionDep, settings: SettingsDep) 
     return TokenResponse(access_token=token)
 
 
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh(
+    user: Annotated[User, Depends(get_current_user)], settings: SettingsDep
+) -> TokenResponse:
+    token = create_access_token(settings, subject=str(user.id), role=user.role)
+    return TokenResponse(access_token=token)
+
+
 @router.get("/me", response_model=UserRead)
 async def me(user: Annotated[User, Depends(get_current_user)]) -> UserRead:
     return UserRead.model_validate(user)

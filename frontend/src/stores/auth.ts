@@ -68,6 +68,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function refresh(): Promise<void> {
+    if (token.value === null) return
+    try {
+      const response = await api.refreshToken()
+      persist(response.access_token)
+    } catch {
+      return
+    }
+  }
+
   async function refreshUser(): Promise<void> {
     if (token.value === null) return
     try {
@@ -113,6 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     restore,
+    refresh,
     refreshUser,
     setDigest,
     fetchUsage,

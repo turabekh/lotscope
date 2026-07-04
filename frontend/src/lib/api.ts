@@ -419,6 +419,9 @@ export const api = {
   login(email: string, password: string): Promise<TokenResponse> {
     return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
   },
+  refreshToken(): Promise<TokenResponse> {
+    return request('/auth/refresh', { method: 'POST' })
+  },
   register(payload: RegisterPayload): Promise<User> {
     return request('/auth/register', { method: 'POST', body: JSON.stringify(payload) })
   },
