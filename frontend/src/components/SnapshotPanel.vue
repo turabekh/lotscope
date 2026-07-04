@@ -8,6 +8,7 @@ const props = defineProps<{ parcelNumber: string }>()
 
 const summary = ref<ParcelSummaryResult | null>(null)
 const loading = ref(false)
+let requestToken = 0
 
 const CONFIDENCE_COLOR: Record<string, string> = {
   high: 'positive',
@@ -16,14 +17,16 @@ const CONFIDENCE_COLOR: Record<string, string> = {
 }
 
 async function load(): Promise<void> {
+  const token = ++requestToken
   summary.value = null
   loading.value = true
   try {
-    summary.value = await api.getParcelSummary(props.parcelNumber)
+    const result = await api.getParcelSummary(props.parcelNumber)
+    if (token === requestToken) summary.value = result
   } catch {
-    summary.value = null
+    if (token === requestToken) summary.value = null
   } finally {
-    loading.value = false
+    if (token === requestToken) loading.value = false
   }
 }
 

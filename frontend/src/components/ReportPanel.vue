@@ -20,6 +20,7 @@ const hasReportAccess = computed(() => REPORT_TIERS.includes(user.value?.tier ??
 const report = ref<ParcelReportResult | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+let requestToken = 0
 
 const CONFIDENCE_COLOR: Record<string, string> = {
   high: 'positive',
@@ -34,17 +35,23 @@ function goLogin(): void {
 watch(
   () => props.parcelNumber,
   () => {
+    requestToken++
     report.value = null
     error.value = null
+    loading.value = false
   },
 )
 
 async function draft(): Promise<void> {
+  const token = ++requestToken
   loading.value = true
   error.value = null
   try {
-    report.value = await api.getParcelReport(props.parcelNumber)
+    const result = await api.getParcelReport(props.parcelNumber)
+    if (token !== requestToken) return
+    report.value = result
   } catch (cause) {
+    if (token !== requestToken) return
     report.value = null
     if (cause instanceof ApiError && cause.status === 401) {
       auth.logout()
@@ -54,7 +61,7 @@ async function draft(): Promise<void> {
       error.value = cause instanceof ApiError ? cause.message : 'Failed to draft the report.'
     }
   } finally {
-    loading.value = false
+    if (token === requestToken) loading.value = false
   }
 }
 </script>
