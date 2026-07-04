@@ -9,7 +9,7 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import ask_daily_limit, parcel_view_daily_limit
+from lotscope.accounts.tiers import ask_daily_limit, parcel_view_daily_limit, report_access
 from lotscope.accounts.usage import (
     get_ask_usage,
     increment_ask_usage,
@@ -77,6 +77,31 @@ SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 _ASK_CACHE_TTL_SECONDS = 86_400
 _SUMMARY_CACHE_TTL_SECONDS = 604_800
 _REPORT_CACHE_TTL_SECONDS = 604_800
+
+
+async def _resolve_report(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    redis: Redis,
+    generator: StructuredGenerator,
+) -> ParcelReportResult | None:
+    verdict = await get_verdict(session, parcel_number)
+    version = verdict.verdict_version if verdict is not None else "none"
+    cache_key = f"report:{parcel_number}:{version}"
+
+    with contextlib.suppress(RedisError):
+        cached = await redis.get(cache_key)
+        if cached is not None:
+            return ParcelReportResult.model_validate_json(cached)
+
+    result = await draft_parcel_report(session, parcel_number, generator=generator)
+    if result is None:
+        return None
+
+    with contextlib.suppress(RedisError):
+        await redis.set(cache_key, result.model_dump_json(), ex=_REPORT_CACHE_TTL_SECONDS)
+    return result
 
 
 def _ask_cache_key(parcel_number: str, question: str) -> str:
@@ -265,24 +290,16 @@ async def parcel_report(
     settings: SettingsDep,
     generator: Annotated[StructuredGenerator, Depends(get_generator)],
 ) -> ParcelReportResult:
+    if not report_access(current_user.tier):
+        raise QuotaExceededError(
+            "The AI investment report is a Pro feature — upgrade to draft a full memo."
+        )
     if not settings.anthropic_api_key:
         raise NotFoundError("The AI report is not available.")
 
-    verdict = await get_verdict(session, parcel_number)
-    version = verdict.verdict_version if verdict is not None else "none"
-    cache_key = f"report:{parcel_number}:{version}"
-
-    with contextlib.suppress(RedisError):
-        cached = await redis.get(cache_key)
-        if cached is not None:
-            return ParcelReportResult.model_validate_json(cached)
-
-    result = await draft_parcel_report(session, parcel_number, generator=generator)
+    result = await _resolve_report(session, parcel_number, redis=redis, generator=generator)
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
-
-    with contextlib.suppress(RedisError):
-        await redis.set(cache_key, result.model_dump_json(), ex=_REPORT_CACHE_TTL_SECONDS)
     return result
 
 
@@ -342,9 +359,17 @@ async def parcel_checklist(
 
 @router.get("/{parcel_number}/dossier")
 async def parcel_dossier(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+    generator: Annotated[StructuredGenerator, Depends(get_generator)],
 ) -> Response:
-    pdf = await build_parcel_dossier(session, parcel_number)
+    report = None
+    if settings.anthropic_api_key and report_access(current_user.tier):
+        report = await _resolve_report(session, parcel_number, redis=redis, generator=generator)
+    pdf = await build_parcel_dossier(session, parcel_number, report=report)
     if pdf is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return Response(

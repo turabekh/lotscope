@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.ai.schemas import ParcelReportResult
 from lotscope.assemblage.service import compute_assemblage
 from lotscope.assessment.service import analyze_parcel_assessment
 from lotscope.checklist.service import build_parcel_checklist
@@ -18,7 +19,12 @@ _DISCLAIMER = (
 )
 
 
-async def build_parcel_dossier(session: AsyncSession, parcel_number: str) -> bytes | None:
+async def build_parcel_dossier(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    report: ParcelReportResult | None = None,
+) -> bytes | None:
     detail = await get_parcel_detail(session, parcel_number)
     if detail is None:
         return None
@@ -36,6 +42,7 @@ async def build_parcel_dossier(session: AsyncSession, parcel_number: str) -> byt
         assemblage=assemblage,
         distress=distress,
         checklist=checklist,
+        report=report,
         generated_at=datetime.now(UTC),
         disclaimer=_DISCLAIMER,
     )

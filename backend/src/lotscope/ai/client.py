@@ -25,9 +25,16 @@ class AnthropicGenerator:
     def __init__(
         self, settings: Settings, *, model: str | None = None, max_tokens: int = 1024
     ) -> None:
-        self._client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self._api_key = settings.anthropic_api_key
         self._model = model or settings.anthropic_model
         self._max_tokens = max_tokens
+        self._cached_client: AsyncAnthropic | None = None
+
+    @property
+    def _client(self) -> AsyncAnthropic:
+        if self._cached_client is None:
+            self._cached_client = AsyncAnthropic(api_key=self._api_key)
+        return self._cached_client
 
     async def generate(self, *, system: str, user: str, schema: type[BaseModel]) -> dict[str, Any]:
         tool = cast(

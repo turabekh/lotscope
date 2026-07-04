@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
+from lotscope.ai.schemas import ParcelReportResult, ReportSection
 from lotscope.assemblage.schemas import AdjacentLot, AssemblageResult, AssemblageSummary
 from lotscope.checklist.schemas import ChecklistItem, ChecklistSummary, ParcelChecklist
 from lotscope.distress.schemas import DistressFactor, DistressResult
@@ -152,6 +153,35 @@ def test_full_dossier_renders_all_sections() -> None:
     )
     assert pdf[:4] == b"%PDF"
     assert len(pdf) > 1500
+
+
+def test_dossier_with_report_renders_memo_section() -> None:
+    report = ParcelReportResult(
+        parcel_number="000000001",
+        headline="Underpriced by-right rowhouse lot.",
+        sections=[
+            ReportSection(heading="Overview", body="A vacant RSA-5 lot with by-right potential."),
+            ReportSection(heading="Risks", body="Tax delinquency is on record."),
+        ],
+        recommendation="Consider a direct offer near the max allowable offer.",
+        confidence="medium",
+        is_informational=True,
+        sources=[],
+        computed_at=_NOW,
+    )
+    common: dict[str, Any] = {
+        "detail": _detail(address="1 Main St"),
+        "verdict": None,
+        "assemblage": None,
+        "distress": None,
+        "generated_at": _NOW,
+        "disclaimer": "Informational only.",
+    }
+    with_report = render_dossier_pdf(report=report, **common)
+    without_report = render_dossier_pdf(**common)
+
+    assert with_report[:4] == b"%PDF"
+    assert len(with_report) > len(without_report)
 
 
 def test_dossier_filename() -> None:

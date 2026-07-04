@@ -88,6 +88,9 @@ class _FakeRedis:
 
 def _app_with_session(session: AsyncSession) -> FastAPI:
     app = create_app()
+    app.state.settings = Settings(
+        _env_file=None, secret_key="test-secret-key-that-is-at-least-32-bytes-long"
+    )
 
     async def _override() -> AsyncIterator[AsyncSession]:
         yield session
@@ -993,6 +996,89 @@ async def test_summary_endpoint_returns_and_caches(db_session: AsyncSession) -> 
     assert first.json()["is_informational"] is True
     assert second.status_code == 200
     assert generator.calls == 1  # second call served from cache
+
+
+class _FakeReportGenerator:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def generate(self, *, system: str, user: str, schema: Any) -> dict[str, Any]:
+        self.calls += 1
+        return {
+            "headline": "Underpriced by-right rowhouse lot.",
+            "sections": [
+                {"heading": "Overview", "body": "A vacant RSA-5 lot with by-right potential."},
+                {"heading": "Risks", "body": "Tax delinquency is on record."},
+            ],
+            "recommendation": "Consider a direct offer near the max allowable offer.",
+            "confidence": "medium",
+            "is_informational": True,
+        }
+
+
+def _report_app(
+    session: AsyncSession, generator: _FakeReportGenerator
+) -> tuple[FastAPI, "_FakeRedis"]:
+    fake_redis = _FakeRedis()
+    app = _app_with_session(session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    app.dependency_overrides[get_redis] = lambda: fake_redis
+    app.dependency_overrides[get_generator] = lambda: generator
+    app.dependency_overrides[get_app_settings] = lambda: Settings(
+        _env_file=None,
+        secret_key="test-secret-key-that-is-at-least-32-bytes-long",
+        anthropic_api_key="test-key",
+    )
+    return app, fake_redis
+
+
+@pytest.mark.integration
+async def test_report_is_gated_for_free_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/parcels/000000001/report")
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_report_endpoint_returns_and_caches_for_paid_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+    )
+    await db_session.flush()
+
+    generator = _FakeReportGenerator()
+    app, _ = _report_app(db_session, generator)
+    async with _client(app) as client:
+        first = await client.get("/parcels/000000001/report")
+        second = await client.get("/parcels/000000001/report")
+
+    assert first.status_code == 200
+    body = first.json()
+    assert body["headline"] == "Underpriced by-right rowhouse lot."
+    assert [section["heading"] for section in body["sections"]] == ["Overview", "Risks"]
+    assert body["is_informational"] is True
+    assert second.status_code == 200
+    assert generator.calls == 1
+
+
+@pytest.mark.integration
+async def test_dossier_embeds_report_for_paid_tier(db_session: AsyncSession) -> None:
+    await _setup_verdict_parcel(db_session)
+
+    generator = _FakeReportGenerator()
+    app, _ = _report_app(db_session, generator)
+    async with _client(app) as client:
+        resp = await client.get("/parcels/000000001/dossier")
+
+    assert resp.status_code == 200
+    assert resp.content[:4] == b"%PDF"
+    assert generator.calls == 1
 
 
 @pytest.mark.integration

@@ -107,6 +107,10 @@ def top_plays_access(tier: str) -> bool:
     return tier in FEED_TIERS
 
 
+def report_access(tier: str) -> bool:
+    return tier in FEED_TIERS
+
+
 Action = Literal["current", "checkout", "contact"]
 
 

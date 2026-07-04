@@ -3,6 +3,7 @@ from datetime import datetime
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
+from lotscope.ai.schemas import ParcelReportResult
 from lotscope.assemblage.schemas import AssemblageResult
 from lotscope.checklist.schemas import ParcelChecklist
 from lotscope.distress.schemas import DistressResult
@@ -26,6 +27,11 @@ _STATUS_COLOR = {
     "info": (120, 144, 156),
 }
 _STATUS_LABEL = {"pass": "OK", "warn": "CHECK", "fail": "ISSUE", "info": "INFO"}
+_CONFIDENCE_COLOR = {
+    "high": (46, 125, 50),
+    "medium": (239, 108, 0),
+    "low": (120, 144, 156),
+}
 
 _REPLACEMENTS = {
     "\u2014": "-",
@@ -104,6 +110,7 @@ def render_dossier_pdf(
     assemblage: AssemblageResult | None,
     distress: DistressResult | None,
     checklist: ParcelChecklist | None = None,
+    report: ParcelReportResult | None = None,
     generated_at: datetime,
     disclaimer: str,
 ) -> bytes:
@@ -191,6 +198,32 @@ def render_dossier_pdf(
             pdf.set_text_color(*_MUTED)
             pdf.set_font("Helvetica", "", 9)
             pdf.cell(0, 5, "No major risk flags.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    if report is not None:
+        _section(pdf, "Investment report")
+        confidence_color = _CONFIDENCE_COLOR.get(report.confidence, _MUTED)
+        _tag(pdf, f"{report.confidence.upper()} CONFIDENCE", confidence_color)
+        _tag(pdf, "AI-DRAFTED", _MUTED)
+        pdf.ln(8)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(*_INK)
+        pdf.multi_cell(0, 5, _s(report.headline))
+        pdf.ln(1)
+        for report_section in report.sections:
+            pdf.set_font("Helvetica", "B", 8.5)
+            pdf.set_text_color(*_MUTED)
+            heading = _s(report_section.heading.upper())
+            pdf.cell(0, 4.5, heading, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.set_font("Helvetica", "", 9)
+            pdf.set_text_color(*_INK)
+            pdf.multi_cell(0, 4.5, _s(report_section.body))
+            pdf.ln(1)
+        pdf.set_font("Helvetica", "B", 8.5)
+        pdf.set_text_color(*_BRAND)
+        pdf.cell(0, 4.5, "RECOMMENDATION", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*_INK)
+        pdf.multi_cell(0, 4.5, _s(report.recommendation))
 
     if checklist is not None and checklist.items:
         _section(pdf, "Due-diligence checklist")
