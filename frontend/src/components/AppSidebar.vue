@@ -32,6 +32,7 @@ const sections = computed<NavLink[]>(() => [
   { label: 'Feed', icon: 'bolt', name: 'feed' },
   { label: 'Sheriff sales', icon: 'gavel', name: 'sheriff-sales' },
   { label: 'Top plays', icon: 'dashboard_customize', name: 'top-plays' },
+  { label: 'Market', icon: 'insights', name: 'market' },
   { label: 'Leads', icon: 'sell', name: 'leads' },
   { label: 'Pipeline', icon: 'view_kanban', name: 'pipeline' },
   { label: 'Lists', icon: 'bookmark', name: 'lists', badge: () => alerts.value + newTotal.value },

@@ -583,6 +583,48 @@ async def test_credits_endpoint_reads_ledger_balance(db_session: AsyncSession) -
 
 
 @pytest.mark.integration
+async def test_neighborhood_market_is_gated_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/neighborhoods/market")
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_neighborhood_market_returns_stats_for_paid_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO neighborhood (name, geom_2272) "
+            "VALUES ('Alpha', ST_GeomFromText('POLYGON((0 0,0 100,100 100,100 0,0 0))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_2272) VALUES "
+            "('000000001', true, 40000, "
+            "ST_GeomFromText('POLYGON((10 10,10 12,12 12,12 10,10 10))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO tax_status (parcel_number, is_delinquent) VALUES ('000000001', true)"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.get("/neighborhoods/market")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totals"]["vacant_lots"] == 1
+    assert body["totals"]["tax_delinquent"] == 1
+    assert body["neighborhoods"][0]["name"] == "Alpha"
+
+
+@pytest.mark.integration
 async def test_feed_is_gated_for_free_tier(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     async with _client(app) as client:

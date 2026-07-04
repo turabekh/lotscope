@@ -17,6 +17,7 @@ import type {
   DealResult,
   DealStage,
   DistressResult,
+  NeighborhoodMarketResponse,
   NextSheriffSale,
   HistoricResult,
   MarketContext,
@@ -154,6 +155,9 @@ export const api = {
   },
   getNextSheriffSale(parcelNumber: string): Promise<NextSheriffSale | null> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/next-sheriff-sale`)
+  },
+  getNeighborhoodMarket(): Promise<NeighborhoodMarketResponse> {
+    return request('/neighborhoods/market')
   },
   getParcelSummary(parcelNumber: string): Promise<ParcelSummaryResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/summary`)

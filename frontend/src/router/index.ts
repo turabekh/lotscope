@@ -88,6 +88,12 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: 'Top plays' },
   },
   {
+    path: '/:market/market',
+    name: 'market',
+    component: () => import('@/pages/MarketPage.vue'),
+    meta: { requiresAuth: true, title: 'Market' },
+  },
+  {
     path: '/:market/pipeline',
     name: 'pipeline',
     component: () => import('@/pages/PipelinePage.vue'),

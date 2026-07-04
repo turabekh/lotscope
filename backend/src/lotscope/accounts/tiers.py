@@ -111,6 +111,10 @@ def report_access(tier: str) -> bool:
     return tier in FEED_TIERS
 
 
+def market_stats_access(tier: str) -> bool:
+    return tier in FEED_TIERS
+
+
 Action = Literal["current", "checkout", "contact"]
 
 

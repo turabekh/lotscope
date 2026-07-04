@@ -324,6 +324,29 @@ export interface DistressResult {
   computed_at: string
 }
 
+export interface NeighborhoodMarketStats {
+  name: string
+  vacant_lots: number
+  avg_distress: number | null
+  avg_opportunity: number | null
+  median_market_value: number | null
+  tax_delinquent: number
+  sheriff_sale: number
+}
+
+export interface MarketTotals {
+  neighborhoods: number
+  vacant_lots: number
+  tax_delinquent: number
+  sheriff_sale: number
+}
+
+export interface NeighborhoodMarketResponse {
+  totals: MarketTotals
+  neighborhoods: NeighborhoodMarketStats[]
+  computed_at: string
+}
+
 export interface NextSheriffSale {
   parcel_number: string
   case_number: string
