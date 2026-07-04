@@ -22,6 +22,7 @@ import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import VerdictHero from '@/components/VerdictHero.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
 import { ApiError, api } from '@/lib/api'
+import { formatCurrency } from '@/lib/format'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
 import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
@@ -67,6 +68,28 @@ const LOW_VACANCY_CONFIDENCE = 0.5
 const lowVacancyConfidence = computed(() => {
   const confidence = detail.value?.vacancy_confidence
   return confidence != null && confidence < LOW_VACANCY_CONFIDENCE
+})
+
+const VACANT_LAND_PREFIX = 'VACANT LAND'
+const isVacantLand = computed(() => {
+  const d = detail.value
+  if (d === null) return false
+  return d.is_vacant === true || (d.land_use ?? '').toUpperCase().startsWith(VACANT_LAND_PREFIX)
+})
+const isDeveloped = computed(() => {
+  const d = detail.value
+  if (d === null || isVacantLand.value) return false
+  return d.land_use !== null && d.land_use.trim() !== ''
+})
+const developedUse = computed(() => {
+  const lu = detail.value?.land_use
+  if (lu == null || lu.trim() === '') return ''
+  return lu.charAt(0).toUpperCase() + lu.slice(1).toLowerCase()
+})
+const developedNote = computed(() => {
+  const mv = detail.value?.market_value
+  const assessed = mv != null ? ` (assessed at ${formatCurrency(mv)})` : ''
+  return `LotScope focuses on vacant & infill land. This parcel already has a structure${assessed}, so the buildability, land value, and deal figures below model a hypothetical teardown or redevelopment — not the property's current value.`
 })
 
 const dealEmpty = computed(
@@ -275,6 +298,21 @@ async function toggleSave(): Promise<void> {
             </q-tooltip>
           </q-chip>
           <q-chip
+            v-if="isDeveloped"
+            dense
+            square
+            color="blue-grey-6"
+            text-color="white"
+            icon="home_work"
+          >
+            Developed
+            <q-tooltip max-width="250px" anchor="top middle" self="bottom middle">
+              Already developed ({{ developedUse }}). LotScope focuses on vacant &amp; infill land —
+              the buildability and land-value figures describe a hypothetical redevelopment, not the
+              current improved property.
+            </q-tooltip>
+          </q-chip>
+          <q-chip
             v-if="detail.is_city_owned"
             dense
             square
@@ -326,7 +364,12 @@ async function toggleSave(): Promise<void> {
 
         <q-tab-panels v-model="tab" animated keep-alive class="dossier-panels">
           <q-tab-panel name="verdict" class="tab-pane">
-            <VerdictHero v-if="verdict" :verdict="verdict" />
+            <q-banner v-if="isDeveloped" dense class="developed-banner rounded-borders">
+              <template #avatar><q-icon name="home_work" color="blue-grey-6" /></template>
+              <div class="developed-head">Already developed — {{ developedUse }}</div>
+              <div class="developed-note">{{ developedNote }}</div>
+            </q-banner>
+            <VerdictHero v-if="verdict" :verdict="verdict" :developed="isDeveloped" />
             <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
               <template #avatar><q-icon name="info" color="grey-7" /></template>
               No verdict yet.
@@ -335,7 +378,7 @@ async function toggleSave(): Promise<void> {
               </template>
             </q-banner>
             <SnapshotPanel :parcel-number="detail.parcel_number" />
-            <VerdictPanel v-if="verdict" :verdict="verdict" />
+            <VerdictPanel v-if="verdict" :verdict="verdict" :developed="isDeveloped" />
             <ChecklistPanel />
             <div class="tab-foot">
               <q-btn
@@ -521,6 +564,22 @@ async function toggleSave(): Promise<void> {
 }
 .rounded-borders {
   border-radius: var(--lot-radius);
+}
+.developed-banner {
+  background: var(--lot-surface-2);
+  border: 1px solid var(--lot-border);
+  border-left: 3px solid #607d8b;
+  color: var(--lot-muted);
+}
+.developed-head {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--lot-ink);
+}
+.developed-note {
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 2px;
 }
 .empty-state {
   text-align: center;

@@ -13,7 +13,7 @@ import {
 } from '@/lib/format'
 import type { VerdictResult } from '@/lib/types'
 
-const props = defineProps<{ verdict: VerdictResult }>()
+const props = defineProps<{ verdict: VerdictResult; developed?: boolean }>()
 
 interface Status {
   label: string
@@ -82,6 +82,9 @@ const buildStatus = computed<Status>(() => {
           likely" means a board (ZBA) approval would be needed.
         </q-tooltip>
       </q-chip>
+      <div v-if="developed" class="redev-note">
+        Redevelopment scenario — assumes the existing structure is removed.
+      </div>
       <div class="row q-col-gutter-sm q-mt-xs">
         <div class="col-4 stat">
           <div class="stat-label">By-right units</div>
@@ -111,14 +114,16 @@ const buildStatus = computed<Status>(() => {
 
     <q-card-section class="q-py-sm">
       <div class="section-title">
-        <q-icon name="payments" size="18px" class="q-mr-xs" />Estimated land value
+        <q-icon name="payments" size="18px" class="q-mr-xs" />{{
+          developed ? 'Redevelopment land value' : 'Estimated land value'
+        }}
       </div>
       <template v-if="hasValueEstimate">
         <div class="value-figure lot-numeric">
           {{ formatRange(verdict.value_estimate_low, verdict.value_estimate_high) }}
         </div>
         <div class="row q-col-gutter-sm q-mt-xs">
-          <div class="col-6 stat">
+          <div class="stat" :class="developed ? 'col-12' : 'col-6'">
             <div class="stat-label">Confidence</div>
             <div class="stat-value lot-numeric">{{ formatPercent(verdict.value_confidence) }}</div>
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
@@ -126,7 +131,7 @@ const buildStatus = computed<Status>(() => {
               comps.
             </q-tooltip>
           </div>
-          <div class="col-6 stat">
+          <div v-if="!developed" class="col-6 stat">
             <div class="stat-label">vs. assessment</div>
             <div class="stat-value lot-numeric">
               {{ formatCurrency(verdict.assessment_market_gap) }}
@@ -203,6 +208,12 @@ const buildStatus = computed<Status>(() => {
   font-size: 18px;
   font-weight: 700;
   color: var(--lot-accent-ink);
+}
+.redev-note {
+  font-size: 11.5px;
+  color: var(--lot-faint);
+  margin-top: 4px;
+  line-height: 1.35;
 }
 .stat {
   text-align: center;

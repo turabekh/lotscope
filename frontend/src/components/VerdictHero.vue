@@ -4,7 +4,7 @@ import { computed } from 'vue'
 import { formatRange, scoreLabel, scoreVar } from '@/lib/format'
 import type { VerdictResult } from '@/lib/types'
 
-const props = defineProps<{ verdict: VerdictResult }>()
+const props = defineProps<{ verdict: VerdictResult; developed?: boolean }>()
 
 interface Pillar {
   key: string
@@ -62,13 +62,15 @@ const valuePillar = computed<Pillar>(() => {
   const has = v.value_estimate_low != null && v.value_estimate_high != null
   return {
     key: 'value',
-    label: 'Est. land value',
+    label: props.developed ? 'Redev. land value' : 'Est. land value',
     value: has ? formatRange(v.value_estimate_low, v.value_estimate_high) : 'No comps',
     icon: 'payments',
-    tone: has ? 'neutral' : 'neutral',
-    hint: has
-      ? 'Estimated from recent recorded comparable sales nearby.'
-      : 'Not enough recorded comparable sales nearby yet.',
+    tone: 'neutral',
+    hint: props.developed
+      ? 'Hypothetical land value for a teardown or redevelopment — not this property’s current improved value.'
+      : has
+        ? 'Estimated from recent recorded comparable sales nearby.'
+        : 'Not enough recorded comparable sales nearby yet.',
   }
 })
 
