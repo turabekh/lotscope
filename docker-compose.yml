@@ -1,6 +1,23 @@
 name: lotscope
 
 services:
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["app"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+      - martin
+
   db:
     build:
       context: ./docker/postgres
@@ -9,7 +26,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lotscope}
       POSTGRES_DB: ${POSTGRES_DB:-lotscope}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +38,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -34,8 +51,6 @@ services:
     image: ghcr.io/maplibre/martin:v0.14.2
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
-    ports:
-      - "3000:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -50,8 +65,6 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
       REDIS_URL: redis://redis:6379/0
       MARTIN_URL: http://martin:3000
-    ports:
-      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -61,9 +74,10 @@ services:
   web:
     build:
       context: ./frontend
+      args:
+        VITE_API_URL: https://parcelphl.online/api
+        VITE_MARTIN_URL: https://parcelphl.online/tiles
     profiles: ["app"]
-    ports:
-      - "8080:80"
     depends_on:
       - api
       - martin
@@ -88,3 +102,5 @@ services:
 volumes:
   db_data:
   redis_data:
+  caddy_data:
+  caddy_config:
