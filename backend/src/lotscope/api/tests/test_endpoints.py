@@ -411,6 +411,58 @@ async def test_leads_export_streams_csv_for_paid_tier(db_session: AsyncSession) 
 
 
 @pytest.mark.integration
+async def test_outreach_letters_blocked_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.post(
+            "/outreach/letters", json={"from_name": "Sam", "from_contact": "555-0100"}
+        )
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_outreach_letters_streams_pdf_for_paid_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, owner, address, mailing_address, is_vacant) "
+            "VALUES ('000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
+            "in_sheriff_sale) VALUES ('000000001', true, 25000, 5, true)"
+        )
+    )
+    await db_session.flush()
+    await recompute_distress(db_session, ["000000001"])
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.post(
+            "/outreach/letters",
+            json={"from_name": "Sam Buyer", "from_contact": "555-0100", "min_score": 30},
+        )
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.content[:4] == b"%PDF"
+
+
+@pytest.mark.integration
+async def test_outreach_letters_404_when_no_mailable_leads(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.post(
+            "/outreach/letters",
+            json={"from_name": "Sam", "from_contact": "555-0100", "min_score": 99},
+        )
+    assert resp.status_code == 404
+
+
+@pytest.mark.integration
 async def test_skip_trace_is_unavailable_without_a_provider(db_session: AsyncSession) -> None:
     await db_session.execute(
         text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'JANE DOE')")

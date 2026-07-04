@@ -43,3 +43,10 @@ class LeadsResponse(BaseModel):
     limit: int
     returned: int
     leads: list[LeadItem]
+
+
+class MailRecipient(BaseModel):
+    parcel_number: str
+    property_address: str | None
+    owner: str
+    mailing_address: str

@@ -99,10 +99,16 @@ async function uploadRequest<T>(path: string, body: FormData): Promise<T> {
   return (await response.json()) as T
 }
 
-async function downloadFile(path: string, filename: string): Promise<void> {
+async function downloadFile(path: string, filename: string, body?: unknown): Promise<void> {
   const headers: Record<string, string> = {}
   if (authToken !== null) headers.authorization = `Bearer ${authToken}`
-  const response = await fetch(`${BASE_URL}${path}`, { headers })
+  const init: RequestInit = { headers }
+  if (body !== undefined) {
+    init.method = 'POST'
+    headers['content-type'] = 'application/json'
+    init.body = JSON.stringify(body)
+  }
+  const response = await fetch(`${BASE_URL}${path}`, init)
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null
     throw new ApiError(response.status, body?.detail ?? response.statusText)
@@ -219,6 +225,23 @@ export const api = {
   },
   exportSavedSearch(id: number): Promise<void> {
     return downloadFile(`/saved-searches/${id}/export`, `lotscope-search-${id}.csv`)
+  },
+  generateOutreachLetters(params: {
+    fromName: string
+    fromContact: string
+    message?: string
+    minScore?: number
+    vacantOnly?: boolean
+    zipCode?: string
+  }): Promise<void> {
+    return downloadFile('/outreach/letters', 'lotscope-outreach-letters.pdf', {
+      from_name: params.fromName,
+      from_contact: params.fromContact,
+      message: params.message || undefined,
+      min_score: params.minScore,
+      vacant_only: params.vacantOnly,
+      zip_code: params.zipCode,
+    })
   },
   getLeads(params: {
     minScore?: number

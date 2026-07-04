@@ -81,6 +81,36 @@ async function exportCsv(): Promise<void> {
   }
 }
 
+const mailerOpen = ref(false)
+const fromName = ref('')
+const fromContact = ref('')
+const message = ref('')
+const generatingLetters = ref(false)
+
+const canGenerate = computed(
+  () => fromName.value.trim().length > 0 && fromContact.value.trim().length > 0,
+)
+
+async function generateLetters(): Promise<void> {
+  generatingLetters.value = true
+  error.value = null
+  try {
+    await api.generateOutreachLetters({
+      fromName: fromName.value.trim(),
+      fromContact: fromContact.value.trim(),
+      message: message.value.trim() || undefined,
+      minScore: minScore.value,
+      vacantOnly: vacantOnly.value,
+      zipCode: zipCode.value.trim() || undefined,
+    })
+    mailerOpen.value = false
+  } catch (cause) {
+    error.value = cause instanceof ApiError ? cause.message : 'Could not generate letters.'
+  } finally {
+    generatingLetters.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -169,7 +199,91 @@ onMounted(load)
           :disable="leads.length === 0"
           @click="exportCsv"
         />
+        <q-btn
+          v-if="isFree"
+          outline
+          dense
+          no-caps
+          size="sm"
+          color="deep-purple-6"
+          icon="lock"
+          label="Mail letters"
+          :to="{ name: 'account' }"
+        >
+          <q-tooltip>Direct-mail letters are a Pro feature — upgrade to generate them.</q-tooltip>
+        </q-btn>
+        <q-btn
+          v-else
+          unelevated
+          dense
+          no-caps
+          size="sm"
+          color="deep-purple-6"
+          icon="mail"
+          label="Mail letters"
+          :disable="leads.length === 0"
+          @click="mailerOpen = true"
+        />
       </div>
+
+      <q-dialog v-model="mailerOpen">
+        <q-card style="min-width: 380px; max-width: 460px">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Direct-mail letters</div>
+            <div class="text-body2 text-grey-7">
+              A print-ready PDF — one personalized purchase-interest letter per lead in the current
+              filter ({{ leads.length }} shown; up to your plan's row limit).
+            </div>
+          </q-card-section>
+          <q-card-section class="column q-gutter-sm">
+            <q-input
+              v-model="fromName"
+              outlined
+              dense
+              label="Your name *"
+              maxlength="120"
+              autofocus
+            />
+            <q-input
+              v-model="fromContact"
+              outlined
+              dense
+              type="textarea"
+              autogrow
+              label="Return address / contact *"
+              hint="Shown as the sender and signature block"
+              maxlength="400"
+            />
+            <q-input
+              v-model="message"
+              outlined
+              dense
+              type="textarea"
+              autogrow
+              label="Custom message (optional)"
+              hint="Leave blank for the default. Use {owner}, {property_address}, {parcel_number}."
+              maxlength="4000"
+            />
+            <div class="text-caption text-grey-6">
+              You are the sender and are responsible for compliance with direct-mail and Fair
+              Housing rules. Informational only.
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat no-caps label="Cancel" color="grey-7" @click="mailerOpen = false" />
+            <q-btn
+              unelevated
+              no-caps
+              color="deep-purple-6"
+              icon="download"
+              label="Generate PDF"
+              :loading="generatingLetters"
+              :disable="!canGenerate"
+              @click="generateLetters"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
 
       <q-inner-loading :showing="loading" color="primary" />
 

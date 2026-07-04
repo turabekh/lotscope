@@ -8,7 +8,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.distress.models import ParcelDistress
-from lotscope.distress.schemas import DistressFactor, DistressResult, LeadItem
+from lotscope.distress.schemas import DistressFactor, DistressResult, LeadItem, MailRecipient
 from lotscope.distress.scoring import (
     _LONG_TENURE_YEARS,
     DISTRESS_VERSION,
@@ -147,6 +147,44 @@ LEADS_EXPORT_HEADER: list[str] = [
     "total_due",
     "in_sheriff_sale",
 ]
+
+
+async def list_mail_recipients(
+    session: AsyncSession,
+    *,
+    row_limit: int,
+    min_score: int = 1,
+    vacant_only: bool = False,
+    zip_code: str | None = None,
+) -> list[MailRecipient]:
+    if row_limit <= 0:
+        return []
+    rows = (
+        await session.execute(
+            _LEADS_EXPORT_SQL,
+            {
+                "limit": row_limit,
+                "min_score": min_score,
+                "vacant_only": vacant_only,
+                "zip_code": zip_code,
+            },
+        )
+    ).all()
+    recipients: list[MailRecipient] = []
+    for row in rows:
+        owner = (row.owner or "").strip()
+        mailing_address = (row.mailing_address or "").strip()
+        if not owner or not mailing_address:
+            continue
+        recipients.append(
+            MailRecipient(
+                parcel_number=row.parcel_number,
+                property_address=row.address,
+                owner=owner,
+                mailing_address=mailing_address,
+            )
+        )
+    return recipients
 
 
 def _as_float(value: Any) -> float | None:
