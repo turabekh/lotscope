@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
@@ -10,9 +10,12 @@ import { useAuthStore } from '@/stores/auth'
 const props = defineProps<{ parcelNumber: string }>()
 
 const auth = useAuthStore()
-const { isAuthenticated } = storeToRefs(auth)
+const { isAuthenticated, user } = storeToRefs(auth)
 const router = useRouter()
 const route = useRoute()
+
+const REPORT_TIERS = ['pro', 'investor', 'enterprise']
+const hasReportAccess = computed(() => REPORT_TIERS.includes(user.value?.tier ?? 'free'))
 
 const report = ref<ParcelReportResult | null>(null)
 const loading = ref(false)
@@ -81,6 +84,22 @@ async function draft(): Promise<void> {
           Sign in to draft an AI investment memo for this parcel.
         </div>
         <q-btn unelevated no-caps color="primary" icon="login" label="Sign in" @click="goLogin" />
+      </div>
+
+      <div v-else-if="!hasReportAccess" class="upgrade-gate column items-center q-py-md">
+        <q-icon name="auto_awesome" size="28px" color="grey-5" />
+        <div class="text-body2 text-grey-7 text-center q-my-sm">
+          The AI investment report is a Pro feature — a full memo synthesizing buildability,
+          valuation, deal math, and risks for this parcel.
+        </div>
+        <q-btn
+          unelevated
+          no-caps
+          color="primary"
+          icon="bolt"
+          label="Upgrade to Pro"
+          :to="{ name: 'account' }"
+        />
       </div>
 
       <template v-else>
@@ -173,7 +192,8 @@ async function draft(): Promise<void> {
   color: var(--lot-faint);
   line-height: 1.4;
 }
-.signin-gate {
+.signin-gate,
+.upgrade-gate {
   text-align: center;
 }
 </style>
