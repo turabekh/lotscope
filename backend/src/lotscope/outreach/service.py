@@ -4,8 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.distress.schemas import MailRecipient
 from lotscope.distress.service import list_mail_recipients
-from lotscope.outreach.schemas import MailMergeRequest
+from lotscope.outreach.schemas import LetterFields, MailMergeRequest, WatchlistMailRequest
 from lotscope.reports.mailer import Letter, render_letters_pdf
+from lotscope.watchlist.service import list_mail_recipients as list_watchlist_recipients
 
 DEFAULT_MESSAGE = (
     "Dear {owner},\n\n"
@@ -46,6 +47,20 @@ def _letter_for(recipient: MailRecipient, template: str) -> Letter:
     return Letter(owner=recipient.owner, mailing_address=recipient.mailing_address, body=body)
 
 
+def _render(fields: LetterFields, recipients: list[MailRecipient]) -> bytes | None:
+    if not recipients:
+        return None
+    template = fields.message or DEFAULT_MESSAGE
+    letters = [_letter_for(recipient, template) for recipient in recipients]
+    return render_letters_pdf(
+        sender_name=fields.from_name,
+        sender_contact=fields.from_contact,
+        letters=letters,
+        generated_at=datetime.now(UTC),
+        disclaimer=LETTER_DISCLAIMER,
+    )
+
+
 async def render_letter_campaign(
     session: AsyncSession, request: MailMergeRequest, *, row_limit: int
 ) -> bytes | None:
@@ -57,15 +72,13 @@ async def render_letter_campaign(
         zip_code=request.zip_code,
         one_per_owner=request.one_per_owner,
     )
-    if not recipients:
-        return None
+    return _render(request, recipients)
 
-    template = request.message or DEFAULT_MESSAGE
-    letters = [_letter_for(recipient, template) for recipient in recipients]
-    return render_letters_pdf(
-        sender_name=request.from_name,
-        sender_contact=request.from_contact,
-        letters=letters,
-        generated_at=datetime.now(UTC),
-        disclaimer=LETTER_DISCLAIMER,
+
+async def render_watchlist_campaign(
+    session: AsyncSession, user_id: int, request: WatchlistMailRequest
+) -> bytes | None:
+    recipients = await list_watchlist_recipients(
+        session, user_id, one_per_owner=request.one_per_owner
     )
+    return _render(request, recipients)

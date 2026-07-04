@@ -3,8 +3,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.distress.service import list_mail_recipients
-from lotscope.outreach.schemas import MailMergeRequest
-from lotscope.outreach.service import DEFAULT_MESSAGE, merge_message, render_letter_campaign
+from lotscope.outreach.schemas import MailMergeRequest, WatchlistMailRequest
+from lotscope.outreach.service import (
+    DEFAULT_MESSAGE,
+    merge_message,
+    render_letter_campaign,
+    render_watchlist_campaign,
+)
+from lotscope.watchlist.service import list_mail_recipients as list_watchlist_recipients
 
 
 def test_merge_message_substitutes_all_placeholders() -> None:
@@ -114,3 +120,76 @@ async def test_render_letter_campaign_respects_row_limit(db_session: AsyncSessio
 
     recipients = await list_mail_recipients(db_session, row_limit=2, min_score=1)
     assert len(recipients) == 2
+
+
+async def _seed_watchlist(
+    session: AsyncSession, parcel_number: str, *, owner: str | None, mailing: str | None
+) -> int:
+    user_id = await session.scalar(
+        text(
+            "INSERT INTO app_user (email, hashed_password, role, tier, is_active) "
+            "VALUES ('wl@example.com', 'x', 'user', 'pro', true) "
+            "ON CONFLICT (email) DO UPDATE SET tier = 'pro' RETURNING id"
+        )
+    )
+    await session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, address, owner, mailing_address) "
+            "VALUES (:pn, :addr, :owner, :mailing)"
+        ),
+        {
+            "pn": parcel_number,
+            "addr": f"{parcel_number} Oak St",
+            "owner": owner,
+            "mailing": mailing,
+        },
+    )
+    await session.execute(
+        text("INSERT INTO saved_parcel (user_id, parcel_number) VALUES (:uid, :pn)"),
+        {"uid": user_id, "pn": parcel_number},
+    )
+    return int(user_id)
+
+
+@pytest.mark.integration
+async def test_watchlist_recipients_require_mailing_address(db_session: AsyncSession) -> None:
+    user_id = await _seed_watchlist(db_session, "000000001", owner="Jane", mailing="PO Box 1")
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, owner, mailing_address) "
+            "VALUES ('000000002', 'X', NULL)"
+        )
+    )
+    await db_session.execute(
+        text("INSERT INTO saved_parcel (user_id, parcel_number) VALUES (:uid, '000000002')"),
+        {"uid": user_id},
+    )
+    await db_session.flush()
+
+    recipients = await list_watchlist_recipients(db_session, user_id)
+    assert [r.parcel_number for r in recipients] == ["000000001"]
+
+
+@pytest.mark.integration
+async def test_render_watchlist_campaign_returns_pdf(db_session: AsyncSession) -> None:
+    user_id = await _seed_watchlist(db_session, "000000001", owner="Jane Doe", mailing="PO Box 1")
+    await db_session.flush()
+
+    request = WatchlistMailRequest(from_name="Sam", from_contact="555-0100")
+    pdf = await render_watchlist_campaign(db_session, user_id, request)
+    assert pdf is not None
+    assert pdf[:4] == b"%PDF"
+
+
+@pytest.mark.integration
+async def test_render_watchlist_campaign_none_when_empty(db_session: AsyncSession) -> None:
+    user_id = await db_session.scalar(
+        text(
+            "INSERT INTO app_user (email, hashed_password, role, tier, is_active) "
+            "VALUES ('empty@example.com', 'x', 'user', 'pro', true) RETURNING id"
+        )
+    )
+    await db_session.flush()
+
+    request = WatchlistMailRequest(from_name="Sam", from_contact="x")
+    assert await render_watchlist_campaign(db_session, int(user_id), request) is None

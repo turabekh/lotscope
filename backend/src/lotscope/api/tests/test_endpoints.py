@@ -451,6 +451,50 @@ async def test_outreach_letters_streams_pdf_for_paid_tier(db_session: AsyncSessi
 
 
 @pytest.mark.integration
+async def test_outreach_watchlist_letters_streams_pdf_for_paid_tier(
+    db_session: AsyncSession,
+) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'wl@example.com', 'x', 'user', 'pro', true)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, owner, address, mailing_address) "
+            "VALUES ('000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY')"
+        )
+    )
+    await db_session.execute(
+        text("INSERT INTO saved_parcel (user_id, parcel_number) VALUES (1, '000000001')")
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.post(
+            "/outreach/letters/watchlist",
+            json={"from_name": "Sam Buyer", "from_contact": "555-0100"},
+        )
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.content[:4] == b"%PDF"
+
+
+@pytest.mark.integration
+async def test_outreach_watchlist_letters_blocked_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.post(
+            "/outreach/letters/watchlist", json={"from_name": "Sam", "from_contact": "x"}
+        )
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
 async def test_outreach_letters_404_when_no_mailable_leads(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     app.dependency_overrides[get_current_user] = _fake_pro_user

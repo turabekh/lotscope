@@ -6,6 +6,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import NotFoundError, QuotaExceededError
+from lotscope.distress.schemas import MailRecipient
 from lotscope.watchlist.changes import compute_changes
 from lotscope.watchlist.models import SavedParcel
 from lotscope.watchlist.schemas import (
@@ -39,6 +40,43 @@ _LIST_SQL = text(
     f"FROM saved_parcel sp JOIN parcel p ON p.parcel_number = sp.parcel_number {_STATE_JOINS} "
     "WHERE sp.user_id = :user_id ORDER BY sp.created_at DESC"
 )
+
+
+_MAIL_RECIPIENTS_SQL = text(
+    "SELECT sp.parcel_number, p.address, p.owner, p.mailing_address "
+    "FROM saved_parcel sp JOIN parcel p ON p.parcel_number = sp.parcel_number "
+    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
+    "WHERE sp.user_id = :user_id "
+    "AND coalesce(p.is_city_owned, false) = false "
+    "ORDER BY round(pv.opportunity_score)::int DESC NULLS LAST, sp.created_at DESC"
+)
+
+
+async def list_mail_recipients(
+    session: AsyncSession, user_id: int, *, one_per_owner: bool = False
+) -> list[MailRecipient]:
+    rows = (await session.execute(_MAIL_RECIPIENTS_SQL, {"user_id": user_id})).all()
+    recipients: list[MailRecipient] = []
+    seen_owners: set[tuple[str, str]] = set()
+    for row in rows:
+        owner = (row.owner or "").strip()
+        mailing_address = (row.mailing_address or "").strip()
+        if not owner or not mailing_address:
+            continue
+        if one_per_owner:
+            key = (owner.casefold(), mailing_address.casefold())
+            if key in seen_owners:
+                continue
+            seen_owners.add(key)
+        recipients.append(
+            MailRecipient(
+                parcel_number=row.parcel_number,
+                property_address=row.address,
+                owner=owner,
+                mailing_address=mailing_address,
+            )
+        )
+    return recipients
 
 
 def _as_float(value: Any) -> float | None:

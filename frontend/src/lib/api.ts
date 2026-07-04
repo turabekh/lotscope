@@ -245,6 +245,19 @@ export const api = {
       one_per_owner: params.onePerOwner,
     })
   },
+  generateWatchlistLetters(params: {
+    fromName: string
+    fromContact: string
+    message?: string
+    onePerOwner?: boolean
+  }): Promise<void> {
+    return downloadFile('/outreach/letters/watchlist', 'lotscope-outreach-letters.pdf', {
+      from_name: params.fromName,
+      from_contact: params.fromContact,
+      message: params.message || undefined,
+      one_per_owner: params.onePerOwner,
+    })
+  },
   getLeads(params: {
     minScore?: number
     vacantOnly?: boolean
