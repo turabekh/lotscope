@@ -368,8 +368,9 @@ export interface AppealPacketStatus {
 
 export interface ParcelSummaryResult {
   parcel_number: string
+  verdict_version: string
   summary: string
-  confidence: 'high' | 'medium' | 'low'
+  data_coverage: 'high' | 'medium' | 'low'
   is_informational: boolean
   sources: Array<Record<string, unknown>>
   computed_at: string

@@ -10,7 +10,7 @@ const summary = ref<ParcelSummaryResult | null>(null)
 const loading = ref(false)
 let requestToken = 0
 
-const CONFIDENCE_COLOR: Record<string, string> = {
+const COVERAGE_COLOR: Record<string, string> = {
   high: 'positive',
   medium: 'blue-grey-6',
   low: 'grey-6',
@@ -18,11 +18,14 @@ const CONFIDENCE_COLOR: Record<string, string> = {
 
 async function load(): Promise<void> {
   const token = ++requestToken
+  const parcelNumber = props.parcelNumber
   summary.value = null
   loading.value = true
   try {
-    const result = await api.getParcelSummary(props.parcelNumber)
-    if (token === requestToken) summary.value = result
+    const result = await api.getParcelSummary(parcelNumber)
+    if (token === requestToken && result.parcel_number === props.parcelNumber) {
+      summary.value = result
+    }
   } catch {
     if (token === requestToken) summary.value = null
   } finally {
@@ -43,15 +46,22 @@ watch(() => props.parcelNumber, load)
         <q-chip
           dense
           square
-          :color="CONFIDENCE_COLOR[summary.confidence] ?? 'grey-6'"
+          :color="COVERAGE_COLOR[summary.data_coverage] ?? 'grey-6'"
           text-color="white"
         >
-          {{ summary.confidence }} confidence
+          {{ summary.data_coverage }} data coverage
+          <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+            Share of core dimensions — verdict, land-value comps, assessment — with data for this
+            parcel. Not a claim about how accurate the estimate is.
+          </q-tooltip>
         </q-chip>
       </div>
       <div class="text-body2 q-mt-xs">{{ summary.summary }}</div>
-      <div class="text-caption text-grey-5 q-mt-sm">
+      <div class="text-caption text-grey-5 q-mt-sm snapshot-foot">
         AI-generated from LotScope's computed data · informational, not legal or financial advice.
+        <span class="snapshot-prov lot-numeric"
+          >Parcel {{ summary.parcel_number }} · verdict {{ summary.verdict_version }}</span
+        >
       </div>
     </q-card-section>
   </q-card>
@@ -71,5 +81,13 @@ watch(() => props.parcelNumber, load)
   letter-spacing: 0.04em;
   color: var(--lot-muted);
   margin-bottom: 6px;
+}
+.snapshot-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.snapshot-prov {
+  color: var(--lot-faint);
 }
 </style>

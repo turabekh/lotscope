@@ -21,7 +21,7 @@ class _FakeGenerator:
         return self._payload
 
 
-_VALID = {"summary": "A vacant RSA-5 lot.", "confidence": "medium", "is_informational": True}
+_VALID = {"summary": "A vacant RSA-5 lot.", "is_informational": True}
 
 
 async def test_summarize_grounds_in_computed_facts(db_session: AsyncSession) -> None:
@@ -38,7 +38,9 @@ async def test_summarize_grounds_in_computed_facts(db_session: AsyncSession) -> 
 
     assert result is not None
     assert result.summary == "A vacant RSA-5 lot."
-    assert result.confidence == "medium"
+    assert result.parcel_number == "000000001"
+    assert result.verdict_version == "none"
+    assert result.data_coverage == "low"
     assert result.is_informational is True
     assert result.sources
     # the prompt must carry the parcel's computed facts (grounding), not a free question

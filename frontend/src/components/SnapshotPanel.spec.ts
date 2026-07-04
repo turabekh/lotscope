@@ -9,8 +9,9 @@ import type { ParcelSummaryResult } from '@/lib/types'
 function makeSummary(parcelNumber: string): ParcelSummaryResult {
   return {
     parcel_number: parcelNumber,
+    verdict_version: 'v8',
     summary: `Summary for ${parcelNumber}`,
-    confidence: 'high',
+    data_coverage: 'high',
     is_informational: true,
     sources: [],
     computed_at: '2026-07-05T00:00:00Z',
@@ -47,5 +48,18 @@ describe('SnapshotPanel', () => {
     expect(wrapper.text()).toContain('Summary for 056219700')
     expect(wrapper.text()).not.toContain('Summary for 056152260')
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('discards a response whose parcel_number does not match the selection', async () => {
+    vi.spyOn(api, 'getParcelSummary').mockResolvedValue(makeSummary('999999999'))
+
+    const wrapper = mount(SnapshotPanel, {
+      props: { parcelNumber: '056219700' },
+      global: { plugins: [[Quasar, {}]] },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('Summary for 999999999')
+    expect(wrapper.find('.snapshot').exists()).toBe(false)
   })
 })

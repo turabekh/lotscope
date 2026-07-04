@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +40,9 @@ from lotscope.zoning.service import assess_parcel as assess_zoning
 TITLE_14_SOURCE = "title14"
 DEED_SOURCE = "deed"
 
+_HIGH_COVERAGE_MIN = 3
+_MEDIUM_COVERAGE_MIN = 2
+
 _SUMMARY_SOURCES: list[dict[str, Any]] = [
     {"source": "parcel"},
     {"source": "parcel_verdict"},
@@ -69,6 +72,23 @@ def _parcel_facts(detail: ParcelDetail, verdict: VerdictResult | None) -> str:
             f"by_right_units={verdict.by_right_units}; risk_score={verdict.risk_score}."
         )
     return "\n".join(lines)
+
+
+def _data_coverage(
+    verdict: VerdictResult | None, assessment: AssessmentResult | None
+) -> Literal["high", "medium", "low"]:
+    present = 0
+    if verdict is not None:
+        present += 1
+    if verdict is not None and verdict.value_estimate_low is not None:
+        present += 1
+    if assessment is not None and assessment.status != "unknown":
+        present += 1
+    if present >= _HIGH_COVERAGE_MIN:
+        return "high"
+    if present >= _MEDIUM_COVERAGE_MIN:
+        return "medium"
+    return "low"
 
 
 def _deal_is_infeasible(verdict: VerdictResult) -> bool:
@@ -147,8 +167,9 @@ async def summarize_parcel(
 
     return ParcelSummaryResult(
         parcel_number=parcel_number,
+        verdict_version=verdict.verdict_version if verdict is not None else "none",
         summary=summary.summary,
-        confidence=summary.confidence,
+        data_coverage=_data_coverage(verdict, assessment),
         is_informational=summary.is_informational,
         sources=_SUMMARY_SOURCES,
         computed_at=datetime.now(UTC),

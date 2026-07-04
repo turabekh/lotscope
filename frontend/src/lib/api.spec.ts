@@ -94,8 +94,9 @@ describe('api', () => {
   it('getParcelSummary reads the summary endpoint', async () => {
     const fetchMock = mockFetch(200, {
       parcel_number: '001',
+      verdict_version: 'v8',
       summary: 'A vacant lot.',
-      confidence: 'medium',
+      data_coverage: 'medium',
       is_informational: true,
       sources: [],
       computed_at: '2026-07-04T00:00:00Z',

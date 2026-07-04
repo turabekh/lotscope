@@ -39,9 +39,6 @@ class ParcelSummary(BaseModel):
             "investor or builder, using ONLY the provided FACTS."
         )
     )
-    confidence: Literal["high", "medium", "low"] = Field(
-        description="Confidence that reflects how complete the provided FACTS are."
-    )
     is_informational: Literal[True] = Field(
         default=True,
         description="Always true: this is informational, not legal or financial advice.",
@@ -50,8 +47,9 @@ class ParcelSummary(BaseModel):
 
 class ParcelSummaryResult(BaseModel):
     parcel_number: str
+    verdict_version: str
     summary: str
-    confidence: Literal["high", "medium", "low"]
+    data_coverage: Literal["high", "medium", "low"]
     is_informational: bool
     sources: list[dict[str, Any]]
     computed_at: datetime

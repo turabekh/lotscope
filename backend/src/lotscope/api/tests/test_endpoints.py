@@ -1150,7 +1150,7 @@ class _FakeSummaryGenerator:
 
     async def generate(self, *, system: str, user: str, schema: Any) -> dict[str, Any]:
         self.calls += 1
-        return {"summary": "A vacant RSA-5 lot.", "confidence": "medium", "is_informational": True}
+        return {"summary": "A vacant RSA-5 lot.", "is_informational": True}
 
 
 @pytest.mark.integration
@@ -1195,6 +1195,8 @@ async def test_summary_endpoint_returns_and_caches(db_session: AsyncSession) -> 
 
     assert first.status_code == 200
     assert first.json()["summary"] == "A vacant RSA-5 lot."
+    assert first.json()["parcel_number"] == "000000001"
+    assert first.json()["verdict_version"] == "none"
     assert first.json()["is_informational"] is True
     assert second.status_code == 200
     assert generator.calls == 1  # second call served from cache

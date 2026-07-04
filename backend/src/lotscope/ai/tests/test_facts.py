@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from lotscope.ai.service import _report_facts, _summary_facts
+from lotscope.ai.prompts import SUMMARY_SYSTEM_PROMPT
+from lotscope.ai.service import _data_coverage, _report_facts, _summary_facts
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.verdict.schemas import VerdictResult
 
@@ -66,3 +67,17 @@ def test_feasible_deal_still_reports_numbers() -> None:
     facts = _report_facts(_detail(), verdict, None, None, "RSA-5")
     assert "95000" in facts
     assert "not economically feasible" not in facts.lower()
+
+
+def test_summary_prompt_carries_score_legend() -> None:
+    assert "SCORE LEGEND" in SUMMARY_SYSTEM_PROMPT
+    assert "NOT a motivated seller" in SUMMARY_SYSTEM_PROMPT
+    assert "underpriced rating of False" in SUMMARY_SYSTEM_PROMPT
+
+
+def test_data_coverage_is_low_without_engine_outputs() -> None:
+    assert _data_coverage(None, None) == "low"
+
+
+def test_data_coverage_rises_with_verdict_and_comps() -> None:
+    assert _data_coverage(_verdict(value_estimate_low=100000.0), None) == "medium"
