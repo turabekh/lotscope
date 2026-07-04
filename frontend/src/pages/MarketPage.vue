@@ -44,6 +44,16 @@ const rows = computed(() => {
   })
 })
 
+const topByVacant = computed(() =>
+  [...(data.value?.neighborhoods ?? [])]
+    .sort((a, b) => b.vacant_lots - a.vacant_lots)
+    .slice(0, 12),
+)
+const maxVacant = computed(() => topByVacant.value[0]?.vacant_lots ?? 0)
+function barPct(value: number): string {
+  return maxVacant.value > 0 ? `${(value / maxVacant.value) * 100}%` : '0%'
+}
+
 function sortBy(key: SortKey): void {
   if (sortKey.value === key) {
     sortDir.value = sortDir.value === 'desc' ? 'asc' : 'desc'
@@ -127,6 +137,32 @@ onMounted(() => {
 
       <q-inner-loading :showing="loading" color="primary" />
 
+      <section v-if="data && topByVacant.length" class="chart">
+        <div class="chart-title">Top neighborhoods by vacant lots</div>
+        <div class="bars">
+          <div
+            v-for="n in topByVacant"
+            :key="n.name"
+            class="bar-row"
+            @click="openNeighborhood(n.name)"
+          >
+            <div class="bar-name">{{ n.name }}</div>
+            <div class="bar-track">
+              <div class="bar-fill" :style="{ width: barPct(n.vacant_lots) }"></div>
+            </div>
+            <span class="bar-value">{{ num(n.vacant_lots) }}</span>
+            <q-tooltip anchor="top middle" self="bottom middle" class="bar-tip">
+              <div class="text-weight-bold">{{ n.name }}</div>
+              <div>{{ num(n.vacant_lots) }} vacant lots</div>
+              <div v-if="n.avg_distress != null">Avg distress {{ n.avg_distress }}</div>
+              <div v-if="n.median_market_value != null">
+                Median {{ formatCurrency(n.median_market_value) }}
+              </div>
+            </q-tooltip>
+          </div>
+        </div>
+      </section>
+
       <div v-if="data" class="table-wrap">
         <table class="market-table">
           <thead>
@@ -206,6 +242,67 @@ onMounted(() => {
   font-size: 12px;
   color: var(--lot-muted);
   margin-top: 2px;
+}
+.chart {
+  border: 1px solid var(--lot-line, #e0e6f0);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lot-muted);
+  margin-bottom: 12px;
+}
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bar-row {
+  display: grid;
+  grid-template-columns: 190px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.bar-name {
+  font-size: 12.5px;
+  color: var(--lot-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+.bar-track {
+  min-width: 0;
+}
+.bar-fill {
+  height: 14px;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--lot-chart-bar, #4f46e5);
+  transition: width 0.3s ease;
+}
+.bar-row:hover .bar-fill {
+  filter: brightness(1.08);
+}
+.bar-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lot-muted);
+  white-space: nowrap;
+  text-align: right;
+  min-width: 44px;
+}
+.bar-tip {
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .bar-row {
+    grid-template-columns: 120px 1fr;
+  }
 }
 .table-wrap {
   overflow-x: auto;

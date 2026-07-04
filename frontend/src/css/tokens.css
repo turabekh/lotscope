@@ -31,6 +31,7 @@
   --lot-accent-strong: #4338ca;
   --lot-accent-soft: rgba(79, 70, 229, 0.1);
   --lot-accent-ink: #4338ca;
+  --lot-chart-bar: #4f46e5;
 
   --lot-score-positive: #16a34a;
   --lot-score-mixed: #ea580c;
@@ -73,6 +74,7 @@ body.body--dark {
   --lot-accent-strong: #a5b4fc;
   --lot-accent-soft: rgba(129, 140, 248, 0.18);
   --lot-accent-ink: #c7d2fe;
+  --lot-chart-bar: #6366f1;
 
   --lot-score-positive: #34d399;
   --lot-score-mixed: #fb923c;
