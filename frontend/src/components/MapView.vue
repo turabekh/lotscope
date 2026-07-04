@@ -212,7 +212,7 @@ function fillColor(): ExpressionSpecification {
 function fillOpacity(): ExpressionSpecification {
   if (colorMode.value === 'opportunity') return ['case', ['has', 'opportunity_score'], 0.72, 0]
   if (colorMode.value === 'risk') return ['case', ['has', 'risk_score'], 0.72, 0]
-  return ['case', ['==', ['get', 'is_vacant'], true], 0.55, 0.16]
+  return ['case', ['==', ['get', 'is_vacant'], true], 0.55, 0]
 }
 
 function applyFillPaint(): void {
@@ -596,7 +596,7 @@ function addParcelLayers(instance: maplibregl.Map): void {
     'source-layer': 'parcels',
     paint: {
       'fill-color': ['case', ['==', ['get', 'is_vacant'], true], '#f9a825', '#1565c0'],
-      'fill-opacity': ['case', ['==', ['get', 'is_vacant'], true], 0.55, 0.16],
+      'fill-opacity': ['case', ['==', ['get', 'is_vacant'], true], 0.55, 0],
     },
   })
   instance.addLayer({

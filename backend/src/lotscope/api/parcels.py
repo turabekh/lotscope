@@ -65,7 +65,11 @@ from lotscope.subdivision.service import analyze_parcel_subdivision
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict.schemas import VerdictResult
-from lotscope.verdict.service import compute_verdict, get_verdict
+from lotscope.verdict.service import (
+    compute_verdict,
+    get_or_compute_current_verdict,
+    get_verdict,
+)
 from lotscope.zoning.schemas import EnvelopeResult
 from lotscope.zoning.service import compute_envelope
 
@@ -152,11 +156,10 @@ async def parcel_detail(
 async def parcel_verdict(
     parcel_number: str, session: SessionDep, current_user: CurrentUserDep
 ) -> VerdictResult:
-    verdict = await get_verdict(session, parcel_number)
+    verdict = await get_or_compute_current_verdict(session, parcel_number)
     if verdict is None:
-        raise NotFoundError(
-            f"No verdict has been computed for parcel {parcel_number}; refresh it first."
-        )
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    await session.commit()
     return verdict
 
 

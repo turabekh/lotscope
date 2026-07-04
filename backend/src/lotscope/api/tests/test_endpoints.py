@@ -155,20 +155,43 @@ async def test_parcel_detail_endpoint(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
-async def test_verdict_refresh_then_read(db_session: AsyncSession) -> None:
+async def test_verdict_computes_on_read_and_refresh(db_session: AsyncSession) -> None:
     await _setup_verdict_parcel(db_session)
     app, _ = _authed_app(db_session)
 
     async with _client(app) as client:
-        before = await client.get("/parcels/000000001/verdict")
+        first = await client.get("/parcels/000000001/verdict")
         refreshed = await client.post("/parcels/000000001/verdict/refresh")
         after = await client.get("/parcels/000000001/verdict")
+        missing = await client.get("/parcels/999999999/verdict")
 
-    assert before.status_code == 404
+    assert first.status_code == 200
+    assert first.json()["verdict_version"] == VERDICT_VERSION
     assert refreshed.status_code == 200
-    assert refreshed.json()["verdict_version"] == VERDICT_VERSION
     assert after.status_code == 200
     assert "RSA-5" in after.json()["summary"]
+    assert missing.status_code == 404
+
+
+@pytest.mark.integration
+async def test_verdict_recomputes_a_stale_stored_version_on_read(db_session: AsyncSession) -> None:
+    await _setup_verdict_parcel(db_session)
+    app, _ = _authed_app(db_session)
+
+    async with _client(app) as client:
+        await client.post("/parcels/000000001/verdict/refresh")
+        await db_session.execute(
+            text(
+                "UPDATE parcel_verdict SET verdict_version = 'v0', summary = 'stale' "
+                "WHERE parcel_number = '000000001'"
+            )
+        )
+        await db_session.commit()
+        resp = await client.get("/parcels/000000001/verdict")
+
+    assert resp.status_code == 200
+    assert resp.json()["verdict_version"] == VERDICT_VERSION
+    assert resp.json()["summary"] != "stale"
 
 
 @pytest.mark.integration
