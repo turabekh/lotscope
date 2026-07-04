@@ -6,7 +6,10 @@ Severity = Literal["high", "medium", "low", "info"]
 Confidence = Literal["high", "medium", "low"]
 
 _WEIGHT: dict[Severity, float] = {"high": 40.0, "medium": 20.0, "low": 10.0, "info": 0.0}
-_HIGH_RISK_FLOOD_ZONES = frozenset({"A", "AE", "AO", "AH", "VE", "V"})
+_SFHA_ZONE_PREFIXES = ("A", "V")
+_MODERATE_HAZARD_MARKERS = ("0.2", "SHADED")
+_MINIMAL_HAZARD_MARKERS = ("MINIMAL", "OPEN WATER")
+_LEGACY_MODERATE_ZONE = "B"
 _TAX_HIGH_DUE = 10000.0
 _TAX_HIGH_YEARS = 3
 STREET_ACCESS_MAX_FT = 75.0
@@ -272,19 +275,40 @@ def _rco_flag(rco: RcoSignal) -> RiskFlag | None:
     )
 
 
+def _classify_flood_zone(zone: str) -> Literal["sfha", "moderate", "minimal"]:
+    normalized = zone.strip().upper()
+    if any(marker in normalized for marker in _MINIMAL_HAZARD_MARKERS):
+        return "minimal"
+    if normalized == _LEGACY_MODERATE_ZONE or any(
+        marker in normalized for marker in _MODERATE_HAZARD_MARKERS
+    ):
+        return "moderate"
+    if normalized.startswith(_SFHA_ZONE_PREFIXES):
+        return "sfha"
+    return "minimal"
+
+
 def _flood_flag(flood_zones: list[str]) -> RiskFlag | None:
-    if not flood_zones:
-        return None
-    severity: Severity = (
-        "high" if any(zone in _HIGH_RISK_FLOOD_ZONES for zone in flood_zones) else "medium"
-    )
-    return RiskFlag(
-        "flood_zone",
-        severity,
-        "FEMA flood zone",
-        f"Intersects flood zone(s): {', '.join(flood_zones)}.",
-        "flood_zone",
-    )
+    sfha_zones = [zone for zone in flood_zones if _classify_flood_zone(zone) == "sfha"]
+    if sfha_zones:
+        return RiskFlag(
+            "flood_zone",
+            "high",
+            "FEMA flood zone",
+            f"In a FEMA Special Flood Hazard Area (zone {', '.join(sfha_zones)}); "
+            "flood insurance is typically required.",
+            "flood_zone",
+        )
+    if any(_classify_flood_zone(zone) == "moderate" for zone in flood_zones):
+        return RiskFlag(
+            "flood_zone",
+            "info",
+            "FEMA flood zone",
+            "0.2%-annual-chance flood zone — moderate hazard; verify stormwater and PWD "
+            "requirements.",
+            "flood_zone",
+        )
+    return None
 
 
 def _summarize(flags: list[RiskFlag]) -> str:

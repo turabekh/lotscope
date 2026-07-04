@@ -6,6 +6,7 @@ from lotscope.risk.scoring import (
     LiSignal,
     OverlaySignal,
     RcoSignal,
+    RiskFlag,
     RiskSignals,
     TaxSignal,
     TitleSignal,
@@ -80,16 +81,47 @@ def test_li_violation_detail_without_types_stays_generic() -> None:
     assert flag.detail == "1 violation(s) on record."
 
 
-def test_high_risk_flood_zone_is_high_severity() -> None:
-    result = assess_risk(RiskSignals(li=LiSignal(), flood_zones=["AE"]))
-    flood = next(f for f in result.flags if f.code == "flood_zone")
+def _flood_flag_for(zones: list[str]) -> RiskFlag | None:
+    result = assess_risk(RiskSignals(li=LiSignal(), flood_zones=zones))
+    return next((f for f in result.flags if f.code == "flood_zone"), None)
+
+
+@pytest.mark.parametrize("zone", ["A", "AE", "AH", "AO", "AR", "A99", "V", "VE"])
+def test_sfha_flood_zones_flag_high(zone: str) -> None:
+    flood = _flood_flag_for([zone])
+    assert flood is not None
     assert flood.severity == "high"
+    assert zone in flood.detail
 
 
-def test_x_flood_zone_is_medium() -> None:
-    result = assess_risk(RiskSignals(li=LiSignal(), flood_zones=["X"]))
-    flood = next(f for f in result.flags if f.code == "flood_zone")
-    assert flood.severity == "medium"
+@pytest.mark.parametrize("zone", ["X", "C", "OPEN WATER", "AREA OF MINIMAL FLOOD HAZARD"])
+def test_minimal_flood_zones_are_not_flagged(zone: str) -> None:
+    assert _flood_flag_for([zone]) is None
+
+
+@pytest.mark.parametrize("zone", ["X (SHADED)", "0.2 PCT ANNUAL CHANCE FLOOD HAZARD", "B"])
+def test_moderate_flood_zones_are_info_only(zone: str) -> None:
+    flood = _flood_flag_for([zone])
+    assert flood is not None
+    assert flood.severity == "info"
+
+
+def test_moderate_flood_zone_adds_no_risk_weight() -> None:
+    baseline = assess_risk(RiskSignals(li=LiSignal(), flood_zones=[])).risk_score
+    with_moderate = assess_risk(RiskSignals(li=LiSignal(), flood_zones=["X (SHADED)"])).risk_score
+    assert with_moderate == baseline
+
+
+def test_mixed_zones_flag_only_sfha_in_detail() -> None:
+    flood = _flood_flag_for(["X", "AE"])
+    assert flood is not None
+    assert flood.severity == "high"
+    assert "AE" in flood.detail
+    assert "X" not in flood.detail
+
+
+def test_no_flood_zones_no_flag() -> None:
+    assert _flood_flag_for([]) is None
 
 
 def test_city_owned_is_flagged() -> None:
