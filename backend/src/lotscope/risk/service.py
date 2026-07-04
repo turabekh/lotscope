@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.risk.schemas import (
+    NextSheriffSale,
     RiskFlagSchema,
     RiskResult,
     SheriffSaleCalendar,
@@ -263,3 +264,33 @@ async def list_sheriff_sales(
         for row in rows
     ]
     return SheriffSaleCalendar(total=int(total or 0), returned=len(items), items=items)
+
+
+_NEXT_SHERIFF_SALE_SQL = text(
+    "SELECT case_number, sale_type, sale_date, status, opening_bid "
+    "FROM sheriff_sale "
+    "WHERE parcel_number = :parcel_number AND sale_date IS NOT NULL AND sale_date >= :today "
+    "ORDER BY sale_date ASC, id ASC LIMIT 1"
+)
+
+
+async def get_next_sheriff_sale(
+    session: AsyncSession, parcel_number: str, *, today: date | None = None
+) -> NextSheriffSale | None:
+    as_of = today or datetime.now(UTC).date()
+    row = (
+        await session.execute(
+            _NEXT_SHERIFF_SALE_SQL, {"parcel_number": parcel_number, "today": as_of}
+        )
+    ).one_or_none()
+    if row is None:
+        return None
+    return NextSheriffSale(
+        parcel_number=parcel_number,
+        case_number=row.case_number,
+        sale_type=row.sale_type,
+        sale_date=row.sale_date,
+        status=row.status,
+        opening_bid=_as_float(row.opening_bid),
+        days_until=(row.sale_date - as_of).days,
+    )

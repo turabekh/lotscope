@@ -29,7 +29,7 @@ import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useParcelStore()
-const { detail, verdict, loading, error, errorStatus } = storeToRefs(store)
+const { detail, verdict, nextSheriffSale, loading, error, errorStatus } = storeToRefs(store)
 const watchlist = useWatchlistStore()
 const pipeline = usePipelineStore()
 const compare = useCompareStore()
@@ -49,6 +49,19 @@ const TABS = [
 ]
 
 const tabsAlign = computed(() => ($q.screen.lt.md ? 'left' : 'justify'))
+
+const sheriffCountdown = computed(() => {
+  const sale = nextSheriffSale.value
+  if (sale === null) return null
+  const days = sale.days_until
+  const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`
+  return {
+    label: `Sheriff sale ${when}`,
+    color: days <= 30 ? 'red-9' : 'red-6',
+    date: sale.sale_date,
+    caseNumber: sale.case_number,
+  }
+})
 
 const LOW_VACANCY_CONFIDENCE = 0.5
 const lowVacancyConfidence = computed(() => {
@@ -273,6 +286,21 @@ async function toggleSave(): Promise<void> {
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
               Owned by the City or Land Bank. Acquisition runs through the public disposition
               process, not a private sale.
+            </q-tooltip>
+          </q-chip>
+          <q-chip
+            v-if="sheriffCountdown"
+            dense
+            square
+            :color="sheriffCountdown.color"
+            text-color="white"
+            icon="gavel"
+          >
+            {{ sheriffCountdown.label }}
+            <q-tooltip max-width="260px" anchor="top middle" self="bottom middle">
+              Scheduled for a Sheriff sale on {{ sheriffCountdown.date }} (case
+              {{ sheriffCountdown.caseNumber }}). A hard deadline the owner is racing — often the
+              strongest motivated-seller signal.
             </q-tooltip>
           </q-chip>
         </div>

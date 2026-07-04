@@ -324,6 +324,16 @@ export interface DistressResult {
   computed_at: string
 }
 
+export interface NextSheriffSale {
+  parcel_number: string
+  case_number: string
+  sale_type: string | null
+  sale_date: string
+  status: string | null
+  opening_bid: number | null
+  days_until: number
+}
+
 export type AssessmentStatus = 'over_assessed' | 'fairly_assessed' | 'under_assessed' | 'unknown'
 
 export interface AppealPacketStatus {

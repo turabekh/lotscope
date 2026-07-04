@@ -17,6 +17,7 @@ import type {
   DealResult,
   DealStage,
   DistressResult,
+  NextSheriffSale,
   HistoricResult,
   MarketContext,
   ParcelChecklist,
@@ -144,6 +145,9 @@ export const api = {
   },
   getDistress(parcelNumber: string): Promise<DistressResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/distress`)
+  },
+  getNextSheriffSale(parcelNumber: string): Promise<NextSheriffSale | null> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/next-sheriff-sale`)
   },
   getParcelSummary(parcelNumber: string): Promise<ParcelSummaryResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/summary`)

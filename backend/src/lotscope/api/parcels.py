@@ -58,6 +58,8 @@ from lotscope.parcels.service import get_parcel_detail
 from lotscope.reports.appeal_packet import appeal_packet_filename
 from lotscope.reports.dossier import dossier_filename
 from lotscope.reports.service import build_appeal_packet, build_parcel_dossier
+from lotscope.risk.schemas import NextSheriffSale
+from lotscope.risk.service import get_next_sheriff_sale
 from lotscope.subdivision.schemas import SubdivisionResult
 from lotscope.subdivision.service import analyze_parcel_subdivision
 from lotscope.valuation.schemas import ValuationResult
@@ -197,6 +199,13 @@ async def parcel_distress(
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result
+
+
+@router.get("/{parcel_number}/next-sheriff-sale", response_model=NextSheriffSale | None)
+async def parcel_next_sheriff_sale(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> NextSheriffSale | None:
+    return await get_next_sheriff_sale(session, parcel_number)
 
 
 @router.get("/{parcel_number}/owner-portfolio", response_model=OwnerPortfolio)

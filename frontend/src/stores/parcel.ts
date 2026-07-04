@@ -8,6 +8,7 @@ import type {
   DealResult,
   DeedRestrictionsResponse,
   DistressResult,
+  NextSheriffSale,
   EnvelopeResult,
   HistoricResult,
   MarketContext,
@@ -28,6 +29,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const assemblage = ref<AssemblageResult | null>(null)
   const assemblageLoading = ref(false)
   const distress = ref<DistressResult | null>(null)
+  const nextSheriffSale = ref<NextSheriffSale | null>(null)
   const assessment = ref<AssessmentResult | null>(null)
   const subdivision = ref<SubdivisionResult | null>(null)
   const historic = ref<HistoricResult | null>(null)
@@ -51,6 +53,7 @@ export const useParcelStore = defineStore('parcel', () => {
     envelope.value = null
     assemblage.value = null
     distress.value = null
+    nextSheriffSale.value = null
     assessment.value = null
     subdivision.value = null
     historic.value = null
@@ -66,6 +69,7 @@ export const useParcelStore = defineStore('parcel', () => {
       verdict.value = await loadVerdict(parcelNumber)
       void loadAssemblage(parcelNumber)
       void loadDistress(parcelNumber)
+      void loadNextSheriffSale(parcelNumber)
       void loadAssessment(parcelNumber)
       void loadSubdivision(parcelNumber)
       void loadHistoric(parcelNumber)
@@ -135,6 +139,15 @@ export const useParcelStore = defineStore('parcel', () => {
       if (detail.value?.parcel_number === parcelNumber) distress.value = result
     } catch {
       distress.value = null
+    }
+  }
+
+  async function loadNextSheriffSale(parcelNumber: string): Promise<void> {
+    try {
+      const result = await api.getNextSheriffSale(parcelNumber)
+      if (detail.value?.parcel_number === parcelNumber) nextSheriffSale.value = result
+    } catch {
+      nextSheriffSale.value = null
     }
   }
 
@@ -240,6 +253,7 @@ export const useParcelStore = defineStore('parcel', () => {
     envelope.value = null
     assemblage.value = null
     distress.value = null
+    nextSheriffSale.value = null
     assessment.value = null
     subdivision.value = null
     historic.value = null
@@ -266,6 +280,7 @@ export const useParcelStore = defineStore('parcel', () => {
     assemblage,
     assemblageLoading,
     distress,
+    nextSheriffSale,
     assessment,
     subdivision,
     historic,

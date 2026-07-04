@@ -1,8 +1,10 @@
+from datetime import date
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.risk.service import assess_parcel_risk
+from lotscope.risk.service import assess_parcel_risk, get_next_sheriff_sale
 
 pytestmark = pytest.mark.integration
 
@@ -232,3 +234,43 @@ async def test_overlay_and_rco_intersection_flagged(db_session: AsyncSession) ->
     assert "/NCA Overlay" in flags["overlay_district"].detail
     assert "rco" in flags
     assert "Test RCO" in flags["rco"].detail
+
+
+async def test_next_sheriff_sale_returns_soonest_upcoming(db_session: AsyncSession) -> None:
+    await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000040')"))
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale (parcel_number, case_number, sale_type, sale_date, "
+            "status, opening_bid) VALUES "
+            "('000000040', 'BW-PAST', 'Tax', '2026-06-01', 'Postponed', 8000), "
+            "('000000040', 'BW-FAR', 'Tax', '2026-09-02', 'Open', 12000), "
+            "('000000040', 'BW-NEXT', 'Tax', '2026-07-14', 'Open', 10000)"
+        )
+    )
+    await db_session.flush()
+
+    result = await get_next_sheriff_sale(db_session, "000000040", today=date(2026, 7, 4))
+    assert result is not None
+    assert result.case_number == "BW-NEXT"
+    assert result.sale_date == date(2026, 7, 14)
+    assert result.days_until == 10
+    assert result.opening_bid == 10000.0
+
+
+async def test_next_sheriff_sale_none_when_only_past(db_session: AsyncSession) -> None:
+    await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000041')"))
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale (parcel_number, case_number, sale_date, status) "
+            "VALUES ('000000041', 'BW-OLD', '2026-06-01', 'Sold')"
+        )
+    )
+    await db_session.flush()
+
+    assert await get_next_sheriff_sale(db_session, "000000041", today=date(2026, 7, 4)) is None
+
+
+async def test_next_sheriff_sale_none_when_no_sale(db_session: AsyncSession) -> None:
+    await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000042')"))
+    await db_session.flush()
+    assert await get_next_sheriff_sale(db_session, "000000042", today=date(2026, 7, 4)) is None

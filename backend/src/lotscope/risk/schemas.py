@@ -24,6 +24,16 @@ class SheriffSaleCalendar(BaseModel):
     items: list[SheriffSaleItem]
 
 
+class NextSheriffSale(BaseModel):
+    parcel_number: str
+    case_number: str
+    sale_type: str | None
+    sale_date: date
+    status: str | None
+    opening_bid: float | None
+    days_until: int
+
+
 class RiskFlagSchema(BaseModel):
     code: str
     severity: Literal["high", "medium", "low", "info"]

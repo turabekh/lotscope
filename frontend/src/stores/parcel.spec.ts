@@ -21,6 +21,7 @@ vi.mock('@/lib/api', async () => {
       getEnvelope: vi.fn(),
       getAssemblage: vi.fn(),
       getDistress: vi.fn(),
+      getNextSheriffSale: vi.fn(),
     },
   }
 })
@@ -96,6 +97,21 @@ describe('parcel store', () => {
 
     expect(api.getAssemblage).toHaveBeenCalledWith('001')
     expect(store.assemblage?.potential).toBe('high')
+  })
+
+  it('loads the next sheriff sale for the selected parcel', async () => {
+    vi.mocked(api.getParcel).mockResolvedValue(parcel)
+    vi.mocked(api.getVerdict).mockResolvedValue(verdict)
+    const sale = { parcel_number: '001', case_number: 'BW-1', days_until: 12 }
+    vi.mocked(api.getNextSheriffSale).mockResolvedValue(
+      sale as unknown as Awaited<ReturnType<typeof api.getNextSheriffSale>>,
+    )
+
+    const store = useParcelStore()
+    await store.select('001')
+
+    expect(api.getNextSheriffSale).toHaveBeenCalledWith('001')
+    expect(store.nextSheriffSale?.case_number).toBe('BW-1')
   })
 
   it('clears the envelope when a new parcel is selected', async () => {
