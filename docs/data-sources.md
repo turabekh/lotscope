@@ -11,7 +11,7 @@ Base endpoint: `https://phl.carto.com/api/v2/sql`
 | Dataset | Table | Purpose | Notes |
 |---|---|---|---|
 | OPA assessments | `opa_properties_public` | Owner, mailing address, assessed market/land/building values, land use | Keyed on OPA `parcel_number`. The assessment + ownership spine. |
-| Recorded transfers | `rtt_summary` | Real recorded sales / deeds / mortgages / sheriff deeds with prices | The **comps** source; back to 1999. Realty Transfer Tax dataset. |
+| Recorded transfers | `rtt_summary` | Real recorded sales / deeds / mortgages / sheriff deeds with prices | The **comps** source; back to 1999. Realty Transfer Tax dataset. **Package-deed gotcha:** a multi-parcel deed attaches the full deed price to *every* parcel on it, so a 3-lot $600k sale reads as three $600k comps. The comp finder excludes any sale whose `document_id` appears on more than one parcel (ADR-0049). |
 | Parcels (PWD) | `pwd_parcels` | Authoritative parcel polygons | Join key to OPA is **not** aligned — reconcile explicitly. |
 | Tax delinquency | (revenue dataset) | Liens, amounts, years owed, sheriff-sale exposure | Distress signal. |
 | L&I | (violations / permits / demolitions) | Violations, permits, demolitions, unsafe / imminently-dangerous flags | Daily freshness target. |
@@ -47,7 +47,7 @@ Base: `https://data-phl.opendata.arcgis.com`
 | Zoning Base Districts | Title 14 base districts (RSA / RM / CMX, …) and overlays. |
 | Building footprints | Structure presence on a parcel. |
 | Land use | Categorical land use. |
-| FEMA flood | Flood zones. |
+| FEMA flood | Flood zones. Only **SFHA** designations (zone starts `A`/`V`) are a risk flag; 0.2%-annual / shaded-X is informational; unshaded X and minimal-hazard zones do not flag (ADR-0049). |
 | Historic districts | Overlay / review impacts. |
 | Council districts, neighborhoods / RCOs | Boundaries, notification requirements. |
 | Street Centerline | Street network (~41k LineString segments); basis for the landlocked / no-street-access flag (ADR-0027). `Street_Centerline` FeatureServer; key `seg_id`, name `stname`. |
