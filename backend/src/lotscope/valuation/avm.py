@@ -12,6 +12,7 @@ _MEDIUM_MIN_COMPS = 3
 _MEDIUM_MAX_CV = 0.5
 _MIN_COMPS_FOR_TRIM = 4
 _IQR_FENCE = 1.5
+_PERCENTILE_MIN_COMPS = 5
 
 _MIN_NAME_TOKEN_LEN = 3
 _NAME_STOPWORDS = frozenset(
@@ -156,13 +157,23 @@ def estimate_land_value(
     average_rate = mean(usable_rates)
     cv = pstdev(usable_rates) / average_rate if len(usable_rates) > 1 and average_rate else 0.0
     estimate = round(median_rate * subject_area_sqft)
-    low = round(min(usable_rates) * subject_area_sqft)
-    high = round(max(usable_rates) * subject_area_sqft)
+    if len(usable_rates) >= _PERCENTILE_MIN_COMPS:
+        deciles = quantiles(usable_rates, n=10, method="inclusive")
+        low_rate, high_rate = deciles[0], deciles[8]
+        range_reason = (
+            f"Range is the 10th-90th percentile of {len(usable_rates)} comparable $/sqft rates."
+        )
+    else:
+        low_rate, high_rate = min(usable_rates), max(usable_rates)
+        range_reason = f"Range is the full range of {len(usable_rates)} comp(s)."
+    low = round(low_rate * subject_area_sqft)
+    high = round(high_rate * subject_area_sqft)
     confidence = _confidence(len(usable_rates), cv)
 
     reasons = [
         f"Estimate from {len(usable_rates)} comparable land sale(s); median "
         f"${median_rate:,.0f}/sqft applied to {subject_area_sqft:,.0f} sqft.",
+        range_reason,
         f"Price dispersion (coefficient of variation) ~{cv:.2f}.",
     ]
     if trimmed:

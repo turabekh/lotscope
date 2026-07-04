@@ -118,6 +118,24 @@ def test_estimate_trims_per_sqft_outlier_to_tighten_range() -> None:
     assert result.confidence == "high"
 
 
+def test_percentile_range_clips_extreme_high_when_depth_allows() -> None:
+    comps = [_comp(rate) for rate in (40, 60, 100, 220, 300)]
+    result = estimate_land_value(1000.0, comps)
+    assert result.high is not None
+    assert result.high < 300 * 1000
+    assert result.estimate == 100 * 1000
+    assert any("10th-90th percentile of 5 comparable" in reason for reason in result.reasons)
+
+
+def test_full_range_preserved_for_shallow_comp_sets() -> None:
+    comps = [_comp(rate) for rate in (95, 100, 105)]
+    result = estimate_land_value(1000.0, comps)
+    assert result.low == 95 * 1000
+    assert result.high == 105 * 1000
+    assert result.estimate == 100 * 1000
+    assert any("full range of 3 comp" in reason for reason in result.reasons)
+
+
 @pytest.mark.parametrize(
     ("grantor", "grantee", "expected"),
     [
