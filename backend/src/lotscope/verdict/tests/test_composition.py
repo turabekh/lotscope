@@ -192,6 +192,18 @@ def test_underpriced_deal_is_called_out_in_summary() -> None:
     assert "MAO $140,000 (underpriced)" in verdict.summary
 
 
+def test_infeasible_deal_replaces_mao_in_summary() -> None:
+    verdict = compose_verdict(
+        _buildability(),
+        _valuation(),
+        _risk(),
+        _deal(infeasible=True, max_allowable_offer=0.0, is_underpriced=False),
+        assessed_market_value=None,
+    )
+    assert "new build not feasible" in verdict.summary
+    assert "MAO $" not in verdict.summary
+
+
 def test_deal_fields_default_to_none_without_deal() -> None:
     verdict = compose_verdict(_buildability(), _valuation(), _risk(), assessed_market_value=None)
     assert verdict.arv is None

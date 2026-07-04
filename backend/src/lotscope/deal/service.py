@@ -109,7 +109,11 @@ async def analyze_parcel_scenarios(
 
     use_class = land_use_class(subject.base_zoning_code)
     finished_comps, _ = await find_comps(
-        session, parcel_number, radius_ft=radius_ft, years=years, vacant_only=False,
+        session,
+        parcel_number,
+        radius_ft=radius_ft,
+        years=years,
+        vacant_only=False,
         use_class=use_class,
     )
     finished_prices = [comp.sale_price for comp in finished_comps]
@@ -127,7 +131,8 @@ async def analyze_parcel_scenarios(
     analysis = build_scenarios(
         ScenarioInputs(
             by_right_units=buildability.by_right_units if buildability is not None else None,
-            buildable_area_sqft=buildability.buildable_area_sqft if buildability is not None
+            buildable_area_sqft=buildability.buildable_area_sqft
+            if buildability is not None
             else None,
             estimated_floors=envelope.estimated_floors if envelope is not None else None,
             finished_comp_prices=finished_prices,
@@ -151,6 +156,7 @@ async def analyze_parcel_scenarios(
                 roi=scenario.roi,
                 max_allowable_offer=scenario.max_allowable_offer,
                 deal_score=scenario.deal_score,
+                infeasible=scenario.infeasible,
             )
             for scenario in analysis.scenarios
         ],
@@ -250,6 +256,7 @@ async def build_deal(
         max_allowable_offer=analysis.max_allowable_offer,
         is_underpriced=analysis.is_underpriced,
         deal_score=analysis.deal_score,
+        infeasible=analysis.infeasible,
         comp_count=analysis.comp_count,
         confidence=analysis.confidence,
         assumptions=DealAssumptionsSchema(

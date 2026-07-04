@@ -46,6 +46,7 @@ class DealAnalysis:
     max_allowable_offer: float | None
     is_underpriced: bool | None
     deal_score: float | None
+    infeasible: bool
     comp_count: int
     confidence: Confidence
     reasons: list[str]
@@ -87,6 +88,7 @@ def _unknown(comp_count: int, reason: str) -> DealAnalysis:
         max_allowable_offer=None,
         is_underpriced=None,
         deal_score=None,
+        infeasible=False,
         comp_count=comp_count,
         confidence="low",
         reasons=[reason],
@@ -152,6 +154,9 @@ def analyze_deal(inputs: DealInputs, assumptions: DealAssumptions) -> DealAnalys
     max_allowable_offer = round(
         arv * (1.0 - assumptions.target_margin) - construction_cost - soft_cost - selling_cost
     )
+    infeasible = max_allowable_offer < 0
+    if infeasible:
+        max_allowable_offer = 0
 
     reasons = [
         f"ARV ${arv:,.0f} from {comp_count} improved comp(s); "
@@ -162,11 +167,17 @@ def analyze_deal(inputs: DealInputs, assumptions: DealAssumptions) -> DealAnalys
             f"selling ${selling_cost:,.0f}."
         ),
         acquisition_reason,
-        (
+    ]
+    if infeasible:
+        reasons.append(
+            "Estimated build cost exceeds achievable finished value; new construction is not "
+            "economical here at any land price (max allowable offer floored to $0)."
+        )
+    else:
+        reasons.append(
             f"Max allowable offer ${max_allowable_offer:,.0f} "
             f"at a {assumptions.target_margin:.0%} target margin."
-        ),
-    ]
+        )
 
     if acquisition_cost is None:
         return DealAnalysis(
@@ -184,6 +195,7 @@ def analyze_deal(inputs: DealInputs, assumptions: DealAssumptions) -> DealAnalys
             max_allowable_offer=float(max_allowable_offer),
             is_underpriced=None,
             deal_score=None,
+            infeasible=infeasible,
             comp_count=comp_count,
             confidence=finished_confidence,
             reasons=reasons,
@@ -194,7 +206,7 @@ def analyze_deal(inputs: DealInputs, assumptions: DealAssumptions) -> DealAnalys
     margin = profit / arv if arv > 0 else None
     cost_basis = acquisition_cost + construction_cost + soft_cost
     roi = profit / cost_basis if cost_basis > 0 else None
-    is_underpriced = acquisition_cost <= max_allowable_offer
+    is_underpriced = not infeasible and acquisition_cost <= max_allowable_offer
     deal_score = (
         round(_clamp(margin / (2.0 * assumptions.target_margin) * 100.0, 0.0, 100.0), 1)
         if margin is not None and assumptions.target_margin > 0
@@ -223,6 +235,7 @@ def analyze_deal(inputs: DealInputs, assumptions: DealAssumptions) -> DealAnalys
         max_allowable_offer=float(max_allowable_offer),
         is_underpriced=is_underpriced,
         deal_score=deal_score,
+        infeasible=infeasible,
         comp_count=comp_count,
         confidence=finished_confidence,
         reasons=reasons,

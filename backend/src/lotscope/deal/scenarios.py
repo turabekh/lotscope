@@ -26,6 +26,7 @@ class Scenario:
     roi: float | None
     max_allowable_offer: float | None
     deal_score: float | None
+    infeasible: bool
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,7 @@ def build_scenarios(
                 roi=analysis.roi,
                 max_allowable_offer=analysis.max_allowable_offer,
                 deal_score=analysis.deal_score,
+                infeasible=analysis.infeasible,
             )
         )
 

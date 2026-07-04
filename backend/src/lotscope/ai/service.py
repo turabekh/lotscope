@@ -71,6 +71,10 @@ def _parcel_facts(detail: ParcelDetail, verdict: VerdictResult | None) -> str:
     return "\n".join(lines)
 
 
+def _deal_is_infeasible(verdict: VerdictResult) -> bool:
+    return verdict.max_allowable_offer is not None and verdict.max_allowable_offer <= 0
+
+
 def _summary_facts(
     detail: ParcelDetail,
     verdict: VerdictResult | None,
@@ -86,14 +90,22 @@ def _summary_facts(
         f"Assessed value: {detail.market_value}.",
     ]
     if verdict is not None:
+        if _deal_is_infeasible(verdict):
+            deal_read = (
+                "new construction is NOT economically feasible (estimated build cost exceeds "
+                "achievable finished value; do not present a negative offer or margin)"
+            )
+        else:
+            deal_read = (
+                f"max allowable offer {verdict.max_allowable_offer}; deal score "
+                f"{verdict.deal_score}; underpriced: {verdict.is_underpriced}"
+            )
         lines.append(
             f"Verdict: opportunity score {verdict.opportunity_score}/100; "
             f"buildable by-right: {verdict.can_build_by_right}; by-right units: "
             f"{verdict.by_right_units}; estimated land value "
             f"{verdict.value_estimate_low}-{verdict.value_estimate_high}; "
-            f"max allowable offer {verdict.max_allowable_offer}; deal score "
-            f"{verdict.deal_score}; underpriced: {verdict.is_underpriced}; "
-            f"risk score {verdict.risk_score}."
+            f"{deal_read}; risk score {verdict.risk_score}."
         )
         flags = [str(flag.get("label", "")) for flag in verdict.risk_flags][:4]
         if flags:
@@ -152,10 +164,17 @@ def _report_facts(
 ) -> str:
     facts = _summary_facts(detail, verdict, distress, assessment)
     if verdict is not None and verdict.arv is not None:
-        facts += (
-            f"\nDeal model: ARV {verdict.arv}; estimated profit {verdict.est_profit}; "
-            f"estimated margin {verdict.est_margin}."
-        )
+        if _deal_is_infeasible(verdict):
+            facts += (
+                f"\nDeal model: ARV {verdict.arv}, but estimated build cost exceeds it — new "
+                "construction is not economically feasible here; do not cite a specific negative "
+                "profit or margin."
+            )
+        else:
+            facts += (
+                f"\nDeal model: ARV {verdict.arv}; estimated profit {verdict.est_profit}; "
+                f"estimated margin {verdict.est_margin}."
+            )
     if cited_section:
         facts += f"\nBuildability basis: LotScope zoning analysis cites Title 14 § {cited_section}."
     return facts

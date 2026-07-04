@@ -23,6 +23,7 @@ class ScenarioItem(BaseModel):
     roi: float | None
     max_allowable_offer: float | None
     deal_score: float | None
+    infeasible: bool = False
 
 
 class ScenariosResult(BaseModel):
@@ -54,6 +55,7 @@ class DealResult(BaseModel):
     max_allowable_offer: float | None
     is_underpriced: bool | None
     deal_score: float | None
+    infeasible: bool = False
     comp_count: int
     confidence: Literal["high", "medium", "low"]
     assumptions: DealAssumptionsSchema

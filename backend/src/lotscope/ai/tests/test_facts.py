@@ -1,0 +1,68 @@
+from datetime import UTC, datetime
+from typing import Any
+
+from lotscope.ai.service import _report_facts, _summary_facts
+from lotscope.parcels.schemas import ParcelDetail
+from lotscope.verdict.schemas import VerdictResult
+
+_NOW = datetime(2026, 7, 4, tzinfo=UTC)
+
+
+def _detail(**overrides: Any) -> ParcelDetail:
+    base: dict[str, Any] = dict.fromkeys(ParcelDetail.model_fields)
+    base["parcel_number"] = "000000001"
+    base.update(overrides)
+    return ParcelDetail(**base)
+
+
+def _verdict(**overrides: Any) -> VerdictResult:
+    base: dict[str, Any] = {
+        "parcel_number": "000000001",
+        "verdict_version": "v7",
+        "buildability_score": 70.0,
+        "opportunity_score": 68.0,
+        "summary": "RSA-5: buildable by-right.",
+        "can_build_by_right": True,
+        "by_right_units": 1,
+        "max_height_ft": 38.0,
+        "needs_variance": False,
+        "buildable_area_sqft": 1557.0,
+        "value_estimate_low": 7929.0,
+        "value_estimate_high": 72261.0,
+        "value_confidence": 0.3,
+        "assessment_market_gap": None,
+        "arv": 97500.0,
+        "est_profit": -535041.0,
+        "est_margin": -5.4876,
+        "max_allowable_offer": 0.0,
+        "deal_score": 0.0,
+        "is_underpriced": False,
+        "risk_score": 80.0,
+        "risk_flags": [],
+        "sources": [],
+        "computed_at": _NOW,
+    }
+    base.update(overrides)
+    return VerdictResult(**base)
+
+
+def test_infeasible_deal_is_narrated_not_quoted_as_negative() -> None:
+    facts = _report_facts(_detail(), _verdict(), None, None, "RSA-5")
+    assert "not economically feasible" in facts.lower()
+    assert "-535041" not in facts
+    assert "-5.4876" not in facts
+
+
+def test_infeasible_detected_from_legacy_negative_mao() -> None:
+    facts = _summary_facts(_detail(), _verdict(max_allowable_offer=-532575.0), None, None)
+    assert "not economically feasible" in facts.lower()
+    assert "-532575" not in facts
+
+
+def test_feasible_deal_still_reports_numbers() -> None:
+    verdict = _verdict(
+        max_allowable_offer=95000.0, deal_score=62.0, is_underpriced=True, est_margin=0.15
+    )
+    facts = _report_facts(_detail(), verdict, None, None, "RSA-5")
+    assert "95000" in facts
+    assert "not economically feasible" not in facts.lower()

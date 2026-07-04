@@ -159,7 +159,22 @@ def render_dossier_pdf(
         _kv(pdf, "Estimated land value", value)
         _kv(pdf, "vs. assessment", _money(verdict.assessment_market_gap))
 
-        if verdict.max_allowable_offer is not None:
+        if verdict.max_allowable_offer is not None and verdict.max_allowable_offer <= 0:
+            _section(pdf, "Deal analysis")
+            _tag(pdf, "NEW BUILD NOT FEASIBLE", (198, 40, 40))
+            pdf.ln(8)
+            _kv(pdf, "After-build value (ARV)", _money(verdict.arv))
+            pdf.set_font("Helvetica", "", 8.5)
+            pdf.set_text_color(*_MUTED)
+            pdf.multi_cell(
+                0,
+                4,
+                _s(
+                    "Estimated build cost exceeds achievable finished value; new construction is "
+                    "not economical here at current pricing."
+                ),
+            )
+        elif verdict.max_allowable_offer is not None:
             _section(pdf, "Deal analysis")
             if verdict.deal_score is not None:
                 color = (27, 94, 32) if verdict.is_underpriced else _BRAND

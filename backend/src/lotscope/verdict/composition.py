@@ -6,7 +6,7 @@ from lotscope.risk.schemas import RiskResult
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.zoning.schemas import BuildabilityResult
 
-VERDICT_VERSION = "v6"
+VERDICT_VERSION = "v7"
 
 _CONFIDENCE_SCORE = {"high": 0.9, "medium": 0.6, "low": 0.3}
 _BUILDABILITY_WEIGHT = 0.6
@@ -108,7 +108,9 @@ def _summary(
     if risk is not None:
         parts.append(f"{len(risk.flags)} risk flag(s)" if risk.flags else "no major risk flags")
 
-    if deal is not None and deal.max_allowable_offer is not None:
+    if deal is not None and deal.infeasible:
+        parts.append("new build not feasible (build cost exceeds value)")
+    elif deal is not None and deal.max_allowable_offer is not None:
         mao = f"MAO ${deal.max_allowable_offer:,.0f}"
         parts.append(f"{mao} (underpriced)" if deal.is_underpriced else mao)
 

@@ -114,6 +114,50 @@ def test_deal_score_scales_with_margin() -> None:
     assert cheaper.deal_score > at_target.deal_score
 
 
+def test_feasible_build_is_not_infeasible() -> None:
+    result = analyze_deal(_inputs(), ASSUMPTIONS)
+    assert result.infeasible is False
+    assert result.max_allowable_offer is not None
+    assert result.max_allowable_offer > 0
+
+
+def test_infeasible_build_floors_mao_at_zero_and_flags() -> None:
+    result = analyze_deal(
+        _inputs(
+            units=1,
+            buildable_area_sqft=1557.0,
+            estimated_floors=3,
+            finished_comp_prices=[97_500.0, 95_000.0, 99_000.0],
+            land_value=22_000.0,
+            acquisition_price=None,
+        ),
+        ASSUMPTIONS,
+    )
+    assert result.infeasible is True
+    assert result.max_allowable_offer == 0.0
+    assert result.arv == 97_500.0
+    assert result.construction_cost is not None
+    assert result.construction_cost > result.arv
+    assert any("not economical" in reason for reason in result.reasons)
+
+
+def test_infeasible_build_is_never_underpriced() -> None:
+    result = analyze_deal(
+        _inputs(
+            units=1,
+            buildable_area_sqft=1557.0,
+            estimated_floors=3,
+            finished_comp_prices=[97_500.0, 95_000.0, 99_000.0],
+            land_value=None,
+            acquisition_price=1.0,
+        ),
+        ASSUMPTIONS,
+    )
+    assert result.infeasible is True
+    assert result.max_allowable_offer == 0.0
+    assert result.is_underpriced is False
+
+
 def test_no_units_returns_unknown() -> None:
     result = analyze_deal(_inputs(units=None), ASSUMPTIONS)
     assert isinstance(result, DealAnalysis)
