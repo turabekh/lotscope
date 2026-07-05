@@ -24,12 +24,14 @@ _PARCEL_SQL = text(
 )
 _SPATIAL_DISTRICT_SQL = text(
     "SELECT zd.code FROM parcel p "
-    "JOIN zoning_district zd ON ST_Contains(zd.geom_local, ST_Centroid(p.geom_local)) "
+    "JOIN zoning_district zd ON zd.market_code = p.market_code "
+    "AND ST_Contains(zd.geom_local, ST_Centroid(p.geom_local)) "
     "WHERE p.parcel_number = :parcel_number LIMIT 1"
 )
 _PARCEL_OVERLAYS_SQL = text(
     "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
-    "JOIN zoning_overlay zo ON ST_Intersects(zo.geom_local, p.geom_local) "
+    "JOIN zoning_overlay zo ON zo.market_code = p.market_code "
+    "AND ST_Intersects(zo.geom_local, p.geom_local) "
     "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL AND zo.name IS NOT NULL"
 )
 

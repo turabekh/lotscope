@@ -37,7 +37,8 @@ _TARGET_SQL = text(
 )
 _NEIGHBORS_SQL = text(
     "WITH t AS ("
-    "  SELECT owner, base_zoning_code, geom_local FROM parcel WHERE parcel_number = :parcel_number"
+    "  SELECT owner, base_zoning_code, geom_local, market_code "
+    "  FROM parcel WHERE parcel_number = :parcel_number"
     ") "
     "SELECT n.parcel_number, n.address, n.owner, n.base_zoning_code, n.lot_area_sqft, "
     "n.frontage_ft, n.market_value, n.is_vacant, n.is_city_owned, "
@@ -49,6 +50,7 @@ _NEIGHBORS_SQL = text(
     "ST_Length(ST_CollectionExtract(ST_Intersection(n.geom_local, t.geom_local), 2)) "
     "AS shared_boundary_ft "
     "FROM t JOIN parcel n ON n.parcel_number <> :parcel_number AND n.geom_local IS NOT NULL "
+    "AND n.market_code = t.market_code "
     "AND ST_DWithin(n.geom_local, t.geom_local, :tolerance) "
     "ORDER BY same_owner DESC, n.is_vacant DESC NULLS LAST, shared_boundary_ft DESC NULLS LAST "
     "LIMIT :limit"
@@ -179,7 +181,8 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
 _META_SQL = text(
     "SELECT p.base_zoning_code, "
     "(SELECT n.name FROM neighborhood n "
-    " WHERE p.geom_local IS NOT NULL AND ST_Contains(n.geom_local, ST_Centroid(p.geom_local)) "
+    " WHERE p.geom_local IS NOT NULL AND n.market_code = p.market_code "
+    " AND ST_Contains(n.geom_local, ST_Centroid(p.geom_local)) "
     " LIMIT 1) AS neighborhood "
     "FROM parcel p WHERE p.parcel_number = :parcel_number"
 )

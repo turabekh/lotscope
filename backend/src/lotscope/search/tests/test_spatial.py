@@ -38,8 +38,8 @@ def test_request_accepts_neighborhood_only() -> None:
 
 def test_build_filters_default_requires_geometry() -> None:
     where, params = build_filters(vacant_only=False, zoning_codes=[])
-    assert where == "p.geom_4326 IS NOT NULL"
-    assert params == {}
+    assert where == "p.geom_4326 IS NOT NULL AND p.market_code = :market"
+    assert params == {"market": "phl"}
 
 
 def test_build_filters_vacant_and_zoning_normalized() -> None:
@@ -65,6 +65,7 @@ def test_build_filters_buy_box_criteria() -> None:
     assert "p.market_value <= :max_value" in where
     assert "pv.opportunity_score >= :min_score" in where
     assert params == {
+        "market": "phl",
         "min_lot_area": 1000,
         "max_lot_area": 5000,
         "min_value": 50000,
@@ -78,7 +79,7 @@ def test_build_filters_omits_unset_criteria() -> None:
     assert "pv.opportunity_score >= :min_score" in where
     assert "lot_area" not in where
     assert "market_value" not in where
-    assert params == {"min_score": 70}
+    assert params == {"market": "phl", "min_score": 70}
 
 
 def test_build_filters_investor_criteria() -> None:
@@ -96,7 +97,7 @@ def test_build_filters_investor_criteria() -> None:
     assert "coalesce(ts.in_sheriff_sale, false) = true" in where
     assert "coalesce(pv.is_underpriced, false) = true" in where
     assert "coalesce(pv.can_build_by_right, false) = true" in where
-    assert params == {"min_distress": 40}
+    assert params == {"market": "phl", "min_distress": 40}
 
 
 def _square(lng: float, lat: float, size: float = 0.0001) -> str:

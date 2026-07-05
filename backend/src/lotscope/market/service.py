@@ -14,14 +14,18 @@ _HAS_GEOM_SQL = text(
 )
 _NEIGHBORHOOD_SQL = text(
     "SELECT n.name FROM parcel p "
-    "JOIN neighborhood n ON ST_Contains(n.geom_local, ST_Centroid(p.geom_local)) "
+    "JOIN neighborhood n ON n.market_code = p.market_code "
+    "AND ST_Contains(n.geom_local, ST_Centroid(p.geom_local)) "
     "WHERE p.parcel_number = :parcel_number LIMIT 1"
 )
 _CONTEXT_SQL = text(
-    "WITH subj AS (SELECT geom_local FROM parcel WHERE parcel_number = :parcel_number), "
+    "WITH subj AS ("
+    "  SELECT geom_local, market_code FROM parcel WHERE parcel_number = :parcel_number"
+    "), "
     "nearby AS ("
     "  SELECT p.parcel_number, p.is_vacant, p.market_value "
-    "  FROM parcel p, subj WHERE ST_DWithin(p.geom_local, subj.geom_local, :radius)"
+    "  FROM parcel p, subj WHERE p.market_code = subj.market_code "
+    "  AND ST_DWithin(p.geom_local, subj.geom_local, :radius)"
     ") "
     "SELECT "
     "(SELECT count(*) FROM nearby) AS parcels_nearby, "

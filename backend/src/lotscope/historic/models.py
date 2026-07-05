@@ -1,7 +1,7 @@
 from datetime import date
 
 from geoalchemy2 import Geometry, WKBElement
-from sqlalchemy import Date, Integer, String, UniqueConstraint
+from sqlalchemy import Date, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -17,6 +17,9 @@ class HistoricDistrict(Base, TimestampMixin, IngestionMixin):
     name: Mapped[str | None] = mapped_column(String(160), index=True)
     designated_date: Mapped[date | None] = mapped_column(Date)
 
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
     geom_local: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
     )

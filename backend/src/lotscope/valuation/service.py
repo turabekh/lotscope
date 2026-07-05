@@ -24,7 +24,8 @@ _SUBJECT_SQL = text(
 )
 _COMPS_SQL = text(
     "WITH subject AS ("
-    "  SELECT ST_Centroid(geom_local) AS pt FROM parcel WHERE parcel_number = :parcel_number"
+    "  SELECT ST_Centroid(geom_local) AS pt, market_code "
+    "  FROM parcel WHERE parcel_number = :parcel_number"
     ") "
     "SELECT s.parcel_number AS parcel_number, "
     "       cp.address AS address, "
@@ -38,6 +39,7 @@ _COMPS_SQL = text(
     "JOIN parcel cp ON cp.parcel_number = s.parcel_number "
     "CROSS JOIN subject "
     "WHERE cp.geom_local IS NOT NULL "
+    "  AND cp.market_code = subject.market_code "
     "  AND s.parcel_number <> :parcel_number "
     "  AND s.sale_price >= :min_price "
     "  AND s.sale_date >= :since "

@@ -2,7 +2,7 @@ from datetime import date
 from typing import Any
 
 from geoalchemy2 import Geometry, WKBElement
-from sqlalchemy import Boolean, Date, Integer, Numeric, String, UniqueConstraint, text
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,6 +20,9 @@ class ZoningDistrict(Base, TimestampMixin, IngestionMixin):
     category: Mapped[str | None] = mapped_column(String(60))
     long_code: Mapped[str | None] = mapped_column(String(60))
 
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
     geom_local: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
     )
@@ -38,6 +41,9 @@ class ZoningOverlay(Base, TimestampMixin, IngestionMixin):
     name: Mapped[str | None] = mapped_column(String(255), index=True)
     code_section: Mapped[str | None] = mapped_column(String(60))
 
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
     geom_local: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
     )
@@ -55,6 +61,9 @@ class Rco(Base, TimestampMixin, IngestionMixin):
     name: Mapped[str | None] = mapped_column(String(255), index=True)
     org_type: Mapped[str | None] = mapped_column(String(60))
 
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
     geom_local: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
     )

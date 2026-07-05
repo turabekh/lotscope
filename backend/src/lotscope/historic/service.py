@@ -17,7 +17,8 @@ _PARCEL_SQL = text(
 )
 _HISTORIC_SQL = text(
     "SELECT hd.name, hd.designated_date FROM parcel p "
-    "JOIN historic_district hd ON ST_Intersects(hd.geom_local, p.geom_local) "
+    "JOIN historic_district hd ON hd.market_code = p.market_code "
+    "AND ST_Intersects(hd.geom_local, p.geom_local) "
     "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL "
     "ORDER BY hd.name LIMIT 1"
 )
