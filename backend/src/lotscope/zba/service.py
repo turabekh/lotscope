@@ -8,9 +8,8 @@ from lotscope.zba.schemas import VarianceOutlook
 
 _WINDOW_YEARS = 3
 
-_GRANTED_DECISIONS = frozenset({"GRANTED", "GRANTED/PROV"})
-_DENIED_DECISIONS = frozenset({"DENIED", "DENIED/PROV"})
-_DECIDED_DECISIONS = _GRANTED_DECISIONS | _DENIED_DECISIONS
+_GRANTED_DECISIONS = frozenset({"GRANTED", "GRANTED/PROV", "APPROVED"})
+_DENIED_DECISIONS = frozenset({"DENIED", "DENIED/PROV", "REFUSED"})
 
 _WINDOW_MONTHS = 36
 _MIN_DECIDED = 10
@@ -37,8 +36,15 @@ _SOURCES = [{"source": "appeals", "signal": "zba_variance_outlook"}]
 
 
 def summarize_decisions(decision_counts: Mapping[str, int]) -> tuple[int, int]:
-    granted = sum(n for decision, n in decision_counts.items() if decision in _GRANTED_DECISIONS)
-    decided = sum(n for decision, n in decision_counts.items() if decision in _DECIDED_DECISIONS)
+    granted = 0
+    decided = 0
+    for decision, count in decision_counts.items():
+        key = decision.strip().upper()
+        if key in _GRANTED_DECISIONS:
+            granted += count
+            decided += count
+        elif key in _DENIED_DECISIONS:
+            decided += count
     return granted, decided
 
 

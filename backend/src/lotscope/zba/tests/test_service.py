@@ -17,6 +17,23 @@ def test_summarize_excludes_non_decisive_outcomes() -> None:
     assert decided == 4
 
 
+def test_summarize_normalizes_case_and_synonyms_across_zba_labels() -> None:
+    granted, decided = summarize_decisions(
+        {
+            "GRANTED": 10,
+            "Granted": 5,
+            "Approved": 3,
+            "DENIED": 2,
+            "Refused": 1,
+            "Complete": 40,
+            "Dismissed / Withdrawn": 7,
+            "": 9,
+        }
+    )
+    assert granted == 18
+    assert decided == 21
+
+
 def test_summarize_empty_is_zero() -> None:
     assert summarize_decisions({}) == (0, 0)
 
