@@ -96,7 +96,7 @@ async def test_load_rtt_stubs_parcel_and_inserts_sale(db_session: AsyncSession) 
     assert sale.sale_price == 250000.0
     assert sale.document_type == "DEED"
 
-    fresh = await db_session.get(DatasetFreshness, "rtt_summary")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "rtt_summary"))
     assert fresh is not None
     assert fresh.status == "success"
 

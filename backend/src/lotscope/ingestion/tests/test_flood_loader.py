@@ -80,7 +80,7 @@ async def test_load_flood_writes_zone_geometry(db_session: AsyncSession) -> None
     assert row[1] == 2272
     assert row[2] == 4326
 
-    fresh = await db_session.get(DatasetFreshness, "fema_flood")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "fema_flood"))
     assert fresh is not None
     assert fresh.status == "success"
 

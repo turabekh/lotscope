@@ -74,7 +74,7 @@ async def test_load_pwd_writes_dual_srid_geometry(db_session: AsyncSession) -> N
     assert row[2] == "P9"
     assert row[3] == "pwd_parcels"
 
-    fresh = await db_session.get(DatasetFreshness, "pwd_parcels")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "pwd_parcels"))
     assert fresh is not None
     assert fresh.status == "success"
 

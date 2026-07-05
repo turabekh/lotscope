@@ -193,7 +193,7 @@ async def ingest_zba(session_factory: SessionFactory, settings: Settings) -> int
     )
 
 
-INGEST_JOBS: dict[str, Job] = {
+_PHL_JOBS: dict[str, Job] = {
     "opa": ingest_opa,
     "pwd": ingest_pwd,
     "rtt": ingest_rtt,
@@ -212,3 +212,24 @@ INGEST_JOBS: dict[str, Job] = {
     "historic": ingest_historic,
     "zba": ingest_zba,
 }
+
+INGEST_JOBS: dict[tuple[str, str], Job] = {
+    ("phl", dataset): job for dataset, job in _PHL_JOBS.items()
+}
+
+
+def datasets_for_market(market: str) -> list[str]:
+    return [dataset for (registered_market, dataset) in INGEST_JOBS if registered_market == market]
+
+
+def markets() -> list[str]:
+    return sorted({registered_market for (registered_market, _) in INGEST_JOBS})
+
+
+async def ingest_market(
+    session_factory: SessionFactory, settings: Settings, market: str = "phl"
+) -> int:
+    total = 0
+    for dataset in datasets_for_market(market):
+        total += await INGEST_JOBS[(market, dataset)](session_factory, settings)
+    return total

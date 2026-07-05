@@ -11,7 +11,7 @@ pytestmark = pytest.mark.integration
 
 async def _cleanup(session_factory: async_sessionmaker[AsyncSession], dataset: str) -> None:
     async with session_factory() as session:
-        record = await session.get(DatasetFreshness, dataset)
+        record = await session.get(DatasetFreshness, ("phl", dataset))
         if record is not None:
             await session.delete(record)
             await session.commit()
@@ -29,7 +29,7 @@ async def test_run_loader_commits_and_returns_total(migrated_database: str) -> N
         total = await run_loader(session_factory, loader, dataset="ds_ok")
         assert total == 7
         async with session_factory() as session:
-            record = await session.get(DatasetFreshness, "ds_ok")
+            record = await session.get(DatasetFreshness, ("phl", "ds_ok"))
             assert record is not None
             assert record.status == "success"
             assert record.row_count == 7
@@ -49,7 +49,7 @@ async def test_run_loader_records_failure_and_raises(migrated_database: str) -> 
         with pytest.raises(IngestionError):
             await run_loader(session_factory, failing, dataset="ds_fail")
         async with session_factory() as session:
-            record = await session.get(DatasetFreshness, "ds_fail")
+            record = await session.get(DatasetFreshness, ("phl", "ds_fail"))
             assert record is not None
             assert record.status == "failed"
             assert record.detail is not None

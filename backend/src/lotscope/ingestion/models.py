@@ -22,6 +22,9 @@ from lotscope.core.mixins import TimestampMixin
 class DatasetFreshness(Base, TimestampMixin):
     __tablename__ = "dataset_freshness"
 
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), primary_key=True, server_default="phl"
+    )
     dataset: Mapped[str] = mapped_column(String(120), primary_key=True)
     status: Mapped[str] = mapped_column(String(30), nullable=False, server_default="unknown")
     last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

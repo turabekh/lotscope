@@ -60,7 +60,7 @@ async def test_load_vacancy_marks_parcel_vacant(db_session: AsyncSession) -> Non
     )
     assert is_vacant is True
 
-    fresh = await db_session.get(DatasetFreshness, "vacant_indicators")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "vacant_indicators"))
     assert fresh is not None
     assert fresh.status == "success"
 

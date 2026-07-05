@@ -85,7 +85,7 @@ async def test_load_li_violations_inserts_event(db_session: AsyncSession) -> Non
     assert event[0] == "violation"
     assert event[1] is True
 
-    fresh = await db_session.get(DatasetFreshness, "violations")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "violations"))
     assert fresh is not None
     assert fresh.status == "success"
 

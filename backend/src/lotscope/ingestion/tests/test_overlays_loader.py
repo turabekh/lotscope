@@ -112,7 +112,7 @@ async def test_load_zoning_overlays_writes_geometry(db_session: AsyncSession) ->
     assert row[0] == "/NCA"
     assert row[1] == 2272
     assert row[2] == 4326
-    fresh = await db_session.get(DatasetFreshness, "zoning_overlays")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "zoning_overlays"))
     assert fresh is not None
     assert fresh.status == "success"
 
