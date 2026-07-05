@@ -35,7 +35,7 @@ def to_parcel_geometry_row(record: PwdRecord) -> dict[str, Any] | None:
         "parcel_number": parcel_number,
         "pwd_parcel_id": normalize_pwd_id(record.parcel_id),
         "geom_4326": geom_4326,
-        "geom_2272": func.ST_Transform(geom_4326, 2272),
+        "geom_local": func.ST_Transform(geom_4326, 2272),
         "source": PWD_DATASET,
     }
 
@@ -66,7 +66,7 @@ async def load_pwd(
                 Parcel,
                 rows,
                 index_elements=["parcel_number"],
-                update_columns=["pwd_parcel_id", "geom_4326", "geom_2272", "source"],
+                update_columns=["pwd_parcel_id", "geom_4326", "geom_local", "source"],
             )
             total += len(rows)
     await record_freshness(session, PWD_DATASET, status="success", success=True, row_count=total)

@@ -30,7 +30,7 @@ def to_street_row(feature: ArcGisFeature) -> dict[str, Any] | None:
         "street_name": str(street_name) if street_name is not None else None,
         "street_class": str(street_class) if street_class is not None else None,
         "geom_4326": geom_4326,
-        "geom_2272": func.ST_Transform(geom_4326, 2272),
+        "geom_local": func.ST_Transform(geom_4326, 2272),
         "source": STREETS_DATASET,
     }
 
@@ -52,7 +52,7 @@ async def load_streets(
                 StreetCenterline,
                 rows,
                 index_elements=["external_id"],
-                update_columns=["street_name", "street_class", "geom_4326", "geom_2272", "source"],
+                update_columns=["street_name", "street_class", "geom_4326", "geom_local", "source"],
             )
             total += len(rows)
     await record_freshness(

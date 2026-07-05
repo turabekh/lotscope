@@ -19,16 +19,16 @@ DEFAULT_MIN_PRICE = 1000.0
 DEFAULT_LIMIT = 25
 
 _SUBJECT_SQL = text(
-    "SELECT lot_area_sqft, base_zoning_code, (geom_2272 IS NOT NULL) AS has_geometry "
+    "SELECT lot_area_sqft, base_zoning_code, (geom_local IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _COMPS_SQL = text(
     "WITH subject AS ("
-    "  SELECT ST_Centroid(geom_2272) AS pt FROM parcel WHERE parcel_number = :parcel_number"
+    "  SELECT ST_Centroid(geom_local) AS pt FROM parcel WHERE parcel_number = :parcel_number"
     ") "
     "SELECT s.parcel_number AS parcel_number, "
     "       cp.address AS address, "
-    "       ST_Distance(subject.pt, ST_Centroid(cp.geom_2272)) AS distance_ft, "
+    "       ST_Distance(subject.pt, ST_Centroid(cp.geom_local)) AS distance_ft, "
     "       s.sale_price AS sale_price, "
     "       s.sale_date AS sale_date, "
     "       s.grantor AS grantor, "
@@ -37,7 +37,7 @@ _COMPS_SQL = text(
     "FROM sale s "
     "JOIN parcel cp ON cp.parcel_number = s.parcel_number "
     "CROSS JOIN subject "
-    "WHERE cp.geom_2272 IS NOT NULL "
+    "WHERE cp.geom_local IS NOT NULL "
     "  AND s.parcel_number <> :parcel_number "
     "  AND s.sale_price >= :min_price "
     "  AND s.sale_date >= :since "
@@ -49,7 +49,7 @@ _COMPS_SQL = text(
     "         WHEN 'R' THEN 'residential' WHEN 'C' THEN 'commercial' "
     "         WHEN 'I' THEN 'industrial' WHEN 'S' THEN 'special' ELSE NULL END "
     "       = (:use_class)::text) "
-    "  AND ST_DWithin(cp.geom_2272, subject.pt, :radius_ft) "
+    "  AND ST_DWithin(cp.geom_local, subject.pt, :radius_ft) "
     "ORDER BY distance_ft "
     "LIMIT :limit"
 )

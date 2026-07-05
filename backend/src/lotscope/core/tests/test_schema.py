@@ -15,9 +15,9 @@ EXPECTED_TABLES = {
 }
 
 EXPECTED_GIST_INDEXES = {
-    "idx_parcel_geom_2272",
+    "idx_parcel_geom_local",
     "idx_parcel_geom_4326",
-    "idx_zoning_district_geom_2272",
+    "idx_zoning_district_geom_local",
     "idx_zoning_district_geom_4326",
 }
 
@@ -46,7 +46,7 @@ async def test_geometry_round_trip_preserves_srid_and_area(
 ) -> None:
     await db_connection.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272, geom_4326) VALUES "
+            "INSERT INTO parcel (parcel_number, geom_local, geom_4326) VALUES "
             "(:pn, ST_GeomFromText(:g2272, 2272), ST_GeomFromText(:g4326, 4326))"
         ),
         {
@@ -57,7 +57,7 @@ async def test_geometry_round_trip_preserves_srid_and_area(
     )
     result = await db_connection.execute(
         text(
-            "SELECT ST_SRID(geom_2272), ST_Area(geom_2272), ST_SRID(geom_4326) "
+            "SELECT ST_SRID(geom_local), ST_Area(geom_local), ST_SRID(geom_4326) "
             "FROM parcel WHERE parcel_number = :pn"
         ),
         {"pn": "001"},

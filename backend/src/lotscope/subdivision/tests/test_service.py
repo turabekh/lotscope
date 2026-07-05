@@ -77,7 +77,7 @@ async def _add_geo_parcel(
     await session.execute(
         text(
             "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, base_zoning_code, "
-            "geom_2272) VALUES (:pn, :area, :width, 'RSA-5', ST_GeomFromText(:poly, 2272))"
+            "geom_local) VALUES (:pn, :area, :width, 'RSA-5', ST_GeomFromText(:poly, 2272))"
         ),
         {"pn": parcel_number, "area": area, "width": width, "poly": polygon},
     )

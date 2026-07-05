@@ -32,12 +32,12 @@ _NEIGHBOR_LIMIT = 16
 
 _TARGET_SQL = text(
     "SELECT owner, base_zoning_code, lot_area_sqft, frontage_ft, "
-    "(geom_2272 IS NOT NULL) AS has_geometry "
+    "(geom_local IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _NEIGHBORS_SQL = text(
     "WITH t AS ("
-    "  SELECT owner, base_zoning_code, geom_2272 FROM parcel WHERE parcel_number = :parcel_number"
+    "  SELECT owner, base_zoning_code, geom_local FROM parcel WHERE parcel_number = :parcel_number"
     ") "
     "SELECT n.parcel_number, n.address, n.owner, n.base_zoning_code, n.lot_area_sqft, "
     "n.frontage_ft, n.market_value, n.is_vacant, n.is_city_owned, "
@@ -46,16 +46,16 @@ _NEIGHBORS_SQL = text(
     "(n.base_zoning_code IS NOT NULL AND t.base_zoning_code IS NOT NULL "
     " AND upper(replace(n.base_zoning_code, '-', '')) = upper(replace(t.base_zoning_code, '-', ''))"
     ") AS same_zoning, "
-    "ST_Length(ST_CollectionExtract(ST_Intersection(n.geom_2272, t.geom_2272), 2)) "
+    "ST_Length(ST_CollectionExtract(ST_Intersection(n.geom_local, t.geom_local), 2)) "
     "AS shared_boundary_ft "
-    "FROM t JOIN parcel n ON n.parcel_number <> :parcel_number AND n.geom_2272 IS NOT NULL "
-    "AND ST_DWithin(n.geom_2272, t.geom_2272, :tolerance) "
+    "FROM t JOIN parcel n ON n.parcel_number <> :parcel_number AND n.geom_local IS NOT NULL "
+    "AND ST_DWithin(n.geom_local, t.geom_local, :tolerance) "
     "ORDER BY same_owner DESC, n.is_vacant DESC NULLS LAST, shared_boundary_ft DESC NULLS LAST "
     "LIMIT :limit"
 )
 
 _SOURCES: list[dict[str, Any]] = [
-    {"source": "pwd_parcel", "field": "geom_2272"},
+    {"source": "pwd_parcel", "field": "geom_local"},
     {"source": "opa_properties", "field": "owner"},
 ]
 
@@ -179,7 +179,7 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
 _META_SQL = text(
     "SELECT p.base_zoning_code, "
     "(SELECT n.name FROM neighborhood n "
-    " WHERE p.geom_2272 IS NOT NULL AND ST_Contains(n.geom_2272, ST_Centroid(p.geom_2272)) "
+    " WHERE p.geom_local IS NOT NULL AND ST_Contains(n.geom_local, ST_Centroid(p.geom_local)) "
     " LIMIT 1) AS neighborhood "
     "FROM parcel p WHERE p.parcel_number = :parcel_number"
 )

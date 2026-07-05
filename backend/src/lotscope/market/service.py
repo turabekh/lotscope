@@ -9,19 +9,19 @@ from lotscope.market.schemas import MarketContext
 _DAYS_PER_YEAR = 365
 
 _HAS_GEOM_SQL = text(
-    "SELECT (geom_2272 IS NOT NULL) AS has_geometry "
+    "SELECT (geom_local IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _NEIGHBORHOOD_SQL = text(
     "SELECT n.name FROM parcel p "
-    "JOIN neighborhood n ON ST_Contains(n.geom_2272, ST_Centroid(p.geom_2272)) "
+    "JOIN neighborhood n ON ST_Contains(n.geom_local, ST_Centroid(p.geom_local)) "
     "WHERE p.parcel_number = :parcel_number LIMIT 1"
 )
 _CONTEXT_SQL = text(
-    "WITH subj AS (SELECT geom_2272 FROM parcel WHERE parcel_number = :parcel_number), "
+    "WITH subj AS (SELECT geom_local FROM parcel WHERE parcel_number = :parcel_number), "
     "nearby AS ("
     "  SELECT p.parcel_number, p.is_vacant, p.market_value "
-    "  FROM parcel p, subj WHERE ST_DWithin(p.geom_2272, subj.geom_2272, :radius)"
+    "  FROM parcel p, subj WHERE ST_DWithin(p.geom_local, subj.geom_local, :radius)"
     ") "
     "SELECT "
     "(SELECT count(*) FROM nearby) AS parcels_nearby, "
@@ -85,9 +85,7 @@ async def get_parcel_market(
         return empty
 
     cutoff = (
-        since
-        if since is not None
-        else computed_at.date() - timedelta(days=years * _DAYS_PER_YEAR)
+        since if since is not None else computed_at.date() - timedelta(days=years * _DAYS_PER_YEAR)
     )
     params = {"parcel_number": parcel_number, "radius": radius_ft, "since": cutoff}
     row = (await session.execute(_CONTEXT_SQL, params)).one()

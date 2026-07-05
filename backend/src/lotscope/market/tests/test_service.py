@@ -22,7 +22,7 @@ async def _add_parcel(
     geom = f"POLYGON(({x} 0,{x} 5,{x + 5} 5,{x + 5} 0,{x} 0))"
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_2272) "
+            "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_local) "
             "VALUES (:pn, :v, :mv, ST_GeomFromText(:geom, 2272))"
         ),
         {"pn": parcel_number, "v": vacant, "mv": market_value, "geom": geom},

@@ -25,7 +25,7 @@ def test_to_neighborhood_row_maps_name_and_geometry() -> None:
     assert row is not None
     assert row["external_id"] == "7"
     assert row["name"] == "Fishtown"
-    assert "geom_2272" in row
+    assert "geom_local" in row
 
 
 def test_to_neighborhood_row_skips_without_geometry_or_name() -> None:
@@ -74,7 +74,7 @@ async def test_load_neighborhoods_writes_geometry(db_session: AsyncSession) -> N
     row = (
         await db_session.execute(
             text(
-                "SELECT name, ST_SRID(geom_2272), ST_SRID(geom_4326) FROM neighborhood "
+                "SELECT name, ST_SRID(geom_local), ST_SRID(geom_4326) FROM neighborhood "
                 "WHERE external_id = '1'"
             )
         )

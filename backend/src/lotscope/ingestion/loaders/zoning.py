@@ -29,7 +29,7 @@ def to_zoning_row(feature: ArcGisFeature) -> dict[str, Any] | None:
         "code": str(code),
         "long_code": first_present(props, "LONG_CODE", "long_code"),
         "geom_4326": geom_4326,
-        "geom_2272": func.ST_Transform(geom_4326, 2272),
+        "geom_local": func.ST_Transform(geom_4326, 2272),
         "source": ZONING_DATASET,
     }
 
@@ -51,7 +51,7 @@ async def load_zoning_districts(
                 ZoningDistrict,
                 rows,
                 index_elements=["external_id"],
-                update_columns=["code", "long_code", "geom_4326", "geom_2272", "source"],
+                update_columns=["code", "long_code", "geom_4326", "geom_local", "source"],
             )
             total += len(rows)
     await record_freshness(session, ZONING_DATASET, status="success", success=True, row_count=total)

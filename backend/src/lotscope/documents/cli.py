@@ -37,9 +37,7 @@ async def _process(parcel_number: str, path: str) -> int:
 
     async with session_factory() as session:
         existing = (
-            await session.execute(
-                select(DeedDocument).where(DeedDocument.blob_key == blob_key)
-            )
+            await session.execute(select(DeedDocument).where(DeedDocument.blob_key == blob_key))
         ).scalar_one_or_none()
         deed = existing or DeedDocument(parcel_number=parcel_number)
         deed.blob_key = blob_key
@@ -49,9 +47,7 @@ async def _process(parcel_number: str, path: str) -> int:
         deed.recording_date = deed.recording_date or datetime.now(UTC).date()
         session.add(deed)
         await session.flush()
-        count = await process_deed_text(
-            session, deed, text, embedder=embedder, generator=generator
-        )
+        count = await process_deed_text(session, deed, text, embedder=embedder, generator=generator)
         await session.commit()
     await engine.dispose()
     logger.info("deed_processed", parcel_number=parcel_number, restrictions=count)

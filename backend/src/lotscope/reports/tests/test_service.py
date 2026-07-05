@@ -13,7 +13,7 @@ async def test_build_dossier_returns_pdf(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, address, owner, lot_area_sqft, frontage_ft, "
-            "depth_ft, base_zoning_code, geom_2272) VALUES "
+            "depth_ft, base_zoning_code, geom_local) VALUES "
             "('000000001', '1 Main St', 'OWNER A', 1600, 18, 90, 'RSA-5', "
             "ST_GeomFromText('POLYGON((0 0,0 90,18 90,18 0,0 0))', 2272))"
         )

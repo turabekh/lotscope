@@ -36,7 +36,7 @@ def test_to_overlay_row_maps_symbol_name_and_geometry() -> None:
     assert row["code"] == "/NCA"
     assert row["name"] == "Neighborhood Commercial Area Overlay"
     assert row["code_section"] == "14-503(4)"
-    assert "geom_2272" in row
+    assert "geom_local" in row
 
 
 def test_to_rco_row_maps_name_and_skips_without_geometry() -> None:
@@ -104,7 +104,7 @@ async def test_load_zoning_overlays_writes_geometry(db_session: AsyncSession) ->
     row = (
         await db_session.execute(
             text(
-                "SELECT code, ST_SRID(geom_2272), ST_SRID(geom_4326) FROM zoning_overlay "
+                "SELECT code, ST_SRID(geom_local), ST_SRID(geom_4326) FROM zoning_overlay "
                 "WHERE external_id = '1'"
             )
         )

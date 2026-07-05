@@ -17,8 +17,8 @@ class HistoricDistrict(Base, TimestampMixin, IngestionMixin):
     name: Mapped[str | None] = mapped_column(String(160), index=True)
     designated_date: Mapped[date | None] = mapped_column(Date)
 
-    geom_2272: Mapped[WKBElement | None] = mapped_column(
-        Geometry(geometry_type="GEOMETRY", srid=2272, spatial_index=True)
+    geom_local: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
     )
     geom_4326: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True)

@@ -10,7 +10,8 @@ pytestmark = pytest.mark.integration
 async def _neighborhood(session: AsyncSession, name: str, wkt: str) -> None:
     await session.execute(
         text(
-            "INSERT INTO neighborhood (name, geom_2272) VALUES (:name, ST_GeomFromText(:wkt, 2272))"
+            "INSERT INTO neighborhood (name, geom_local) "
+            "VALUES (:name, ST_GeomFromText(:wkt, 2272))"
         ),
         {"name": name, "wkt": wkt},
     )
@@ -29,7 +30,7 @@ async def _vacant_parcel(
 ) -> None:
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_local) VALUES "
             "(:pn, true, :mv, ST_GeomFromText(:wkt, 2272))"
         ),
         {

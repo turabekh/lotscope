@@ -14,8 +14,8 @@ class Neighborhood(Base, TimestampMixin, IngestionMixin):
     external_id: Mapped[str | None] = mapped_column(String(60), index=True)
     name: Mapped[str] = mapped_column(String(120), index=True, nullable=False)
 
-    geom_2272: Mapped[WKBElement | None] = mapped_column(
-        Geometry(geometry_type="GEOMETRY", srid=2272, spatial_index=True)
+    geom_local: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
     )
     geom_4326: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True)

@@ -24,7 +24,7 @@ def test_to_parcel_geometry_row_maps_key_and_geometry() -> None:
     assert row["parcel_number"] == "phl:001234567"
     assert row["pwd_parcel_id"] == "PWD-9"
     assert "geom_4326" in row
-    assert "geom_2272" in row
+    assert "geom_local" in row
     assert row["source"] == "pwd_parcels"
 
 
@@ -63,7 +63,7 @@ async def test_load_pwd_writes_dual_srid_geometry(db_session: AsyncSession) -> N
     row = (
         await db_session.execute(
             text(
-                "SELECT ST_SRID(geom_2272), ST_SRID(geom_4326), pwd_parcel_id, source "
+                "SELECT ST_SRID(geom_local), ST_SRID(geom_4326), pwd_parcel_id, source "
                 "FROM parcel WHERE parcel_number = :pn"
             ),
             {"pn": "phl:001234567"},

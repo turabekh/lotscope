@@ -15,7 +15,7 @@ _SINCE = date(2000, 1, 1)
 async def _add_subject(session: AsyncSession, parcel_number: str, *, market_value: float) -> None:
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, lot_area_sqft, market_value, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, market_value, geom_local) VALUES "
             "(:pn, 2000, :mv, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
         ),
         {"pn": parcel_number, "mv": market_value},
@@ -28,7 +28,7 @@ async def _add_comp(session: AsyncSession, parcel_number: str, *, offset_ft: flo
     )
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, geom_2272) "
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, geom_local) "
             "VALUES (:pn, 1000, true, ST_GeomFromText(:geom, 2272))"
         ),
         {"pn": parcel_number, "geom": geom},
