@@ -27,8 +27,8 @@ def test_phl_to_canonical_prefixes_market() -> None:
     assert n.to_canonical(None) is None
 
 
-def test_registry_is_market_keyed_and_phl_only() -> None:
-    assert set(KEY_NORMALIZERS) == {"phl"}
+def test_registry_is_market_keyed() -> None:
+    assert set(KEY_NORMALIZERS) == {"phl", "hbg"}
     assert get_normalizer("phl").market == "phl"
     with pytest.raises(KeyError):
-        get_normalizer("hbg")
+        get_normalizer("pgh")

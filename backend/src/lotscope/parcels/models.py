@@ -39,6 +39,7 @@ class Parcel(Base, TimestampMixin, IngestionMixin):
         String(40),
         Computed("substring(parcel_number from strpos(parcel_number, ':') + 1)", persisted=True),
     )
+    coverage: Mapped[str] = mapped_column(String(20), nullable=False, server_default="full")
     pwd_parcel_id: Mapped[str | None] = mapped_column(String(40), index=True)
     brt_number: Mapped[str | None] = mapped_column(String(40), index=True)
 

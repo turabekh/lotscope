@@ -78,6 +78,6 @@ async def test_search_rejects_unknown_market() -> None:
     app.dependency_overrides[get_session] = _override_session
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/search", params={"q": "main", "market": "harrisburg"})
+        response = await client.get("/search", params={"q": "main", "market": "pittsburgh"})
 
     assert response.status_code == 422
