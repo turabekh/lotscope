@@ -119,6 +119,7 @@ _LEADS_SQL = text(
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
     "LEFT JOIN (" + _TIRED_OWNERS_SUBQUERY + ") tired ON tired.owner_key = p.owner_key "
     "WHERE pd.score >= CAST(:min_score AS integer) "
+    "AND p.market_code = CAST(:market_code AS text) "
     "AND coalesce(p.is_city_owned, false) = false "
     "AND (NOT CAST(:vacant_only AS boolean) OR coalesce(p.is_vacant, false)) "
     "AND (CAST(:zip_code AS text) IS NULL OR p.zip_code = CAST(:zip_code AS text)) "
@@ -133,6 +134,7 @@ _LEADS_EXPORT_SQL = text(
     "JOIN parcel p ON p.parcel_number = pd.parcel_number "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
     "WHERE pd.score >= CAST(:min_score AS integer) "
+    "AND p.market_code = CAST(:market_code AS text) "
     "AND coalesce(p.is_city_owned, false) = false "
     "AND (NOT CAST(:vacant_only AS boolean) OR coalesce(p.is_vacant, false)) "
     "AND (CAST(:zip_code AS text) IS NULL OR p.zip_code = CAST(:zip_code AS text)) "
@@ -159,6 +161,7 @@ async def list_mail_recipients(
     session: AsyncSession,
     *,
     row_limit: int,
+    market_code: str = "phl",
     min_score: int = 1,
     vacant_only: bool = False,
     zip_code: str | None = None,
@@ -171,6 +174,7 @@ async def list_mail_recipients(
             _LEADS_EXPORT_SQL,
             {
                 "limit": row_limit,
+                "market_code": market_code,
                 "min_score": min_score,
                 "vacant_only": vacant_only,
                 "zip_code": zip_code,
@@ -307,6 +311,7 @@ async def find_leads(
     session: AsyncSession,
     *,
     limit: int,
+    market_code: str = "phl",
     min_score: int = 1,
     vacant_only: bool = False,
     zip_code: str | None = None,
@@ -316,6 +321,7 @@ async def find_leads(
             _LEADS_SQL,
             {
                 "limit": limit,
+                "market_code": market_code,
                 "min_score": min_score,
                 "vacant_only": vacant_only,
                 "zip_code": zip_code,
@@ -330,6 +336,7 @@ async def export_leads(
     session: AsyncSession,
     *,
     row_limit: int,
+    market_code: str = "phl",
     min_score: int = 1,
     vacant_only: bool = False,
     zip_code: str | None = None,
@@ -341,6 +348,7 @@ async def export_leads(
             _LEADS_EXPORT_SQL,
             {
                 "limit": row_limit,
+                "market_code": market_code,
                 "min_score": min_score,
                 "vacant_only": vacant_only,
                 "zip_code": zip_code,

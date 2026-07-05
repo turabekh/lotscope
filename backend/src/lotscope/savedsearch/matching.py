@@ -24,9 +24,11 @@ MATCH_EXPORT_SELECT = (
 MATCH_ORDER = "ORDER BY pv.opportunity_score DESC NULLS LAST, p.parcel_number"
 
 
-def build_where(criteria: SearchCriteria) -> tuple[str, dict[str, Any]]:
-    conditions: list[str] = []
-    params: dict[str, Any] = {}
+def build_where(
+    criteria: SearchCriteria, *, market_code: str = "phl"
+) -> tuple[str, dict[str, Any]]:
+    conditions: list[str] = ["p.market_code = :market_code"]
+    params: dict[str, Any] = {"market_code": market_code}
 
     if criteria.exclude_city_owned:
         conditions.append("coalesce(p.is_city_owned, false) = false")
@@ -67,8 +69,10 @@ def build_where(criteria: SearchCriteria) -> tuple[str, dict[str, Any]]:
     return where, params
 
 
-def build_match_sql(criteria: SearchCriteria) -> tuple[str, dict[str, Any]]:
-    where, params = build_where(criteria)
+def build_match_sql(
+    criteria: SearchCriteria, *, market_code: str = "phl"
+) -> tuple[str, dict[str, Any]]:
+    where, params = build_where(criteria, market_code=market_code)
     sql = (
         f"SELECT {MATCH_SELECT} {MATCH_BASE} WHERE {where} {MATCH_ORDER} "
         "LIMIT CAST(:match_limit AS integer)"
@@ -76,8 +80,10 @@ def build_match_sql(criteria: SearchCriteria) -> tuple[str, dict[str, Any]]:
     return sql, params
 
 
-def build_match_export_sql(criteria: SearchCriteria) -> tuple[str, dict[str, Any]]:
-    where, params = build_where(criteria)
+def build_match_export_sql(
+    criteria: SearchCriteria, *, market_code: str = "phl"
+) -> tuple[str, dict[str, Any]]:
+    where, params = build_where(criteria, market_code=market_code)
     sql = (
         f"SELECT {MATCH_EXPORT_SELECT} {MATCH_BASE} WHERE {where} {MATCH_ORDER} "
         "LIMIT CAST(:match_limit AS integer)"

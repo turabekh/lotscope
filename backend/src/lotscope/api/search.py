@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.api.deps import get_session
-from lotscope.core.markets import DEFAULT_MARKET, Market
+from lotscope.core.markets import DEFAULT_MARKET, Market, market_code
 from lotscope.search.schemas import (
     AreaSearchRequest,
     AreaSearchResponse,
@@ -24,7 +24,9 @@ async def search(
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ParcelSearchResponse:
-    results = await search_parcels(session, q, limit=limit, offset=offset)
+    results = await search_parcels(
+        session, q, market_code=market_code(market), limit=limit, offset=offset
+    )
     return ParcelSearchResponse(query=q, market=market, results=results)
 
 

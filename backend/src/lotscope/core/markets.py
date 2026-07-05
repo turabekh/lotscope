@@ -6,3 +6,9 @@ class Market(StrEnum):
 
 
 DEFAULT_MARKET = Market.philadelphia
+
+_SLUG_TO_CODE: dict[str, str] = {"philadelphia": "phl"}
+
+
+def market_code(value: str) -> str:
+    return _SLUG_TO_CODE.get(value, value)

@@ -97,7 +97,7 @@ async def _existing_match_numbers(session: AsyncSession, search_id: int) -> set[
 
 
 async def run_match(session: AsyncSession, search: SavedSearch, *, baseline: bool) -> list[str]:
-    sql, params = build_match_sql(_criteria(search))
+    sql, params = build_match_sql(_criteria(search), market_code=search.market_code)
     rows = (
         await session.execute(text(sql), {**params, "match_limit": MAX_MATCHES_PER_SEARCH})
     ).all()
@@ -243,7 +243,7 @@ async def export_search_matches(
     search = await _get_owned(session, user_id, search_id)
     if row_limit <= 0:
         return []
-    sql, params = build_match_export_sql(_criteria(search))
+    sql, params = build_match_export_sql(_criteria(search), market_code=search.market_code)
     params["match_limit"] = row_limit
     rows = (await session.execute(text(sql), params)).all()
     return [
@@ -273,7 +273,7 @@ async def list_mail_recipients(
     search = await _get_owned(session, user_id, search_id)
     if row_limit <= 0:
         return []
-    sql, params = build_match_export_sql(_criteria(search))
+    sql, params = build_match_export_sql(_criteria(search), market_code=search.market_code)
     params["match_limit"] = row_limit
     rows = (await session.execute(text(sql), params)).all()
     return build_mail_recipients(rows, one_per_owner=one_per_owner)

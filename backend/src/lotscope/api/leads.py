@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.accounts.models import User
 from lotscope.accounts.tiers import lead_list_limit
 from lotscope.api.deps import get_current_user, get_session
+from lotscope.core.markets import DEFAULT_MARKET, Market, market_code
 from lotscope.distress.schemas import LeadsResponse
 from lotscope.distress.service import find_leads
 
@@ -19,6 +20,7 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 async def leads(
     session: SessionDep,
     current_user: CurrentUserDep,
+    market: Annotated[Market, Query()] = DEFAULT_MARKET,
     min_score: Annotated[int, Query(ge=1, le=100)] = 30,
     vacant_only: bool = False,
     zip_code: Annotated[str | None, Query(max_length=10)] = None,
@@ -27,6 +29,7 @@ async def leads(
     items = await find_leads(
         session,
         limit=limit,
+        market_code=market_code(market),
         min_score=min_score,
         vacant_only=vacant_only,
         zip_code=zip_code,
