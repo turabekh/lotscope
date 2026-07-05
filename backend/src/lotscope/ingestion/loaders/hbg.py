@@ -383,3 +383,52 @@ async def load_hbg_streets(
         row_count=total,
     )
     return total
+
+
+HBG_PUBLIC_DATASET = "public_ownership"
+_PUBLIC_OWNER_PATTERNS = (
+    "CITY OF HARRISBURG",
+    "HARRISBURG CITY",
+    "REDEVELOPMENT AUTHORITY",
+    "HOUSING AUTHORITY",
+    "COUNTY OF DAUPHIN",
+    "DAUPHIN COUNTY",
+    "COMMONWEALTH OF PENNSYLVANIA",
+    "LAND BANK",
+)
+
+
+def is_hbg_public_owner(owner: str | None) -> bool:
+    if not owner:
+        return False
+    upper = owner.upper()
+    return any(pattern in upper for pattern in _PUBLIC_OWNER_PATTERNS)
+
+
+_PUBLIC_UPDATE = text(
+    "UPDATE parcel SET is_city_owned = :is_public WHERE parcel_number = :parcel_number"
+)
+
+
+async def derive_hbg_public_ownership(session: AsyncSession) -> int:
+    result = await session.execute(
+        select(Parcel.parcel_number, Parcel.owner).where(Parcel.market_code == _MARKET)
+    )
+    updates: list[dict[str, Any]] = []
+    public = 0
+    for row in result:
+        is_public = is_hbg_public_owner(row.owner)
+        updates.append({"parcel_number": row.parcel_number, "is_public": is_public})
+        if is_public:
+            public += 1
+    if updates:
+        await session.execute(_PUBLIC_UPDATE, updates)
+    await record_freshness(
+        session,
+        HBG_PUBLIC_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=public,
+    )
+    return public

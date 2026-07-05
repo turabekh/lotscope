@@ -184,3 +184,16 @@ async def test_load_hbg_zoning_districts_writes_geometry(db_session: AsyncSessio
     assert row.code == "CG"
     assert row.market_code == "hbg"
     assert row.srid == 2272
+
+
+def test_public_owner_matches_authorities_not_private_llcs() -> None:
+    from lotscope.ingestion.loaders.hbg import is_hbg_public_owner
+
+    assert is_hbg_public_owner("REDEVELOPMENT AUTHORITY OF CITY OF HARRISBURG")
+    assert is_hbg_public_owner("HARRISBURG HOUSING AUTHORITY")
+    assert is_hbg_public_owner("COUNTY OF DAUPHIN")
+    assert is_hbg_public_owner("CITY OF HARRISBURG")
+    assert not is_hbg_public_owner("HARRISBURG REDEVELOPMENT GROUP LLC")
+    assert not is_hbg_public_owner("MIDTOWN REDEVELOPMENT LLC")
+    assert not is_hbg_public_owner("SMITH, JOHN")
+    assert not is_hbg_public_owner(None)
