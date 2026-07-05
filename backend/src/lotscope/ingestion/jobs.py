@@ -272,10 +272,20 @@ _PHL_JOBS: dict[str, Job] = {
     "zba": ingest_zba,
 }
 
+async def ingest_hbg_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
+    return await run_loader(
+        session_factory,
+        hbg.derive_hbg_vacancy,
+        dataset=hbg.HBG_VACANCY_DATASET,
+        market_code="hbg",
+    )
+
+
 _HBG_JOBS: dict[str, Job] = {
     "parcels": ingest_hbg_parcels,
     "sales": ingest_hbg_sales,
     "zoning": ingest_hbg_zoning,
+    "vacancy": ingest_hbg_vacancy,
 }
 
 INGEST_JOBS: dict[tuple[str, str], Job] = {

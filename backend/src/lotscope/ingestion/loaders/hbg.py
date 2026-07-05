@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.arcgis import ArcGisClient, ArcGisFeature
@@ -9,12 +9,14 @@ from lotscope.ingestion.normalizers import get_normalizer
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
+from lotscope.vacancy.derivation import derive_vacancy
 from lotscope.valuation.models import Sale
 from lotscope.zoning.models import ZoningDistrict
 
 HBG_PARCELS_DATASET = "dc_parcels"
 HBG_SALES_DATASET = "dc_deed_references"
 HBG_ZONING_DATASET = "tcrp_zoning_districts"
+HBG_VACANCY_DATASET = "derived_vacancy"
 _MARKET = "hbg"
 _LOCAL_SRID = 2272
 _HBG_DISTRICT_WHERE = "property_id >= '01' AND property_id < '16'"
@@ -284,3 +286,38 @@ async def load_hbg_zoning_districts(
         row_count=total,
     )
     return total
+
+
+_VACANCY_UPDATE = text(
+    "UPDATE parcel SET is_vacant = :is_vacant, vacancy_confidence = :conf "
+    "WHERE parcel_number = :parcel_number"
+)
+
+
+async def derive_hbg_vacancy(session: AsyncSession) -> int:
+    result = await session.execute(
+        select(Parcel.parcel_number, Parcel.land_use, Parcel.improvement_value).where(
+            Parcel.market_code == _MARKET
+        )
+    )
+    updates: list[dict[str, Any]] = []
+    vacant = 0
+    for row in result:
+        improvement = float(row.improvement_value) if row.improvement_value is not None else None
+        is_vacant, confidence = derive_vacancy(row.land_use, improvement)
+        updates.append(
+            {"parcel_number": row.parcel_number, "is_vacant": is_vacant, "conf": confidence}
+        )
+        if is_vacant:
+            vacant += 1
+    if updates:
+        await session.execute(_VACANCY_UPDATE, updates)
+    await record_freshness(
+        session,
+        HBG_VACANCY_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=vacant,
+    )
+    return vacant
