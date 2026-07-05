@@ -80,6 +80,9 @@ pnpm-debug.log*
 !/backend/data/title14/sections.jsonl
 !/backend/data/demo/
 /backend/data/demo/*
+!/backend/data/zoning-hbg/
+/backend/data/zoning-hbg/*
+!/backend/data/zoning-hbg/sections.jsonl
 !/backend/data/demo/demo.sql
 tmp/
 scratch/
@@ -142,3 +145,5 @@ ehthumbs.db
 desktop.ini
 
 mynotes.txt
+# Corpus source binaries (parsed into JSONL/DB; never commit the raw PDFs)
+backend/corpus/**/*.pdf

@@ -16,9 +16,13 @@ from lotscope.core.logging import configure_logging, get_logger
 TITLE_14_SOURCE = "title14"
 _MAX_CHARS = 1500
 _OVERLAP = 150
+_EMBED_BATCH = 96
 _DEFAULT_PATH = Path("data/title14/sections.jsonl")
 
 _DELETE_SOURCE = text("DELETE FROM document WHERE source = :source")
+_DELETE_SOURCE_MARKET = text(
+    "DELETE FROM document WHERE source = :source AND doc_metadata->>'market' = :market"
+)
 _INSERT = text(
     "INSERT INTO document (source, section, title, content, doc_metadata, embedding) "
     "VALUES (:source, :section, :title, :content, (:metadata)::jsonb, (:embedding)::vector)"
@@ -65,16 +69,26 @@ async def load_title14_documents(
     embedder: Embedder,
     *,
     source: str = TITLE_14_SOURCE,
+    market: str | None = None,
 ) -> int:
-    await session.execute(_DELETE_SOURCE, {"source": source})
+    if market is None:
+        await session.execute(_DELETE_SOURCE, {"source": source})
+    else:
+        await session.execute(_DELETE_SOURCE_MARKET, {"source": source, "market": market})
     items: list[tuple[Title14Record, int, str]] = []
     for record in records:
         for index, chunk in enumerate(chunk_text(record.text)):
             items.append((record, index, chunk))
     if not items:
         return 0
-    vectors = await embedder.embed([chunk for _, _, chunk in items])
+    vectors: list[list[float]] = []
+    for start in range(0, len(items), _EMBED_BATCH):
+        batch = [chunk for _, _, chunk in items[start : start + _EMBED_BATCH]]
+        vectors.extend(await embedder.embed(batch))
     for (record, index, chunk), vector in zip(items, vectors, strict=True):
+        metadata: dict[str, object] = {"chunk_index": index}
+        if market is not None:
+            metadata["market"] = market
         await session.execute(
             _INSERT,
             {
@@ -82,14 +96,14 @@ async def load_title14_documents(
                 "section": record.section,
                 "title": record.title,
                 "content": chunk,
-                "metadata": json.dumps({"chunk_index": index}),
+                "metadata": json.dumps(metadata),
                 "embedding": to_vector_literal(vector),
             },
         )
     return len(items)
 
 
-async def _run(path: Path) -> None:
+async def _run(path: Path, *, source: str = TITLE_14_SOURCE, market: str | None = None) -> None:
     settings = get_settings()
     configure_logging(settings)
     records = read_records(path)
@@ -97,16 +111,31 @@ async def _run(path: Path) -> None:
     session_factory = create_session_factory(engine)
     try:
         async with VoyageEmbedder(settings) as embedder, session_factory() as session:
-            count = await load_title14_documents(session, records, embedder)
+            count = await load_title14_documents(
+                session, records, embedder, source=source, market=market
+            )
             await session.commit()
-            get_logger("ai.corpus").info("loaded_title14", documents=count, source=str(path))
+            get_logger("ai.corpus").info(
+                "loaded_corpus", documents=count, source=source, market=market, path=str(path)
+            )
     finally:
         await engine.dispose()
 
 
 def main() -> None:
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else _DEFAULT_PATH
-    asyncio.run(_run(path))
+    args = sys.argv[1:]
+    source = TITLE_14_SOURCE
+    market: str | None = None
+    if "--source" in args:
+        i = args.index("--source")
+        source = args[i + 1]
+        del args[i : i + 2]
+    if "--market" in args:
+        i = args.index("--market")
+        market = args[i + 1]
+        del args[i : i + 2]
+    path = Path(args[0]) if args else _DEFAULT_PATH
+    asyncio.run(_run(path, source=source, market=market))
 
 
 if __name__ == "__main__":

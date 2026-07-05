@@ -3,7 +3,7 @@ from collections.abc import Awaitable, Callable
 
 import httpx
 
-from lotscope.ingestion.errors import IngestionError
+from lotscope.core.errors import LotScopeError
 
 RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
@@ -13,7 +13,7 @@ async def request_with_retry(
     *,
     max_retries: int,
     backoff: float,
-    error: type[IngestionError],
+    error: type[LotScopeError],
     retryable_status: frozenset[int] = RETRYABLE_STATUS,
 ) -> httpx.Response:
     last_error: Exception | None = None
