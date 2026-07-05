@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.markets.capabilities import forced_sale_label
 from lotscope.risk.schemas import (
     NextSheriffSale,
     RiskFlagSchema,
@@ -18,6 +19,7 @@ from lotscope.risk.scoring import (
     LiSignal,
     OverlaySignal,
     RcoSignal,
+    RiskFlag,
     RiskSignals,
     TaxSignal,
     TitleSignal,
@@ -90,6 +92,17 @@ _CHECKED_SOURCES = (
     "zoning_rco",
     "parcel",
 )
+
+
+def _flag_schema(flag: RiskFlag, market: str) -> RiskFlagSchema:
+    label, detail = flag.label, flag.detail
+    if flag.code == "sheriff_sale" and market != "phl":
+        term = forced_sale_label(market)
+        label = f"{term} exposure"
+        detail = f"Parcel is in the {term} pipeline."
+    return RiskFlagSchema(
+        code=flag.code, severity=flag.severity, label=label, detail=detail, source=flag.source
+    )
 
 
 def _as_float(value: Any) -> float | None:
@@ -182,19 +195,11 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
             rco=rco,
         )
     )
+    market = parcel_number.split(":", 1)[0]
     return RiskResult(
         parcel_number=parcel_number,
         risk_score=assessment.risk_score,
-        flags=[
-            RiskFlagSchema(
-                code=flag.code,
-                severity=flag.severity,
-                label=flag.label,
-                detail=flag.detail,
-                source=flag.source,
-            )
-            for flag in assessment.flags
-        ],
+        flags=[_flag_schema(flag, market) for flag in assessment.flags],
         summary=assessment.summary,
         confidence=assessment.confidence,
         sources=[{"source": source} for source in _CHECKED_SOURCES],

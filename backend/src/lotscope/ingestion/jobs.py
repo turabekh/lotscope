@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Protocol
+from typing import Any, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -203,10 +203,14 @@ async def ingest_zba(session_factory: SessionFactory, settings: Settings) -> int
     )
 
 
-async def ingest_hbg_parcels(session_factory: SessionFactory, settings: Settings) -> int:
+async def _hbg_source_config(session_factory: SessionFactory) -> dict[str, Any]:
     async with session_factory() as session:
         market = await session.get(Market, "hbg")
-        config = dict(market.source_config) if market is not None else {}
+        return dict(market.source_config) if market is not None else {}
+
+
+async def ingest_hbg_parcels(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _hbg_source_config(session_factory)
     services_url = str(config["arcgis_services_url"])
     municipality = str(config["municipality_filter"])
     return await _run_arcgis(
@@ -216,6 +220,20 @@ async def ingest_hbg_parcels(session_factory: SessionFactory, settings: Settings
             session, arcgis, services_url=services_url, municipality=municipality
         ),
         dataset=hbg.HBG_PARCELS_DATASET,
+        market_code="hbg",
+    )
+
+
+async def ingest_hbg_sales(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _hbg_source_config(session_factory)
+    services_url = str(config["arcgis_services_url"])
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=lambda session, arcgis: hbg.load_hbg_sales(
+            session, arcgis, services_url=services_url
+        ),
+        dataset=hbg.HBG_SALES_DATASET,
         market_code="hbg",
     )
 
@@ -242,6 +260,7 @@ _PHL_JOBS: dict[str, Job] = {
 
 _HBG_JOBS: dict[str, Job] = {
     "parcels": ingest_hbg_parcels,
+    "sales": ingest_hbg_sales,
 }
 
 INGEST_JOBS: dict[tuple[str, str], Job] = {

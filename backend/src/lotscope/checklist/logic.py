@@ -57,8 +57,21 @@ def _worse(current: ChecklistStatus, candidate: ChecklistStatus) -> ChecklistSta
 
 
 def _risk_item(
-    code: str, category: str, flag_codes: frozenset[str], clear_detail: str, flags: list[Any]
+    code: str,
+    category: str,
+    flag_codes: frozenset[str],
+    clear_detail: str,
+    flags: list[Any],
+    *,
+    unsupported: bool = False,
 ) -> ChecklistItem:
+    if unsupported:
+        return ChecklistItem(
+            code=code,
+            category=category,
+            status="info",
+            detail="No data source for this market.",
+        )
     matched = [flag for flag in flags if flag.get("code") in flag_codes]
     if not matched:
         return ChecklistItem(code=code, category=category, status="pass", detail=clear_detail)
@@ -189,12 +202,22 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
 
 
 def build_checklist(
-    verdict: VerdictResult, *, has_abatement: bool = False
+    verdict: VerdictResult,
+    *,
+    has_abatement: bool = False,
+    unsupported_categories: frozenset[str] = frozenset(),
 ) -> tuple[list[ChecklistItem], ChecklistSummary]:
     flags = verdict.risk_flags
     items = [_zoning_item(verdict)]
     items.extend(
-        _risk_item(code, category, flag_codes, clear_detail, flags)
+        _risk_item(
+            code,
+            category,
+            flag_codes,
+            clear_detail,
+            flags,
+            unsupported=code in unsupported_categories,
+        )
         for code, category, flag_codes, clear_detail in _RISK_CATEGORIES
     )
     if has_abatement:

@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.arcgis import ArcGisClient, ArcGisFeature
@@ -9,10 +9,13 @@ from lotscope.ingestion.normalizers import get_normalizer
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
+from lotscope.valuation.models import Sale
 
 HBG_PARCELS_DATASET = "dc_parcels"
+HBG_SALES_DATASET = "dc_deed_references"
 _MARKET = "hbg"
 _LOCAL_SRID = 2272
+_HBG_DISTRICT_WHERE = "property_id >= '01' AND property_id < '16'"
 
 _PARCEL_FIELDS = (
     "property_i,house_numb,prefix_dir,street_nam,street_suf,post_direc,"
@@ -158,6 +161,66 @@ async def load_hbg_parcels(
     await record_freshness(
         session,
         HBG_PARCELS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
+    )
+    return total
+
+
+async def _hbg_local_keys(session: AsyncSession) -> set[str]:
+    result = await session.execute(
+        select(Parcel.local_key).where(Parcel.market_code == _MARKET)
+    )
+    return set(result.scalars())
+
+
+def _sale_row(props: dict[str, Any], known_keys: set[str]) -> dict[str, Any] | None:
+    local = get_normalizer(_MARKET).normalize_local_key(props.get("property_id"))
+    document_id = _txt(props.get("document_number"))
+    if local is None or local not in known_keys or document_id is None:
+        return None
+    return {
+        "parcel_number": f"{_MARKET}:{local}",
+        "document_id": document_id,
+        "document_type": "DEED",
+    }
+
+
+async def load_hbg_sales(
+    session: AsyncSession,
+    arcgis: ArcGisClient,
+    *,
+    services_url: str,
+    page_size: int = 2000,
+) -> int:
+    known_keys = await _hbg_local_keys(session)
+    layer = f"{services_url}/DC_ParcelCharacteristic/FeatureServer/0/query"
+    total = 0
+    async for features in arcgis.paginate(
+        layer,
+        where=_HBG_DISTRICT_WHERE,
+        out_fields="property_id,document_number",
+        page_size=page_size,
+    ):
+        rows = [
+            row
+            for row in (_sale_row(f.properties, known_keys) for f in features)
+            if row is not None
+        ]
+        if rows:
+            await upsert(
+                session,
+                Sale,
+                rows,
+                index_elements=["parcel_number", "document_id"],
+                update_columns=["document_type"],
+            )
+            total += len(rows)
+    await record_freshness(
+        session,
+        HBG_SALES_DATASET,
         status="success",
         success=True,
         market_code=_MARKET,
