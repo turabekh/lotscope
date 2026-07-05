@@ -28,6 +28,33 @@ PHILADELPHIA: dict[str, Any] = {
     "launch_status": "live",
 }
 
+HARRISBURG: dict[str, Any] = {
+    "code": "hbg",
+    "name": "Harrisburg",
+    "state": "PA",
+    "url_slug": "harrisburg",
+    "local_srid": 2272,
+    "map_center": [-76.8844, 40.2732],
+    "map_bounds": [[-76.9200, 40.2450], [-76.8500, 40.2950]],
+    "default_zoom": 13.5,
+    "timezone": "America/New_York",
+    "recorder_url_template": (
+        "https://www.dauphinpropertyinfo.org/search/CommonSearch.aspx?mode=REALPROP"
+    ),
+    "deal_assumption_overrides": {"deal_construction_cost_per_sqft": 145.0},
+    "source_config": {
+        "arcgis_services_url": (
+            "https://services2.arcgis.com/EEtiX55QzkHKYQKY/arcgis/rest/services"
+        ),
+        "municipality_filter": "CITY OF HARRISBURG",
+    },
+    "coverage_note": (
+        "Harrisburg city pilot — county assessment + geometry; no open sale-price comps "
+        "and no code-enforcement feed; zoning provisional pending review."
+    ),
+    "launch_status": "pilot",
+}
+
 
 def market_source_url(source_config: dict[str, Any], key: str, settings: Any) -> str | None:
     value = source_config.get(key)
@@ -35,7 +62,7 @@ def market_source_url(source_config: dict[str, Any], key: str, settings: Any) ->
         return str(value)
     return getattr(settings, key, None)
 
-_SEED_MARKETS: tuple[dict[str, Any], ...] = (PHILADELPHIA,)
+_SEED_MARKETS: tuple[dict[str, Any], ...] = (PHILADELPHIA, HARRISBURG)
 
 
 async def seed_markets(session: AsyncSession) -> int:

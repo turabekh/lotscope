@@ -15,7 +15,14 @@ const market = useMarketStore()
 
 const sheet = ref(false)
 const activeLabel = computed(() => MARKET_LABELS[market.active])
-const options = computed(() => MARKETS.map((value) => ({ value, label: MARKET_LABELS[value] })))
+const activePilot = computed(() => market.statusOf(market.active) === 'pilot')
+const options = computed(() =>
+  MARKETS.map((value) => ({
+    value,
+    label: MARKET_LABELS[value],
+    pilot: market.statusOf(value) === 'pilot',
+  })),
+)
 
 function switchTo(next: Market): void {
   sheet.value = false
@@ -44,6 +51,7 @@ function switchTo(next: Market): void {
   >
     <q-icon name="location_on" size="16px" class="switcher-pin" />
     <span class="pill-label">{{ activeLabel }}</span>
+    <q-badge v-if="activePilot" color="amber-8" text-color="white" label="pilot" class="q-ml-xs" />
     <q-icon name="expand_more" size="15px" class="switcher-caret" />
     <q-dialog v-model="sheet" position="bottom">
       <q-card class="sheet-card">
@@ -60,7 +68,7 @@ function switchTo(next: Market): void {
             @click="switchTo(opt.value)"
           >
             <q-item-section avatar><q-icon name="location_on" size="18px" /></q-item-section>
-            <q-item-section>{{ opt.label }}</q-item-section>
+            <q-item-section>{{ opt.label }}<q-badge v-if="opt.pilot" color="amber-8" text-color="white" label="pilot" class="q-ml-sm" /></q-item-section>
             <q-item-section v-if="opt.value === market.active" side>
               <q-icon name="check" size="16px" />
             </q-item-section>
@@ -80,6 +88,7 @@ function switchTo(next: Market): void {
   >
     <q-icon name="location_on" size="18px" class="switcher-pin" />
     <span v-if="!collapsed" class="switcher-label">{{ activeLabel }}</span>
+    <q-badge v-if="activePilot && !collapsed" color="amber-8" text-color="white" label="pilot" class="q-mr-xs" />
     <q-icon v-if="!collapsed" name="expand_more" size="16px" class="switcher-caret" />
     <q-tooltip v-if="collapsed" anchor="center right" self="center left">{{
       activeLabel
@@ -96,7 +105,7 @@ function switchTo(next: Market): void {
           @click="switchTo(opt.value)"
         >
           <q-item-section avatar><q-icon name="location_on" size="18px" /></q-item-section>
-          <q-item-section>{{ opt.label }}</q-item-section>
+          <q-item-section>{{ opt.label }}<q-badge v-if="opt.pilot" color="amber-8" text-color="white" label="pilot" class="q-ml-sm" /></q-item-section>
           <q-item-section v-if="opt.value === market.active" side>
             <q-icon name="check" size="16px" />
           </q-item-section>

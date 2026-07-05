@@ -4,12 +4,13 @@ import { computed, ref } from 'vue'
 import { api } from '@/lib/api'
 import type { MarketInfo } from '@/lib/types'
 
-export const MARKETS = ['philadelphia'] as const
+export const MARKETS = ['philadelphia', 'harrisburg'] as const
 export type Market = (typeof MARKETS)[number]
 export const DEFAULT_MARKET: Market = 'philadelphia'
 
 export const MARKET_LABELS: Record<Market, string> = {
   philadelphia: 'Philadelphia',
+  harrisburg: 'Harrisburg',
 }
 
 const STORAGE_KEY = 'lotscope.market'
@@ -38,5 +39,9 @@ export const useMarketStore = defineStore('market', () => {
     }
   }
 
-  return { active, infos, activeInfo, set, load }
+  function statusOf(slug: string): string | undefined {
+    return infos.value.find((m) => m.url_slug === slug)?.launch_status
+  }
+
+  return { active, infos, activeInfo, set, load, statusOf }
 })
