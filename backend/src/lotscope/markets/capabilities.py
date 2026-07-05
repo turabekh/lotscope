@@ -1,5 +1,5 @@
 _UNSUPPORTED_CHECKLIST_CATEGORIES: dict[str, frozenset[str]] = {
-    "hbg": frozenset({"li", "overlays"}),
+    "hbg": frozenset({"li", "overlays", "flood"}),
 }
 
 _FORCED_SALE_LABEL: dict[str, str] = {
