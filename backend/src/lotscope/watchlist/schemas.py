@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class SavedParcelCreate(BaseModel):
-    parcel_number: str = Field(min_length=1, max_length=20)
+    parcel_number: str = Field(min_length=1, max_length=40)
     tags: list[str] = Field(default_factory=list, max_length=20)
     note: str | None = Field(default=None, max_length=2000)
 

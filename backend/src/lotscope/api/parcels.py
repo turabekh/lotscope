@@ -20,6 +20,7 @@ from lotscope.ai.embeddings import Embedder
 from lotscope.ai.schemas import ParcelAnswer, ParcelReportResult, ParcelSummaryResult
 from lotscope.ai.service import ask_the_parcel, draft_parcel_report, summarize_parcel
 from lotscope.api.deps import (
+    ParcelKeyDep,
     get_app_settings,
     get_current_user,
     get_embedder,
@@ -133,7 +134,7 @@ async def parcels_compare(
 
 @router.get("/{parcel_number}", response_model=ParcelDetail)
 async def parcel_detail(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     redis: RedisDep,
@@ -156,7 +157,7 @@ async def parcel_detail(
 
 @router.get("/{parcel_number}/verdict", response_model=VerdictResult)
 async def parcel_verdict(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> VerdictResult:
     verdict = await get_or_compute_current_verdict(session, parcel_number)
     if verdict is None:
@@ -167,7 +168,7 @@ async def parcel_verdict(
 
 @router.post("/{parcel_number}/verdict/refresh", response_model=VerdictResult)
 async def refresh_parcel_verdict(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> VerdictResult:
     verdict = await compute_verdict(session, parcel_number)
     if verdict is None:
@@ -178,7 +179,7 @@ async def refresh_parcel_verdict(
 
 @router.get("/{parcel_number}/envelope", response_model=EnvelopeResult)
 async def parcel_envelope(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> EnvelopeResult:
     envelope = await compute_envelope(session, parcel_number)
     if envelope is None:
@@ -188,7 +189,7 @@ async def parcel_envelope(
 
 @router.get("/{parcel_number}/assemblage", response_model=AssemblageResult)
 async def parcel_assemblage(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> AssemblageResult:
     result = await compute_assemblage(session, parcel_number)
     if result is None:
@@ -198,7 +199,7 @@ async def parcel_assemblage(
 
 @router.get("/{parcel_number}/distress", response_model=DistressResult)
 async def parcel_distress(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> DistressResult:
     result = await assess_parcel_distress(session, parcel_number)
     if result is None:
@@ -208,14 +209,14 @@ async def parcel_distress(
 
 @router.get("/{parcel_number}/next-sheriff-sale", response_model=NextSheriffSale | None)
 async def parcel_next_sheriff_sale(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> NextSheriffSale | None:
     return await get_next_sheriff_sale(session, parcel_number)
 
 
 @router.get("/{parcel_number}/variance-outlook", response_model=VarianceOutlook)
 async def parcel_variance_outlook(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> VarianceOutlook:
     result = await variance_outlook(session, parcel_number)
     if result is None:
@@ -225,7 +226,7 @@ async def parcel_variance_outlook(
 
 @router.get("/{parcel_number}/owner-portfolio", response_model=OwnerPortfolio)
 async def parcel_owner_portfolio(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> OwnerPortfolio:
     result = await get_owner_portfolio(session, parcel_number)
     if result is None:
@@ -235,7 +236,7 @@ async def parcel_owner_portfolio(
 
 @router.get("/{parcel_number}/deed-restrictions", response_model=DeedRestrictionsResponse)
 async def parcel_deed_restrictions(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     settings: SettingsDep,
@@ -252,7 +253,7 @@ async def parcel_deed_restrictions(
     "/{parcel_number}/deeds/{document_id}/analyze", response_model=DeedRestrictionsResponse
 )
 async def analyze_parcel_deed(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     document_id: str,
     session: SessionDep,
     current_user: CurrentUserDep,
@@ -277,7 +278,7 @@ async def analyze_parcel_deed(
 
 @router.get("/{parcel_number}/summary", response_model=ParcelSummaryResult)
 async def parcel_summary(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     redis: RedisDep,
@@ -307,7 +308,7 @@ async def parcel_summary(
 
 @router.get("/{parcel_number}/report", response_model=ParcelReportResult)
 async def parcel_report(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     redis: RedisDep,
@@ -329,7 +330,7 @@ async def parcel_report(
 
 @router.get("/{parcel_number}/assessment", response_model=AssessmentResult)
 async def parcel_assessment(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> AssessmentResult:
     result = await analyze_parcel_assessment(session, parcel_number)
     if result is None:
@@ -339,7 +340,7 @@ async def parcel_assessment(
 
 @router.get("/{parcel_number}/subdivision", response_model=SubdivisionResult)
 async def parcel_subdivision(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> SubdivisionResult:
     result = await analyze_parcel_subdivision(session, parcel_number)
     if result is None:
@@ -349,7 +350,7 @@ async def parcel_subdivision(
 
 @router.get("/{parcel_number}/historic", response_model=HistoricResult)
 async def parcel_historic(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> HistoricResult:
     result = await get_parcel_historic(session, parcel_number)
     if result is None:
@@ -359,7 +360,7 @@ async def parcel_historic(
 
 @router.get("/{parcel_number}/market", response_model=MarketContext)
 async def parcel_market(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     radius_ft: Annotated[float, Query(gt=0, le=10000)] = 1500.0,
@@ -373,7 +374,7 @@ async def parcel_market(
 
 @router.get("/{parcel_number}/checklist", response_model=ParcelChecklist)
 async def parcel_checklist(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> ParcelChecklist:
     result = await build_parcel_checklist(session, parcel_number)
     if result is None:
@@ -383,7 +384,7 @@ async def parcel_checklist(
 
 @router.get("/{parcel_number}/dossier")
 async def parcel_dossier(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     redis: RedisDep,
@@ -407,14 +408,14 @@ async def parcel_dossier(
 
 @router.get("/{parcel_number}/appeal-packet", response_model=AppealPacketStatus)
 async def parcel_appeal_packet_status(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> AppealPacketStatus:
     return await packet_status(session, current_user.id, parcel_number)
 
 
 @router.post("/{parcel_number}/appeal-packet", response_model=AppealPacketStatus)
 async def redeem_parcel_appeal_packet(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> AppealPacketStatus:
     detail = await get_parcel_detail(session, parcel_number)
     if detail is None:
@@ -426,7 +427,7 @@ async def redeem_parcel_appeal_packet(
 
 @router.get("/{parcel_number}/appeal-packet.pdf")
 async def download_parcel_appeal_packet(
-    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> Response:
     if not await has_entitlement(session, current_user.id, parcel_number):
         raise ForbiddenError("Purchase or redeem the Assessment Review Packet to download it.")
@@ -444,7 +445,7 @@ async def download_parcel_appeal_packet(
 
 @router.get("/{parcel_number}/comps", response_model=ValuationResult)
 async def parcel_comps(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     radius_ft: Annotated[float, Query(gt=0, le=10000)] = 1500.0,
@@ -458,7 +459,7 @@ async def parcel_comps(
 
 @router.get("/{parcel_number}/deal", response_model=DealResult)
 async def parcel_deal(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     acquisition_price: Annotated[float | None, Query(ge=0)] = None,
@@ -487,7 +488,7 @@ async def parcel_deal(
 
 @router.get("/{parcel_number}/scenarios", response_model=ScenariosResult)
 async def parcel_scenarios(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     current_user: CurrentUserDep,
     acquisition_price: Annotated[float | None, Query(ge=0)] = None,
@@ -516,7 +517,7 @@ async def parcel_scenarios(
 
 @router.post("/{parcel_number}/ask", response_model=ParcelAnswer)
 async def ask_parcel(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     body: AskRequest,
     session: SessionDep,
     embedder: Annotated[Embedder, Depends(get_embedder)],

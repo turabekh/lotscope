@@ -313,4 +313,4 @@ def render_dossier_pdf(
 
 
 def dossier_filename(parcel_number: str) -> str:
-    return f"lotscope-dossier-{parcel_number}.pdf"
+    return f"lotscope-dossier-{parcel_number.replace(':', '-')}.pdf"

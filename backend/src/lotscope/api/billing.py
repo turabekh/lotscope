@@ -26,6 +26,7 @@ from lotscope.accounts.service import (
 )
 from lotscope.accounts.tiers import PLAN_CATALOG
 from lotscope.api.deps import (
+    canonicalize_parcel_key,
     get_app_settings,
     get_current_user,
     get_optional_user,
@@ -96,7 +97,7 @@ async def checkout(
 
 
 class AppealPacketCheckoutRequest(BaseModel):
-    parcel_number: str = Field(min_length=1, max_length=20)
+    parcel_number: str = Field(min_length=1, max_length=40)
 
 
 @router.post("/appeal-packet/checkout", response_model=CheckoutResponse)
@@ -113,7 +114,7 @@ async def appeal_packet_checkout(
     url = await gateway.create_appeal_packet_checkout_session(
         customer_id=customer_id,
         price_id=settings.stripe_price_appeal_packet,
-        parcel_number=data.parcel_number,
+        parcel_number=canonicalize_parcel_key(data.parcel_number),
         success_url=settings.billing_success_url,
         cancel_url=settings.billing_cancel_url,
     )
