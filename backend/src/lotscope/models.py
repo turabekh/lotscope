@@ -11,6 +11,7 @@ from lotscope.risk.models import FloodZone, LiEvent, TaxStatus
 from lotscope.streets.models import StreetCenterline
 from lotscope.valuation.models import Sale
 from lotscope.verdict.models import ParcelVerdict
+from lotscope.zba.models import ZbaAppeal
 from lotscope.zoning.models import Rco, ZoningDistrict, ZoningOverlay, ZoningStandard
 
 metadata = Base.metadata
@@ -31,6 +32,7 @@ __all__ = [
     "StreetCenterline",
     "TaxStatus",
     "User",
+    "ZbaAppeal",
     "ZoningDistrict",
     "ZoningOverlay",
     "ZoningStandard",

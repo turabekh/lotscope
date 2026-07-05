@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from lotscope.core.config import Settings
 from lotscope.ingestion.arcgis import ArcGisClient
 from lotscope.ingestion.carto import CartoClient
-from lotscope.ingestion.filters import li_events_where, rtt_sales_where
+from lotscope.ingestion.filters import li_events_where, rtt_sales_where, zba_appeals_where
 from lotscope.ingestion.loaders import (
     flood,
     historic,
@@ -20,6 +20,7 @@ from lotscope.ingestion.loaders import (
     streets,
     tax,
     vacancy,
+    zba,
     zoning,
 )
 from lotscope.ingestion.loaders.sheriff import CsvSheriffSource, load_sheriff
@@ -182,6 +183,16 @@ async def ingest_historic(session_factory: SessionFactory, settings: Settings) -
     )
 
 
+async def ingest_zba(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_carto(
+        session_factory,
+        settings,
+        loader=zba.load_zba,
+        dataset=zba.ZBA_DATASET,
+        where=zba_appeals_where(settings.zba_min_decision_date),
+    )
+
+
 INGEST_JOBS: dict[str, Job] = {
     "opa": ingest_opa,
     "pwd": ingest_pwd,
@@ -199,4 +210,5 @@ INGEST_JOBS: dict[str, Job] = {
     "neighborhoods": ingest_neighborhoods,
     "streets": ingest_streets,
     "historic": ingest_historic,
+    "zba": ingest_zba,
 }

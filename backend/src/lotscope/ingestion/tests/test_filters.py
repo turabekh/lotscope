@@ -4,6 +4,7 @@ from lotscope.ingestion.filters import (
     LI_DATE_COLUMNS,
     li_events_where,
     rtt_sales_where,
+    zba_appeals_where,
 )
 
 
@@ -38,3 +39,16 @@ def test_li_events_where_rejects_unknown_column() -> None:
 def test_li_events_where_rejects_malformed_date() -> None:
     with pytest.raises(ValueError, match="date"):
         li_events_where("violationdate", "not-a-date")
+
+
+def test_zba_appeals_where_scopes_to_both_zba_labels_and_date() -> None:
+    clause = zba_appeals_where("2019-01-01")
+    assert "'RB_ZBA'" in clause
+    assert "'Zoning Board of Adjustment'" in clause
+    assert "decisiondate >= '2019-01-01'" in clause
+    assert "scheduleddate >= '2019-01-01'" in clause
+
+
+def test_zba_appeals_where_rejects_malformed_date() -> None:
+    with pytest.raises(ValueError, match="date"):
+        zba_appeals_where("2019/01/01")

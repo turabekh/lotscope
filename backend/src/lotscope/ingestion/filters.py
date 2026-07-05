@@ -23,3 +23,15 @@ def li_events_where(date_column: str, min_date: str) -> str:
         raise ValueError(f"unknown L&I date column: {date_column!r}")
     date = _safe_date(min_date)
     return f"{date_column} >= '{date}'"
+
+
+ZBA_APPLICATION_TYPES = ("RB_ZBA", "Zoning Board of Adjustment")
+
+
+def zba_appeals_where(min_decision_date: str) -> str:
+    date = _safe_date(min_decision_date)
+    types = ", ".join(f"'{value}'" for value in ZBA_APPLICATION_TYPES)
+    return (
+        f"applicationtype IN ({types}) "
+        f"AND (decisiondate >= '{date}' OR scheduleddate >= '{date}')"
+    )

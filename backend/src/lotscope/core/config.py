@@ -95,6 +95,7 @@ class Settings(BaseSettings):
 
     rtt_min_sale_date: str = "2005-01-01"
     li_min_event_date: str = "2023-01-01"
+    zba_min_decision_date: str = "2019-01-01"
 
     raw_retention_days: int = 90
     event_retention_months: int = 18
