@@ -96,7 +96,7 @@ onMounted(async () => {
   void savedSearches.ensureLoaded()
   void pipeline.ensureLoaded()
   try {
-    const response = await api.getLeads({})
+    const response = await api.getLeads({ market: market.active })
     leads.value = response.leads.slice(0, LEADS_PREVIEW)
   } finally {
     leadsLoading.value = false

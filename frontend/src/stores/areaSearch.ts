@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { api } from '@/lib/api'
 import type { AreaSearchRequest, GeoPoint, SpatialParcelResult } from '@/lib/types'
 import { useFiltersStore } from '@/stores/filters'
+import { useMarketStore } from '@/stores/market'
 
 const DEFAULT_RADIUS_M = 500
 const RESULT_LIMIT = 200
@@ -35,7 +36,10 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   const truncated = ref(false)
 
   function criteria(): Partial<AreaSearchRequest> {
-    const c: Partial<AreaSearchRequest> = { vacant_only: useFiltersStore().vacantOnly }
+    const c: Partial<AreaSearchRequest> = {
+      market: useMarketStore().active,
+      vacant_only: useFiltersStore().vacantOnly,
+    }
     if (minValue.value !== null) c.min_market_value = minValue.value
     if (maxValue.value !== null) c.max_market_value = maxValue.value
     if (minLotArea.value !== null) c.min_lot_area_sqft = minLotArea.value

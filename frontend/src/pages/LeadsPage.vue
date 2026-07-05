@@ -46,6 +46,7 @@ async function load(): Promise<void> {
   error.value = null
   try {
     const response = await api.getLeads({
+      market: market.active,
       minScore: minScore.value,
       vacantOnly: vacantOnly.value,
       zipCode: zipCode.value.trim() || undefined,

@@ -27,6 +27,7 @@ import type {
   EnvelopeResult,
   LayersResponse,
   LeadsResponse,
+  MarketInfo,
   PipelineResponse,
   ParcelAnswer,
   ParcelDetail,
@@ -126,6 +127,9 @@ async function downloadFile(path: string, filename: string, body?: unknown): Pro
 }
 
 export const api = {
+  getMarkets(): Promise<MarketInfo[]> {
+    return request('/markets')
+  },
   search(query: string, market: string, limit = 10): Promise<ParcelSearchResponse> {
     return request(
       `/search?q=${encodeURIComponent(query)}&market=${encodeURIComponent(market)}&limit=${limit}`,
@@ -282,11 +286,13 @@ export const api = {
     )
   },
   getLeads(params: {
+    market?: string
     minScore?: number
     vacantOnly?: boolean
     zipCode?: string
   }): Promise<LeadsResponse> {
     const query = new URLSearchParams()
+    if (params.market) query.set('market', params.market)
     if (params.minScore != null) query.set('min_score', String(params.minScore))
     if (params.vacantOnly) query.set('vacant_only', 'true')
     if (params.zipCode) query.set('zip_code', params.zipCode)

@@ -215,7 +215,20 @@ export interface GeoPoint {
   lng: number
 }
 
+export interface MarketInfo {
+  code: string
+  name: string
+  state: string | null
+  url_slug: string
+  map_center: [number, number]
+  map_bounds: number[] | null
+  default_zoom: number
+  launch_status: string
+  coverage_note: string | null
+}
+
 export interface AreaSearchRequest {
+  market?: string
   center?: GeoPoint
   radius_m?: number
   polygon?: GeoJSON.Polygon
