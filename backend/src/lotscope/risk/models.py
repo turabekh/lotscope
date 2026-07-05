@@ -22,7 +22,7 @@ class TaxStatus(Base, TimestampMixin, IngestionMixin):
     __tablename__ = "tax_status"
 
     parcel_number: Mapped[str] = mapped_column(
-        String(20),
+        String(40),
         ForeignKey("parcel.parcel_number", ondelete="CASCADE"),
         primary_key=True,
     )
@@ -45,7 +45,7 @@ class SheriffSale(Base, TimestampMixin, IngestionMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     parcel_number: Mapped[str] = mapped_column(
-        String(20), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
+        String(40), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
     )
     case_number: Mapped[str] = mapped_column(String(60), nullable=False)
     sale_type: Mapped[str | None] = mapped_column(String(30))
@@ -64,7 +64,7 @@ class LiEvent(Base, TimestampMixin, IngestionMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     parcel_number: Mapped[str] = mapped_column(
-        String(20), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
+        String(40), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
     )
     external_id: Mapped[str | None] = mapped_column(String(60), index=True)
     event_type: Mapped[str | None] = mapped_column(String(60), index=True)

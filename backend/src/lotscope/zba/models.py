@@ -16,7 +16,7 @@ class ZbaAppeal(Base, TimestampMixin, IngestionMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     appeal_number: Mapped[str] = mapped_column(String(40), nullable=False)
-    parcel_number: Mapped[str | None] = mapped_column(String(20), index=True)
+    parcel_number: Mapped[str | None] = mapped_column(String(40), index=True)
     appeal_type: Mapped[str | None] = mapped_column(String(60), index=True)
     decision: Mapped[str | None] = mapped_column(String(40), index=True)
     decision_date: Mapped[date | None] = mapped_column(Date)

@@ -13,7 +13,7 @@ class DeedDocument(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     parcel_number: Mapped[str] = mapped_column(
-        String(20), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
+        String(40), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
     )
     external_id: Mapped[str | None] = mapped_column(String(80), index=True)
     document_type: Mapped[str | None] = mapped_column(String(80))
@@ -33,7 +33,7 @@ class DeedRestriction(Base, TimestampMixin):
         ForeignKey("deed_document.id", ondelete="CASCADE"), index=True
     )
     parcel_number: Mapped[str] = mapped_column(
-        String(20), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
+        String(40), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
     )
     kind: Mapped[str] = mapped_column(String(40), nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)

@@ -16,7 +16,7 @@ class Sale(Base, TimestampMixin, IngestionMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     parcel_number: Mapped[str] = mapped_column(
-        String(20), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
+        String(40), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), index=True
     )
     document_id: Mapped[str | None] = mapped_column(String(40), index=True)
     document_type: Mapped[str | None] = mapped_column(String(60))
