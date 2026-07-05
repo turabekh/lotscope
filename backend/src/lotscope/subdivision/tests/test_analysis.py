@@ -1,4 +1,53 @@
-from lotscope.subdivision.analysis import SubdivisionInputs, analyze_subdivision
+from lotscope.subdivision.analysis import (
+    SubdivisionInputs,
+    analyze_subdivision,
+    small_lot_provision_for,
+)
+
+_RSA5_SMALL_LOT = small_lot_provision_for("RSA-5")
+
+
+def _small_lot_inputs(**overrides: object) -> SubdivisionInputs:
+    base: dict[str, object] = {
+        "district_code": "RSA-5",
+        "lot_area_sqft": 1600.0,
+        "lot_width_ft": 20.0,
+        "min_lot_area_sqft": 1440.0,
+        "min_lot_width_ft": 16.0,
+        "small_lot_provision": _RSA5_SMALL_LOT,
+        "adjacent_small_share": 0.8,
+        "has_overlay": False,
+    }
+    base.update(overrides)
+    return SubdivisionInputs(**base)  # type: ignore[arg-type]
+
+
+def test_small_lot_provision_splits_qualifying_lot() -> None:
+    result = analyze_subdivision(_small_lot_inputs())
+    assert result.can_subdivide is True
+    assert result.max_lots == 2
+    assert result.min_lot_area_sqft == 800.0
+    assert any("Small-lot provision applies" in reason for reason in result.reasons)
+
+
+def test_small_lot_provision_requires_adjacency_share() -> None:
+    result = analyze_subdivision(_small_lot_inputs(adjacent_small_share=0.74))
+    assert result.can_subdivide is False
+    assert result.max_lots == 1
+    assert any("at least 75%" in reason for reason in result.reasons)
+
+
+def test_small_lot_provision_requires_minimum_width() -> None:
+    result = analyze_subdivision(_small_lot_inputs(lot_width_ft=14.0))
+    assert result.can_subdivide is False
+    assert result.max_lots != 2
+
+
+def test_overlay_blocks_small_lot_division_with_caveat() -> None:
+    result = analyze_subdivision(_small_lot_inputs(has_overlay=True))
+    assert result.can_subdivide is False
+    assert result.max_lots == 1
+    assert any("§14-500" in reason for reason in result.reasons)
 
 
 def _inputs(**overrides: object) -> SubdivisionInputs:

@@ -1,7 +1,36 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 LimitingFactor = Literal["area", "width", "both", "none"]
+
+
+@dataclass(frozen=True)
+class SmallLotProvision:
+    trigger_lot_area_sqft: float
+    min_child_lot_area_sqft: float
+    min_lot_width_ft: float
+    adjacent_small_share: float
+    adjacent_small_max_area_sqft: float
+    citation: str
+
+
+SMALL_LOT_PROVISIONS: dict[str, SmallLotProvision] = {
+    "RSA5": SmallLotProvision(
+        trigger_lot_area_sqft=1600.0,
+        min_child_lot_area_sqft=800.0,
+        min_lot_width_ft=16.0,
+        adjacent_small_share=0.75,
+        adjacent_small_max_area_sqft=1000.0,
+        citation="Title 14 Table 14-701-1 small-lot provision",
+    ),
+}
+
+
+def small_lot_provision_for(district_code: str | None) -> SmallLotProvision | None:
+    if district_code is None:
+        return None
+    key = district_code.upper().replace("-", "")
+    return SMALL_LOT_PROVISIONS.get(key)
 
 
 @dataclass(frozen=True)
@@ -11,6 +40,9 @@ class SubdivisionInputs:
     lot_width_ft: float | None
     min_lot_area_sqft: float | None
     min_lot_width_ft: float | None
+    small_lot_provision: SmallLotProvision | None = None
+    adjacent_small_share: float | None = None
+    has_overlay: bool = False
 
 
 @dataclass(frozen=True)
@@ -48,7 +80,7 @@ def _limiting_factor(by_area: int | None, by_width: int | None) -> LimitingFacto
     return "both"
 
 
-def analyze_subdivision(inputs: SubdivisionInputs) -> SubdivisionAnalysis:
+def _analyze_base(inputs: SubdivisionInputs) -> SubdivisionAnalysis:
     def result(
         *,
         can_subdivide: bool,
@@ -147,4 +179,55 @@ def analyze_subdivision(inputs: SubdivisionInputs) -> SubdivisionAnalysis:
         is_conforming=False,
         needs_consolidation=True,
         reasons=reasons,
+    )
+
+
+def analyze_subdivision(inputs: SubdivisionInputs) -> SubdivisionAnalysis:
+    base = _analyze_base(inputs)
+    provision = inputs.small_lot_provision
+    if (
+        provision is None
+        or inputs.lot_area_sqft is None
+        or inputs.lot_area_sqft < provision.trigger_lot_area_sqft
+    ):
+        return base
+    if inputs.lot_width_ft is not None and inputs.lot_width_ft < provision.min_lot_width_ft:
+        return base
+
+    if inputs.has_overlay:
+        caveat = (
+            "A councilmanic overlay may modify or prohibit small-lot division here; verify the "
+            "Title 14 §14-500 series. Showing the base-district result only."
+        )
+        return replace(base, reasons=[*base.reasons, caveat])
+
+    share = inputs.adjacent_small_share
+    threshold = provision.adjacent_small_share
+    if share is None or share < threshold:
+        note = (
+            f"The small-lot provision needs at least {threshold:.0%} of adjacent lots at or below "
+            f"{provision.adjacent_small_max_area_sqft:,.0f} sq ft"
+            + (f"; here it is {share:.0%}." if share is not None else "; adjacency is unknown.")
+        )
+        return replace(base, reasons=[*base.reasons, note])
+
+    small_lot_max = int(inputs.lot_area_sqft // provision.min_child_lot_area_sqft)
+    if small_lot_max <= (base.max_lots or 0):
+        return base
+
+    reason = (
+        f"Small-lot provision applies: up to {small_lot_max} lots at the "
+        f"{provision.min_child_lot_area_sqft:,.0f} sq ft floor ({provision.citation}), since "
+        f"{share:.0%} of adjacent lots are {provision.adjacent_small_max_area_sqft:,.0f} sq ft or "
+        "smaller. Subdivision is subject to plan approval and access."
+    )
+    return replace(
+        base,
+        can_subdivide=True,
+        max_lots=small_lot_max,
+        limiting_factor="area",
+        is_conforming=True,
+        needs_consolidation=False,
+        min_lot_area_sqft=provision.min_child_lot_area_sqft,
+        reasons=[reason],
     )

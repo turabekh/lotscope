@@ -27,6 +27,16 @@ _SPATIAL_DISTRICT_SQL = text(
     "JOIN zoning_district zd ON ST_Contains(zd.geom_2272, ST_Centroid(p.geom_2272)) "
     "WHERE p.parcel_number = :parcel_number LIMIT 1"
 )
+_PARCEL_OVERLAYS_SQL = text(
+    "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
+    "JOIN zoning_overlay zo ON ST_Intersects(zo.geom_2272, p.geom_2272) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL AND zo.name IS NOT NULL"
+)
+
+
+async def get_parcel_overlays(session: AsyncSession, parcel_number: str) -> list[str]:
+    names = await session.scalar(_PARCEL_OVERLAYS_SQL, {"parcel_number": parcel_number})
+    return list(names or [])
 _FOOTPRINT_SQL = text(
     "SELECT ST_AsGeoJSON(ST_Transform(geom_2272, 4326), 6) AS lot_geojson, "
     "ST_AsGeoJSON(ST_Transform(ST_Buffer(geom_2272, -CAST(:inset AS double precision)), 4326), 6) "

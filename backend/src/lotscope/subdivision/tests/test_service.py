@@ -69,3 +69,54 @@ async def test_bogus_frontage_equal_to_area_is_ignored(db_session: AsyncSession)
 
 async def test_unknown_parcel_returns_none(db_session: AsyncSession) -> None:
     assert await analyze_parcel_subdivision(db_session, "999999999") is None
+
+
+async def _add_geo_parcel(
+    session: AsyncSession, parcel_number: str, *, area: float, width: float, polygon: str
+) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, base_zoning_code, "
+            "geom_2272) VALUES (:pn, :area, :width, 'RSA-5', ST_GeomFromText(:poly, 2272))"
+        ),
+        {"pn": parcel_number, "area": area, "width": width, "poly": polygon},
+    )
+
+
+_SUBJECT_POLY = "POLYGON((0 0,0 80,20 80,20 0,0 0))"
+_LEFT_SMALL = "POLYGON((-10 0,-10 80,0 80,0 0,-10 0))"
+_RIGHT_SMALL = "POLYGON((20 0,20 80,30 80,30 0,20 0))"
+_REAR_SMALL = "POLYGON((0 80,0 120,20 120,20 80,0 80))"
+_FRONT_LARGE = "POLYGON((0 -60,0 0,20 0,20 -60,0 -60))"
+
+
+async def test_small_lot_division_when_adjacent_lots_are_small(db_session: AsyncSession) -> None:
+    await _add_standard(db_session, "RSA-5")
+    await _add_geo_parcel(db_session, "000000001", area=1600, width=20, polygon=_SUBJECT_POLY)
+    await _add_geo_parcel(db_session, "000000010", area=800, width=10, polygon=_LEFT_SMALL)
+    await _add_geo_parcel(db_session, "000000011", area=800, width=10, polygon=_RIGHT_SMALL)
+    await _add_geo_parcel(db_session, "000000012", area=800, width=20, polygon=_REAR_SMALL)
+    await _add_geo_parcel(db_session, "000000013", area=1200, width=20, polygon=_FRONT_LARGE)
+    await db_session.flush()
+
+    result = await analyze_parcel_subdivision(db_session, "000000001")
+    assert result is not None
+    assert result.can_subdivide is True
+    assert result.max_lots == 2
+    assert result.min_lot_area_sqft == 800.0
+    assert any("Small-lot provision applies" in reason for reason in result.reasons)
+
+
+async def test_no_small_lot_division_when_neighbors_are_large(db_session: AsyncSession) -> None:
+    await _add_standard(db_session, "RSA-5")
+    await _add_geo_parcel(db_session, "000000001", area=1600, width=20, polygon=_SUBJECT_POLY)
+    await _add_geo_parcel(db_session, "000000010", area=800, width=10, polygon=_LEFT_SMALL)
+    await _add_geo_parcel(db_session, "000000011", area=1600, width=20, polygon=_RIGHT_SMALL)
+    await _add_geo_parcel(db_session, "000000012", area=1600, width=20, polygon=_REAR_SMALL)
+    await _add_geo_parcel(db_session, "000000013", area=1200, width=20, polygon=_FRONT_LARGE)
+    await db_session.flush()
+
+    result = await analyze_parcel_subdivision(db_session, "000000001")
+    assert result is not None
+    assert result.can_subdivide is False
+    assert result.max_lots == 1
