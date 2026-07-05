@@ -33,3 +33,22 @@ def test_forced_sale_flag_relabelled_retsl_for_hbg() -> None:
     assert phl.label == "Sheriff-sale exposure"
     assert "RETSL" in hbg.label
     assert forced_sale_label("hbg") in hbg.detail
+
+
+def test_display_name_citation_and_hidden_surfaces() -> None:
+    from lotscope.ai.prompts import SUMMARY_SYSTEM_PROMPT, for_market
+    from lotscope.markets.capabilities import (
+        hidden_surfaces,
+        market_display_name,
+        zoning_citation_label,
+    )
+
+    assert market_display_name("phl") == "Philadelphia"
+    assert market_display_name("hbg") == "Harrisburg"
+    assert zoning_citation_label("phl") == "Title 14"
+    assert zoning_citation_label("hbg") == "Harrisburg Zoning Code"
+    assert hidden_surfaces("hbg") == {"zba_variance", "sheriff_sales"}
+    assert hidden_surfaces("phl") == frozenset()
+    # prompts carry the market city, not a hardcoded literal
+    assert "Harrisburg real estate" in for_market(SUMMARY_SYSTEM_PROMPT, "Harrisburg")
+    assert "Philadelphia real estate" in for_market(SUMMARY_SYSTEM_PROMPT, "Philadelphia")

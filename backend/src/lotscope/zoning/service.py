@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.markets.capabilities import zoning_citation_label
 from lotscope.zoning.buildability import (
     DistrictStandard,
     ParcelDimensions,
@@ -97,6 +98,7 @@ async def _get_standard(
     return DistrictStandard(
         code=row.code,
         code_version=row.code_version,
+        citation_label=zoning_citation_label(market_code),
         permitted_uses=list(row.permitted_uses or []),
         min_lot_area_sqft=_as_float(row.min_lot_area_sqft),
         min_lot_width_ft=_as_float(row.min_lot_width_ft),

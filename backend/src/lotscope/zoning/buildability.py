@@ -18,6 +18,7 @@ class ParcelDimensions:
 class DistrictStandard:
     code: str
     code_version: str
+    citation_label: str = "Title 14"
     permitted_uses: list[str] = field(default_factory=list)
     min_lot_area_sqft: float | None = None
     min_lot_width_ft: float | None = None
@@ -196,7 +197,7 @@ def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> B
     if not has_permitted_uses:
         reasons.append(
             f"No by-right uses are recorded for {standard.code}; confirm permitted uses "
-            "in Title 14 before relying on this."
+            f"in {standard.citation_label} before relying on this."
         )
 
     needs_variance = (not conforming) if conforming is not None else None
@@ -229,7 +230,7 @@ def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> B
 
     return Buildability(
         district_code=standard.code,
-        cited_section=f"{standard.code} (Title 14, {standard.code_version})",
+        cited_section=f"{standard.code} ({standard.citation_label}, {standard.code_version})",
         conforming=conforming,
         can_build_by_right=can_build_by_right,
         needs_variance=needs_variance,

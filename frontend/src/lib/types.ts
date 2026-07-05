@@ -225,6 +225,7 @@ export interface MarketInfo {
   default_zoom: number
   launch_status: string
   coverage_note: string | null
+  hidden_surfaces: string[]
 }
 
 export interface AreaSearchRequest {

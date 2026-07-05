@@ -15,3 +15,4 @@ class MarketInfo(BaseModel):
     default_zoom: float
     launch_status: str
     coverage_note: str | None
+    hidden_surfaces: list[str] = []
