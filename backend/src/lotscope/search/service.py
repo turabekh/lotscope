@@ -17,13 +17,15 @@ _SEARCH_SQL = text(
                similarity(coalesce(owner, ''), :query)
            ) AS score
     FROM parcel
-    WHERE address ILIKE :contains
+    WHERE market_code = :market_code
+      AND (address ILIKE :contains
        OR owner ILIKE :contains
+       OR local_key = :query
+       OR local_key = :padded
        OR parcel_number = :query
-       OR parcel_number = :padded
-       OR parcel_number LIKE :prefix
+       OR local_key LIKE :prefix)
     ORDER BY
-        (parcel_number = :query OR parcel_number = :padded) DESC,
+        (local_key = :query OR local_key = :padded) DESC,
         score DESC,
         parcel_number
     LIMIT :limit OFFSET :offset
@@ -43,7 +45,12 @@ def _padded_account(query: str) -> str:
 
 
 async def search_parcels(
-    session: AsyncSession, query: str, *, limit: int = 20, offset: int = 0
+    session: AsyncSession,
+    query: str,
+    *,
+    market_code: str = "phl",
+    limit: int = 20,
+    offset: int = 0,
 ) -> list[ParcelSearchResult]:
     cleaned = query.strip()
     if not cleaned:
@@ -52,6 +59,7 @@ async def search_parcels(
     result = await session.execute(
         _SEARCH_SQL,
         {
+            "market_code": market_code,
             "query": cleaned,
             "contains": f"%{escaped}%",
             "prefix": f"{escaped}%",

@@ -16,6 +16,9 @@ class SavedSearch(Base, TimestampMixin):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("app_user.id", ondelete="CASCADE"), index=True, nullable=False
     )
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     criteria: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     alerts_enabled: Mapped[bool] = mapped_column(

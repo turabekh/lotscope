@@ -4,14 +4,20 @@ from lotscope.savedsearch.schemas import SearchCriteria
 
 def test_empty_criteria_excludes_city_owned_by_default() -> None:
     where, params = build_where(SearchCriteria())
-    assert where == "coalesce(p.is_city_owned, false) = false"
-    assert params == {}
+    assert where == "p.market_code = :market_code AND coalesce(p.is_city_owned, false) = false"
+    assert params == {"market_code": "phl"}
 
 
 def test_no_conditions_when_city_owned_allowed() -> None:
     where, params = build_where(SearchCriteria(exclude_city_owned=False))
-    assert where == "true"
-    assert params == {}
+    assert where == "p.market_code = :market_code"
+    assert params == {"market_code": "phl"}
+
+
+def test_market_code_scopes_matcher() -> None:
+    where, params = build_where(SearchCriteria(exclude_city_owned=False), market_code="zzz")
+    assert where == "p.market_code = :market_code"
+    assert params == {"market_code": "zzz"}
 
 
 def test_all_filters_are_parametrized() -> None:

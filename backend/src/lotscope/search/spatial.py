@@ -6,6 +6,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import ValidationError
+from lotscope.core.markets import market_code
 from lotscope.search.schemas import AreaSearchRequest, SpatialParcelResult
 
 MAX_RADIUS_M = 5000.0
@@ -79,7 +80,7 @@ def build_filters(
 
 def _filters_for(request: AreaSearchRequest) -> tuple[str, dict[str, Any]]:
     return build_filters(
-        market=request.market,
+        market=market_code(request.market),
         vacant_only=request.vacant_only,
         zoning_codes=request.zoning_codes,
         min_lot_area_sqft=request.min_lot_area_sqft,
