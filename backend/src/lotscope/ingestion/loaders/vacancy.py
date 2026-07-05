@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.arcgis import ArcGisClient, ArcGisFeature
 from lotscope.ingestion.parsing import first_present
-from lotscope.ingestion.reconciliation import normalize_account
+from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
@@ -17,7 +17,7 @@ VACANCY_LAYER_URL = (
 
 
 def to_vacancy_row(feature: ArcGisFeature) -> dict[str, Any] | None:
-    parcel_number = normalize_account(
+    parcel_number = to_parcel_key(
         first_present(
             feature.properties,
             "OPA_ID",

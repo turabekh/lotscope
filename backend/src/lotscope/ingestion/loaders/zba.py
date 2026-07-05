@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.parsing import parse_iso_date
-from lotscope.ingestion.reconciliation import normalize_account
+from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.zba.models import ZbaAppeal
@@ -40,7 +40,7 @@ def to_zba_row(record: ZbaRecord) -> dict[str, Any] | None:
         return None
     return {
         "appeal_number": appeal_number,
-        "parcel_number": normalize_account(record.opa_account_num),
+        "parcel_number": to_parcel_key(record.opa_account_num),
         "appeal_type": record.applicationtype,
         "decision": record.decision,
         "decision_date": parse_iso_date(record.decisiondate)

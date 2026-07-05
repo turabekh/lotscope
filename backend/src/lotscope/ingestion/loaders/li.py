@@ -11,7 +11,7 @@ from lotscope.ingestion.merge import merge_li
 from lotscope.ingestion.models import IngestRun, StagingLiEvent
 from lotscope.ingestion.parsing import parse_iso_date
 from lotscope.ingestion.raw import write_raw
-from lotscope.ingestion.reconciliation import normalize_account
+from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
@@ -89,7 +89,7 @@ def _base_event(
 
 
 def to_violation_event_row(record: ViolationRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.opa_account_num)
+    parcel_number = to_parcel_key(record.opa_account_num)
     external_id = _clean_id(record.violationnumber)
     if parcel_number is None or not external_id:
         return None
@@ -104,7 +104,7 @@ def to_violation_event_row(record: ViolationRecord) -> dict[str, Any] | None:
 
 
 def to_permit_event_row(record: PermitRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.opa_account_num)
+    parcel_number = to_parcel_key(record.opa_account_num)
     external_id = _clean_id(record.permitnumber)
     if parcel_number is None or not external_id:
         return None
@@ -117,7 +117,7 @@ def to_permit_event_row(record: PermitRecord) -> dict[str, Any] | None:
 
 
 def to_demolition_event_row(record: DemolitionRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.opa_account_num)
+    parcel_number = to_parcel_key(record.opa_account_num)
     external_id = _clean_id(record.caseorpermitnumber)
     if parcel_number is None or not external_id:
         return None

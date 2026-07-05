@@ -9,7 +9,7 @@ from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.merge import merge_opa
 from lotscope.ingestion.models import IngestRun, StagingOpa
 from lotscope.ingestion.raw import write_raw
-from lotscope.ingestion.reconciliation import normalize_account
+from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 
@@ -53,7 +53,7 @@ class OpaRecord(BaseModel):
 
 
 def to_parcel_row(record: OpaRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.parcel_number)
+    parcel_number = to_parcel_key(record.parcel_number)
     if parcel_number is None:
         return None
     return {

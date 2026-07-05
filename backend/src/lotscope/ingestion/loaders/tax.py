@@ -9,7 +9,7 @@ from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.merge import merge_tax
 from lotscope.ingestion.models import IngestRun, StagingTax
 from lotscope.ingestion.raw import write_raw
-from lotscope.ingestion.reconciliation import normalize_account
+from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
@@ -33,7 +33,7 @@ class TaxRecord(BaseModel):
 
 
 def to_tax_row(record: TaxRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.opa_number)
+    parcel_number = to_parcel_key(record.opa_number)
     if parcel_number is None:
         return None
     return {
