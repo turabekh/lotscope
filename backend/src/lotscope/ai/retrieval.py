@@ -21,19 +21,22 @@ _PARCEL_DEED_SQL = text(
     "ORDER BY distance ASC "
     "LIMIT :limit"
 )
+_MARKET_FILTER = "AND ((:market)::text IS NULL OR doc_metadata->>'market' = (:market)::text) "
 _SEARCH_SQL = text(
     "SELECT id, source, section, title, content, "
     "(embedding <=> (:embedding)::vector) AS distance "
     "FROM document "
     "WHERE embedding IS NOT NULL AND ((:source)::text IS NULL OR source = (:source)::text) "
-    "ORDER BY distance ASC "
+    + _MARKET_FILTER
+    + "ORDER BY distance ASC "
     "LIMIT :limit"
 )
 _DISTRICT_SQL = text(
     "SELECT id, source, section, title, content, 0.0 AS distance "
     "FROM document "
     "WHERE embedding IS NOT NULL AND ((:source)::text IS NULL OR source = (:source)::text) "
-    "AND upper(regexp_replace(coalesce(substring(section from "
+    + _MARKET_FILTER
+    + "AND upper(regexp_replace(coalesce(substring(section from "
     r"'\(([^)]+)\)'"
     "), ''), '[^A-Za-z0-9.]', '', 'g')) "
     "= upper(regexp_replace(:district, '[^A-Za-z0-9.]', '', 'g')) "
@@ -108,10 +111,16 @@ async def vector_search(
     *,
     limit: int = 5,
     source: str | None = None,
+    market: str | None = None,
 ) -> list[RetrievedDocument]:
     rows = await session.execute(
         _SEARCH_SQL,
-        {"embedding": to_vector_literal(embedding), "source": source, "limit": limit},
+        {
+            "embedding": to_vector_literal(embedding),
+            "source": source,
+            "market": market,
+            "limit": limit,
+        },
     )
     documents: list[RetrievedDocument] = []
     for row in rows:
@@ -135,9 +144,10 @@ async def embed_and_search(
     *,
     limit: int = 5,
     source: str | None = None,
+    market: str | None = None,
 ) -> list[RetrievedDocument]:
     vectors = await embedder.embed([query])
-    return await vector_search(session, vectors[0], limit=limit, source=source)
+    return await vector_search(session, vectors[0], limit=limit, source=source, market=market)
 
 
 async def fetch_district_documents(
@@ -146,9 +156,11 @@ async def fetch_district_documents(
     *,
     limit: int = 2,
     source: str | None = None,
+    market: str | None = None,
 ) -> list[RetrievedDocument]:
     rows = await session.execute(
-        _DISTRICT_SQL, {"district": district_code, "source": source, "limit": limit}
+        _DISTRICT_SQL,
+        {"district": district_code, "source": source, "market": market, "limit": limit},
     )
     return [
         RetrievedDocument(

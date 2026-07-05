@@ -11,8 +11,14 @@ from lotscope.ingestion.http import request_with_retry
 
 
 class ArcGisFeature(BaseModel):
+    id: str | int | None = None
     geometry: dict[str, Any] | None = None
     properties: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArcGisError400(BaseModel):
+    message: str = ""
+    details: list[str] = Field(default_factory=list)
 
 
 class ArcGisResponse(BaseModel):
@@ -20,6 +26,7 @@ class ArcGisResponse(BaseModel):
 
     features: list[ArcGisFeature] = Field(default_factory=list)
     exceeded_transfer_limit: bool = Field(default=False, alias="exceededTransferLimit")
+    error: ArcGisError400 | None = None
 
 
 class ArcGisClient:
@@ -51,7 +58,11 @@ class ArcGisClient:
             backoff=self._backoff,
             error=ArcGisError,
         )
-        return ArcGisResponse.model_validate(response.json())
+        parsed = ArcGisResponse.model_validate(response.json())
+        if parsed.error is not None:
+            detail = parsed.error.message or "; ".join(parsed.error.details) or "unknown error"
+            raise ArcGisError(f"ArcGIS query failed: {detail}")
+        return parsed
 
     async def paginate(
         self,

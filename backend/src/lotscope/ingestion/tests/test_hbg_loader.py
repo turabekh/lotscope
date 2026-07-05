@@ -25,6 +25,21 @@ _GEOMETRY = {
 }
 
 
+# A small polygon in EPSG:4326, near downtown Harrisburg (for the districts loader).
+_GEOMETRY_4326 = {
+    "type": "Polygon",
+    "coordinates": [
+        [
+            [-76.885, 40.273],
+            [-76.885, 40.274],
+            [-76.884, 40.274],
+            [-76.884, 40.273],
+            [-76.885, 40.273],
+        ]
+    ],
+}
+
+
 def _props(**overrides: Any) -> dict[str, Any]:
     base = {
         "property_i": "04-038-028",
@@ -122,3 +137,50 @@ async def test_load_hbg_parcels_writes_spine_geometry_and_freshness(
     fresh = await db_session.get(DatasetFreshness, ("hbg", "dc_parcels"))
     assert fresh is not None
     assert fresh.status == "success"
+
+
+def test_district_row_maps_code_and_market() -> None:
+    from lotscope.ingestion.loaders.hbg import _district_row
+
+    feature = ArcGisFeature(
+        id=42, geometry=_GEOMETRY_4326, properties={"MAP_ACRONY": "CG"}
+    )
+    row = _district_row(feature)
+    assert row is not None
+    assert row["external_id"] == "hbg:42"
+    assert row["code"] == "CG"
+    assert row["market_code"] == "hbg"
+    assert row["source"] == "tcrp_zoning"
+
+
+@pytest.mark.integration
+async def test_load_hbg_zoning_districts_writes_geometry(db_session: AsyncSession) -> None:
+    from lotscope.ingestion.loaders.hbg import load_hbg_zoning_districts
+
+    settings = Settings(_env_file=None, http_backoff_seconds=0.0)
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        feature = {
+            "type": "Feature",
+            "id": 42,
+            "geometry": _GEOMETRY_4326,
+            "properties": {"MAP_ACRONY": "CG"},
+        }
+        return httpx.Response(200, json={"type": "FeatureCollection", "features": [feature]})
+
+    async with ArcGisClient(settings, transport=httpx.MockTransport(_handler)) as arcgis:
+        total = await load_hbg_zoning_districts(
+            db_session, arcgis, services_url="http://arcgis.test/rest/services", page_size=500
+        )
+    assert total == 1
+    row = (
+        await db_session.execute(
+            text(
+                "SELECT code, market_code, ST_SRID(geom_local) srid FROM zoning_district "
+                "WHERE external_id = 'hbg:42'"
+            )
+        )
+    ).one()
+    assert row.code == "CG"
+    assert row.market_code == "hbg"
+    assert row.srid == 2272

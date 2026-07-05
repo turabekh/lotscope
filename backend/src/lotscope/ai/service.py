@@ -38,7 +38,14 @@ from lotscope.verdict.service import get_verdict
 from lotscope.zoning.service import assess_parcel as assess_zoning
 
 TITLE_14_SOURCE = "title14"
+ZONING_SOURCE = "zoning"
 DEED_SOURCE = "deed"
+
+
+def zoning_retrieval_scope(market_code: str) -> tuple[str, str | None]:
+    if market_code == "phl":
+        return TITLE_14_SOURCE, None
+    return ZONING_SOURCE, market_code
 
 _HIGH_COVERAGE_MIN = 3
 _MEDIUM_COVERAGE_MIN = 2
@@ -252,12 +259,18 @@ async def ask_the_parcel(
         return None
 
     verdict = await get_verdict(session, parcel_number)
+    zoning_source, zoning_market = zoning_retrieval_scope(detail.market_code)
     documents = await embed_and_search(
-        session, embedder, question, limit=document_limit, source=TITLE_14_SOURCE
+        session,
+        embedder,
+        question,
+        limit=document_limit,
+        source=zoning_source,
+        market=zoning_market,
     )
     if detail.base_zoning_code:
         pinned = await fetch_district_documents(
-            session, detail.base_zoning_code, source=TITLE_14_SOURCE
+            session, detail.base_zoning_code, source=zoning_source, market=zoning_market
         )
         if pinned:
             seen = {document.id for document in pinned}

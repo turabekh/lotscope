@@ -238,6 +238,20 @@ async def ingest_hbg_sales(session_factory: SessionFactory, settings: Settings) 
     )
 
 
+async def ingest_hbg_zoning(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _hbg_source_config(session_factory)
+    services_url = str(config["arcgis_services_url"])
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=lambda session, arcgis: hbg.load_hbg_zoning_districts(
+            session, arcgis, services_url=services_url
+        ),
+        dataset=hbg.HBG_ZONING_DATASET,
+        market_code="hbg",
+    )
+
+
 _PHL_JOBS: dict[str, Job] = {
     "opa": ingest_opa,
     "pwd": ingest_pwd,
@@ -261,6 +275,7 @@ _PHL_JOBS: dict[str, Job] = {
 _HBG_JOBS: dict[str, Job] = {
     "parcels": ingest_hbg_parcels,
     "sales": ingest_hbg_sales,
+    "zoning": ingest_hbg_zoning,
 }
 
 INGEST_JOBS: dict[tuple[str, str], Job] = {
