@@ -11,3 +11,11 @@ class CartoError(IngestionError):
 
 class ArcGisError(IngestionError):
     default_message = "The ArcGIS Hub request failed."
+
+
+class CkanError(IngestionError):
+    default_message = "The CKAN datastore request failed."
+
+
+class ExtractError(IngestionError):
+    default_message = "The file extract download failed."

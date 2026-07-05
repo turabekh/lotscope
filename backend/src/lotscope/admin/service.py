@@ -25,7 +25,11 @@ _COUNTS_SQL = text(
 
 async def list_datasets(session: AsyncSession) -> list[DatasetStatus]:
     rows = (
-        await session.execute(select(DatasetFreshness).order_by(DatasetFreshness.dataset))
+        await session.execute(
+            select(DatasetFreshness).order_by(
+                DatasetFreshness.market_code, DatasetFreshness.dataset
+            )
+        )
     ).scalars()
     return [DatasetStatus.model_validate(row) for row in rows]
 

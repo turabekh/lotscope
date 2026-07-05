@@ -65,7 +65,7 @@ async def test_record_freshness_tracks_success(db_session: AsyncSession) -> None
     await record_freshness(db_session, "opa", status="success", success=True, row_count=42)
     await db_session.flush()
 
-    record = await db_session.get(DatasetFreshness, "opa")
+    record = await db_session.get(DatasetFreshness, ("phl", "opa"))
     assert record is not None
     assert record.status == "success"
     assert record.row_count == 42

@@ -12,11 +12,13 @@ async def record_freshness(
     dataset: str,
     *,
     status: str,
+    market_code: str = "phl",
     success: bool = False,
     row_count: int | None = None,
     detail: str | None = None,
 ) -> None:
     row: dict[str, Any] = {
+        "market_code": market_code,
         "dataset": dataset,
         "status": status,
         "last_attempt_at": func.now(),
@@ -27,4 +29,4 @@ async def record_freshness(
         row["row_count"] = row_count
     if detail is not None:
         row["detail"] = detail
-    await upsert(session, DatasetFreshness, [row], index_elements=["dataset"])
+    await upsert(session, DatasetFreshness, [row], index_elements=["market_code", "dataset"])

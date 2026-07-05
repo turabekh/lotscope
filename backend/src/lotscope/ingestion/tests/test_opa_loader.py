@@ -75,7 +75,7 @@ async def test_load_opa_upserts_and_records_freshness(db_session: AsyncSession) 
     assert total == 3
     count = await db_session.scalar(select(func.count()).select_from(Parcel))
     assert count == 3
-    fresh = await db_session.get(DatasetFreshness, "opa_properties_public")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "opa_properties_public"))
     assert fresh is not None
     assert fresh.status == "success"
     assert fresh.row_count == 3

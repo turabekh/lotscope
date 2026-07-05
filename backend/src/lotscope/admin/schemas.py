@@ -9,6 +9,7 @@ from lotscope.accounts.schemas import UserRead
 class DatasetStatus(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    market_code: str
     dataset: str
     status: str
     last_attempt_at: datetime | None

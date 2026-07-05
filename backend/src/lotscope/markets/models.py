@@ -25,5 +25,8 @@ class Market(Base, TimestampMixin):
     deal_assumption_overrides: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="{}"
     )
+    source_config: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
     coverage_note: Mapped[str | None] = mapped_column(Text)
     launch_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="live")

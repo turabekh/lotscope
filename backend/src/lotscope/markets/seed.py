@@ -20,9 +20,20 @@ PHILADELPHIA: dict[str, Any] = {
         "InstrumentID={document_id}&Guest=true"
     ),
     "deal_assumption_overrides": {},
+    "source_config": {
+        "carto_sql_url": "https://phl.carto.com/api/v2/sql",
+        "arcgis_hub_url": "https://data-phl.opendata.arcgis.com",
+    },
     "coverage_note": None,
     "launch_status": "live",
 }
+
+
+def market_source_url(source_config: dict[str, Any], key: str, settings: Any) -> str | None:
+    value = source_config.get(key)
+    if value:
+        return str(value)
+    return getattr(settings, key, None)
 
 _SEED_MARKETS: tuple[dict[str, Any], ...] = (PHILADELPHIA,)
 

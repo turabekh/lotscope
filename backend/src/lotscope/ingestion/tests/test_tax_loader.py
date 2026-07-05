@@ -70,7 +70,7 @@ async def test_load_tax_upserts_status_and_stubs_parcel(db_session: AsyncSession
     assert status[1] == 2
     assert status[2] is True
 
-    fresh = await db_session.get(DatasetFreshness, "real_estate_tax_delinquencies")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "real_estate_tax_delinquencies"))
     assert fresh is not None
     assert fresh.status == "success"
 

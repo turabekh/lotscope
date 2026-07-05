@@ -10,7 +10,7 @@ from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.distress.jobs import recompute_all_distress
-from lotscope.ingestion.jobs import INGEST_JOBS
+from lotscope.ingestion.jobs import INGEST_JOBS, ingest_market, markets
 from lotscope.ingestion.retention import sweep_retention
 from lotscope.notifications.email import get_email_sender
 from lotscope.notifications.push import get_push_sender
@@ -40,16 +40,16 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     await ctx["engine"].dispose()
 
 
-async def ingest_dataset(ctx: dict[str, Any], name: str) -> int:
-    rows = await INGEST_JOBS[name](ctx["session_factory"], ctx["settings"])
-    _logger.info("dataset_ingested", dataset=name, rows=rows)
+async def ingest_dataset(ctx: dict[str, Any], market: str, name: str) -> int:
+    rows = await INGEST_JOBS[(market, name)](ctx["session_factory"], ctx["settings"])
+    _logger.info("dataset_ingested", market=market, dataset=name, rows=rows)
     return rows
 
 
 async def ingest_all(ctx: dict[str, Any]) -> int:
     total = 0
-    for name in INGEST_JOBS:
-        total += await ingest_dataset(ctx, name)
+    for market in markets():
+        total += await ingest_market(ctx["session_factory"], ctx["settings"], market)
     return total
 
 

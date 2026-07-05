@@ -68,7 +68,7 @@ async def test_load_sheriff_inserts_and_records_freshness(db_session: AsyncSessi
         text("SELECT opening_bid FROM sheriff_sale WHERE case_number = 'BW-1'")
     )
     assert float(bid) == 10000.0
-    fresh = await db_session.get(DatasetFreshness, "sheriff_sale")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "sheriff_sale"))
     assert fresh is not None
     assert fresh.status == "success"
 

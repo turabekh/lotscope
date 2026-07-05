@@ -83,7 +83,7 @@ async def test_load_neighborhoods_writes_geometry(db_session: AsyncSession) -> N
     assert row[1] == 2272
     assert row[2] == 4326
 
-    fresh = await db_session.get(DatasetFreshness, "neighborhoods")
+    fresh = await db_session.get(DatasetFreshness, ("phl", "neighborhoods"))
     assert fresh is not None
     assert fresh.status == "success"
 
