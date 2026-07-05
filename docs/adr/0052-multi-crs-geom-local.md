@@ -4,7 +4,7 @@ Date: 2026-07-05
 
 ## Status
 
-Proposed
+Accepted
 
 Implements PRD Amendment-02 workstream **B2**. (PRD calls this "ADR-0030".)
 

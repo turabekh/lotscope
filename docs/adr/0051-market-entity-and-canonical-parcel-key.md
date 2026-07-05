@@ -4,7 +4,7 @@ Date: 2026-07-05
 
 ## Status
 
-Proposed
+Accepted
 
 Implements PRD Amendment-02 workstream **B1**. (The PRD names this "ADR-0029"; that number was already taken by "App shell and market scope" — the amendment's 0029–0034 numbering is stale, so Phase P authors 0051–0053.)
 
@@ -18,7 +18,7 @@ Allegheny's 16-char block-lot IDs, Baltimore's ward-section-block-lot, Milwaukee
 
 **Add a `market` table and re-key parcels on a single-column canonical key `{code}:{local_key}` (e.g. `phl:012345678`), keeping the single-column PK so every FK, cascade, upsert helper, and the keyset-pagination chunker survive untouched.**
 
-- **Market code is the short form (`phl`, `hbg`, `pgh`, `bal`, `det`, `mke`, `cle`)**, per the PRD, so canonical keys stay terse across all markets (`pgh:0028F00194000000`, not `pittsburgh:…`). The shipped frontend URL segment `/philadelphia/` is preserved as a **`url_slug`** on the market row (`phl` ⇄ `philadelphia`); the frontend continues to route on the slug and a small bridge maps slug→code when calling the API. `core/markets.py`'s enum is reconciled to the backend-owned market registry (the DB table becomes the source of truth; the enum, if kept, holds codes). **This code-vs-slug split is the one decision to confirm before Slice 1 — it fixes the migration prefix and the frontend bridge.**
+- **Market code is the short form (`phl`, `hbg`, `pgh`, `bal`, `det`, `mke`, `cle`)** — decided — so canonical keys stay terse across all markets (`pgh:0028F00194000000`, not `pittsburgh:…`). The shipped frontend URL segment `/philadelphia/` is preserved as a **`url_slug`** on the market row (`phl` ⇄ `philadelphia`); the frontend continues to route on the slug and a small bridge maps slug→code when calling the API. `core/markets.py`'s enum is reconciled to the backend-owned market registry (the DB table becomes the source of truth; the enum, if kept, holds codes). The canonical-key prefix is therefore `phl:`.
 - **`market` table** (fields from PRD §B1): `code` (pk), `name`, `state`, `url_slug`, `local_srid`, `map_center`, `map_bounds`, `default_zoom`, `timezone`, `recorder_url_template`, `deal_assumption_overrides` (jsonb), `coverage_note`, `launch_status` (`live`/`data_only`/`pilot`). Seed the `phl` row from the values found in Slice 0 (SRID 2272, `America/New_York`, center `[-75.1652, 39.9526]`, default_zoom 13, `recorder_url_template` from `philadox_document_url_template`, `launch_status='live'`).
 - **`parcel`** gains `market_code` (FK → `market.code`, indexed, default `'phl'`) and `local_key` (the bare upstream key). `parcel_number` becomes the prefixed canonical key. `String(20)` widens to `String(40)` on `parcel` and **every** FK/staging column in the inventory; the Pydantic cap `pipeline/schemas.py::parcel_number max_length=20` widens in lockstep. Philly-specific `pwd_parcel_id`/`brt_number` stay as columns until Wave 1 (fold into a `source_keys` jsonb later).
 - **Migration** (transactional, `feat/expansion-b1-market-key`): create `market` + seed `phl`; widen columns; rewrite `parcel_number → 'phl:' || parcel_number` across all 20 tables in an FK-safe order (or with constraints deferred); backfill `market_code='phl'` and `local_key`; embed verification (pre/post per-table row counts, prefixed-shape assertion, spot-check joins) that raises on mismatch; symmetric `downgrade()` strips the prefix.
