@@ -207,7 +207,7 @@ async function toggleSave(): Promise<void> {
               {{ detail.address ?? detail.parcel_number }}
               <q-tooltip anchor="bottom left" self="top left">Show on map</q-tooltip>
             </div>
-            <div class="pid lot-numeric">Parcel {{ detail.parcel_number }}</div>
+            <div class="pid lot-numeric">Parcel {{ detail.local_key ?? detail.parcel_number }}</div>
           </div>
           <div class="header-actions">
             <q-btn

@@ -1,5 +1,7 @@
 export interface ParcelDetail {
   parcel_number: string
+  market_code: string
+  local_key: string
   address: string | null
   zip_code: string | null
   owner: string | null
