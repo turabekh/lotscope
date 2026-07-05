@@ -16,15 +16,18 @@ async def run_loader(
     loader: Loader,
     *,
     dataset: str,
+    market_code: str = "phl",
 ) -> int:
     try:
         async with session_factory() as session:
             total = await loader(session)
             await session.commit()
     except Exception as exc:
-        _logger.error("ingestion_failed", dataset=dataset, error=str(exc))
+        _logger.error("ingestion_failed", market=market_code, dataset=dataset, error=str(exc))
         async with session_factory() as session:
-            await record_freshness(session, dataset, status="failed", detail=str(exc))
+            await record_freshness(
+                session, dataset, status="failed", market_code=market_code, detail=str(exc)
+            )
             await session.commit()
         raise IngestionError(f"ingestion failed for {dataset}: {exc}") from exc
     _logger.info("ingestion_succeeded", dataset=dataset, rows=total)

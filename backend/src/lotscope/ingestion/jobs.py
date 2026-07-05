@@ -9,6 +9,7 @@ from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.filters import li_events_where, rtt_sales_where, zba_appeals_where
 from lotscope.ingestion.loaders import (
     flood,
+    hbg,
     historic,
     li,
     neighborhoods,
@@ -25,6 +26,7 @@ from lotscope.ingestion.loaders import (
 )
 from lotscope.ingestion.loaders.sheriff import CsvSheriffSource, load_sheriff
 from lotscope.ingestion.runner import run_loader
+from lotscope.markets.models import Market
 
 SessionFactory = async_sessionmaker[AsyncSession]
 Job = Callable[[SessionFactory, Settings], Awaitable[int]]
@@ -52,11 +54,19 @@ async def _run_carto(
 
 
 async def _run_arcgis(
-    session_factory: SessionFactory, settings: Settings, *, loader: ArcGisLoader, dataset: str
+    session_factory: SessionFactory,
+    settings: Settings,
+    *,
+    loader: ArcGisLoader,
+    dataset: str,
+    market_code: str = "phl",
 ) -> int:
     async with ArcGisClient(settings) as arcgis:
         return await run_loader(
-            session_factory, lambda session: loader(session, arcgis), dataset=dataset
+            session_factory,
+            lambda session: loader(session, arcgis),
+            dataset=dataset,
+            market_code=market_code,
         )
 
 
@@ -193,6 +203,23 @@ async def ingest_zba(session_factory: SessionFactory, settings: Settings) -> int
     )
 
 
+async def ingest_hbg_parcels(session_factory: SessionFactory, settings: Settings) -> int:
+    async with session_factory() as session:
+        market = await session.get(Market, "hbg")
+        config = dict(market.source_config) if market is not None else {}
+    services_url = str(config["arcgis_services_url"])
+    municipality = str(config["municipality_filter"])
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=lambda session, arcgis: hbg.load_hbg_parcels(
+            session, arcgis, services_url=services_url, municipality=municipality
+        ),
+        dataset=hbg.HBG_PARCELS_DATASET,
+        market_code="hbg",
+    )
+
+
 _PHL_JOBS: dict[str, Job] = {
     "opa": ingest_opa,
     "pwd": ingest_pwd,
@@ -213,8 +240,13 @@ _PHL_JOBS: dict[str, Job] = {
     "zba": ingest_zba,
 }
 
+_HBG_JOBS: dict[str, Job] = {
+    "parcels": ingest_hbg_parcels,
+}
+
 INGEST_JOBS: dict[tuple[str, str], Job] = {
-    ("phl", dataset): job for dataset, job in _PHL_JOBS.items()
+    **{("phl", dataset): job for dataset, job in _PHL_JOBS.items()},
+    **{("hbg", dataset): job for dataset, job in _HBG_JOBS.items()},
 }
 
 
