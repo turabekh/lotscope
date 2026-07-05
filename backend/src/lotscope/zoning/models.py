@@ -75,10 +75,15 @@ class Rco(Base, TimestampMixin, IngestionMixin):
 class ZoningStandard(Base, TimestampMixin):
     __tablename__ = "zoning_standard"
     __table_args__ = (
-        UniqueConstraint("code", "code_version", name="uq_zoning_standard_code_version"),
+        UniqueConstraint(
+            "market_code", "code", "code_version", name="uq_zoning_standard_market_code_version"
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
     code: Mapped[str] = mapped_column(String(20), index=True)
     code_version: Mapped[str] = mapped_column(String(40))
     source: Mapped[str | None] = mapped_column(String(255))
