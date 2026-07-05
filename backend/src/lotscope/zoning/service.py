@@ -55,12 +55,17 @@ _STANDARD_SQL = text(
     "max_height_ft, max_units, lot_area_per_unit_sqft, max_floor_area_ratio_pct, "
     "max_occupancy_pct, front_setback_ft, rear_setback_ft, side_setback_ft, requires_master_plan "
     "FROM zoning_standard WHERE upper(replace(replace(code, '-', ''), ' ', '')) = :code "
+    "AND market_code = :market_code "
     "ORDER BY code_version DESC LIMIT 1"
 )
 
 
 def _as_float(value: Any) -> float | None:
     return float(value) if value is not None else None
+
+
+def _market_of(parcel_number: str) -> str:
+    return parcel_number.split(":", 1)[0] if ":" in parcel_number else "phl"
 
 
 async def resolve_district(
@@ -79,9 +84,13 @@ async def resolve_district(
     return None
 
 
-async def _get_standard(session: AsyncSession, code: str) -> DistrictStandard | None:
+async def _get_standard(
+    session: AsyncSession, code: str, market_code: str
+) -> DistrictStandard | None:
     row = (
-        await session.execute(_STANDARD_SQL, {"code": normalize_zoning_code(code)})
+        await session.execute(
+            _STANDARD_SQL, {"code": normalize_zoning_code(code), "market_code": market_code}
+        )
     ).one_or_none()
     if row is None:
         return None
@@ -115,7 +124,7 @@ async def get_parcel_standard(session: AsyncSession, parcel_number: str) -> Dist
     )
     if resolution is None:
         return None
-    return await _get_standard(session, resolution.code)
+    return await _get_standard(session, resolution.code, _market_of(parcel_number))
 
 
 async def assemblage_unit_estimate(
@@ -188,6 +197,16 @@ def _build_result(
         depth_ft=_as_float(parcel.depth_ft),
     )
     buildability = assess_buildability(dims, standard)
+    provisional = "provisional" in standard.code_version
+    confidence = (
+        "low" if provisional and buildability.confidence != "low" else buildability.confidence
+    )
+    reasons = list(buildability.reasons)
+    if provisional:
+        reasons.append(
+            "Zoning standards for this market are provisional pending local review; "
+            "treat the by-right read as preliminary."
+        )
     sources = [
         {"source": "zoning_district", "method": resolution.method},
         {"source": "zoning_standard", "code": standard.code, "version": standard.code_version},
@@ -204,9 +223,9 @@ def _build_result(
         max_height_ft=buildability.max_height_ft,
         buildable_area_sqft=buildability.buildable_area_sqft,
         buildability_score=buildability.buildability_score,
-        confidence=buildability.confidence,
+        confidence=confidence,
         requires_master_plan=buildability.requires_master_plan,
-        reasons=buildability.reasons,
+        reasons=reasons,
         sources=sources,
         computed_at=computed_at,
     )
@@ -259,7 +278,11 @@ async def compute_envelope(session: AsyncSession, parcel_number: str) -> Envelop
         base_zoning_code=parcel.base_zoning_code,
         has_geometry=parcel.has_geometry,
     )
-    standard = await _get_standard(session, resolution.code) if resolution is not None else None
+    standard = (
+        await _get_standard(session, resolution.code, _market_of(parcel_number))
+        if resolution is not None
+        else None
+    )
     inset = (
         representative_inset_ft(
             standard.front_setback_ft, standard.side_setback_ft, standard.rear_setback_ft
@@ -372,7 +395,7 @@ async def assess_parcel(session: AsyncSession, parcel_number: str) -> Buildabili
         return _unknown_result(
             parcel_number, computed_at, "Zoning district could not be resolved for this parcel."
         )
-    standard = await _get_standard(session, resolution.code)
+    standard = await _get_standard(session, resolution.code, _market_of(parcel_number))
     if standard is None:
         return _no_standard_result(parcel_number, resolution, computed_at)
     return _build_result(parcel_number, parcel, resolution, standard, computed_at)

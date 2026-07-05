@@ -9,6 +9,7 @@ from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.zoning.models import ZoningStandard
+from lotscope.zoning.seed_hbg import seed_hbg_zoning_standards
 
 TITLE_14_VERSION = "title14-quickguide-2026-02"
 TITLE_14_SOURCE = (
@@ -387,6 +388,7 @@ _UPDATE_COLUMNS = ("source", "permitted_uses", "requires_master_plan", *_DIMENSI
 
 def _row(entry: dict[str, Any]) -> dict[str, Any]:
     row: dict[str, Any] = {
+        "market_code": entry.get("market_code", "phl"),
         "code": entry["code"],
         "code_version": entry.get("code_version", TITLE_14_VERSION),
         "source": entry.get("source", TITLE_14_SOURCE),
@@ -404,7 +406,7 @@ async def seed_zoning_standards(session: AsyncSession) -> int:
     assignments: dict[str, Any] = {column: statement.excluded[column] for column in _UPDATE_COLUMNS}
     assignments["updated_at"] = func.now()
     statement = statement.on_conflict_do_update(
-        constraint="uq_zoning_standard_code_version", set_=assignments
+        constraint="uq_zoning_standard_market_code_version", set_=assignments
     )
     await session.execute(statement)
     return len(rows)
@@ -418,8 +420,11 @@ async def _run() -> None:
     try:
         async with session_factory() as session:
             count = await seed_zoning_standards(session)
+            hbg_count = await seed_hbg_zoning_standards(session)
             await session.commit()
-            get_logger("zoning.seed").info("seeded_zoning_standards", count=count)
+            get_logger("zoning.seed").info(
+                "seeded_zoning_standards", phl=count, hbg=hbg_count
+            )
     finally:
         await engine.dispose()
 

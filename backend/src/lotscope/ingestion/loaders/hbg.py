@@ -10,12 +10,16 @@ from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
 from lotscope.valuation.models import Sale
+from lotscope.zoning.models import ZoningDistrict
 
 HBG_PARCELS_DATASET = "dc_parcels"
 HBG_SALES_DATASET = "dc_deed_references"
+HBG_ZONING_DATASET = "tcrp_zoning_districts"
 _MARKET = "hbg"
 _LOCAL_SRID = 2272
 _HBG_DISTRICT_WHERE = "property_id >= '01' AND property_id < '16'"
+_ZONING_SOURCE = "tcrp_zoning"
+_ZONING_MUNI_WHERE = "MUNICIPALI LIKE '%HARRISBURG%'"
 
 _PARCEL_FIELDS = (
     "property_i,house_numb,prefix_dir,street_nam,street_suf,post_direc,"
@@ -221,6 +225,59 @@ async def load_hbg_sales(
     await record_freshness(
         session,
         HBG_SALES_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
+    )
+    return total
+
+
+def _district_row(feature: ArcGisFeature) -> dict[str, Any] | None:
+    code = _txt(feature.properties.get("MAP_ACRONY"))
+    external_id = feature.id if feature.id is not None else feature.properties.get("OBJECTID")
+    if feature.geometry is None or code is None or external_id is None:
+        return None
+    geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
+    return {
+        "external_id": f"{_MARKET}:{external_id}",
+        "code": code,
+        "market_code": _MARKET,
+        "geom_4326": geom_4326,
+        "geom_local": func.ST_Transform(geom_4326, _LOCAL_SRID),
+        "source": _ZONING_SOURCE,
+    }
+
+
+async def load_hbg_zoning_districts(
+    session: AsyncSession,
+    arcgis: ArcGisClient,
+    *,
+    services_url: str,
+    page_size: int = 2000,
+) -> int:
+    layer = f"{services_url}/TCRP_CountyZoning_Dauphin/FeatureServer/0/query"
+    total = 0
+    async for features in arcgis.paginate(
+        layer,
+        where=_ZONING_MUNI_WHERE,
+        page_size=page_size,
+    ):
+        rows = [
+            row for row in (_district_row(f) for f in features) if row is not None
+        ]
+        if rows:
+            await upsert(
+                session,
+                ZoningDistrict,
+                rows,
+                index_elements=["external_id"],
+                update_columns=["code", "market_code", "geom_local", "geom_4326", "source"],
+            )
+            total += len(rows)
+    await record_freshness(
+        session,
+        HBG_ZONING_DATASET,
         status="success",
         success=True,
         market_code=_MARKET,
