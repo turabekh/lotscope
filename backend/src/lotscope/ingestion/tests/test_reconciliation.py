@@ -21,8 +21,8 @@ def test_normalize_account_rejects_unusable_values() -> None:
 
 
 def test_canonical_prefers_opa_then_brt() -> None:
-    assert canonical_parcel_number(SourceRecord("opa", opa_account="1234567")) == "001234567"
-    assert canonical_parcel_number(SourceRecord("pwd", brt_number="1234567")) == "001234567"
+    assert canonical_parcel_number(SourceRecord("opa", opa_account="1234567")) == "phl:001234567"
+    assert canonical_parcel_number(SourceRecord("pwd", brt_number="1234567")) == "phl:001234567"
 
 
 def test_reconcile_merges_sources_to_one_canonical_parcel() -> None:
@@ -35,7 +35,7 @@ def test_reconcile_merges_sources_to_one_canonical_parcel() -> None:
     )
     assert len(result.parcels) == 1
     parcel = result.parcels[0]
-    assert parcel.parcel_number == "001234567"
+    assert parcel.parcel_number == "phl:001234567"
     assert parcel.pwd_parcel_id == "PWD-9"
     assert parcel.brt_number == "001234567"
     assert parcel.sources == ["opa", "pwd", "rtt"]

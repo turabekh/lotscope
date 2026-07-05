@@ -4,7 +4,7 @@ from lotscope.ingestion.loaders.historic import HistoricRecord, to_historic_row
 
 _GEOJSON = (
     '{"type":"Polygon","coordinates":[[[-75.15,39.95],[-75.15,39.96],'
-    '[-75.14,39.96],[-75.14,39.95],[-75.15,39.95]]]}'
+    "[-75.14,39.96],[-75.14,39.95],[-75.15,39.95]]]}"
 )
 
 

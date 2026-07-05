@@ -22,7 +22,7 @@ def test_to_sheriff_row_maps_and_normalizes() -> None:
         )
     )
     assert row is not None
-    assert row["parcel_number"] == "001234567"
+    assert row["parcel_number"] == "phl:001234567"
     assert row["case_number"] == "BW-1"
     assert row["sale_date"] == date(2026, 8, 5)
     assert row["opening_bid"] == 12000.0
@@ -61,7 +61,7 @@ async def test_load_sheriff_inserts_and_records_freshness(db_session: AsyncSessi
 
     assert total == 1
     parcel = await db_session.scalar(
-        text("SELECT count(*) FROM parcel WHERE parcel_number = '001234567'")
+        text("SELECT count(*) FROM parcel WHERE parcel_number = 'phl:001234567'")
     )
     assert parcel == 1
     bid = await db_session.scalar(
@@ -87,7 +87,7 @@ async def test_load_sheriff_emits_event_for_new_case(db_session: AsyncSession) -
         await db_session.execute(
             text(
                 "SELECT code, new_value->>'case_number' AS case_number, severity "
-                "FROM parcel_event WHERE parcel_number = '001234567' ORDER BY id"
+                "FROM parcel_event WHERE parcel_number = 'phl:001234567' ORDER BY id"
             )
         )
     ).all()
