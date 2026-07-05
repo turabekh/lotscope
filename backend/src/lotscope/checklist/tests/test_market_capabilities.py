@@ -8,7 +8,7 @@ from lotscope.risk.service import _flag_schema
 
 
 def test_hbg_marks_li_and_overlays_unsupported() -> None:
-    assert unsupported_checklist_categories("hbg") == {"li", "overlays"}
+    assert unsupported_checklist_categories("hbg") == {"li", "overlays", "flood"}
     assert unsupported_checklist_categories("phl") == frozenset()
 
 

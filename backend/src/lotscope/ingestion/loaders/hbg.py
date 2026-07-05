@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.arcgis import ArcGisClient, ArcGisFeature
@@ -9,12 +9,14 @@ from lotscope.ingestion.normalizers import get_normalizer
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
+from lotscope.vacancy.derivation import derive_vacancy
 from lotscope.valuation.models import Sale
 from lotscope.zoning.models import ZoningDistrict
 
 HBG_PARCELS_DATASET = "dc_parcels"
 HBG_SALES_DATASET = "dc_deed_references"
 HBG_ZONING_DATASET = "tcrp_zoning_districts"
+HBG_VACANCY_DATASET = "derived_vacancy"
 _MARKET = "hbg"
 _LOCAL_SRID = 2272
 _HBG_DISTRICT_WHERE = "property_id >= '01' AND property_id < '16'"
@@ -284,3 +286,149 @@ async def load_hbg_zoning_districts(
         row_count=total,
     )
     return total
+
+
+_VACANCY_UPDATE = text(
+    "UPDATE parcel SET is_vacant = :is_vacant, vacancy_confidence = :conf "
+    "WHERE parcel_number = :parcel_number"
+)
+
+
+async def derive_hbg_vacancy(session: AsyncSession) -> int:
+    result = await session.execute(
+        select(Parcel.parcel_number, Parcel.land_use, Parcel.improvement_value).where(
+            Parcel.market_code == _MARKET
+        )
+    )
+    updates: list[dict[str, Any]] = []
+    vacant = 0
+    for row in result:
+        improvement = float(row.improvement_value) if row.improvement_value is not None else None
+        is_vacant, confidence = derive_vacancy(row.land_use, improvement)
+        updates.append(
+            {"parcel_number": row.parcel_number, "is_vacant": is_vacant, "conf": confidence}
+        )
+        if is_vacant:
+            vacant += 1
+    if updates:
+        await session.execute(_VACANCY_UPDATE, updates)
+    await record_freshness(
+        session,
+        HBG_VACANCY_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=vacant,
+    )
+    return vacant
+
+
+HBG_STREETS_DATASET = "dc_streets"
+_STREETS_ZIP_WHERE = "ZIPL LIKE '171%' OR ZIPR LIKE '171%'"
+
+
+def _street_row(feature: ArcGisFeature) -> dict[str, Any] | None:
+    if feature.geometry is None or feature.id is None:
+        return None
+    props = feature.properties
+    name_parts = (_txt(props.get("DIRPRE")), _txt(props.get("FEANME")), _txt(props.get("FEATYP")))
+    name = " ".join(part for part in name_parts if part)
+    geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
+    return {
+        "external_id": f"{_MARKET}:{feature.id}",
+        "street_name": name or None,
+        "street_class": _txt(props.get("CLASS")),
+        "market_code": _MARKET,
+        "geom_4326": geom_4326,
+        "geom_local": func.ST_Transform(geom_4326, _LOCAL_SRID),
+        "source": HBG_STREETS_DATASET,
+    }
+
+
+async def load_hbg_streets(
+    session: AsyncSession,
+    arcgis: ArcGisClient,
+    *,
+    services_url: str,
+    page_size: int = 2000,
+) -> int:
+    from lotscope.streets.models import StreetCenterline
+
+    layer = f"{services_url}/DC_Streets/FeatureServer/0/query"
+    total = 0
+    async for features in arcgis.paginate(layer, where=_STREETS_ZIP_WHERE, page_size=page_size):
+        rows = [row for row in (_street_row(f) for f in features) if row is not None]
+        if rows:
+            await upsert(
+                session,
+                StreetCenterline,
+                rows,
+                index_elements=["external_id"],
+                update_columns=[
+                    "street_name",
+                    "street_class",
+                    "market_code",
+                    "geom_4326",
+                    "geom_local",
+                    "source",
+                ],
+            )
+            total += len(rows)
+    await record_freshness(
+        session,
+        HBG_STREETS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
+    )
+    return total
+
+
+HBG_PUBLIC_DATASET = "public_ownership"
+_PUBLIC_OWNER_PATTERNS = (
+    "CITY OF HARRISBURG",
+    "HARRISBURG CITY",
+    "REDEVELOPMENT AUTHORITY",
+    "HOUSING AUTHORITY",
+    "COUNTY OF DAUPHIN",
+    "DAUPHIN COUNTY",
+    "COMMONWEALTH OF PENNSYLVANIA",
+    "LAND BANK",
+)
+
+
+def is_hbg_public_owner(owner: str | None) -> bool:
+    if not owner:
+        return False
+    upper = owner.upper()
+    return any(pattern in upper for pattern in _PUBLIC_OWNER_PATTERNS)
+
+
+_PUBLIC_UPDATE = text(
+    "UPDATE parcel SET is_city_owned = :is_public WHERE parcel_number = :parcel_number"
+)
+
+
+async def derive_hbg_public_ownership(session: AsyncSession) -> int:
+    result = await session.execute(
+        select(Parcel.parcel_number, Parcel.owner).where(Parcel.market_code == _MARKET)
+    )
+    updates: list[dict[str, Any]] = []
+    public = 0
+    for row in result:
+        is_public = is_hbg_public_owner(row.owner)
+        updates.append({"parcel_number": row.parcel_number, "is_public": is_public})
+        if is_public:
+            public += 1
+    if updates:
+        await session.execute(_PUBLIC_UPDATE, updates)
+    await record_freshness(
+        session,
+        HBG_PUBLIC_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=public,
+    )
+    return public

@@ -272,10 +272,45 @@ _PHL_JOBS: dict[str, Job] = {
     "zba": ingest_zba,
 }
 
+async def ingest_hbg_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
+    return await run_loader(
+        session_factory,
+        hbg.derive_hbg_vacancy,
+        dataset=hbg.HBG_VACANCY_DATASET,
+        market_code="hbg",
+    )
+
+
+async def ingest_hbg_streets(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _hbg_source_config(session_factory)
+    services_url = str(config["arcgis_services_url"])
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=lambda session, arcgis: hbg.load_hbg_streets(
+            session, arcgis, services_url=services_url
+        ),
+        dataset=hbg.HBG_STREETS_DATASET,
+        market_code="hbg",
+    )
+
+
+async def ingest_hbg_public(session_factory: SessionFactory, settings: Settings) -> int:
+    return await run_loader(
+        session_factory,
+        hbg.derive_hbg_public_ownership,
+        dataset=hbg.HBG_PUBLIC_DATASET,
+        market_code="hbg",
+    )
+
+
 _HBG_JOBS: dict[str, Job] = {
     "parcels": ingest_hbg_parcels,
     "sales": ingest_hbg_sales,
     "zoning": ingest_hbg_zoning,
+    "streets": ingest_hbg_streets,
+    "vacancy": ingest_hbg_vacancy,
+    "public": ingest_hbg_public,
 }
 
 INGEST_JOBS: dict[tuple[str, str], Job] = {
