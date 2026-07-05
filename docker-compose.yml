@@ -55,6 +55,20 @@ services:
       db:
         condition: service_healthy
 
+  migrate:
+    build:
+      context: ./backend
+    profiles: ["app"]
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
+    depends_on:
+      db:
+        condition: service_healthy
+
   api:
     build:
       context: ./backend
@@ -70,6 +84,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   web:
     build:
@@ -98,6 +114,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   db_data:
