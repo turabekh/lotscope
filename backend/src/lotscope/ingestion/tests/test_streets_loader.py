@@ -27,7 +27,7 @@ def test_to_street_row_maps_name_class_and_geometry() -> None:
     assert row["external_id"] == "4421"
     assert row["street_name"] == "MARKET ST"
     assert row["street_class"] == "2"
-    assert "geom_2272" in row
+    assert "geom_local" in row
 
 
 def test_to_street_row_skips_without_geometry_or_id() -> None:
@@ -77,7 +77,7 @@ async def test_load_streets_writes_geometry(db_session: AsyncSession) -> None:
     row = (
         await db_session.execute(
             text(
-                "SELECT street_name, ST_SRID(geom_2272), ST_SRID(geom_4326) "
+                "SELECT street_name, ST_SRID(geom_local), ST_SRID(geom_4326) "
                 "FROM street_centerline WHERE external_id = '101'"
             )
         )

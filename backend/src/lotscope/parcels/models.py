@@ -72,8 +72,8 @@ class Parcel(Base, TimestampMixin, IngestionMixin):
     recorded_at: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(Text)
 
-    geom_2272: Mapped[WKBElement | None] = mapped_column(
-        Geometry(geometry_type="GEOMETRY", srid=2272, spatial_index=True)
+    geom_local: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
     )
     geom_4326: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True)

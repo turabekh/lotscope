@@ -70,13 +70,13 @@ async def test_li_violation_types_surface_in_detail(db_session: AsyncSession) ->
 async def test_flood_zone_intersection_flagged(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, geom_local) VALUES "
             "('000000003', ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO flood_zone (zone, geom_2272) VALUES "
+            "INSERT INTO flood_zone (zone, geom_local) VALUES "
             "('AE', ST_GeomFromText('POLYGON((5 5,5 20,20 20,20 5,5 5))', 2272))"
         )
     )
@@ -108,13 +108,13 @@ async def test_estate_owner_flag_from_owner_record(db_session: AsyncSession) -> 
 async def test_landlocked_parcel_flagged(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, geom_local) VALUES "
             "('000000020', ST_GeomFromText('POLYGON((0 0,0 20,20 20,20 0,0 0))', 2272))"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO street_centerline (external_id, geom_2272) VALUES "
+            "INSERT INTO street_centerline (external_id, geom_local) VALUES "
             "('S-FAR', ST_GeomFromText('LINESTRING(0 200, 20 200)', 2272))"
         )
     )
@@ -129,13 +129,13 @@ async def test_landlocked_parcel_flagged(db_session: AsyncSession) -> None:
 async def test_parcel_with_frontage_not_flagged(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, geom_local) VALUES "
             "('000000021', ST_GeomFromText('POLYGON((0 0,0 20,20 20,20 0,0 0))', 2272))"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO street_centerline (external_id, geom_2272) VALUES "
+            "INSERT INTO street_centerline (external_id, geom_local) VALUES "
             "('S-NEAR', ST_GeomFromText('LINESTRING(0 40, 20 40)', 2272))"
         )
     )
@@ -149,13 +149,13 @@ async def test_parcel_with_frontage_not_flagged(db_session: AsyncSession) -> Non
 async def test_historic_district_intersection_flagged(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, geom_local) VALUES "
             "('000000030', ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO historic_district (name, geom_2272) VALUES "
+            "INSERT INTO historic_district (name, geom_local) VALUES "
             "('Society Hill', ST_GeomFromText('POLYGON((5 5,5 20,20 20,20 5,5 5))', 2272))"
         )
     )
@@ -172,13 +172,13 @@ async def test_historic_district_intersection_flagged(db_session: AsyncSession) 
 async def test_parcel_outside_historic_district_not_flagged(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, geom_local) VALUES "
             "('000000031', ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO historic_district (name, geom_2272) VALUES "
+            "INSERT INTO historic_district (name, geom_local) VALUES "
             "('Far Away', ST_GeomFromText('POLYGON((100 100,100 120,120 120,120 100,100 100))', "
             "2272))"
         )
@@ -209,19 +209,19 @@ async def test_missing_parcel_returns_none(db_session: AsyncSession) -> None:
 async def test_overlay_and_rco_intersection_flagged(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, geom_local) VALUES "
             "('000000030', ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO zoning_overlay (external_id, name, geom_2272) VALUES "
+            "INSERT INTO zoning_overlay (external_id, name, geom_local) VALUES "
             "('O-1', '/NCA Overlay', ST_GeomFromText('POLYGON((5 5,5 20,20 20,20 5,5 5))', 2272))"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO rco (external_id, name, geom_2272) VALUES "
+            "INSERT INTO rco (external_id, name, geom_local) VALUES "
             "('R-1', 'Test RCO', ST_GeomFromText('POLYGON((1 1,1 30,30 30,30 1,1 1))', 2272))"
         )
     )

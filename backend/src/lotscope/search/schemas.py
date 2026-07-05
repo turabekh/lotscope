@@ -24,6 +24,7 @@ class GeoPoint(BaseModel):
 
 
 class AreaSearchRequest(BaseModel):
+    market: str = "phl"
     center: GeoPoint | None = None
     radius_m: float | None = Field(default=None, gt=0)
     polygon: dict[str, Any] | None = None

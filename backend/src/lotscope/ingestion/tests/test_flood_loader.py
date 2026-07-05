@@ -26,7 +26,7 @@ def test_to_flood_row_maps_zone_and_geometry() -> None:
     assert row is not None
     assert row["external_id"] == "3"
     assert row["zone"] == "AE"
-    assert "geom_2272" in row
+    assert "geom_local" in row
 
 
 def test_to_flood_row_skips_without_geometry() -> None:
@@ -71,7 +71,7 @@ async def test_load_flood_writes_zone_geometry(db_session: AsyncSession) -> None
     row = (
         await db_session.execute(
             text(
-                "SELECT zone, ST_SRID(geom_2272), ST_SRID(geom_4326) FROM flood_zone "
+                "SELECT zone, ST_SRID(geom_local), ST_SRID(geom_4326) FROM flood_zone "
                 "WHERE external_id = '1'"
             )
         )

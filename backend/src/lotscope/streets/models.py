@@ -1,5 +1,5 @@
 from geoalchemy2 import Geometry, WKBElement
-from sqlalchemy import Integer, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -15,8 +15,11 @@ class StreetCenterline(Base, TimestampMixin, IngestionMixin):
     street_name: Mapped[str | None] = mapped_column(String(120))
     street_class: Mapped[str | None] = mapped_column(String(40))
 
-    geom_2272: Mapped[WKBElement | None] = mapped_column(
-        Geometry(geometry_type="GEOMETRY", srid=2272, spatial_index=True)
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
+    geom_local: Mapped[WKBElement | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
     )
     geom_4326: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True)

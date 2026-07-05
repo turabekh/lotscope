@@ -14,14 +14,14 @@ async def _setup_parcel(session: AsyncSession) -> None:
     await seed_zoning_standards(session)
     await session.execute(
         text(
-            "INSERT INTO zoning_district (code, geom_2272) VALUES ('RSA-5', "
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RSA-5', "
             "ST_GeomFromText('POLYGON((-100 -100,-100 100,100 100,100 -100,-100 -100))', 2272))"
         )
     )
     await session.execute(
         text(
             "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
-            "market_value, base_zoning_code, geom_2272) VALUES "
+            "market_value, base_zoning_code, geom_local) VALUES "
             "('000000001', 1600, 18, 90, 150000, 'RSA-5', "
             "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
         )

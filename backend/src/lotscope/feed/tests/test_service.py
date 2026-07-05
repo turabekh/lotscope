@@ -12,9 +12,7 @@ pytestmark = pytest.mark.integration
 
 async def _add_parcel(session: AsyncSession, parcel_number: str, *, vacant: bool) -> None:
     await session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, owner, is_vacant) VALUES (:pn, 'OWNER', :v)"
-        ),
+        text("INSERT INTO parcel (parcel_number, owner, is_vacant) VALUES (:pn, 'OWNER', :v)"),
         {"pn": parcel_number, "v": vacant},
     )
 

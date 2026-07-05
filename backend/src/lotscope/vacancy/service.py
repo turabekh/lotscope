@@ -49,9 +49,7 @@ def _signals(row: Row[Any]) -> VacancySignals:
     )
 
 
-async def recompute_vacancy_confidence(
-    session: AsyncSession, parcel_numbers: Sequence[str]
-) -> int:
+async def recompute_vacancy_confidence(session: AsyncSession, parcel_numbers: Sequence[str]) -> int:
     if not parcel_numbers:
         return 0
     rows = (

@@ -17,7 +17,7 @@ def test_to_historic_row_maps_name_date_and_geometry() -> None:
     assert row["external_id"] == "4"
     assert row["name"] == "Old City"
     assert row["designated_date"] == date(2003, 12, 21)
-    assert "geom_2272" in row
+    assert "geom_local" in row
 
 
 def test_to_historic_row_skips_without_geometry_or_id() -> None:

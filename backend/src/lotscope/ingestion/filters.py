@@ -32,6 +32,5 @@ def zba_appeals_where(min_decision_date: str) -> str:
     date = _safe_date(min_decision_date)
     types = ", ".join(f"'{value}'" for value in ZBA_APPLICATION_TYPES)
     return (
-        f"applicationtype IN ({types}) "
-        f"AND (decisiondate >= '{date}' OR scheduleddate >= '{date}')"
+        f"applicationtype IN ({types}) AND (decisiondate >= '{date}' OR scheduleddate >= '{date}')"
     )

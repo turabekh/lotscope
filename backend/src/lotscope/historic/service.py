@@ -12,13 +12,14 @@ HISTORIC_REVIEW_NOTE = (
 )
 
 _PARCEL_SQL = text(
-    "SELECT (geom_2272 IS NOT NULL) AS has_geometry "
+    "SELECT (geom_local IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _HISTORIC_SQL = text(
     "SELECT hd.name, hd.designated_date FROM parcel p "
-    "JOIN historic_district hd ON ST_Intersects(hd.geom_2272, p.geom_2272) "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL "
+    "JOIN historic_district hd ON hd.market_code = p.market_code "
+    "AND ST_Intersects(hd.geom_local, p.geom_local) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL "
     "ORDER BY hd.name LIMIT 1"
 )
 
@@ -33,9 +34,7 @@ async def get_parcel_historic(session: AsyncSession, parcel_number: str) -> Hist
 
     row = None
     if parcel.has_geometry:
-        row = (
-            await session.execute(_HISTORIC_SQL, {"parcel_number": parcel_number})
-        ).one_or_none()
+        row = (await session.execute(_HISTORIC_SQL, {"parcel_number": parcel_number})).one_or_none()
 
     in_district = row is not None
     return HistoricResult(

@@ -25,7 +25,7 @@ from lotscope.risk.scoring import (
 )
 
 _PARCEL_SQL = text(
-    "SELECT is_city_owned, owner, (geom_2272 IS NOT NULL) AS has_geometry "
+    "SELECT is_city_owned, owner, (geom_local IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _TAX_SQL = text(
@@ -50,30 +50,34 @@ _LI_TYPES_SQL = text(
 )
 _FLOOD_SQL = text(
     "SELECT array_agg(DISTINCT fz.zone) AS zones "
-    "FROM parcel p JOIN flood_zone fz ON ST_Intersects(fz.geom_2272, p.geom_2272) "
+    "FROM parcel p JOIN flood_zone fz ON fz.market_code = p.market_code "
+    "AND ST_Intersects(fz.geom_local, p.geom_local) "
     "WHERE p.parcel_number = :parcel_number AND fz.zone IS NOT NULL"
 )
 _ACCESS_SQL = text(
     "SELECT EXISTS("
     "SELECT 1 FROM street_centerline s JOIN parcel p ON p.parcel_number = :parcel_number "
-    "WHERE ST_DWithin(s.geom_2272, p.geom_2272, :max)"
+    "WHERE s.market_code = p.market_code AND ST_DWithin(s.geom_local, p.geom_local, :max)"
     ") AS has_frontage"
 )
 _HISTORIC_SQL = text(
     "SELECT hd.name FROM parcel p "
-    "JOIN historic_district hd ON ST_Intersects(hd.geom_2272, p.geom_2272) "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL "
+    "JOIN historic_district hd ON hd.market_code = p.market_code "
+    "AND ST_Intersects(hd.geom_local, p.geom_local) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL "
     "ORDER BY hd.name LIMIT 1"
 )
 _OVERLAY_SQL = text(
     "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
-    "JOIN zoning_overlay zo ON ST_Intersects(zo.geom_2272, p.geom_2272) "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL AND zo.name IS NOT NULL"
+    "JOIN zoning_overlay zo ON zo.market_code = p.market_code "
+    "AND ST_Intersects(zo.geom_local, p.geom_local) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL AND zo.name IS NOT NULL"
 )
 _RCO_SQL = text(
     "SELECT array_agg(DISTINCT r.name ORDER BY r.name) AS names FROM parcel p "
-    "JOIN rco r ON ST_Intersects(r.geom_2272, p.geom_2272) "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL AND r.name IS NOT NULL"
+    "JOIN rco r ON r.market_code = p.market_code "
+    "AND ST_Intersects(r.geom_local, p.geom_local) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL AND r.name IS NOT NULL"
 )
 
 _CHECKED_SOURCES = (

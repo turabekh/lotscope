@@ -27,6 +27,7 @@ _POINT = "ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography"
 
 def build_filters(
     *,
+    market: str = "phl",
     vacant_only: bool,
     zoning_codes: list[str],
     min_lot_area_sqft: float | None = None,
@@ -40,8 +41,8 @@ def build_filters(
     underpriced_only: bool = False,
     by_right_only: bool = False,
 ) -> tuple[str, dict[str, Any]]:
-    conditions = ["p.geom_4326 IS NOT NULL"]
-    params: dict[str, Any] = {}
+    conditions = ["p.geom_4326 IS NOT NULL", "p.market_code = :market"]
+    params: dict[str, Any] = {"market": market}
     if vacant_only:
         conditions.append("coalesce(p.is_vacant, false) = true")
     if zoning_codes:
@@ -78,6 +79,7 @@ def build_filters(
 
 def _filters_for(request: AreaSearchRequest) -> tuple[str, dict[str, Any]]:
     return build_filters(
+        market=request.market,
         vacant_only=request.vacant_only,
         zoning_codes=request.zoning_codes,
         min_lot_area_sqft=request.min_lot_area_sqft,

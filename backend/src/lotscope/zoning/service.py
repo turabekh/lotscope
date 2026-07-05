@@ -19,31 +19,35 @@ from lotscope.zoning.schemas import BuildabilityResult, DistrictResolution, Enve
 
 _PARCEL_SQL = text(
     "SELECT lot_area_sqft, frontage_ft, depth_ft, base_zoning_code, "
-    "(geom_2272 IS NOT NULL) AS has_geometry "
+    "(geom_local IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _SPATIAL_DISTRICT_SQL = text(
     "SELECT zd.code FROM parcel p "
-    "JOIN zoning_district zd ON ST_Contains(zd.geom_2272, ST_Centroid(p.geom_2272)) "
+    "JOIN zoning_district zd ON zd.market_code = p.market_code "
+    "AND ST_Contains(zd.geom_local, ST_Centroid(p.geom_local)) "
     "WHERE p.parcel_number = :parcel_number LIMIT 1"
 )
 _PARCEL_OVERLAYS_SQL = text(
     "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
-    "JOIN zoning_overlay zo ON ST_Intersects(zo.geom_2272, p.geom_2272) "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_2272 IS NOT NULL AND zo.name IS NOT NULL"
+    "JOIN zoning_overlay zo ON zo.market_code = p.market_code "
+    "AND ST_Intersects(zo.geom_local, p.geom_local) "
+    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL AND zo.name IS NOT NULL"
 )
 
 
 async def get_parcel_overlays(session: AsyncSession, parcel_number: str) -> list[str]:
     names = await session.scalar(_PARCEL_OVERLAYS_SQL, {"parcel_number": parcel_number})
     return list(names or [])
+
+
 _FOOTPRINT_SQL = text(
-    "SELECT ST_AsGeoJSON(ST_Transform(geom_2272, 4326), 6) AS lot_geojson, "
-    "ST_AsGeoJSON(ST_Transform(ST_Buffer(geom_2272, -CAST(:inset AS double precision)), 4326), 6) "
+    "SELECT ST_AsGeoJSON(ST_Transform(geom_local, 4326), 6) AS lot_geojson, "
+    "ST_AsGeoJSON(ST_Transform(ST_Buffer(geom_local, -CAST(:inset AS double precision)), 4326), 6) "
     "AS buildable_geojson, "
-    "ST_Area(ST_Buffer(geom_2272, -CAST(:inset AS double precision))) AS buildable_area, "
-    "ST_Area(geom_2272) AS lot_area "
-    "FROM parcel WHERE parcel_number = :parcel_number AND geom_2272 IS NOT NULL"
+    "ST_Area(ST_Buffer(geom_local, -CAST(:inset AS double precision))) AS buildable_area, "
+    "ST_Area(geom_local) AS lot_area "
+    "FROM parcel WHERE parcel_number = :parcel_number AND geom_local IS NOT NULL"
 )
 _MIN_BUILDABLE_RATIO = 0.05
 _STANDARD_SQL = text(
@@ -297,7 +301,7 @@ async def compute_envelope(session: AsyncSession, parcel_number: str) -> Envelop
         )
         applied_setback = inset
 
-    sources: list[dict[str, Any]] = [{"source": "pwd_parcel", "field": "geom_2272"}]
+    sources: list[dict[str, Any]] = [{"source": "pwd_parcel", "field": "geom_local"}]
     if resolution is not None:
         sources.append({"source": "zoning_district", "method": resolution.method})
 

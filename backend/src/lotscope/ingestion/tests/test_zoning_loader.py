@@ -29,7 +29,7 @@ def test_to_zoning_row_maps_code_and_geometry() -> None:
     assert row["external_id"] == "7"
     assert row["code"] == "RSA5"
     assert row["long_code"] == "RSA-5"
-    assert "geom_2272" in row
+    assert "geom_local" in row
 
 
 def test_to_zoning_row_skips_without_geometry_or_code() -> None:
@@ -78,7 +78,7 @@ async def test_load_zoning_districts_writes_geometry(db_session: AsyncSession) -
     row = (
         await db_session.execute(
             text(
-                "SELECT code, ST_SRID(geom_2272), ST_SRID(geom_4326) FROM zoning_district "
+                "SELECT code, ST_SRID(geom_local), ST_SRID(geom_4326) FROM zoning_district "
                 "WHERE external_id = '1'"
             )
         )

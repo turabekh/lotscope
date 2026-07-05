@@ -22,7 +22,7 @@ async def _insert(
     await session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner, base_zoning_code, lot_area_sqft, "
-            "frontage_ft, is_vacant, geom_2272) VALUES "
+            "frontage_ft, is_vacant, geom_local) VALUES "
             "(:pn, :owner, :zoning, 1620, 18, :vacant, ST_GeomFromText(:poly, 2272))"
         ),
         {

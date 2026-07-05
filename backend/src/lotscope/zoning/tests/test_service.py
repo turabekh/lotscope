@@ -24,14 +24,14 @@ async def test_assess_parcel_resolves_spatially(db_session: AsyncSession) -> Non
     await _add_standard(db_session, "RSA-5")
     await db_session.execute(
         text(
-            "INSERT INTO zoning_district (code, geom_2272) VALUES ('RSA-5', "
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RSA-5', "
             "ST_GeomFromText('POLYGON((-100 -100,-100 100,100 100,100 -100,-100 -100))', 2272))"
         )
     )
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
-            "base_zoning_code, geom_2272) VALUES "
+            "base_zoning_code, geom_local) VALUES "
             "('000000001', 1600, 18, 90, 'CMX-2', "
             "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
         )

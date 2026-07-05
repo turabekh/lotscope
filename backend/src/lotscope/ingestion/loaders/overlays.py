@@ -25,7 +25,7 @@ def _geom_columns(feature: ArcGisFeature) -> dict[str, Any]:
     )
     return {
         "geom_4326": geom_4326,
-        "geom_2272": func.ST_MakeValid(func.ST_Transform(geom_4326, 2272)),
+        "geom_local": func.ST_MakeValid(func.ST_Transform(geom_4326, 2272)),
     }
 
 
@@ -75,7 +75,14 @@ async def load_zoning_overlays(
                 ZoningOverlay,
                 rows,
                 index_elements=["external_id"],
-                update_columns=["code", "name", "code_section", "geom_4326", "geom_2272", "source"],
+                update_columns=[
+                    "code",
+                    "name",
+                    "code_section",
+                    "geom_4326",
+                    "geom_local",
+                    "source",
+                ],
             )
             total += len(rows)
     await record_freshness(
@@ -101,7 +108,7 @@ async def load_rco(
                 Rco,
                 rows,
                 index_elements=["external_id"],
-                update_columns=["name", "org_type", "geom_4326", "geom_2272", "source"],
+                update_columns=["name", "org_type", "geom_4326", "geom_local", "source"],
             )
             total += len(rows)
     await record_freshness(session, RCO_DATASET, status="success", success=True, row_count=total)

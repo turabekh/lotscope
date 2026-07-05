@@ -13,7 +13,7 @@ from lotscope.verdict.service import recompute_verdicts
 _PARCEL_NUMBERS_SQL = text("SELECT parcel_number FROM parcel ORDER BY parcel_number")
 _VACANT_PARCEL_NUMBERS_SQL = text(
     "SELECT parcel_number FROM parcel "
-    "WHERE is_vacant IS TRUE AND geom_2272 IS NOT NULL ORDER BY parcel_number"
+    "WHERE is_vacant IS TRUE AND geom_local IS NOT NULL ORDER BY parcel_number"
 )
 _DEFAULT_BATCH_SIZE = 500
 

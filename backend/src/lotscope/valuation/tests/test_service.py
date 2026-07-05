@@ -16,8 +16,8 @@ async def _add_subject(
 ) -> None:
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, lot_area_sqft, base_zoning_code, geom_2272) VALUES "
-            "(:pn, :area, :zoning, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, base_zoning_code, geom_local) "
+            "VALUES (:pn, :area, :zoning, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
         ),
         {"pn": parcel_number, "area": area, "zoning": zoning},
     )
@@ -41,7 +41,7 @@ async def _add_comp(
     await session.execute(
         text(
             "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, base_zoning_code, "
-            "geom_2272) VALUES (:pn, :area, :vacant, :zoning, ST_GeomFromText(:geom, 2272))"
+            "geom_local) VALUES (:pn, :area, :vacant, :zoning, ST_GeomFromText(:geom, 2272))"
         ),
         {"pn": parcel_number, "area": area, "vacant": vacant, "zoning": zoning, "geom": geom},
     )
@@ -69,7 +69,7 @@ async def _add_vacant_parcel(
     )
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, geom_2272) "
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, geom_local) "
             "VALUES (:pn, :area, TRUE, ST_GeomFromText(:geom, 2272))"
         ),
         {"pn": parcel_number, "area": area, "geom": geom},

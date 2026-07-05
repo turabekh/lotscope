@@ -155,9 +155,7 @@ async def test_analyze_uploaded_deed_rejects_unknown_document(db_session: AsyncS
 
 
 async def test_deed_index_lists_recorded_deeds_with_links(db_session: AsyncSession) -> None:
-    await db_session.execute(
-        text("INSERT INTO parcel (parcel_number) VALUES ('000000050')")
-    )
+    await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000050')"))
     await db_session.execute(
         text(
             "INSERT INTO sale (parcel_number, document_id, document_type, sale_date, "
@@ -167,9 +165,7 @@ async def test_deed_index_lists_recorded_deeds_with_links(db_session: AsyncSessi
     )
     await db_session.flush()
 
-    result = await get_deed_restrictions(
-        db_session, "000000050", record_url_template=_URL_TEMPLATE
-    )
+    result = await get_deed_restrictions(db_session, "000000050", record_url_template=_URL_TEMPLATE)
     assert len(result.deeds) == 1
     deed = result.deeds[0]
     assert deed.document_id == "53772373"

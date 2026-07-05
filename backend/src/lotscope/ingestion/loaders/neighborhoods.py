@@ -28,7 +28,7 @@ def to_neighborhood_row(feature: ArcGisFeature) -> dict[str, Any] | None:
         "external_id": str(external_id),
         "name": str(name),
         "geom_4326": geom_4326,
-        "geom_2272": func.ST_Transform(geom_4326, 2272),
+        "geom_local": func.ST_Transform(geom_4326, 2272),
         "source": NEIGHBORHOODS_DATASET,
     }
 
@@ -52,7 +52,7 @@ async def load_neighborhoods(
                 Neighborhood,
                 rows,
                 index_elements=["external_id"],
-                update_columns=["name", "geom_4326", "geom_2272", "source"],
+                update_columns=["name", "geom_4326", "geom_local", "source"],
             )
             total += len(rows)
     await record_freshness(

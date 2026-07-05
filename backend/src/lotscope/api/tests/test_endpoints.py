@@ -115,14 +115,14 @@ async def _setup_verdict_parcel(session: AsyncSession) -> None:
     await seed_zoning_standards(session)
     await session.execute(
         text(
-            "INSERT INTO zoning_district (code, geom_2272) VALUES ('RSA-5', "
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RSA-5', "
             "ST_GeomFromText('POLYGON((-100 -100,-100 100,100 100,100 -100,-100 -100))', 2272))"
         )
     )
     await session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner, lot_area_sqft, frontage_ft, depth_ft, "
-            "market_value, base_zoning_code, geom_2272) VALUES "
+            "market_value, base_zoning_code, geom_local) VALUES "
             "('phl:000000001', 'Jane Doe', 1600, 18, 90, 150000, 'RSA-5', "
             "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
         )
@@ -256,7 +256,7 @@ async def test_verdict_recomputes_a_stale_stored_version_on_read(db_session: Asy
 async def test_comps_endpoint(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, lot_area_sqft, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, geom_local) VALUES "
             "('phl:000000001', 2000, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
         )
     )
@@ -679,13 +679,13 @@ async def test_neighborhood_market_is_gated_for_free_tier(db_session: AsyncSessi
 async def test_neighborhood_market_returns_stats_for_paid_tier(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
-            "INSERT INTO neighborhood (name, geom_2272) "
+            "INSERT INTO neighborhood (name, geom_local) "
             "VALUES ('Alpha', ST_GeomFromText('POLYGON((0 0,0 100,100 100,100 0,0 0))', 2272))"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_local) VALUES "
             "('phl:000000001', true, 40000, "
             "ST_GeomFromText('POLYGON((10 10,10 12,12 12,12 10,10 10))', 2272))"
         )
@@ -1405,14 +1405,14 @@ async def test_envelope_endpoint_returns_extrudable_footprint(db_session: AsyncS
     await seed_zoning_standards(db_session)
     await db_session.execute(
         text(
-            "INSERT INTO zoning_district (code, geom_2272) VALUES ('RSA-5', "
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RSA-5', "
             "ST_GeomFromText('POLYGON((-500 -500,-500 500,500 500,500 -500,-500 -500))', 2272))"
         )
     )
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
-            "base_zoning_code, geom_2272) VALUES ('phl:000000001', 6000, 60, 100, 'RSA-5', "
+            "base_zoning_code, geom_local) VALUES ('phl:000000001', 6000, 60, 100, 'RSA-5', "
             "ST_GeomFromText('POLYGON((0 0,0 100,60 100,60 0,0 0))', 2272))"
         )
     )

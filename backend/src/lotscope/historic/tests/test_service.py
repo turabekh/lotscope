@@ -10,7 +10,7 @@ pytestmark = pytest.mark.integration
 async def _add_district(session: AsyncSession) -> None:
     await session.execute(
         text(
-            "INSERT INTO historic_district (external_id, name, designated_date, geom_2272) VALUES "
+            "INSERT INTO historic_district (external_id, name, designated_date, geom_local) VALUES "
             "('1', 'Old City', '2003-12-21', "
             "ST_GeomFromText('POLYGON((0 0,0 100,100 100,100 0,0 0))', 2272))"
         )
@@ -21,7 +21,7 @@ async def test_parcel_inside_district_is_flagged(db_session: AsyncSession) -> No
     await _add_district(db_session)
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272) VALUES "
+            "INSERT INTO parcel (parcel_number, geom_local) VALUES "
             "('000000001', ST_GeomFromText('POLYGON((10 10,10 20,20 20,20 10,10 10))', 2272))"
         )
     )
@@ -38,7 +38,7 @@ async def test_parcel_outside_district_is_not_flagged(db_session: AsyncSession) 
     await _add_district(db_session)
     await db_session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, geom_2272) VALUES ('000000002', "
+            "INSERT INTO parcel (parcel_number, geom_local) VALUES ('000000002', "
             "ST_GeomFromText('POLYGON((500 500,500 510,510 510,510 500,500 500))', 2272))"
         )
     )

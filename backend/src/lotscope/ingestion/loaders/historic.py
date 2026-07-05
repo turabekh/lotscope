@@ -37,7 +37,7 @@ def to_historic_row(record: HistoricRecord) -> dict[str, Any] | None:
         "name": record.name,
         "designated_date": parse_iso_date(record.designated),
         "geom_4326": geom_4326,
-        "geom_2272": func.ST_Transform(geom_4326, 2272),
+        "geom_local": func.ST_Transform(geom_4326, 2272),
         "source": HISTORIC_DATASET,
     }
 
@@ -68,7 +68,7 @@ async def load_historic(
                 HistoricDistrict,
                 rows,
                 index_elements=["external_id"],
-                update_columns=["name", "designated_date", "geom_4326", "geom_2272", "source"],
+                update_columns=["name", "designated_date", "geom_4326", "geom_local", "source"],
             )
             total += len(rows)
     await record_freshness(
