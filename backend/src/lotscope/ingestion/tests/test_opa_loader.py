@@ -24,7 +24,7 @@ def test_to_parcel_row_normalizes_key_and_maps_fields() -> None:
     )
     row = to_parcel_row(record)
     assert row is not None
-    assert row["parcel_number"] == "000012345"
+    assert row["parcel_number"] == "phl:000012345"
     assert row["address"] == "123 Main St"
     assert row["owner"] == "Jane Doe"
     assert row["market_value"] == 250000.0
@@ -93,7 +93,7 @@ async def test_load_opa_is_idempotent(db_session: AsyncSession) -> None:
         await db_session.flush()
 
     count = await db_session.scalar(
-        select(func.count()).select_from(Parcel).where(Parcel.parcel_number == "000000021")
+        select(func.count()).select_from(Parcel).where(Parcel.parcel_number == "phl:000000021")
     )
     assert count == 1
 
@@ -116,13 +116,13 @@ async def test_load_opa_emits_assessment_event_on_value_change(db_session: Async
         await db_session.execute(
             text(
                 "SELECT code, new_value->>'market_value' AS mv FROM parcel_event "
-                "WHERE parcel_number = '000000011'"
+                "WHERE parcel_number = 'phl:000000011'"
             )
         )
     ).all()
     assert [(e.code, e.mv) for e in events] == [("assessment", "80000.0")]
 
     market_value = await db_session.scalar(
-        text("SELECT market_value FROM parcel WHERE parcel_number = '000000011'")
+        text("SELECT market_value FROM parcel WHERE parcel_number = 'phl:000000011'")
     )
     assert float(market_value) == 80000

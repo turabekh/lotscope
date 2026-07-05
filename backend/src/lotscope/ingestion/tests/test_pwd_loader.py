@@ -21,7 +21,7 @@ def test_to_parcel_geometry_row_maps_key_and_geometry() -> None:
         PwdRecord(brt_id="1234567", parcel_id="pwd-9", geom_geojson=_POLYGON)
     )
     assert row is not None
-    assert row["parcel_number"] == "001234567"
+    assert row["parcel_number"] == "phl:001234567"
     assert row["pwd_parcel_id"] == "PWD-9"
     assert "geom_4326" in row
     assert "geom_2272" in row
@@ -66,7 +66,7 @@ async def test_load_pwd_writes_dual_srid_geometry(db_session: AsyncSession) -> N
                 "SELECT ST_SRID(geom_2272), ST_SRID(geom_4326), pwd_parcel_id, source "
                 "FROM parcel WHERE parcel_number = :pn"
             ),
-            {"pn": "001234567"},
+            {"pn": "phl:001234567"},
         )
     ).one()
     assert row[0] == 2272
@@ -84,7 +84,7 @@ async def test_load_pwd_composes_with_existing_parcel(db_session: AsyncSession) 
     from lotscope.ingestion.loaders.pwd import load_pwd
 
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, owner) VALUES ('001234567', 'Existing Owner')")
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:001234567', 'Existing Owner')")
     )
     await db_session.flush()
 
@@ -98,7 +98,7 @@ async def test_load_pwd_composes_with_existing_parcel(db_session: AsyncSession) 
     row = (
         await db_session.execute(
             text("SELECT owner, ST_SRID(geom_4326) FROM parcel WHERE parcel_number = :pn"),
-            {"pn": "001234567"},
+            {"pn": "phl:001234567"},
         )
     ).one()
     assert row[0] == "Existing Owner"

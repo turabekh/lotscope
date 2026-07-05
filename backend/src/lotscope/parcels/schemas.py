@@ -7,6 +7,8 @@ class ParcelDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     parcel_number: str
+    market_code: str
+    local_key: str
     address: str | None
     zip_code: str | None
     owner: str | None

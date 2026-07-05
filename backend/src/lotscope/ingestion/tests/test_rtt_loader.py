@@ -34,7 +34,7 @@ def test_to_sale_row_maps_and_normalizes() -> None:
         )
     )
     assert row is not None
-    assert row["parcel_number"] == "001234567"
+    assert row["parcel_number"] == "phl:001234567"
     assert row["document_id"] == "55512345"
     assert row["sale_date"] == date(2022, 3, 1)
     assert row["sale_price"] == 300000.0
@@ -85,7 +85,7 @@ async def test_load_rtt_stubs_parcel_and_inserts_sale(db_session: AsyncSession) 
 
     assert total == 1
     parcel_exists = await db_session.scalar(
-        text("SELECT count(*) FROM parcel WHERE parcel_number = '001234567'")
+        text("SELECT count(*) FROM parcel WHERE parcel_number = 'phl:001234567'")
     )
     assert parcel_exists == 1
     sale = (
@@ -136,7 +136,7 @@ async def test_load_rtt_emits_new_deed_for_new_document(db_session: AsyncSession
         await db_session.execute(
             text(
                 "SELECT code, new_value->>'document_id' AS doc FROM parcel_event "
-                "WHERE parcel_number = '001234567' ORDER BY id"
+                "WHERE parcel_number = 'phl:001234567' ORDER BY id"
             )
         )
     ).all()

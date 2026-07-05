@@ -11,7 +11,9 @@ import { useWatchlistStore } from '@/stores/watchlist'
 
 function makeDetail(overrides: Partial<ParcelDetail>): ParcelDetail {
   return {
-    parcel_number: '141281340',
+    parcel_number: 'phl:141281340',
+    market_code: 'phl',
+    local_key: '141281340',
     address: '1123 LEMON ST',
     zip_code: '19123',
     owner: null,

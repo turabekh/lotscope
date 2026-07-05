@@ -31,7 +31,7 @@ class SavedSearchMatch(Base):
         ForeignKey("saved_search.id", ondelete="CASCADE"), primary_key=True
     )
     parcel_number: Mapped[str] = mapped_column(
-        String(20),
+        String(40),
         ForeignKey("parcel.parcel_number", ondelete="CASCADE"),
         primary_key=True,
     )

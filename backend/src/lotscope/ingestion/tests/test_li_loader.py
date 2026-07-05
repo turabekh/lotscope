@@ -22,7 +22,7 @@ def test_to_violation_event_row_maps_and_flags() -> None:
         )
     )
     assert row is not None
-    assert row["parcel_number"] == "001234567"
+    assert row["parcel_number"] == "phl:001234567"
     assert row["external_id"] == "987"
     assert row["event_type"] == "violation"
     assert row["is_unsafe"] is True

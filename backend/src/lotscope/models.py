@@ -5,6 +5,7 @@ from lotscope.assemblage.models import ParcelAssemblage
 from lotscope.core.db import Base
 from lotscope.historic.models import HistoricDistrict
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.markets.models import Market
 from lotscope.neighborhoods.models import Neighborhood
 from lotscope.parcels.models import Parcel
 from lotscope.risk.models import FloodZone, LiEvent, TaxStatus
@@ -23,6 +24,7 @@ __all__ = [
     "FloodZone",
     "HistoricDistrict",
     "LiEvent",
+    "Market",
     "Neighborhood",
     "Parcel",
     "ParcelAssemblage",

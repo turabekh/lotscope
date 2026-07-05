@@ -16,7 +16,7 @@ def test_to_zba_row_maps_appeal_fields_and_reconciles_parcel() -> None:
     )
     assert row is not None
     assert row["appeal_number"] == "18756"
-    assert row["parcel_number"] == "882966695"
+    assert row["parcel_number"] == "phl:882966695"
     assert row["appeal_type"] == "RB_ZBA"
     assert row["decision"] == "GRANTED/PROV"
     assert row["decision_date"] == date(2013, 2, 27)

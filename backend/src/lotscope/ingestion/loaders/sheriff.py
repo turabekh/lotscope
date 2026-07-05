@@ -11,7 +11,7 @@ from lotscope.ingestion.merge import merge_sheriff
 from lotscope.ingestion.models import IngestRun, StagingSheriffSale
 from lotscope.ingestion.parsing import parse_iso_date
 from lotscope.ingestion.raw import write_raw
-from lotscope.ingestion.reconciliation import normalize_account
+from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
@@ -47,7 +47,7 @@ class SheriffSaleRecord(BaseModel):
 
 
 def to_sheriff_row(record: SheriffSaleRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.opa_number)
+    parcel_number = to_parcel_key(record.opa_number)
     case_number = record.case_number.strip() if record.case_number else None
     if parcel_number is None or not case_number:
         return None

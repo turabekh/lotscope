@@ -9,7 +9,7 @@ STAGES: tuple[Stage, ...] = ("lead", "diligence", "offer", "under_contract", "cl
 
 
 class DealCreate(BaseModel):
-    parcel_number: str = Field(min_length=1, max_length=20)
+    parcel_number: str = Field(min_length=1, max_length=40)
     stage: Stage = "lead"
     note: str | None = Field(default=None, max_length=2000)
     target_price: float | None = Field(default=None, ge=0)

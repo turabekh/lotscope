@@ -66,7 +66,7 @@ class ParcelEvent(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     parcel_number: Mapped[str] = mapped_column(
-        String(20),
+        String(40),
         ForeignKey("parcel.parcel_number", ondelete="CASCADE"),
         index=True,
         nullable=False,
@@ -88,7 +88,7 @@ class StagingTax(Base):
     __tablename__ = "tax"
     __table_args__ = ({"schema": "staging"},)
 
-    parcel_number: Mapped[str] = mapped_column(String(20), primary_key=True)
+    parcel_number: Mapped[str] = mapped_column(String(40), primary_key=True)
     ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
     is_delinquent: Mapped[bool | None] = mapped_column(Boolean)
     total_due: Mapped[float | None] = mapped_column(Numeric(14, 2))
@@ -103,7 +103,7 @@ class StagingOpa(Base):
     __tablename__ = "opa"
     __table_args__ = ({"schema": "staging"},)
 
-    parcel_number: Mapped[str] = mapped_column(String(20), primary_key=True)
+    parcel_number: Mapped[str] = mapped_column(String(40), primary_key=True)
     ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
     address: Mapped[str | None] = mapped_column(String(255))
     zip_code: Mapped[str | None] = mapped_column(String(20))
@@ -125,7 +125,7 @@ class StagingRtt(Base):
     __tablename__ = "rtt"
     __table_args__ = ({"schema": "staging"},)
 
-    parcel_number: Mapped[str] = mapped_column(String(20), primary_key=True)
+    parcel_number: Mapped[str] = mapped_column(String(40), primary_key=True)
     document_id: Mapped[str] = mapped_column(String(40), primary_key=True)
     ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
     document_type: Mapped[str | None] = mapped_column(String(60))
@@ -142,7 +142,7 @@ class StagingSheriffSale(Base):
 
     case_number: Mapped[str] = mapped_column(String(60), primary_key=True)
     ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    parcel_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    parcel_number: Mapped[str] = mapped_column(String(40), nullable=False)
     sale_type: Mapped[str | None] = mapped_column(String(30))
     sale_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[str | None] = mapped_column(String(40))
@@ -158,7 +158,7 @@ class StagingLiEvent(Base):
     event_type: Mapped[str] = mapped_column(String(60), primary_key=True)
     external_id: Mapped[str] = mapped_column(String(60), primary_key=True)
     ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    parcel_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    parcel_number: Mapped[str] = mapped_column(String(40), nullable=False)
     status: Mapped[str | None] = mapped_column(String(60))
     event_date: Mapped[date | None] = mapped_column(Date)
     description: Mapped[str | None] = mapped_column(Text)

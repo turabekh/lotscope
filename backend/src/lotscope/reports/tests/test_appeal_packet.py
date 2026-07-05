@@ -13,6 +13,8 @@ def _detail(**overrides: Any) -> ParcelDetail:
     base: dict[str, Any] = dict.fromkeys(ParcelDetail.model_fields)
     base["parcel_number"] = "000000001"
     base.update(overrides)
+    base["market_code"] = "phl"
+    base["local_key"] = str(base["parcel_number"]).split(":")[-1]
     return ParcelDetail(**base)
 
 

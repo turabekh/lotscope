@@ -160,4 +160,4 @@ def render_appeal_packet_pdf(
 
 
 def appeal_packet_filename(parcel_number: str) -> str:
-    return f"lotscope-assessment-review-{parcel_number}.pdf"
+    return f"lotscope-assessment-review-{parcel_number.replace(':', '-')}.pdf"

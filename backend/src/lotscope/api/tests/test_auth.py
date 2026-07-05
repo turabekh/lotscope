@@ -59,9 +59,7 @@ async def test_refresh_issues_a_new_token_for_valid_session(db_session: AsyncSes
             "/auth/login", json={"email": "r@example.com", "password": "hunter2-strong"}
         )
         token = logged_in.json()["access_token"]
-        refreshed = await client.post(
-            "/auth/refresh", headers={"Authorization": f"Bearer {token}"}
-        )
+        refreshed = await client.post("/auth/refresh", headers={"Authorization": f"Bearer {token}"})
         unauthenticated = await client.post("/auth/refresh")
 
     assert refreshed.status_code == 200

@@ -15,7 +15,7 @@ class AppealPacketEntitlement(Base):
         ForeignKey("app_user.id", ondelete="CASCADE"), index=True, nullable=False
     )
     parcel_number: Mapped[str] = mapped_column(
-        String(20), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), nullable=False
+        String(40), ForeignKey("parcel.parcel_number", ondelete="CASCADE"), nullable=False
     )
     source: Mapped[str] = mapped_column(String(20), nullable=False)
     ref: Mapped[str | None] = mapped_column(String(120))

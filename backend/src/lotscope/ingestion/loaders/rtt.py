@@ -10,7 +10,7 @@ from lotscope.ingestion.merge import merge_rtt
 from lotscope.ingestion.models import IngestRun, StagingRtt
 from lotscope.ingestion.parsing import parse_iso_date
 from lotscope.ingestion.raw import write_raw
-from lotscope.ingestion.reconciliation import normalize_account
+from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
@@ -40,7 +40,7 @@ class RttRecord(BaseModel):
 
 
 def to_sale_row(record: RttRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.opa_account_num)
+    parcel_number = to_parcel_key(record.opa_account_num)
     document_id = str(record.document_id).strip() if record.document_id is not None else None
     if parcel_number is None or not document_id:
         return None

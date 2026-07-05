@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 
 _NON_DIGIT = re.compile(r"\D")
 _OPA_ACCOUNT_LENGTH = 9
+_MARKET_KEY_SEP = ":"
+_DEFAULT_MARKET = "phl"
 
 
 def normalize_account(raw: str | int | None) -> str | None:
@@ -13,6 +15,11 @@ def normalize_account(raw: str | int | None) -> str | None:
     if not digits or len(digits) > _OPA_ACCOUNT_LENGTH:
         return None
     return digits.zfill(_OPA_ACCOUNT_LENGTH)
+
+
+def to_parcel_key(raw: str | int | None, *, market: str = _DEFAULT_MARKET) -> str | None:
+    local = normalize_account(raw)
+    return f"{market}{_MARKET_KEY_SEP}{local}" if local is not None else None
 
 
 def normalize_pwd_id(raw: str | int | None) -> str | None:
@@ -45,7 +52,8 @@ class ReconciliationResult:
 
 
 def canonical_parcel_number(record: SourceRecord) -> str | None:
-    return normalize_account(record.opa_account) or normalize_account(record.brt_number)
+    local = normalize_account(record.opa_account) or normalize_account(record.brt_number)
+    return f"{_DEFAULT_MARKET}{_MARKET_KEY_SEP}{local}" if local is not None else None
 
 
 def reconcile(records: Iterable[SourceRecord]) -> ReconciliationResult:

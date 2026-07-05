@@ -16,7 +16,7 @@ def test_to_tax_row_flags_delinquency() -> None:
         TaxRecord(opa_number="1234567", total_due=5000.0, principal_due=4000.0, num_years_owed=3)
     )
     assert row is not None
-    assert row["parcel_number"] == "001234567"
+    assert row["parcel_number"] == "phl:001234567"
     assert row["is_delinquent"] is True
     assert row["years_owed"] == 3
 
@@ -62,7 +62,7 @@ async def test_load_tax_upserts_status_and_stubs_parcel(db_session: AsyncSession
         await db_session.execute(
             text(
                 "SELECT total_due, years_owed, is_delinquent FROM tax_status "
-                "WHERE parcel_number = '001234567'"
+                "WHERE parcel_number = 'phl:001234567'"
             )
         )
     ).one()
@@ -87,7 +87,7 @@ async def test_load_tax_is_idempotent(db_session: AsyncSession) -> None:
         await db_session.flush()
 
     count = await db_session.scalar(
-        text("SELECT count(*) FROM tax_status WHERE parcel_number = '001234567'")
+        text("SELECT count(*) FROM tax_status WHERE parcel_number = 'phl:001234567'")
     )
     assert count == 1
 
@@ -107,8 +107,15 @@ async def test_load_tax_emits_event_on_second_run_change(db_session: AsyncSessio
         await db_session.flush()
 
     codes = (
-        await db_session.execute(
-            text("SELECT code FROM parcel_event WHERE parcel_number = '001234567' ORDER BY code")
+        (
+            await db_session.execute(
+                text(
+                    "SELECT code FROM parcel_event "
+                    "WHERE parcel_number = 'phl:001234567' ORDER BY code"
+                )
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert codes == ["tax_up"]

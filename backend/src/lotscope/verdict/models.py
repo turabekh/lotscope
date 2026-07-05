@@ -12,7 +12,7 @@ class ParcelVerdict(Base, TimestampMixin, ProvenanceMixin):
     __tablename__ = "parcel_verdict"
 
     parcel_number: Mapped[str] = mapped_column(
-        String(20),
+        String(40),
         ForeignKey("parcel.parcel_number", ondelete="CASCADE"),
         primary_key=True,
     )

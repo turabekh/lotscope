@@ -16,7 +16,7 @@ LAYER_URL = "http://arcgis.test/FeatureServer/0/query"
 def test_to_vacancy_row_normalizes_key() -> None:
     row = to_vacancy_row(ArcGisFeature(properties={"OPA_ID": "1234567"}))
     assert row is not None
-    assert row["parcel_number"] == "001234567"
+    assert row["parcel_number"] == "phl:001234567"
     assert row["is_vacant"] is True
 
 
@@ -56,7 +56,7 @@ async def test_load_vacancy_marks_parcel_vacant(db_session: AsyncSession) -> Non
 
     assert total == 1
     is_vacant = await db_session.scalar(
-        text("SELECT is_vacant FROM parcel WHERE parcel_number = '001234567'")
+        text("SELECT is_vacant FROM parcel WHERE parcel_number = 'phl:001234567'")
     )
     assert is_vacant is True
 
@@ -70,7 +70,7 @@ async def test_load_vacancy_preserves_existing_attributes(db_session: AsyncSessi
     from lotscope.ingestion.loaders.vacancy import load_vacancy
 
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, owner) VALUES ('001234567', 'Owner X')")
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:001234567', 'Owner X')")
     )
     await db_session.flush()
 
@@ -81,7 +81,7 @@ async def test_load_vacancy_preserves_existing_attributes(db_session: AsyncSessi
 
     row = (
         await db_session.execute(
-            text("SELECT owner, is_vacant FROM parcel WHERE parcel_number = '001234567'")
+            text("SELECT owner, is_vacant FROM parcel WHERE parcel_number = 'phl:001234567'")
         )
     ).one()
     assert row[0] == "Owner X"

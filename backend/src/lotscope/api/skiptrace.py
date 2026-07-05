@@ -7,6 +7,7 @@ from lotscope.accounts.billing import StripeGateway
 from lotscope.accounts.models import User
 from lotscope.accounts.service import ensure_stripe_customer
 from lotscope.api.deps import (
+    ParcelKeyDep,
     get_app_settings,
     get_current_user,
     get_session,
@@ -34,7 +35,7 @@ GatewayDep = Annotated[StripeGateway, Depends(get_stripe_gateway)]
 
 @router.post("/parcels/{parcel_number}/skip-trace", response_model=SkipTraceResultOut)
 async def skip_trace(
-    parcel_number: str,
+    parcel_number: ParcelKeyDep,
     session: SessionDep,
     settings: SettingsDep,
     current_user: CurrentUserDep,

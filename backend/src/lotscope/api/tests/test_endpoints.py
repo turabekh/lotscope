@@ -123,14 +123,14 @@ async def _setup_verdict_parcel(session: AsyncSession) -> None:
         text(
             "INSERT INTO parcel (parcel_number, owner, lot_area_sqft, frontage_ft, depth_ft, "
             "market_value, base_zoning_code, geom_2272) VALUES "
-            "('000000001', 'Jane Doe', 1600, 18, 90, 150000, 'RSA-5', "
+            "('phl:000000001', 'Jane Doe', 1600, 18, 90, 150000, 'RSA-5', "
             "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
         )
     )
     await session.execute(
         text(
             "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed) "
-            "VALUES ('000000001', true, 20000, 4)"
+            "VALUES ('phl:000000001', true, 20000, 4)"
         )
     )
     await session.flush()
@@ -139,13 +139,13 @@ async def _setup_verdict_parcel(session: AsyncSession) -> None:
 @pytest.mark.integration
 async def test_parcel_detail_endpoint(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'Jane Doe')")
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:000000001', 'Jane Doe')")
     )
     await db_session.flush()
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        ok = await client.get("/parcels/000000001")
+        ok = await client.get("/parcels/phl:000000001")
         missing = await client.get("/parcels/999999999")
 
     assert ok.status_code == 200
@@ -155,11 +155,31 @@ async def test_parcel_detail_endpoint(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
+async def test_bare_and_prefixed_parcel_keys_resolve_identically(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:056219700', 'Jane Doe')")
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        bare = await client.get("/parcels/056219700")
+        prefixed = await client.get("/parcels/phl:056219700")
+
+    assert bare.status_code == 200
+    assert prefixed.status_code == 200
+    assert bare.json() == prefixed.json()
+    assert bare.json()["parcel_number"] == "phl:056219700"
+    assert bare.json()["local_key"] == "056219700"
+    assert bare.json()["market_code"] == "phl"
+
+
+@pytest.mark.integration
 async def test_variance_outlook_endpoint(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, base_zoning_code, zip_code) VALUES "
-            "('000000001', 'RSA5', '19123')"
+            "('phl:000000001', 'RSA5', '19123')"
         )
     )
     for index in range(12):
@@ -182,11 +202,11 @@ async def test_variance_outlook_endpoint(db_session: AsyncSession) -> None:
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/variance-outlook")
+        resp = await client.get("/parcels/phl:000000001/variance-outlook")
 
     assert resp.status_code == 200
     body = resp.json()
-    assert body["parcel_number"] == "000000001"
+    assert body["parcel_number"] == "phl:000000001"
     assert body["district"] == "RSA5"
     assert body["decided"] == 12
     assert body["grant_rate"] == 0.75
@@ -198,9 +218,9 @@ async def test_verdict_computes_on_read_and_refresh(db_session: AsyncSession) ->
     app, _ = _authed_app(db_session)
 
     async with _client(app) as client:
-        first = await client.get("/parcels/000000001/verdict")
-        refreshed = await client.post("/parcels/000000001/verdict/refresh")
-        after = await client.get("/parcels/000000001/verdict")
+        first = await client.get("/parcels/phl:000000001/verdict")
+        refreshed = await client.post("/parcels/phl:000000001/verdict/refresh")
+        after = await client.get("/parcels/phl:000000001/verdict")
         missing = await client.get("/parcels/999999999/verdict")
 
     assert first.status_code == 200
@@ -217,15 +237,15 @@ async def test_verdict_recomputes_a_stale_stored_version_on_read(db_session: Asy
     app, _ = _authed_app(db_session)
 
     async with _client(app) as client:
-        await client.post("/parcels/000000001/verdict/refresh")
+        await client.post("/parcels/phl:000000001/verdict/refresh")
         await db_session.execute(
             text(
                 "UPDATE parcel_verdict SET verdict_version = 'v0', summary = 'stale' "
-                "WHERE parcel_number = '000000001'"
+                "WHERE parcel_number = 'phl:000000001'"
             )
         )
         await db_session.commit()
-        resp = await client.get("/parcels/000000001/verdict")
+        resp = await client.get("/parcels/phl:000000001/verdict")
 
     assert resp.status_code == 200
     assert resp.json()["verdict_version"] == VERDICT_VERSION
@@ -237,14 +257,14 @@ async def test_comps_endpoint(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, lot_area_sqft, geom_2272) VALUES "
-            "('000000001', 2000, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
+            "('phl:000000001', 2000, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
         )
     )
     await db_session.flush()
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/comps")
+        resp = await client.get("/parcels/phl:000000001/comps")
 
     assert resp.status_code == 200
     assert resp.json()["comp_count"] == 0
@@ -254,7 +274,7 @@ async def test_comps_endpoint(db_session: AsyncSession) -> None:
 async def test_comps_endpoint_validates_radius(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/comps", params={"radius_ft": -1})
+        resp = await client.get("/parcels/phl:000000001/comps", params={"radius_ft": -1})
 
     assert resp.status_code == 422
     assert resp.json()["error"] == "ValidationError"
@@ -281,7 +301,9 @@ class _FakeGenerator:
 @pytest.mark.integration
 async def test_ask_endpoint(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+        text(
+            "INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('phl:000000001', 'RSA-5')"
+        )
     )
     await add_document(
         db_session,
@@ -302,11 +324,11 @@ async def test_ask_endpoint(db_session: AsyncSession) -> None:
 
     async with _client(app) as client:
         resp = await client.post(
-            "/parcels/000000001/ask", json={"question": "Can I build a house?"}
+            "/parcels/phl:000000001/ask", json={"question": "Can I build a house?"}
         )
         # repeat the same question — should be served from cache, not recomputed
         repeat = await client.post(
-            "/parcels/000000001/ask", json={"question": "Can I  build a HOUSE?"}
+            "/parcels/phl:000000001/ask", json={"question": "Can I  build a HOUSE?"}
         )
 
     assert resp.status_code == 200
@@ -328,14 +350,16 @@ async def test_ask_endpoint_requires_authentication(db_session: AsyncSession) ->
     app.dependency_overrides[get_generator] = lambda: _FakeGenerator()
     app.dependency_overrides[get_redis] = lambda: _FakeRedis()
     async with _client(app) as client:
-        resp = await client.post("/parcels/000000001/ask", json={"question": "Hi?"})
+        resp = await client.post("/parcels/phl:000000001/ask", json={"question": "Hi?"})
     assert resp.status_code == 401
 
 
 @pytest.mark.integration
 async def test_ask_endpoint_enforces_tier_quota(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+        text(
+            "INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('phl:000000001', 'RSA-5')"
+        )
     )
     await db_session.flush()
 
@@ -350,7 +374,7 @@ async def test_ask_endpoint_enforces_tier_quota(db_session: AsyncSession) -> Non
     app.dependency_overrides[get_current_user] = _fake_user
 
     async with _client(app) as client:
-        resp = await client.post("/parcels/000000001/ask", json={"question": "Anything?"})
+        resp = await client.post("/parcels/phl:000000001/ask", json={"question": "Anything?"})
 
     assert resp.status_code == 429
     assert resp.json()["error"] == "QuotaExceededError"
@@ -382,7 +406,7 @@ async def test_usage_endpoint_reports_tier_and_remaining(db_session: AsyncSessio
 async def test_parcel_detail_enforces_free_view_quota(db_session: AsyncSession) -> None:
     for index in range(5):
         await db_session.execute(
-            text(f"INSERT INTO parcel (parcel_number, owner) VALUES ('00000000{index}', 'O')")
+            text(f"INSERT INTO parcel (parcel_number, owner) VALUES ('phl:00000000{index}', 'O')")
         )
     await db_session.flush()
 
@@ -403,17 +427,17 @@ async def test_leads_endpoint_ranks_and_caps_by_tier(db_session: AsyncSession) -
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner, address, mailing_address, is_vacant) "
-            "VALUES ('000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
+            "VALUES ('phl:000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
         )
     )
     await db_session.execute(
         text(
             "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
-            "in_sheriff_sale) VALUES ('000000001', true, 25000, 5, true)"
+            "in_sheriff_sale) VALUES ('phl:000000001', true, 25000, 5, true)"
         )
     )
     await db_session.flush()
-    await recompute_distress(db_session, ["000000001"])
+    await recompute_distress(db_session, ["phl:000000001"])
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
@@ -423,7 +447,7 @@ async def test_leads_endpoint_ranks_and_caps_by_tier(db_session: AsyncSession) -
     body = resp.json()
     assert body["tier"] == "free"
     assert body["limit"] == 8
-    assert body["leads"][0]["parcel_number"] == "000000001"
+    assert body["leads"][0]["parcel_number"] == "phl:000000001"
     assert body["leads"][0]["score"] == 80
 
 
@@ -446,17 +470,17 @@ async def test_leads_export_streams_csv_for_paid_tier(db_session: AsyncSession) 
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner, address, mailing_address, is_vacant) "
-            "VALUES ('000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
+            "VALUES ('phl:000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
         )
     )
     await db_session.execute(
         text(
             "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
-            "in_sheriff_sale) VALUES ('000000001', true, 25000, 5, true)"
+            "in_sheriff_sale) VALUES ('phl:000000001', true, 25000, 5, true)"
         )
     )
     await db_session.flush()
-    await recompute_distress(db_session, ["000000001"])
+    await recompute_distress(db_session, ["phl:000000001"])
 
     app, _ = _authed_app(db_session)
     app.dependency_overrides[get_current_user] = _fake_pro_user
@@ -486,17 +510,17 @@ async def test_outreach_letters_streams_pdf_for_paid_tier(db_session: AsyncSessi
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner, address, mailing_address, is_vacant) "
-            "VALUES ('000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
+            "VALUES ('phl:000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY', true)"
         )
     )
     await db_session.execute(
         text(
             "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
-            "in_sheriff_sale) VALUES ('000000001', true, 25000, 5, true)"
+            "in_sheriff_sale) VALUES ('phl:000000001', true, 25000, 5, true)"
         )
     )
     await db_session.flush()
-    await recompute_distress(db_session, ["000000001"])
+    await recompute_distress(db_session, ["phl:000000001"])
 
     app, _ = _authed_app(db_session)
     app.dependency_overrides[get_current_user] = _fake_pro_user
@@ -524,11 +548,11 @@ async def test_outreach_watchlist_letters_streams_pdf_for_paid_tier(
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner, address, mailing_address) "
-            "VALUES ('000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY')"
+            "VALUES ('phl:000000001', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY')"
         )
     )
     await db_session.execute(
-        text("INSERT INTO saved_parcel (user_id, parcel_number) VALUES (1, '000000001')")
+        text("INSERT INTO saved_parcel (user_id, parcel_number) VALUES (1, 'phl:000000001')")
     )
     await db_session.flush()
 
@@ -562,7 +586,7 @@ async def test_outreach_saved_search_letters_streams_pdf_for_paid_tier(
         text(
             "INSERT INTO parcel (parcel_number, address, base_zoning_code, is_vacant, "
             "is_city_owned, market_value, owner, mailing_address) "
-            "VALUES ('000000001', '1 A ST', 'RSA-5', true, false, 50000, 'OWNER', '99 ZZ AVE')"
+            "VALUES ('phl:000000001', '1 A ST', 'RSA-5', true, false, 50000, 'OWNER', '99 ZZ AVE')"
         )
     )
     await db_session.flush()
@@ -611,13 +635,13 @@ async def test_outreach_letters_404_when_no_mailable_leads(db_session: AsyncSess
 @pytest.mark.integration
 async def test_skip_trace_is_unavailable_without_a_provider(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'JANE DOE')")
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:000000001', 'JANE DOE')")
     )
     await db_session.flush()
     app, _ = _authed_app(db_session)
     app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
     async with _client(app) as client:
-        resp = await client.post("/parcels/000000001/skip-trace")
+        resp = await client.post("/parcels/phl:000000001/skip-trace")
     assert resp.status_code == 503
 
 
@@ -662,12 +686,12 @@ async def test_neighborhood_market_returns_stats_for_paid_tier(db_session: Async
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_2272) VALUES "
-            "('000000001', true, 40000, "
+            "('phl:000000001', true, 40000, "
             "ST_GeomFromText('POLYGON((10 10,10 12,12 12,12 10,10 10))', 2272))"
         )
     )
     await db_session.execute(
-        text("INSERT INTO tax_status (parcel_number, is_delinquent) VALUES ('000000001', true)")
+        text("INSERT INTO tax_status (parcel_number, is_delinquent) VALUES ('phl:000000001', true)")
     )
     await db_session.flush()
 
@@ -694,12 +718,15 @@ async def test_feed_is_gated_for_free_tier(db_session: AsyncSession) -> None:
 @pytest.mark.integration
 async def test_feed_lists_recent_events_for_paid_tier(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, owner, is_vacant) VALUES ('000000001', 'O', true)")
+        text(
+            "INSERT INTO parcel (parcel_number, owner, is_vacant) "
+            "VALUES ('phl:000000001', 'O', true)"
+        )
     )
     await db_session.execute(
         text(
             "INSERT INTO parcel_event (parcel_number, dataset, code, severity) "
-            "VALUES ('000000001', 'tax_delinquency', 'delinquent', 'high')"
+            "VALUES ('phl:000000001', 'tax_delinquency', 'delinquent', 'high')"
         )
     )
     await db_session.flush()
@@ -713,7 +740,7 @@ async def test_feed_lists_recent_events_for_paid_tier(db_session: AsyncSession) 
     body = resp.json()
     assert body["total"] == 1
     assert body["summary"][0]["code"] == "delinquent"
-    assert body["events"][0]["parcel_number"] == "000000001"
+    assert body["events"][0]["parcel_number"] == "phl:000000001"
 
 
 @pytest.mark.integration
@@ -729,22 +756,22 @@ async def test_sheriff_sales_ranked_by_bid_gap_for_paid_tier(db_session: AsyncSe
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner) VALUES "
-            "('000000001', 'A'), ('000000002', 'B')"
+            "('phl:000000001', 'A'), ('phl:000000002', 'B')"
         )
     )
     await db_session.execute(
         text(
             "INSERT INTO parcel_verdict "
             "(parcel_number, verdict_version, max_allowable_offer, opportunity_score) VALUES "
-            "('000000001', 't', 50000, 80), ('000000002', 't', 30000, 60)"
+            "('phl:000000001', 't', 50000, 80), ('phl:000000002', 't', 30000, 60)"
         )
     )
     await db_session.execute(
         text(
             "INSERT INTO sheriff_sale "
             "(parcel_number, case_number, sale_date, status, opening_bid) VALUES "
-            "('000000001', 'BW-A', '2026-08-05', 'Open', 10000), "
-            "('000000002', 'BW-B', '2026-08-06', 'Open', 25000)"
+            "('phl:000000001', 'BW-A', '2026-08-05', 'Open', 10000), "
+            "('phl:000000002', 'BW-B', '2026-08-06', 'Open', 25000)"
         )
     )
     await db_session.flush()
@@ -775,7 +802,7 @@ async def test_assemblage_top_ranks_by_unit_unlock(db_session: AsyncSession) -> 
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, address, base_zoning_code) VALUES "
-            "('000000001', '1 A ST', 'RM-1'), ('000000002', '2 B ST', 'RSA-5')"
+            "('phl:000000001', '1 A ST', 'RM-1'), ('phl:000000002', '2 B ST', 'RSA-5')"
         )
     )
     await db_session.execute(
@@ -783,8 +810,8 @@ async def test_assemblage_top_ranks_by_unit_unlock(db_session: AsyncSession) -> 
             "INSERT INTO parcel_assemblage "
             "(parcel_number, potential, candidate_count, unit_unlock, "
             "combined_lot_area_sqft, base_zoning_code, neighborhood) VALUES "
-            "('000000001', 'high', 2, 6, 5000, 'RM-1', 'Fishtown'), "
-            "('000000002', 'medium', 1, 1, 3000, 'RSA-5', 'Point Breeze')"
+            "('phl:000000001', 'high', 2, 6, 5000, 'RM-1', 'Fishtown'), "
+            "('phl:000000002', 'medium', 1, 1, 3000, 'RSA-5', 'Point Breeze')"
         )
     )
     await db_session.flush()
@@ -798,35 +825,35 @@ async def test_assemblage_top_ranks_by_unit_unlock(db_session: AsyncSession) -> 
     assert top.status_code == 200
     body = top.json()
     assert body["total"] == 2
-    assert [p["parcel_number"] for p in body["plays"]] == ["000000001", "000000002"]
+    assert [p["parcel_number"] for p in body["plays"]] == ["phl:000000001", "phl:000000002"]
     assert body["plays"][0]["unit_unlock"] == 6
 
-    assert [p["parcel_number"] for p in filtered.json()["plays"]] == ["000000002"]
+    assert [p["parcel_number"] for p in filtered.json()["plays"]] == ["phl:000000002"]
 
 
 @pytest.mark.integration
 async def test_appeal_packet_download_requires_entitlement(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'O')")
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:000000001', 'O')")
     )
     await db_session.flush()
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/appeal-packet.pdf")
+        resp = await client.get("/parcels/phl:000000001/appeal-packet.pdf")
     assert resp.status_code == 403
 
 
 @pytest.mark.integration
 async def test_appeal_packet_redeem_requires_credit(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'O')")
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:000000001', 'O')")
     )
     await db_session.flush()
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        resp = await client.post("/parcels/000000001/appeal-packet")
+        resp = await client.post("/parcels/phl:000000001/appeal-packet")
     assert resp.status_code == 429
 
 
@@ -835,7 +862,7 @@ async def test_appeal_packet_redeem_then_download(db_session: AsyncSession) -> N
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, owner, market_value) "
-            "VALUES ('000000001', 'O', 300000)"
+            "VALUES ('phl:000000001', 'O', 300000)"
         )
     )
     await db_session.execute(
@@ -854,8 +881,8 @@ async def test_appeal_packet_redeem_then_download(db_session: AsyncSession) -> N
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        redeem = await client.post("/parcels/000000001/appeal-packet")
-        download = await client.get("/parcels/000000001/appeal-packet.pdf")
+        redeem = await client.post("/parcels/phl:000000001/appeal-packet")
+        download = await client.get("/parcels/phl:000000001/appeal-packet.pdf")
 
     assert redeem.status_code == 200
     assert redeem.json()["entitled"] is True
@@ -873,14 +900,14 @@ async def test_watchlist_add_list_remove(db_session: AsyncSession) -> None:
         )
     )
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, address) VALUES ('000000001', '1 Main St')")
+        text("INSERT INTO parcel (parcel_number, address) VALUES ('phl:000000001', '1 Main St')")
     )
     await db_session.flush()
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
         added = await client.post(
-            "/watchlist", json={"parcel_number": "000000001", "tags": ["flip"]}
+            "/watchlist", json={"parcel_number": "phl:000000001", "tags": ["flip"]}
         )
         listed = await client.get("/watchlist")
         state = await client.get("/watchlist/000000001")
@@ -901,11 +928,11 @@ async def test_dossier_endpoint_returns_pdf(db_session: AsyncSession) -> None:
     await _setup_verdict_parcel(db_session)
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/dossier")
+        resp = await client.get("/parcels/phl:000000001/dossier")
 
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/pdf"
-    assert "dossier-000000001.pdf" in resp.headers["content-disposition"]
+    assert "dossier-phl-000000001.pdf" in resp.headers["content-disposition"]
     assert resp.content[:4] == b"%PDF"
 
 
@@ -918,13 +945,13 @@ async def test_pipeline_add_move_and_remove(db_session: AsyncSession) -> None:
         )
     )
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, address) VALUES ('000000001', '1 Main St')")
+        text("INSERT INTO parcel (parcel_number, address) VALUES ('phl:000000001', '1 Main St')")
     )
     await db_session.flush()
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        added = await client.post("/pipeline", json={"parcel_number": "000000001"})
+        added = await client.post("/pipeline", json={"parcel_number": "phl:000000001"})
         listed = await client.get("/pipeline")
         moved = await client.patch("/pipeline/000000001", json={"stage": "offer"})
         removed = await client.delete("/pipeline/000000001")
@@ -1192,7 +1219,9 @@ class _FakeSummaryGenerator:
 @pytest.mark.integration
 async def test_summary_dormant_without_api_key(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+        text(
+            "INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('phl:000000001', 'RSA-5')"
+        )
     )
     await db_session.flush()
 
@@ -1202,14 +1231,16 @@ async def test_summary_dormant_without_api_key(db_session: AsyncSession) -> None
         _env_file=None, secret_key="test-secret-key-that-is-at-least-32-bytes-long"
     )
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/summary")
+        resp = await client.get("/parcels/phl:000000001/summary")
     assert resp.status_code == 404
 
 
 @pytest.mark.integration
 async def test_summary_endpoint_returns_and_caches(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+        text(
+            "INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('phl:000000001', 'RSA-5')"
+        )
     )
     await db_session.flush()
 
@@ -1226,12 +1257,12 @@ async def test_summary_endpoint_returns_and_caches(db_session: AsyncSession) -> 
     )
 
     async with _client(app) as client:
-        first = await client.get("/parcels/000000001/summary")
-        second = await client.get("/parcels/000000001/summary")
+        first = await client.get("/parcels/phl:000000001/summary")
+        second = await client.get("/parcels/phl:000000001/summary")
 
     assert first.status_code == 200
     assert first.json()["summary"] == "A vacant RSA-5 lot."
-    assert first.json()["parcel_number"] == "000000001"
+    assert first.json()["parcel_number"] == "phl:000000001"
     assert first.json()["verdict_version"] == "none"
     assert first.json()["is_informational"] is True
     assert second.status_code == 200
@@ -1275,28 +1306,32 @@ def _report_app(
 @pytest.mark.integration
 async def test_report_is_gated_for_free_tier(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+        text(
+            "INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('phl:000000001', 'RSA-5')"
+        )
     )
     await db_session.flush()
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/report")
+        resp = await client.get("/parcels/phl:000000001/report")
     assert resp.status_code == 429
 
 
 @pytest.mark.integration
 async def test_report_endpoint_returns_and_caches_for_paid_tier(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000001', 'RSA-5')")
+        text(
+            "INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('phl:000000001', 'RSA-5')"
+        )
     )
     await db_session.flush()
 
     generator = _FakeReportGenerator()
     app, _ = _report_app(db_session, generator)
     async with _client(app) as client:
-        first = await client.get("/parcels/000000001/report")
-        second = await client.get("/parcels/000000001/report")
+        first = await client.get("/parcels/phl:000000001/report")
+        second = await client.get("/parcels/phl:000000001/report")
 
     assert first.status_code == 200
     body = first.json()
@@ -1314,7 +1349,7 @@ async def test_dossier_embeds_report_for_paid_tier(db_session: AsyncSession) -> 
     generator = _FakeReportGenerator()
     app, _ = _report_app(db_session, generator)
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/dossier")
+        resp = await client.get("/parcels/phl:000000001/dossier")
 
     assert resp.status_code == 200
     assert resp.content[:4] == b"%PDF"
@@ -1328,7 +1363,7 @@ async def test_webhook_fulfills_appeal_packet_purchase(db_session: AsyncSession)
     )
     db_session.add(user)
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, owner) VALUES ('000000001', 'O')")
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:000000001', 'O')")
     )
     await db_session.flush()
 
@@ -1340,7 +1375,7 @@ async def test_webhook_fulfills_appeal_packet_purchase(db_session: AsyncSession)
                 "mode": "payment",
                 "customer": "cus_1",
                 "payment_intent": "pi_1",
-                "metadata": {"product": "appeal_packet", "parcel_number": "000000001"},
+                "metadata": {"product": "appeal_packet", "parcel_number": "phl:000000001"},
             }
         },
     }
@@ -1357,7 +1392,8 @@ async def test_webhook_fulfills_appeal_packet_purchase(db_session: AsyncSession)
     assert resp.json() == {"handled": True}
     entitled = await db_session.scalar(
         text(
-            "SELECT source FROM appeal_packet WHERE user_id = :uid AND parcel_number = '000000001'"
+            "SELECT source FROM appeal_packet "
+            "WHERE user_id = :uid AND parcel_number = 'phl:000000001'"
         ),
         {"uid": user.id},
     )
@@ -1376,7 +1412,7 @@ async def test_envelope_endpoint_returns_extrudable_footprint(db_session: AsyncS
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
-            "base_zoning_code, geom_2272) VALUES ('000000001', 6000, 60, 100, 'RSA-5', "
+            "base_zoning_code, geom_2272) VALUES ('phl:000000001', 6000, 60, 100, 'RSA-5', "
             "ST_GeomFromText('POLYGON((0 0,0 100,60 100,60 0,0 0))', 2272))"
         )
     )
@@ -1384,7 +1420,7 @@ async def test_envelope_endpoint_returns_extrudable_footprint(db_session: AsyncS
 
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
-        resp = await client.get("/parcels/000000001/envelope")
+        resp = await client.get("/parcels/phl:000000001/envelope")
 
     assert resp.status_code == 200
     body = resp.json()

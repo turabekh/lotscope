@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 from typing import Annotated, cast
 
 import jwt
-from fastapi import Depends, Request
+from fastapi import Depends, Path, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -17,6 +17,22 @@ from lotscope.core.config import Settings
 from lotscope.core.errors import AuthError, ForbiddenError
 
 _bearer_scheme = HTTPBearer(auto_error=False)
+
+_MARKET_KEY_SEP = ":"
+_DEFAULT_MARKET = "phl"
+
+
+def canonicalize_parcel_key(parcel_number: str) -> str:
+    if _MARKET_KEY_SEP in parcel_number:
+        return parcel_number
+    return f"{_DEFAULT_MARKET}{_MARKET_KEY_SEP}{parcel_number}"
+
+
+def _resolve_parcel_key(parcel_number: Annotated[str, Path()]) -> str:
+    return canonicalize_parcel_key(parcel_number)
+
+
+ParcelKeyDep = Annotated[str, Depends(_resolve_parcel_key)]
 
 
 def get_app_settings(request: Request) -> Settings:

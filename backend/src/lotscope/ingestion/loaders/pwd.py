@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.carto import CartoClient
-from lotscope.ingestion.reconciliation import normalize_account, normalize_pwd_id
+from lotscope.ingestion.reconciliation import normalize_pwd_id, to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
@@ -27,7 +27,7 @@ class PwdRecord(BaseModel):
 
 
 def to_parcel_geometry_row(record: PwdRecord) -> dict[str, Any] | None:
-    parcel_number = normalize_account(record.brt_id)
+    parcel_number = to_parcel_key(record.brt_id)
     if parcel_number is None or not record.geom_geojson:
         return None
     geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(record.geom_geojson), 4326)
