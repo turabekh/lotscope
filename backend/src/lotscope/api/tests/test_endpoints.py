@@ -155,6 +155,44 @@ async def test_parcel_detail_endpoint(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
+async def test_variance_outlook_endpoint(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, base_zoning_code, zip_code) VALUES "
+            "('000000001', 'RSA5', '19123')"
+        )
+    )
+    for index in range(12):
+        await db_session.execute(
+            text(
+                "INSERT INTO parcel (parcel_number, base_zoning_code, zip_code) VALUES "
+                "(:pn, 'RSA5', '19123')"
+            ),
+            {"pn": f"1000000{index:02d}"},
+        )
+        decision = "GRANTED" if index < 9 else "DENIED"
+        await db_session.execute(
+            text(
+                "INSERT INTO zba_appeal (appeal_number, parcel_number, decision, decision_date) "
+                "VALUES (:an, :pn, :decision, CURRENT_DATE)"
+            ),
+            {"an": f"A{index}", "pn": f"1000000{index:02d}", "decision": decision},
+        )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/parcels/000000001/variance-outlook")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["parcel_number"] == "000000001"
+    assert body["district"] == "RSA5"
+    assert body["decided"] == 12
+    assert body["grant_rate"] == 0.75
+
+
+@pytest.mark.integration
 async def test_verdict_computes_on_read_and_refresh(db_session: AsyncSession) -> None:
     await _setup_verdict_parcel(db_session)
     app, _ = _authed_app(db_session)
@@ -629,9 +667,7 @@ async def test_neighborhood_market_returns_stats_for_paid_tier(db_session: Async
         )
     )
     await db_session.execute(
-        text(
-            "INSERT INTO tax_status (parcel_number, is_delinquent) VALUES ('000000001', true)"
-        )
+        text("INSERT INTO tax_status (parcel_number, is_delinquent) VALUES ('000000001', true)")
     )
     await db_session.flush()
 

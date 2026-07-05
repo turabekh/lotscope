@@ -70,6 +70,8 @@ from lotscope.verdict.service import (
     get_or_compute_current_verdict,
     get_verdict,
 )
+from lotscope.zba.schemas import VarianceOutlook
+from lotscope.zba.service import variance_outlook
 from lotscope.zoning.schemas import EnvelopeResult
 from lotscope.zoning.service import compute_envelope
 
@@ -209,6 +211,16 @@ async def parcel_next_sheriff_sale(
     parcel_number: str, session: SessionDep, current_user: CurrentUserDep
 ) -> NextSheriffSale | None:
     return await get_next_sheriff_sale(session, parcel_number)
+
+
+@router.get("/{parcel_number}/variance-outlook", response_model=VarianceOutlook)
+async def parcel_variance_outlook(
+    parcel_number: str, session: SessionDep, current_user: CurrentUserDep
+) -> VarianceOutlook:
+    result = await variance_outlook(session, parcel_number)
+    if result is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
 
 
 @router.get("/{parcel_number}/owner-portfolio", response_model=OwnerPortfolio)

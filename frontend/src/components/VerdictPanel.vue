@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import VarianceOutlookLine from '@/components/VarianceOutlookLine.vue'
 import {
   formatCurrency,
   formatFeet,
@@ -108,6 +109,10 @@ const buildStatus = computed<Status>(() => {
           </q-tooltip>
         </div>
       </div>
+      <VarianceOutlookLine
+        v-if="verdict.needs_variance"
+        :parcel-number="verdict.parcel_number"
+      />
     </q-card-section>
 
     <q-separator />

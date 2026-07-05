@@ -376,6 +376,22 @@ export interface ParcelSummaryResult {
   computed_at: string
 }
 
+export interface VarianceOutlook {
+  parcel_number: string
+  district: string | null
+  population_label: string
+  window_months: number
+  decided: number
+  granted: number
+  grant_rate: number | null
+  local_scope: string | null
+  local_decided: number | null
+  local_grant_rate: number | null
+  reason: string | null
+  sources: Array<Record<string, unknown>>
+  computed_at: string
+}
+
 export interface ReportSection {
   heading: string
   body: string

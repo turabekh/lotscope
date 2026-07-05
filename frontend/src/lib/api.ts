@@ -19,6 +19,7 @@ import type {
   DistressResult,
   NeighborhoodMarketResponse,
   NextSheriffSale,
+  VarianceOutlook,
   HistoricResult,
   MarketContext,
   ParcelChecklist,
@@ -155,6 +156,9 @@ export const api = {
   },
   getNextSheriffSale(parcelNumber: string): Promise<NextSheriffSale | null> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/next-sheriff-sale`)
+  },
+  getVarianceOutlook(parcelNumber: string): Promise<VarianceOutlook> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/variance-outlook`)
   },
   getNeighborhoodMarket(): Promise<NeighborhoodMarketResponse> {
     return request('/neighborhoods/market')
