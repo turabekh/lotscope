@@ -1,25 +1,17 @@
-import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
-_NON_DIGIT = re.compile(r"\D")
-_OPA_ACCOUNT_LENGTH = 9
-_MARKET_KEY_SEP = ":"
+from lotscope.ingestion.normalizers import get_normalizer
+
 _DEFAULT_MARKET = "phl"
 
 
 def normalize_account(raw: str | int | None) -> str | None:
-    if raw is None:
-        return None
-    digits = _NON_DIGIT.sub("", str(raw).strip())
-    if not digits or len(digits) > _OPA_ACCOUNT_LENGTH:
-        return None
-    return digits.zfill(_OPA_ACCOUNT_LENGTH)
+    return get_normalizer(_DEFAULT_MARKET).normalize_local_key(raw)
 
 
 def to_parcel_key(raw: str | int | None, *, market: str = _DEFAULT_MARKET) -> str | None:
-    local = normalize_account(raw)
-    return f"{market}{_MARKET_KEY_SEP}{local}" if local is not None else None
+    return get_normalizer(market).to_canonical(raw)
 
 
 def normalize_pwd_id(raw: str | int | None) -> str | None:
@@ -52,8 +44,7 @@ class ReconciliationResult:
 
 
 def canonical_parcel_number(record: SourceRecord) -> str | None:
-    local = normalize_account(record.opa_account) or normalize_account(record.brt_number)
-    return f"{_DEFAULT_MARKET}{_MARKET_KEY_SEP}{local}" if local is not None else None
+    return to_parcel_key(record.opa_account) or to_parcel_key(record.brt_number)
 
 
 def reconcile(records: Iterable[SourceRecord]) -> ReconciliationResult:
