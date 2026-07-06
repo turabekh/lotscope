@@ -83,6 +83,7 @@ _DISPLAY_NAME: dict[str, str] = {
 _ZONING_CITATION: dict[str, str] = {
     "phl": "Title 14",
     "hbg": "Harrisburg Zoning Code",
+    "pgh": "Pittsburgh Zoning Code",
 }
 
 _HIDDEN_SURFACES: dict[str, frozenset[str]] = {

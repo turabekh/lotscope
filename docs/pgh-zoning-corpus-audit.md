@@ -33,3 +33,16 @@ Cited to §903.03 (each density subdistrict's Site Development Standards table).
 - Corpus-stated values only; **NULL every unconfirmed field** (VH min-lot, density/units where not cleanly stated, non-residential until pass 2).
 - `land_use_class` for pgh prefixes derived from the district *definitions* (R1/R2/R3/RM = residential; LNC/HC = commercial; UI/EMI = industrial/institutional), not inferred from letters.
 - Coverage table (Step 4) reported before merge.
+
+## Authoring coverage — pass 1 (residential), the deliverable table
+`code_version='pgh-provisional-2026'`, cited to § 903.03. Buildability verified live (R1D-M→40 ft, RM-H→85 ft, R1A-VH→40 ft; citation "Pittsburgh Zoning Code").
+
+| Field | Filled / 18 | Notes |
+|---|---|---|
+| max_height_ft | **18/18** | R1-R3 = 40 ft; RM = 40/40/55/85/180 by density |
+| front/rear/side setback | **18/18** | side = interior sideyard (binding); other yards in `dimensional` note |
+| min_lot_area_sqft | **14/18** | VL 6,000 · L 3,000 · M 2,400 · H 1,200; **VH NULL** (page-boundary, unconfirmed — not guessed) |
+| min_lot_width_ft, max_occupancy_pct, max_units, FAR | 0/18 | not in the § 903.03 dimensional table — honestly NULL |
+| permitted_uses | 0/18 | Use Table (§ 911.02) not yet parsed — pass 2 |
+
+**Districts authored: 18 residential (R1D/R1A/R2/R3/RM × their density suffixes).** Not yet authored: ~22 non-residential (LNC/HC/GT-A..E/UI/EMI/RIV-* + P/H/AP/CP) — they resolve spatially but read "standards not loaded" until pass 2. **Authoring actuals for Baltimore calibration:** residential pass = 18 suffixed codes from a 573-page code, ~1 focused session; the density-subdistrict table structure (shared setbacks/height across base districts, varying by density) made it far more tractable than per-district authoring would suggest.
