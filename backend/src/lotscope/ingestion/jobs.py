@@ -304,11 +304,33 @@ async def ingest_hbg_public(session_factory: SessionFactory, settings: Settings)
     )
 
 
+async def ingest_hbg_historic(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=hbg.load_hbg_historic,
+        dataset=hbg.HBG_HISTORIC_DATASET,
+        market_code="hbg",
+    )
+
+
+async def ingest_hbg_neighborhoods(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=hbg.load_hbg_neighborhoods,
+        dataset=hbg.HBG_NEIGHBORHOODS_DATASET,
+        market_code="hbg",
+    )
+
+
 _HBG_JOBS: dict[str, Job] = {
     "parcels": ingest_hbg_parcels,
     "sales": ingest_hbg_sales,
     "zoning": ingest_hbg_zoning,
     "streets": ingest_hbg_streets,
+    "historic": ingest_hbg_historic,
+    "neighborhoods": ingest_hbg_neighborhoods,
     "vacancy": ingest_hbg_vacancy,
     "public": ingest_hbg_public,
 }

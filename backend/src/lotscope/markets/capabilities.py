@@ -2,7 +2,6 @@ _CHECKLIST_CATEGORY_STATE: dict[str, dict[str, str]] = {
     "hbg": {
         "li": "no_data_source",
         "flood": "pending_load",
-        "overlays": "pending_load",
     },
 }
 
@@ -12,15 +11,12 @@ _NO_SOURCE_DETAIL: dict[tuple[str, str], str] = {
 
 _PENDING_DETAIL: dict[tuple[str, str], str] = {
     ("hbg", "flood"): "FEMA flood-zone data is being loaded for Harrisburg.",
-    ("hbg", "overlays"): "Historic-district data is being loaded for Harrisburg.",
 }
 
 # Categories whose Philadelphia clear-detail wording references concepts a market
 # lacks (e.g. RCO is a Philadelphia Title-14 construct) get a market-neutral clear detail.
 _CLEAR_DETAIL_OVERRIDE: dict[tuple[str, str], str] = {
-    ("hbg", "overlays"): (
-        "Not in a historic district or zoning overlay requiring extra design review."
-    ),
+    ("hbg", "overlays"): "Not in a historic district requiring extra design review.",
 }
 
 
