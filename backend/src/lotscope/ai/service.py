@@ -72,7 +72,8 @@ _REPORT_SOURCES: list[dict[str, Any]] = [
 def _parcel_facts(detail: ParcelDetail, verdict: VerdictResult | None) -> str:
     lines = [
         f"Parcel {detail.parcel_number}; address {detail.address}; "
-        f"zoning {detail.base_zoning_code}; lot area {detail.lot_area_sqft} sqft; "
+        f"zoning {detail.resolved_zoning_code or detail.base_zoning_code or 'unknown'}; "
+        f"lot area {detail.lot_area_sqft} sqft; "
         f"vacant={detail.is_vacant}; city-owned={detail.is_city_owned}."
     ]
     if verdict is not None:
@@ -113,7 +114,7 @@ def _summary_facts(
 ) -> str:
     lines = [
         f"Address: {detail.address or 'unknown'}; parcel {detail.parcel_number}.",
-        f"Zoning: {detail.base_zoning_code or 'unknown'}; "
+        f"Zoning: {detail.resolved_zoning_code or detail.base_zoning_code or 'unknown'}; "
         f"land use: {detail.land_use or 'unknown'}.",
         f"Lot area: {detail.lot_area_sqft} sqft; vacant: {detail.is_vacant}; "
         f"city-owned: {detail.is_city_owned}.",

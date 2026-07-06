@@ -16,6 +16,8 @@ class ParcelDetail(BaseModel):
     land_use: str | None
     category: str | None
     base_zoning_code: str | None
+    resolved_zoning_code: str | None = None
+    zoning_resolution: str | None = None
     market_value: float | None
     land_value: float | None
     improvement_value: float | None

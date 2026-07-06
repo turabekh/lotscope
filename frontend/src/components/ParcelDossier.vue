@@ -275,10 +275,11 @@ async function toggleSave(): Promise<void> {
         </div>
         <div class="chips">
           <q-chip dense square color="primary" text-color="white" class="text-weight-medium">
-            {{ detail.base_zoning_code ?? 'No zoning' }}
+            {{ detail.resolved_zoning_code ?? detail.base_zoning_code ?? 'No zoning' }}
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-              Base Title 14 zoning district. It sets what you can build by-right — uses, units,
-              height, and setbacks.
+              Zoning district. It sets what you can build by-right — uses, units, height, and
+              setbacks.<template v-if="detail.zoning_resolution === 'spatial'">
+                Resolved from the zoning map (no per-parcel attribute on file).</template>
             </q-tooltip>
           </q-chip>
           <q-chip

@@ -9,6 +9,8 @@ export interface ParcelDetail {
   land_use: string | null
   category: string | null
   base_zoning_code: string | null
+  resolved_zoning_code: string | null
+  zoning_resolution: string | null
   market_value: number | null
   land_value: number | null
   improvement_value: number | null

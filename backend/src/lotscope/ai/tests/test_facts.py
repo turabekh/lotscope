@@ -83,3 +83,24 @@ def test_data_coverage_is_low_without_engine_outputs() -> None:
 
 def test_data_coverage_rises_with_verdict_and_comps() -> None:
     assert _data_coverage(_verdict(value_estimate_low=100000.0), None) == "medium"
+
+
+def test_snapshot_uses_resolved_district_when_attribute_is_null() -> None:
+    facts = _summary_facts(
+        _detail(base_zoning_code=None, resolved_zoning_code="RM", zoning_resolution="spatial"),
+        _verdict(),
+        None,
+        None,
+    )
+    assert "Zoning: RM" in facts
+    assert "Zoning: unknown" not in facts
+
+
+def test_snapshot_keeps_attribute_zoning_for_phl_unchanged() -> None:
+    facts = _summary_facts(
+        _detail(base_zoning_code="RSA5", resolved_zoning_code="RSA5", zoning_resolution="attribute"),
+        _verdict(),
+        None,
+        None,
+    )
+    assert "Zoning: RSA5" in facts

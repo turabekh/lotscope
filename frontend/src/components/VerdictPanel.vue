@@ -13,8 +13,11 @@ import {
   severityVar,
 } from '@/lib/format'
 import type { VerdictResult } from '@/lib/types'
+import { useMarketStore } from '@/stores/market'
 
 const props = defineProps<{ verdict: VerdictResult; developed?: boolean }>()
+
+const market = useMarketStore()
 
 interface Status {
   label: string
@@ -110,7 +113,7 @@ const buildStatus = computed<Status>(() => {
         </div>
       </div>
       <VarianceOutlookLine
-        v-if="verdict.needs_variance"
+        v-if="verdict.needs_variance && !market.isHidden('zba_variance')"
         :parcel-number="verdict.parcel_number"
       />
     </q-card-section>

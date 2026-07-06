@@ -21,6 +21,8 @@ function makeDetail(overrides: Partial<ParcelDetail>): ParcelDetail {
     land_use: 'SINGLE FAMILY',
     category: null,
     base_zoning_code: 'RSA5',
+    resolved_zoning_code: 'RSA5',
+    zoning_resolution: 'attribute',
     market_value: 519000,
     land_value: 103800,
     improvement_value: 415200,
