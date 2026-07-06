@@ -197,6 +197,10 @@ const buildStatus = computed<Status>(() => {
         <q-icon name="verified" size="18px" color="positive" class="q-mr-xs" />
         No major risk flags found.
       </div>
+      <div v-if="market.activeInfo?.risk_coverage_note" class="risk-coverage">
+        Risk {{ market.activeInfo.risk_coverage_note }} — absent feeds mean this is not a
+        proven clean result.
+      </div>
     </q-card-section>
   </q-card>
 </template>
@@ -277,6 +281,12 @@ const buildStatus = computed<Status>(() => {
   display: flex;
   align-items: center;
   font-size: 13px;
+  color: var(--lot-muted);
+}
+.risk-coverage {
+  margin-top: 6px;
+  font-size: 12px;
+  font-style: italic;
   color: var(--lot-muted);
 }
 .empty-value {

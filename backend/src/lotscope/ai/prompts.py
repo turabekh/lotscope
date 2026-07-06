@@ -54,6 +54,11 @@ SUMMARY_SYSTEM_PROMPT = (
     "that dataset (say so plainly, e.g. 'the city publishes no code-enforcement data') — never "
     "imply a clean/passing result; 'pending_load' means the source exists and is being loaded. "
     "Do not conflate the two, and never read either as 'no issues found'.\n"
+    "- Risk: when the risk score is 0, never cite risk as an explanation for anything and never "
+    "invent offsetting 'risks' — there are none in the data. Do not manufacture factors (risks, "
+    "constraints, upside) that the FACTS do not state.\n"
+    "- When a risk-coverage note is supplied, narrate risk with that coverage awareness: absence "
+    "of a flag reflects the feeds available in that market, not a proven clean result.\n"
     "- Keep the informational framing; this is never advice.\n"
     "Return your response using the provided structured tool."
 )

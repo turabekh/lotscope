@@ -15,6 +15,7 @@ const PHL: MarketInfo = {
   launch_status: 'live',
   coverage_note: null,
   hidden_surfaces: [],
+  risk_coverage_note: null,
 }
 
 vi.mock('@/lib/api', () => ({
