@@ -42,6 +42,15 @@ _FORCED_SALE_LABEL: dict[str, str] = {
     "hbg": "Tax sale (RETSL)",
 }
 
+_FORCED_SALE_SURFACE_LABEL: dict[str, str] = {
+    "phl": "Sheriff sales",
+    "hbg": "Tax sales",
+}
+
+
+def forced_sale_surface_label(market_code: str) -> str:
+    return _FORCED_SALE_SURFACE_LABEL.get(market_code, "Sheriff sales")
+
 _DISPLAY_NAME: dict[str, str] = {
     "phl": "Philadelphia",
     "hbg": "Harrisburg",
