@@ -180,7 +180,10 @@ def _no_standard_result(
         buildable_area_sqft=None,
         buildability_score=0.0,
         confidence="low",
-        reasons=[f"No Title 14 standards are loaded for district {resolution.code}."],
+        reasons=[
+            f"No {zoning_citation_label(_market_of(parcel_number))} standards are loaded "
+            f"for district {resolution.code}."
+        ],
         sources=[{"source": "zoning_district", "method": resolution.method}],
         computed_at=computed_at,
     )
@@ -333,7 +336,8 @@ async def compute_envelope(session: AsyncSession, parcel_number: str) -> Envelop
     if standard is None:
         district_code = resolution.code if resolution else None
         reason = (
-            f"No Title 14 standards are loaded for district {district_code}."
+            f"No {zoning_citation_label(_market_of(parcel_number))} standards are loaded "
+            f"for district {district_code}."
             if district_code
             else "Zoning district could not be resolved for this parcel."
         )
@@ -351,7 +355,7 @@ async def compute_envelope(session: AsyncSession, parcel_number: str) -> Envelop
     sources.append(
         {"source": "zoning_standard", "code": standard.code, "version": standard.code_version}
     )
-    cited_section = f"{standard.code} (Title 14, {standard.code_version})"
+    cited_section = f"{standard.code} ({standard.citation_label}, {standard.code_version})"
     if standard.max_height_ft is None:
         reasons.append(f"No by-right height standard is recorded for district {standard.code}.")
     if applied_setback > 0:
