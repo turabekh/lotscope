@@ -230,6 +230,7 @@ export interface MarketInfo {
   launch_status: string
   coverage_note: string | null
   hidden_surfaces: string[]
+  risk_coverage_note: string | null
 }
 
 export interface AreaSearchRequest {

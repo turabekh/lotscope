@@ -1,5 +1,5 @@
 from lotscope.core.markets import Market, market_code
-from lotscope.markets.seed import HARRISBURG, _SEED_MARKETS
+from lotscope.markets.seed import _SEED_MARKETS, HARRISBURG
 
 
 def test_harrisburg_slug_resolves_to_hbg_code() -> None:

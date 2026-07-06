@@ -12,7 +12,7 @@ def test_hbg_category_states_are_distinct() -> None:
     assert checklist_category_state("hbg", "li") == "no_data_source"
     assert checklist_category_state("hbg", "flood") == "pending_load"
     assert checklist_category_state("hbg", "overlays") == "available"
-    assert checklist_category_state("hbg", "liens_taxes") == "available"
+    assert checklist_category_state("hbg", "access") == "available"
     assert checklist_category_state("phl", "li") == "available"
 
 
@@ -70,3 +70,20 @@ def test_display_name_citation_and_hidden_surfaces() -> None:
     # prompts carry the market city, not a hardcoded literal
     assert "Harrisburg real estate" in for_market(SUMMARY_SYSTEM_PROMPT, "Harrisburg")
     assert "Philadelphia real estate" in for_market(SUMMARY_SYSTEM_PROMPT, "Philadelphia")
+
+
+def test_hbg_liens_taxes_pending_not_clean() -> None:
+    from lotscope.markets.capabilities import checklist_category_state, checklist_state_detail
+
+    assert checklist_category_state("hbg", "liens_taxes") == "pending_load"
+    assert checklist_category_state("phl", "liens_taxes") == "available"
+    detail = checklist_state_detail("hbg", "liens_taxes", "pending_load")
+    assert "August" in detail
+    assert "not" in detail.lower() and "clean" in detail.lower()
+
+
+def test_risk_coverage_note_only_for_partial_markets() -> None:
+    from lotscope.markets.capabilities import risk_coverage_note
+
+    assert risk_coverage_note("hbg") == "based on available Harrisburg sources"
+    assert risk_coverage_note("phl") is None

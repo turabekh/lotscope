@@ -32,7 +32,7 @@ from lotscope.assessment.schemas import AssessmentResult
 from lotscope.assessment.service import analyze_parcel_assessment
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
-from lotscope.markets.capabilities import market_display_name
+from lotscope.markets.capabilities import market_display_name, risk_coverage_note
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.verdict.schemas import VerdictResult
@@ -141,6 +141,12 @@ def _summary_facts(
         flags = [str(flag.get("label", "")) for flag in verdict.risk_flags][:4]
         if flags:
             lines.append(f"Top risk flags: {', '.join(flags)}.")
+        coverage = risk_coverage_note(detail.market_code)
+        if coverage is not None:
+            lines.append(
+                f"Risk coverage: the risk read is {coverage}; some feeds present in other "
+                "markets are absent here, so no flags does not prove a clean parcel."
+            )
     if distress is not None and distress.factors:
         factors = ", ".join(factor.label for factor in distress.factors[:4])
         lines.append(f"Distress score {distress.score}/100 ({distress.tier}): {factors}.")

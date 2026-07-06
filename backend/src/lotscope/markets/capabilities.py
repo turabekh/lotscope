@@ -2,6 +2,7 @@ _CHECKLIST_CATEGORY_STATE: dict[str, dict[str, str]] = {
     "hbg": {
         "li": "no_data_source",
         "flood": "pending_load",
+        "liens_taxes": "pending_load",
     },
 }
 
@@ -14,7 +15,22 @@ _RTKL_FILED: frozenset[tuple[str, str]] = frozenset()
 
 _PENDING_DETAIL: dict[tuple[str, str], str] = {
     ("hbg", "flood"): "FEMA flood-zone data is being loaded for Harrisburg.",
+    ("hbg", "liens_taxes"): (
+        "Dauphin County publishes delinquency through its annual tax-sale lists; "
+        "the 2026 upset-sale list publishes in August. Delinquency is not yet loaded "
+        "for Harrisburg, so this is not a clean-title confirmation."
+    ),
 }
+
+# Markets whose risk pillar covers only a subset of the feeds Philadelphia has;
+# the display carries this honest qualifier.
+_RISK_COVERAGE_NOTE: dict[str, str] = {
+    "hbg": "based on available Harrisburg sources",
+}
+
+
+def risk_coverage_note(market_code: str) -> str | None:
+    return _RISK_COVERAGE_NOTE.get(market_code)
 
 # Categories whose Philadelphia clear-detail wording references concepts a market
 # lacks (e.g. RCO is a Philadelphia Title-14 construct) get a market-neutral clear detail.

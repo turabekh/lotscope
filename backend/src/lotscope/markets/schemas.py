@@ -16,3 +16,4 @@ class MarketInfo(BaseModel):
     launch_status: str
     coverage_note: str | None
     hidden_surfaces: list[str] = []
+    risk_coverage_note: str | None = None
