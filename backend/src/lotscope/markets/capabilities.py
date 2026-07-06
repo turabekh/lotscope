@@ -9,6 +9,9 @@ _NO_SOURCE_DETAIL: dict[tuple[str, str], str] = {
     ("hbg", "li"): "Harrisburg does not publish a code-enforcement / violations dataset.",
 }
 
+# Flip an entry on once the PA Right-to-Know Law request is filed for that market/category.
+_RTKL_FILED: frozenset[tuple[str, str]] = frozenset()
+
 _PENDING_DETAIL: dict[tuple[str, str], str] = {
     ("hbg", "flood"): "FEMA flood-zone data is being loaded for Harrisburg.",
 }
@@ -31,7 +34,10 @@ def checklist_state_detail(market_code: str, category: str, state: str) -> str:
         if state == "no_data_source"
         else "This dataset is being loaded for this market."
     )
-    return table.get((market_code, category), default)
+    detail = table.get((market_code, category), default)
+    if state == "no_data_source" and (market_code, category) in _RTKL_FILED:
+        detail += " Records requested under the PA Right-to-Know Law."
+    return detail
 
 
 def clear_detail_override(market_code: str, category: str) -> str | None:
