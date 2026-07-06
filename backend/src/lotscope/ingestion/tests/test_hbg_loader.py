@@ -197,3 +197,22 @@ def test_public_owner_matches_authorities_not_private_llcs() -> None:
     assert not is_hbg_public_owner("MIDTOWN REDEVELOPMENT LLC")
     assert not is_hbg_public_owner("SMITH, JOHN")
     assert not is_hbg_public_owner(None)
+
+
+def test_geo_feature_row_maps_name_and_market() -> None:
+    from lotscope.ingestion.loaders.hbg import _geo_feature_row
+
+    feature = ArcGisFeature(id=3, geometry=_GEOMETRY_4326, properties={"District": "Shipoke"})
+    row = _geo_feature_row(feature, "Shipoke", "city_municipal_hd")
+    assert row is not None
+    assert row["external_id"] == "hbg:3"
+    assert row["name"] == "Shipoke"
+    assert row["market_code"] == "hbg"
+    assert row["source"] == "city_municipal_hd"
+
+
+def test_geo_feature_row_skips_without_name_or_id() -> None:
+    from lotscope.ingestion.loaders.hbg import _geo_feature_row
+
+    assert _geo_feature_row(ArcGisFeature(id=None, geometry=_GEOMETRY_4326), "X", "s") is None
+    assert _geo_feature_row(ArcGisFeature(id=1, geometry=_GEOMETRY_4326), None, "s") is None

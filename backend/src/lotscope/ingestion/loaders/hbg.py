@@ -176,9 +176,7 @@ async def load_hbg_parcels(
 
 
 async def _hbg_local_keys(session: AsyncSession) -> set[str]:
-    result = await session.execute(
-        select(Parcel.local_key).where(Parcel.market_code == _MARKET)
-    )
+    result = await session.execute(select(Parcel.local_key).where(Parcel.market_code == _MARKET))
     return set(result.scalars())
 
 
@@ -265,9 +263,7 @@ async def load_hbg_zoning_districts(
         where=_ZONING_MUNI_WHERE,
         page_size=page_size,
     ):
-        rows = [
-            row for row in (_district_row(f) for f in features) if row is not None
-        ]
+        rows = [row for row in (_district_row(f) for f in features) if row is not None]
         if rows:
             await upsert(
                 session,
@@ -432,3 +428,92 @@ async def derive_hbg_public_ownership(session: AsyncSession) -> int:
         row_count=public,
     )
     return public
+
+
+HBG_HISTORIC_DATASET = "city_municipal_hd"
+HBG_NEIGHBORHOODS_DATASET = "city_neighborhoods"
+_CITY_ARCGIS = "https://services5.arcgis.com/9n3LUAMi3B692MBL/arcgis/rest/services"
+
+
+def _geo_feature_row(
+    feature: ArcGisFeature, name: str | None, source: str
+) -> dict[str, Any] | None:
+    if feature.geometry is None or feature.id is None or not name:
+        return None
+    geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
+    return {
+        "external_id": f"{_MARKET}:{feature.id}",
+        "name": name,
+        "market_code": _MARKET,
+        "geom_4326": geom_4326,
+        "geom_local": func.ST_Transform(geom_4326, _LOCAL_SRID),
+        "source": source,
+    }
+
+
+async def load_hbg_historic(session: AsyncSession, arcgis: ArcGisClient) -> int:
+    from lotscope.historic.models import HistoricDistrict
+
+    layer = f"{_CITY_ARCGIS}/MunicipalHD/FeatureServer/0/query"
+    total = 0
+    async for features in arcgis.paginate(layer, page_size=1000):
+        rows = [
+            row
+            for f in features
+            if (
+                row := _geo_feature_row(f, _txt(f.properties.get("District")), HBG_HISTORIC_DATASET)
+            )
+        ]
+        if rows:
+            await upsert(
+                session,
+                HistoricDistrict,
+                rows,
+                index_elements=["external_id"],
+                update_columns=["name", "market_code", "geom_4326", "geom_local", "source"],
+            )
+            total += len(rows)
+    await record_freshness(
+        session,
+        HBG_HISTORIC_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
+    )
+    return total
+
+
+async def load_hbg_neighborhoods(session: AsyncSession, arcgis: ArcGisClient) -> int:
+    from lotscope.neighborhoods.models import Neighborhood
+
+    layer = f"{_CITY_ARCGIS}/Neighborhood_Associations/FeatureServer/0/query"
+    total = 0
+    async for features in arcgis.paginate(layer, page_size=1000):
+        rows = [
+            row
+            for f in features
+            if (
+                row := _geo_feature_row(
+                    f, _txt(f.properties.get("Name")), HBG_NEIGHBORHOODS_DATASET
+                )
+            )
+        ]
+        if rows:
+            await upsert(
+                session,
+                Neighborhood,
+                rows,
+                index_elements=["external_id"],
+                update_columns=["name", "market_code", "geom_4326", "geom_local", "source"],
+            )
+            total += len(rows)
+    await record_freshness(
+        session,
+        HBG_NEIGHBORHOODS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
+    )
+    return total
