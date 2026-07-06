@@ -41,6 +41,9 @@ seed: ## Seed reference data (Title 14 zoning standards)
 recompute-verdicts: ## Recompute the Parcel Verdict for every parcel
 	cd $(BACKEND) && uv run python -m lotscope.verdict.jobs
 
+graduate-hbg-zoning: ## Lift the Harrisburg provisional zoning cap (run ONLY after reviewer sign-off): make graduate-hbg-zoning CONFIRM=--confirm
+	cd $(BACKEND) && uv run python scripts/graduate_hbg_zoning.py $(CONFIRM)
+
 recompute-distress: ## Recompute the motivated-seller distress index for every parcel
 	cd $(BACKEND) && uv run python -m lotscope.distress.jobs
 
