@@ -28,6 +28,12 @@ _MARKET_OVERRIDES_SQL = text(
 )
 
 
+def assumptions_source(overrides: object) -> str:
+    if isinstance(overrides, dict) and bool(overrides.get("calibrated")):
+        return "calibrated"
+    return "market_default"
+
+
 def _as_float(value: Any) -> float | None:
     return float(value) if value is not None else None
 
@@ -247,7 +253,7 @@ async def build_deal(
 
     return DealResult(
         parcel_number=parcel_number,
-        assumptions_source="calibrated" if overrides else "market_default",
+        assumptions_source=assumptions_source(overrides),
         units=units,
         arv=analysis.arv,
         per_unit_value=analysis.per_unit_value,
