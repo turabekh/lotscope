@@ -447,12 +447,59 @@ async def ingest_pgh_foreclosures(session_factory: SessionFactory, settings: Set
         )
 
 
+async def _run_pgh_ckan(
+    session_factory: SessionFactory,
+    settings: Settings,
+    *,
+    resource_key: str,
+    dataset: str,
+    loader: Any,
+) -> int:
+    config = await _pgh_source_config(session_factory)
+    base_url = str(config["ckan_base_url"])
+    resource_id = str(config[resource_key])
+    async with CkanDatastoreClient(settings, base_url) as ckan:
+        return await run_loader(
+            session_factory,
+            lambda session: loader(session, ckan, resource_id=resource_id),
+            dataset=dataset,
+            market_code="pgh",
+        )
+
+
+async def ingest_pgh_violations(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_pgh_ckan(
+        session_factory, settings,
+        resource_key="violations_resource_id",
+        dataset=pgh.PGH_VIOLATIONS_DATASET, loader=pgh.load_pgh_violations,
+    )
+
+
+async def ingest_pgh_city_owned(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_pgh_ckan(
+        session_factory, settings,
+        resource_key="city_owned_resource_id",
+        dataset=pgh.PGH_CITY_OWNED_DATASET, loader=pgh.load_pgh_city_owned,
+    )
+
+
+async def ingest_pgh_condemned(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_pgh_ckan(
+        session_factory, settings,
+        resource_key="condemned_resource_id",
+        dataset=pgh.PGH_CONDEMNED_DATASET, loader=pgh.load_pgh_condemned,
+    )
+
+
 _PGH_JOBS: dict[str, Job] = {
     "parcels": ingest_pgh_parcels,
     "geometry": ingest_pgh_geometry,
     "sales": ingest_pgh_sales,
     "liens": ingest_pgh_liens,
     "foreclosures": ingest_pgh_foreclosures,
+    "violations": ingest_pgh_violations,
+    "city_owned": ingest_pgh_city_owned,
+    "condemned": ingest_pgh_condemned,
 }
 
 

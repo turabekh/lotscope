@@ -300,6 +300,21 @@ async function toggleSave(): Promise<void> {
             </q-tooltip>
           </q-chip>
           <q-chip
+            v-if="detail.condemned_status"
+            dense
+            square
+            color="deep-orange-8"
+            text-color="white"
+            icon="report"
+          >
+            Condemned / dead-end
+            <q-tooltip max-width="260px" anchor="top middle" self="bottom middle">
+              On the city's Condemned &amp; Dead-End Properties list (PLI). "Dead-end" means the
+              city cannot locate the owner. An unscored fact for now — it does not affect the risk
+              score at this version. Known only for listed parcels, not citywide.
+            </q-tooltip>
+          </q-chip>
+          <q-chip
             v-if="isDeveloped"
             dense
             square

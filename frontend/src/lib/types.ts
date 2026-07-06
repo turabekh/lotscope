@@ -20,6 +20,7 @@ export interface ParcelDetail {
   assessment_ratio: number | null
   lot_area_sqft: number | null
   lot_area_source: string | null
+  condemned_status: string | null
   frontage_ft: number | null
   depth_ft: number | null
   is_vacant: boolean | null

@@ -372,3 +372,155 @@ async def load_pgh_foreclosures(
         market_code=_MARKET, row_count=len(rows),
     )
     return len(rows)
+
+
+PGH_VIOLATIONS_DATASET = "pgh_violations"
+_VIOLATION_WHERE = (
+    "\"parcel_id\" IS NOT NULL "
+    "AND \"violation_description\" IS NOT NULL AND \"violation_description\" <> 'None'"
+)
+_VIOLATION_COLUMNS = (
+    '"_id"',
+    '"casefile_number"',
+    '"parcel_id"',
+    '"status"',
+    '"investigation_date"',
+    '"violation_description"',
+)
+
+
+def _violation_status(value: Any) -> str | None:
+    text = _txt(value)
+    if text is None:
+        return None
+    return "OPEN" if text.strip().lower() in ("open", "active", "in violation") else "CLOSED"
+
+
+def _violation_row(record: dict[str, Any], known: set[str]) -> dict[str, Any] | None:
+    local = get_normalizer(_MARKET).normalize_local_key(record.get("parcel_id"))
+    external = _txt(record.get("casefile_number"))
+    if local is None or external is None:
+        return None
+    parcel_number = f"{_MARKET}:{local}"
+    if parcel_number not in known:
+        return None
+    return {
+        "parcel_number": parcel_number,
+        "external_id": external,
+        "event_type": "violation",
+        "status": _violation_status(record.get("status")),
+        "event_date": _date(record.get("investigation_date")),
+        "description": _txt(record.get("violation_description")),
+        "source": PGH_VIOLATIONS_DATASET,
+    }
+
+
+async def load_pgh_violations(
+    session: AsyncSession,
+    ckan: CkanDatastoreClient,
+    *,
+    resource_id: str,
+    page_size: int = 20000,
+) -> int:
+    from lotscope.risk.models import LiEvent
+
+    known = await _pgh_known_parcels(session)
+    total = 0
+    async for records in ckan.paginate_by_key(
+        resource_id=resource_id,
+        columns=_VIOLATION_COLUMNS,
+        key_column='"_id"',
+        page_size=page_size,
+        where=_VIOLATION_WHERE,
+    ):
+        rows = [row for row in (_violation_row(r, known) for r in records) if row is not None]
+        if rows:
+            await upsert(
+                session,
+                LiEvent,
+                rows,
+                index_elements=["event_type", "external_id"],
+                update_columns=["parcel_number", "status", "event_date", "description", "source"],
+            )
+            total += len(rows)
+    await record_freshness(
+        session, PGH_VIOLATIONS_DATASET, status="success", success=True,
+        market_code=_MARKET, row_count=total,
+    )
+    return total
+
+
+PGH_CITY_OWNED_DATASET = "pgh_city_owned"
+PGH_CONDEMNED_DATASET = "pgh_condemned"
+
+
+async def load_pgh_city_owned(
+    session: AsyncSession,
+    ckan: CkanDatastoreClient,
+    *,
+    resource_id: str,
+    page_size: int = 20000,
+) -> int:
+    from sqlalchemy import update
+
+    known = await _pgh_known_parcels(session)
+    normalizer = get_normalizer(_MARKET)
+    parcels: set[str] = set()
+    async for records in ckan.paginate_by_key(
+        resource_id=resource_id, columns=('"_id"', '"pin"'), key_column='"_id"', page_size=page_size
+    ):
+        for record in records:
+            local = normalizer.normalize_local_key(record.get("pin"))
+            if local is None:
+                continue
+            parcel_number = f"{_MARKET}:{local}"
+            if parcel_number in known:
+                parcels.add(parcel_number)
+    if parcels:
+        await session.execute(
+            update(Parcel).where(Parcel.parcel_number.in_(parcels)).values(is_city_owned=True)
+        )
+    await record_freshness(
+        session, PGH_CITY_OWNED_DATASET, status="success", success=True,
+        market_code=_MARKET, row_count=len(parcels),
+    )
+    return len(parcels)
+
+
+async def load_pgh_condemned(
+    session: AsyncSession,
+    ckan: CkanDatastoreClient,
+    *,
+    resource_id: str,
+    page_size: int = 20000,
+) -> int:
+    from sqlalchemy import update
+
+    known = await _pgh_known_parcels(session)
+    normalizer = get_normalizer(_MARKET)
+    parcels: set[str] = set()
+    async for records in ckan.paginate_by_key(
+        resource_id=resource_id,
+        columns=('"_id"', '"parcel_id"', '"inspection_status"'),
+        key_column='"_id"',
+        page_size=page_size,
+        where="\"inspection_status\" ILIKE 'Active'",
+    ):
+        for record in records:
+            local = normalizer.normalize_local_key(record.get("parcel_id"))
+            if local is None:
+                continue
+            parcel_number = f"{_MARKET}:{local}"
+            if parcel_number in known:
+                parcels.add(parcel_number)
+    if parcels:
+        await session.execute(
+            update(Parcel)
+            .where(Parcel.parcel_number.in_(parcels))
+            .values(condemned_status="condemned_or_dead_end")
+        )
+    await record_freshness(
+        session, PGH_CONDEMNED_DATASET, status="success", success=True,
+        market_code=_MARKET, row_count=len(parcels),
+    )
+    return len(parcels)

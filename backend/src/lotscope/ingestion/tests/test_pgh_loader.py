@@ -74,3 +74,34 @@ def test_pgh_hidden_surfaces_owner_and_forced_sale_off() -> None:
     assert "owner_portfolio" in hidden  # Ordinance 3478-07
     assert "zba_variance" in hidden
     assert "sheriff_sales" in hidden  # hidden until foreclosure calendar exists
+
+
+def test_violation_row_maps_and_filters() -> None:
+    from lotscope.ingestion.loaders.pgh import _violation_row
+
+    known = {"pgh:0042M00227000000"}
+    row = _violation_row(
+        {"parcel_id": "0042M00227000000", "casefile_number": "CF-2026-1",
+         "status": "In Violation", "investigation_date": "2026-01-10",
+         "violation_description": "Overgrowth"},
+        known,
+    )
+    assert row is not None
+    assert row["event_type"] == "violation"
+    assert row["status"] == "OPEN"
+    assert row["external_id"] == "CF-2026-1"
+
+
+def test_violation_row_skips_unknown_parcel() -> None:
+    from lotscope.ingestion.loaders.pgh import _violation_row
+
+    assert _violation_row({"parcel_id": "0042M00227000000", "casefile_number": "X"}, set()) is None
+
+
+def test_condemned_status_is_not_read_by_risk_scoring() -> None:
+    # condemned/dead-end is an unscored fact — the risk service source must not reference it
+    import inspect
+
+    from lotscope.risk import service
+
+    assert "condemned_status" not in inspect.getsource(service)
