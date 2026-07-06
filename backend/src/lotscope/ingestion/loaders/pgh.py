@@ -587,6 +587,60 @@ async def load_pgh_zoning_districts(
     return total
 
 
+PGH_NEIGHBORHOODS_DATASET = "pgh_neighborhoods"
+_NEIGHBORHOOD_COLUMNS = ('"_id"', '"hood"', 'encode("dataspatial_wkb", \'hex\') AS wkb_hex')
+
+
+def _neighborhood_row(record: dict[str, Any]) -> dict[str, Any] | None:
+    name = _txt(record.get("hood"))
+    external = _txt(record.get("_id"))
+    wkb_hex = _txt(record.get("wkb_hex"))
+    if name is None or external is None or wkb_hex is None:
+        return None
+    geom_4326 = func.ST_SetSRID(func.ST_GeomFromWKB(func.decode(wkb_hex, "hex")), 4326)
+    return {
+        "external_id": f"{_MARKET}:{external}",
+        "name": name,
+        "market_code": _MARKET,
+        "geom_4326": geom_4326,
+        "geom_local": func.ST_Transform(geom_4326, _LOCAL_SRID),
+        "source": PGH_NEIGHBORHOODS_DATASET,
+    }
+
+
+async def load_pgh_neighborhoods(
+    session: AsyncSession,
+    ckan: CkanDatastoreClient,
+    *,
+    resource_id: str,
+    page_size: int = 200,
+) -> int:
+    from lotscope.neighborhoods.models import Neighborhood
+
+    total = 0
+    async for records in ckan.paginate_by_key(
+        resource_id=resource_id,
+        columns=_NEIGHBORHOOD_COLUMNS,
+        key_column='"_id"',
+        page_size=page_size,
+    ):
+        rows = [row for row in (_neighborhood_row(r) for r in records) if row is not None]
+        if rows:
+            await upsert(
+                session,
+                Neighborhood,
+                rows,
+                index_elements=["external_id"],
+                update_columns=["name", "market_code", "geom_4326", "geom_local", "source"],
+            )
+            total += len(rows)
+    await record_freshness(
+        session, PGH_NEIGHBORHOODS_DATASET, status="success", success=True,
+        market_code=_MARKET, row_count=total,
+    )
+    return total
+
+
 PGH_VACANCY_DATASET = "pgh_vacancy"
 
 _VACANCY_UPDATE = text(

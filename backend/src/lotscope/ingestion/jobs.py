@@ -499,6 +499,14 @@ async def ingest_pgh_zoning(session_factory: SessionFactory, settings: Settings)
     )
 
 
+async def ingest_pgh_neighborhoods(session_factory: SessionFactory, settings: Settings) -> int:
+    return await _run_pgh_ckan(
+        session_factory, settings,
+        resource_key="neighborhoods_resource_id",
+        dataset=pgh.PGH_NEIGHBORHOODS_DATASET, loader=pgh.load_pgh_neighborhoods,
+    )
+
+
 async def ingest_pgh_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
     return await run_loader(
         session_factory,
@@ -519,6 +527,7 @@ _PGH_JOBS: dict[str, Job] = {
     "condemned": ingest_pgh_condemned,
     "zoning": ingest_pgh_zoning,
     "vacancy": ingest_pgh_vacancy,
+    "neighborhoods": ingest_pgh_neighborhoods,
 }
 
 

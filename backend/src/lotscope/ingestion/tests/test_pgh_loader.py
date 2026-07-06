@@ -144,3 +144,24 @@ def test_district_row_skips_without_code_or_geom() -> None:
 
     assert _district_row({"_id": "1", "zon_new": None, "geometry": "POLYGON(())"}) is None
     assert _district_row({"_id": "1", "zon_new": "R1D-M", "geometry": None}) is None
+
+
+def test_neighborhood_row_maps_name_and_geometry() -> None:
+    from lotscope.ingestion.loaders.pgh import _neighborhood_row
+
+    row = _neighborhood_row(
+        {"_id": "64", "hood": "Point Breeze North", "wkb_hex": "0101000000000000000000f03f0000000000000040"}
+    )
+    assert row is not None
+    assert row["name"] == "Point Breeze North"
+    assert row["external_id"] == "pgh:64"
+    assert row["market_code"] == "pgh"
+    assert "geom_local" in row
+    assert "geom_4326" in row
+
+
+def test_neighborhood_row_skips_without_name_or_geom() -> None:
+    from lotscope.ingestion.loaders.pgh import _neighborhood_row
+
+    assert _neighborhood_row({"_id": "1", "hood": None, "wkb_hex": "00"}) is None
+    assert _neighborhood_row({"_id": "1", "hood": "Bloomfield", "wkb_hex": None}) is None

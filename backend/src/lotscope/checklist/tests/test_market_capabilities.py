@@ -44,6 +44,18 @@ def test_available_category_with_no_flags_still_passes() -> None:
     assert item.availability == "available"
 
 
+def test_pgh_flood_is_pending_not_false_clean() -> None:
+    assert checklist_category_state("pgh", "flood") == "pending_load"
+    assert checklist_category_state("pgh", "liens_taxes") == "available"
+    code, category, flag_codes, clear = next(c for c in _RISK_CATEGORIES if c[0] == "flood")
+    detail = checklist_state_detail("pgh", "flood", "pending_load")
+    item = _risk_item(
+        code, category, flag_codes, clear, [], availability="pending_load", state_detail=detail
+    )
+    assert item.status == "info"
+    assert "not in a mapped fema flood zone" not in item.detail.lower()
+
+
 def test_forced_sale_flag_relabelled_retsl_for_hbg() -> None:
     flag = RiskFlag("sheriff_sale", "high", "Sheriff-sale exposure", "Parcel is flagged.", "tax")
     phl = _flag_schema(flag, "phl")
