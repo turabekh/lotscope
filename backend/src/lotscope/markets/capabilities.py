@@ -6,6 +6,8 @@ _CHECKLIST_CATEGORY_STATE: dict[str, dict[str, str]] = {
     },
     "pgh": {
         "flood": "pending_load",
+        "access": "pending_load",
+        "overlays": "pending_load",
     },
 }
 
@@ -20,6 +22,10 @@ _PENDING_DETAIL: dict[tuple[str, str], str] = {
     ("hbg", "flood"): "FEMA flood-zone data is being loaded for Harrisburg.",
     ("pgh", "flood"): "FEMA flood-zone data is not yet loaded for Pittsburgh; "
     "flood exposure is unconfirmed for this parcel.",
+    ("pgh", "access"): "Street-centerline data is not yet loaded for Pittsburgh; "
+    "street frontage and landlocked status are unconfirmed for this parcel.",
+    ("pgh", "overlays"): "Historic-district and zoning-overlay data is not yet loaded for "
+    "Pittsburgh; extra design-review requirements are unconfirmed for this parcel.",
     ("hbg", "liens_taxes"): (
         "Dauphin County publishes delinquency through its annual tax-sale lists; "
         "the 2026 upset-sale list publishes in August. Delinquency is not yet loaded "
