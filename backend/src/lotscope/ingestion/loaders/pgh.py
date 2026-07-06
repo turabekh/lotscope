@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from sqlalchemy import func
@@ -307,6 +308,67 @@ async def load_pgh_liens(
         )
     await record_freshness(
         session, PGH_LIENS_DATASET, status="success", success=True,
+        market_code=_MARKET, row_count=len(rows),
+    )
+    return len(rows)
+
+
+PGH_FORECLOSURES_DATASET = "pgh_foreclosures"
+_FORECLOSURE_YEARS = 3
+_FORECLOSURE_COLUMNS = ('"_id"', '"pin"', '"filing_date"')
+
+
+async def load_pgh_foreclosures(
+    session: AsyncSession,
+    ckan: CkanDatastoreClient,
+    *,
+    resource_id: str,
+    as_of: "date",
+    page_size: int = 20000,
+) -> int:
+    from datetime import date as _date_t
+
+    from lotscope.risk.models import TaxStatus
+
+    known = await _pgh_known_parcels(session)
+    normalizer = get_normalizer(_MARKET)
+    cutoff = _date_t(as_of.year - _FORECLOSURE_YEARS, as_of.month, as_of.day)
+    where = f"\"filing_date\" >= '{cutoff.isoformat()}'"
+    flagged: dict[str, date] = {}
+    async for records in ckan.paginate_by_key(
+        resource_id=resource_id,
+        columns=_FORECLOSURE_COLUMNS,
+        key_column='"_id"',
+        page_size=page_size,
+        where=where,
+    ):
+        for record in records:
+            local = normalizer.normalize_local_key(record.get("pin"))
+            if local is None:
+                continue
+            parcel_number = f"{_MARKET}:{local}"
+            if parcel_number not in known:
+                continue
+            filed = _date(record.get("filing_date"))
+            if filed is not None:
+                prior = flagged.get(parcel_number)
+                if prior is None or filed > prior:
+                    flagged[parcel_number] = filed
+
+    rows = [
+        {"parcel_number": pn, "in_sheriff_sale": True, "as_of_date": filed}
+        for pn, filed in flagged.items()
+    ]
+    if rows:
+        await upsert(
+            session,
+            TaxStatus,
+            rows,
+            index_elements=["parcel_number"],
+            update_columns=["in_sheriff_sale", "as_of_date"],
+        )
+    await record_freshness(
+        session, PGH_FORECLOSURES_DATASET, status="success", success=True,
         market_code=_MARKET, row_count=len(rows),
     )
     return len(rows)

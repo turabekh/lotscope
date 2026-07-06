@@ -65,3 +65,12 @@ def test_pgh_forced_sale_named_treasurers_sale() -> None:
     assert forced_sale_surface_label("pgh") == "Treasurer's sale"
     assert forced_sale_label("pgh") == "Treasurer's sale"
     assert forced_sale_surface_label("phl") == "Sheriff sales"
+
+
+def test_pgh_hidden_surfaces_owner_and_forced_sale_off() -> None:
+    from lotscope.markets.capabilities import hidden_surfaces
+
+    hidden = hidden_surfaces("pgh")
+    assert "owner_portfolio" in hidden  # Ordinance 3478-07
+    assert "zba_variance" in hidden
+    assert "sheriff_sales" in hidden  # hidden until foreclosure calendar exists

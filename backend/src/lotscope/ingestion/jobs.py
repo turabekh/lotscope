@@ -429,11 +429,30 @@ async def ingest_pgh_liens(session_factory: SessionFactory, settings: Settings) 
         )
 
 
+async def ingest_pgh_foreclosures(session_factory: SessionFactory, settings: Settings) -> int:
+    from datetime import UTC, datetime
+
+    config = await _pgh_source_config(session_factory)
+    base_url = str(config["ckan_base_url"])
+    resource_id = str(config["foreclosures_resource_id"])
+    as_of = datetime.now(UTC).date()
+    async with CkanDatastoreClient(settings, base_url) as ckan:
+        return await run_loader(
+            session_factory,
+            lambda session: pgh.load_pgh_foreclosures(
+                session, ckan, resource_id=resource_id, as_of=as_of
+            ),
+            dataset=pgh.PGH_FORECLOSURES_DATASET,
+            market_code="pgh",
+        )
+
+
 _PGH_JOBS: dict[str, Job] = {
     "parcels": ingest_pgh_parcels,
     "geometry": ingest_pgh_geometry,
     "sales": ingest_pgh_sales,
     "liens": ingest_pgh_liens,
+    "foreclosures": ingest_pgh_foreclosures,
 }
 
 
