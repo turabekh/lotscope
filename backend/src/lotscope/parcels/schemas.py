@@ -25,6 +25,7 @@ class ParcelDetail(BaseModel):
     exempt_building: float | None
     assessment_year: int | None
     lot_area_sqft: float | None
+    lot_area_source: str | None = None
     frontage_ft: float | None
     depth_ft: float | None
     is_vacant: bool | None

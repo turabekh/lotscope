@@ -78,3 +78,11 @@ A Harrisburg snapshot that says "Philadelphia" is the classic Wave-0 bug. Every 
 - **Zoning overlays / RCO panels** — Philadelphia concepts; absent for hbg.
 - **Checklist "L&I & demolition" category** (`checklist/logic.py`) — must show *no data source for this market*.
 - Driven by a **market-capabilities config**, not scattered `if market == …` conditionals.
+
+## Lot area — source & the DC_Parcels acres variance (field-test 2026-07-06)
+
+Harrisburg `parcel.lot_area_sqft` is **polygon-derived** (`ST_Area(geom_local)`), recorded as `lot_area_source = 'geometry'`. Philadelphia uses OPA's deeded `total_area` (`lot_area_source = 'extract'`).
+
+We evaluated preferring the extract's stated area for hbg and **rejected it**: the only area field in the GIS extract, `DC_Parcels.acres`, is rounded to **2 decimals** — for small urban lots this is coarser than the polygon by up to ~50% (sampled 14 small lots; 11 differed >5% from the polygon; worst case PID 02-017-016: acres 0.01→436 sqft vs polygon 852 sqft). Preferring it would degrade lot area on exactly the infill parcels the product targets.
+
+**Field-test parcel 02-021-052 variance (recorded, not chased):** polygon `ST_Area` = **2,484 sqft** (retained); `DC_Parcels.acres` 0.05 → **2,178 sqft** (rounded, less precise); the county's third-party figure of **2,295 sqft** comes from the Dauphin **CAMA/assessment** system, which the GIS extract does not expose. If a precise CAMA deeded-area export becomes available, prefer it then (and set `lot_area_source` accordingly).

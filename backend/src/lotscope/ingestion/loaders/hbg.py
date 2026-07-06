@@ -40,6 +40,7 @@ _UPDATE_COLUMNS = [
     "land_value",
     "improvement_value",
     "lot_area_sqft",
+    "lot_area_source",
     "geom_local",
     "geom_4326",
 ]
@@ -120,6 +121,7 @@ def _parcel_row(feature: ArcGisFeature, land_use_names: dict[str, str]) -> dict[
         "land_value": land,
         "improvement_value": building,
         "lot_area_sqft": func.ST_Area(geom_local),
+        "lot_area_source": "geometry",
         "geom_local": geom_local,
         "geom_4326": func.ST_Transform(geom_local, 4326),
     }

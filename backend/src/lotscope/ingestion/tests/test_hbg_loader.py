@@ -216,3 +216,9 @@ def test_geo_feature_row_skips_without_name_or_id() -> None:
 
     assert _geo_feature_row(ArcGisFeature(id=None, geometry=_GEOMETRY_4326), "X", "s") is None
     assert _geo_feature_row(ArcGisFeature(id=1, geometry=_GEOMETRY_4326), None, "s") is None
+
+
+def test_hbg_parcel_row_records_geometry_lot_area_source() -> None:
+    from lotscope.ingestion.loaders.hbg import _UPDATE_COLUMNS
+
+    assert "lot_area_source" in _UPDATE_COLUMNS

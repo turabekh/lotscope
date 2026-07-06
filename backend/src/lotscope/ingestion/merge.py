@@ -154,10 +154,10 @@ _UPSERT_OPA_SQL = text(
     "INSERT INTO parcel "
     "(parcel_number, address, zip_code, owner, mailing_address, land_use, base_zoning_code, "
     "market_value, land_value, improvement_value, exempt_land, exempt_building, "
-    "lot_area_sqft, frontage_ft, depth_ft, source, updated_at) "
+    "lot_area_sqft, lot_area_source, frontage_ft, depth_ft, source, updated_at) "
     "SELECT parcel_number, address, zip_code, owner, mailing_address, land_use, base_zoning_code, "
     "market_value, land_value, improvement_value, exempt_land, exempt_building, "
-    "lot_area_sqft, frontage_ft, depth_ft, :source, now() "
+    "lot_area_sqft, 'extract', frontage_ft, depth_ft, :source, now() "
     "FROM staging.opa WHERE ingest_run_id = :ingest_run_id "
     "ON CONFLICT (parcel_number) DO UPDATE SET "
     "address = excluded.address, zip_code = excluded.zip_code, owner = excluded.owner, "
@@ -165,8 +165,8 @@ _UPSERT_OPA_SQL = text(
     "base_zoning_code = excluded.base_zoning_code, market_value = excluded.market_value, "
     "land_value = excluded.land_value, improvement_value = excluded.improvement_value, "
     "exempt_land = excluded.exempt_land, exempt_building = excluded.exempt_building, "
-    "lot_area_sqft = excluded.lot_area_sqft, frontage_ft = excluded.frontage_ft, "
-    "depth_ft = excluded.depth_ft, updated_at = now()"
+    "lot_area_sqft = excluded.lot_area_sqft, lot_area_source = excluded.lot_area_source, "
+    "frontage_ft = excluded.frontage_ft, depth_ft = excluded.depth_ft, updated_at = now()"
 )
 
 
