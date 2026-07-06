@@ -221,13 +221,14 @@ _SHERIFF_SELECT = (
 async def list_sheriff_sales(
     session: AsyncSession,
     *,
+    market_code: str = "phl",
     date_from: date | None = None,
     date_to: date | None = None,
     zip_code: str | None = None,
     limit: int = 200,
 ) -> SheriffSaleCalendar:
-    conditions: list[str] = []
-    params: dict[str, Any] = {"limit": limit}
+    conditions: list[str] = ["p.market_code = :market_code"]
+    params: dict[str, Any] = {"limit": limit, "market_code": market_code}
     if date_from is not None:
         conditions.append("ss.sale_date >= :date_from")
         params["date_from"] = date_from

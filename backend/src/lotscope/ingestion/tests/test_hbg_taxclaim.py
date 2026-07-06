@@ -90,3 +90,25 @@ async def test_load_hbg_tax_claim_flags_forced_sale_and_labels_freshness(
     fresh = await db_session.get(DatasetFreshness, ("hbg", "dc_tax_claim"))
     assert fresh is not None
     assert fresh.detail == "as of 2026-08-15"
+
+
+def test_repository_rows_extracted_for_public_inventory() -> None:
+    from lotscope.ingestion.loaders.hbg_taxclaim import (
+        classify_tax_claim_row,
+        repository_parcel_numbers,
+    )
+
+    rows = [
+        {"parcel_id": "01-002-003", "sale_type": "repository", "amount_due": "$0"},
+        {"parcel_id": "04-038-028", "sale_type": "upset", "amount_due": "$5,000"},
+    ]
+    classified = [c for r in rows if (c := classify_tax_claim_row(r)) is not None]
+    repo = repository_parcel_numbers(classified)
+    assert repo == ["hbg:01-002-003"]
+
+
+def test_forced_sale_surface_label_market_aware() -> None:
+    from lotscope.markets.capabilities import forced_sale_surface_label
+
+    assert forced_sale_surface_label("phl") == "Sheriff sales"
+    assert forced_sale_surface_label("hbg") == "Tax sales"

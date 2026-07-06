@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.extract import ExtractClient
@@ -40,6 +40,10 @@ def classify_tax_claim_row(row: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def repository_parcel_numbers(classified: list[dict[str, Any]]) -> list[str]:
+    return [c["parcel_number"] for c in classified if c["sale_type"] == "repository"]
+
+
 def tax_status_row(record: dict[str, Any], list_date: date) -> dict[str, Any] | None:
     if record["sale_type"] not in FORCED_SALE_TYPES:
         return None
@@ -75,6 +79,13 @@ async def load_hbg_tax_claim(
             tax_rows,
             index_elements=["parcel_number"],
             update_columns=["is_delinquent", "in_sheriff_sale", "total_due", "as_of_date"],
+        )
+    repository = repository_parcel_numbers(classified)
+    if repository:
+        await session.execute(
+            update(Parcel)
+            .where(Parcel.parcel_number.in_(repository))
+            .values(is_city_owned=True)
         )
     await record_freshness(
         session,

@@ -21,6 +21,7 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 async def sheriff_sales(
     session: SessionDep,
     current_user: CurrentUserDep,
+    market: Annotated[str, Query()] = "phl",
     date_from: Annotated[date | None, Query(alias="from")] = None,
     date_to: Annotated[date | None, Query(alias="to")] = None,
     zip_code: Annotated[str | None, Query(alias="zip")] = None,
@@ -31,5 +32,10 @@ async def sheriff_sales(
             "The Sheriff-sale calendar is a Pro feature — upgrade to see upcoming auctions."
         )
     return await list_sheriff_sales(
-        session, date_from=date_from, date_to=date_to, zip_code=zip_code, limit=limit
+        session,
+        market_code=market,
+        date_from=date_from,
+        date_to=date_to,
+        zip_code=zip_code,
+        limit=limit,
     )
