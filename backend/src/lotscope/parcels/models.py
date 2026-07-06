@@ -64,6 +64,7 @@ class Parcel(Base, TimestampMixin, IngestionMixin):
 
     lot_area_sqft: Mapped[float | None] = mapped_column(Numeric(14, 2))
     lot_area_source: Mapped[str | None] = mapped_column(String(20))
+    condemned_status: Mapped[str | None] = mapped_column(String(30))
     frontage_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
     depth_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
 

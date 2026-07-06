@@ -32,6 +32,7 @@ function makeDetail(overrides: Partial<ParcelDetail>): ParcelDetail {
     assessment_ratio: 1.0,
     lot_area_sqft: 1342,
     lot_area_source: 'extract',
+    condemned_status: null,
     frontage_ft: 20,
     depth_ft: 58,
     is_vacant: null,
