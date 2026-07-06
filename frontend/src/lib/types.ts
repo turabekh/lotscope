@@ -28,6 +28,7 @@ export interface ParcelDetail {
 }
 
 export type ChecklistStatus = 'pass' | 'warn' | 'fail' | 'info'
+export type ChecklistAvailability = 'available' | 'no_data_source' | 'pending_load'
 
 export interface ChecklistItem {
   code: string
@@ -35,6 +36,7 @@ export interface ChecklistItem {
   status: ChecklistStatus
   detail: string
   source: string | null
+  availability?: ChecklistAvailability
 }
 
 export interface ChecklistSummary {

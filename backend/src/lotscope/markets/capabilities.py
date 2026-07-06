@@ -1,6 +1,45 @@
-_UNSUPPORTED_CHECKLIST_CATEGORIES: dict[str, frozenset[str]] = {
-    "hbg": frozenset({"li", "overlays", "flood"}),
+_CHECKLIST_CATEGORY_STATE: dict[str, dict[str, str]] = {
+    "hbg": {
+        "li": "no_data_source",
+        "flood": "pending_load",
+        "overlays": "pending_load",
+    },
 }
+
+_NO_SOURCE_DETAIL: dict[tuple[str, str], str] = {
+    ("hbg", "li"): "Harrisburg does not publish a code-enforcement / violations dataset.",
+}
+
+_PENDING_DETAIL: dict[tuple[str, str], str] = {
+    ("hbg", "flood"): "FEMA flood-zone data is being loaded for Harrisburg.",
+    ("hbg", "overlays"): "Historic-district data is being loaded for Harrisburg.",
+}
+
+# Categories whose Philadelphia clear-detail wording references concepts a market
+# lacks (e.g. RCO is a Philadelphia Title-14 construct) get a market-neutral clear detail.
+_CLEAR_DETAIL_OVERRIDE: dict[tuple[str, str], str] = {
+    ("hbg", "overlays"): (
+        "Not in a historic district or zoning overlay requiring extra design review."
+    ),
+}
+
+
+def checklist_category_state(market_code: str, category: str) -> str:
+    return _CHECKLIST_CATEGORY_STATE.get(market_code, {}).get(category, "available")
+
+
+def checklist_state_detail(market_code: str, category: str, state: str) -> str:
+    table = _NO_SOURCE_DETAIL if state == "no_data_source" else _PENDING_DETAIL
+    default = (
+        "No data source for this market."
+        if state == "no_data_source"
+        else "This dataset is being loaded for this market."
+    )
+    return table.get((market_code, category), default)
+
+
+def clear_detail_override(market_code: str, category: str) -> str | None:
+    return _CLEAR_DETAIL_OVERRIDE.get((market_code, category))
 
 _FORCED_SALE_LABEL: dict[str, str] = {
     "phl": "Sheriff sale",
@@ -32,10 +71,6 @@ def zoning_citation_label(market_code: str) -> str:
 
 def hidden_surfaces(market_code: str) -> frozenset[str]:
     return _HIDDEN_SURFACES.get(market_code, frozenset())
-
-
-def unsupported_checklist_categories(market_code: str) -> frozenset[str]:
-    return _UNSUPPORTED_CHECKLIST_CATEGORIES.get(market_code, frozenset())
 
 
 def forced_sale_label(market_code: str) -> str:

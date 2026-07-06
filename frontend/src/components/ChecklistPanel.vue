@@ -2,7 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 
-import type { ChecklistStatus } from '@/lib/types'
+import type { ChecklistItem, ChecklistStatus } from '@/lib/types'
 import { useParcelStore } from '@/stores/parcel'
 
 const { checklist } = storeToRefs(useParcelStore())
@@ -17,6 +17,16 @@ const STATUS: Record<ChecklistStatus, StatusStyle> = {
   warn: { icon: 'warning', color: 'warning' },
   fail: { icon: 'cancel', color: 'negative' },
   info: { icon: 'info', color: 'blue-grey-6' },
+}
+
+const AVAILABILITY: Record<string, StatusStyle> = {
+  no_data_source: { icon: 'do_not_disturb_on', color: 'grey-5' },
+  pending_load: { icon: 'downloading', color: 'blue-grey-4' },
+}
+
+function styleFor(item: ChecklistItem): StatusStyle {
+  const avail = item.availability ?? 'available'
+  return avail !== 'available' ? AVAILABILITY[avail] : STATUS[item.status]
 }
 
 const headline = computed(() => {
@@ -59,8 +69,8 @@ const headlineColor = computed(() => {
       <div class="check-list">
         <div v-for="item in checklist.items" :key="item.code" class="check-row">
           <q-icon
-            :name="STATUS[item.status].icon"
-            :color="STATUS[item.status].color"
+            :name="styleFor(item).icon"
+            :color="styleFor(item).color"
             size="20px"
             class="check-icon"
           />

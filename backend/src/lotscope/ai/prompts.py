@@ -50,6 +50,10 @@ SUMMARY_SYSTEM_PROMPT = (
     '- Never echo raw field names or booleans; translate them into plain English (e.g. "not '
     'currently flagged as underpriced", never "underpriced rating of False").\n'
     "- If a field is null, say the data is insufficient for that dimension; do not guess.\n"
+    "- Checklist rows carry a data state: 'no_data_source' means this market does not publish "
+    "that dataset (say so plainly, e.g. 'the city publishes no code-enforcement data') — never "
+    "imply a clean/passing result; 'pending_load' means the source exists and is being loaded. "
+    "Do not conflate the two, and never read either as 'no issues found'.\n"
     "- Keep the informational framing; this is never advice.\n"
     "Return your response using the provided structured tool."
 )

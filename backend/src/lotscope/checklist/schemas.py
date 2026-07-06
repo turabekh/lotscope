@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 ChecklistStatus = Literal["pass", "warn", "fail", "info"]
+ChecklistAvailability = Literal["available", "no_data_source", "pending_load"]
 
 
 class ChecklistItem(BaseModel):
@@ -12,6 +13,7 @@ class ChecklistItem(BaseModel):
     status: ChecklistStatus
     detail: str
     source: str | None = None
+    availability: ChecklistAvailability = "available"
 
 
 class ChecklistSummary(BaseModel):
