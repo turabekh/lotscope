@@ -172,8 +172,8 @@ export const api = {
   getVarianceOutlook(parcelNumber: string): Promise<VarianceOutlook> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/variance-outlook`)
   },
-  getNeighborhoodMarket(): Promise<NeighborhoodMarketResponse> {
-    return request('/neighborhoods/market')
+  getNeighborhoodMarket(market: string): Promise<NeighborhoodMarketResponse> {
+    return request(`/neighborhoods/market?market=${encodeURIComponent(market)}`)
   },
   getParcelSummary(parcelNumber: string): Promise<ParcelSummaryResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/summary`)
@@ -354,8 +354,8 @@ export const api = {
   searchArea(payload: AreaSearchRequest): Promise<AreaSearchResponse> {
     return request('/search/area', { method: 'POST', body: JSON.stringify(payload) })
   },
-  getNeighborhoods(): Promise<NeighborhoodListResponse> {
-    return request('/neighborhoods')
+  getNeighborhoods(market: string): Promise<NeighborhoodListResponse> {
+    return request(`/neighborhoods?market=${encodeURIComponent(market)}`)
   },
   getAdminOverview(): Promise<AdminOverview> {
     return request('/admin/overview')

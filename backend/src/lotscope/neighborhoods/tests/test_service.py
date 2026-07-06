@@ -7,13 +7,15 @@ from lotscope.neighborhoods.service import neighborhood_market_stats
 pytestmark = pytest.mark.integration
 
 
-async def _neighborhood(session: AsyncSession, name: str, wkt: str) -> None:
+async def _neighborhood(
+    session: AsyncSession, name: str, wkt: str, market: str = "phl"
+) -> None:
     await session.execute(
         text(
-            "INSERT INTO neighborhood (name, geom_local) "
-            "VALUES (:name, ST_GeomFromText(:wkt, 2272))"
+            "INSERT INTO neighborhood (name, market_code, geom_local) "
+            "VALUES (:name, :market, ST_GeomFromText(:wkt, 2272))"
         ),
-        {"name": name, "wkt": wkt},
+        {"name": name, "market": market, "wkt": wkt},
     )
 
 
@@ -27,14 +29,16 @@ async def _vacant_parcel(
     delinquent: bool = False,
     sheriff: bool = False,
     distress: int | None = None,
+    market: str = "phl",
 ) -> None:
     await session.execute(
         text(
-            "INSERT INTO parcel (parcel_number, is_vacant, market_value, geom_local) VALUES "
-            "(:pn, true, :mv, ST_GeomFromText(:wkt, 2272))"
+            "INSERT INTO parcel (parcel_number, market_code, is_vacant, market_value, geom_local) "
+            "VALUES (:pn, :market, true, :mv, ST_GeomFromText(:wkt, 2272))"
         ),
         {
             "pn": number,
+            "market": market,
             "mv": market_value,
             "wkt": f"POLYGON(({x} {y},{x} {y + 2},{x + 2} {y + 2},{x + 2} {y},{x} {y}))",
         },
@@ -69,7 +73,7 @@ async def test_market_stats_aggregate_per_neighborhood(db_session: AsyncSession)
     await _vacant_parcel(db_session, "000000003", x=210, y=10, market_value=30000, distress=20)
     await db_session.flush()
 
-    result = await neighborhood_market_stats(db_session)
+    result = await neighborhood_market_stats(db_session, "phl")
 
     assert result.totals.neighborhoods == 2
     assert result.totals.vacant_lots == 3
@@ -92,6 +96,20 @@ async def test_market_stats_excludes_empty_neighborhoods(db_session: AsyncSessio
     await _neighborhood(db_session, "Empty", "POLYGON((0 0,0 10,10 10,10 0,0 0))")
     await db_session.flush()
 
-    result = await neighborhood_market_stats(db_session)
+    result = await neighborhood_market_stats(db_session, "phl")
     assert result.neighborhoods == []
     assert result.totals.vacant_lots == 0
+
+
+async def test_market_stats_are_scoped_to_the_requested_market(db_session: AsyncSession) -> None:
+    await _neighborhood(db_session, "PhlHood", "POLYGON((0 0,0 100,100 100,100 0,0 0))", "phl")
+    await _neighborhood(db_session, "HbgHood", "POLYGON((0 0,0 100,100 100,100 0,0 0))", "hbg")
+    await _vacant_parcel(db_session, "phl:1", x=10, y=10, market_value=40000, market="phl")
+    await _vacant_parcel(db_session, "hbg:1", x=20, y=20, market_value=50000, market="hbg")
+    await db_session.flush()
+
+    phl = await neighborhood_market_stats(db_session, "phl")
+    hbg = await neighborhood_market_stats(db_session, "hbg")
+
+    assert [n.name for n in phl.neighborhoods] == ["PhlHood"]
+    assert [n.name for n in hbg.neighborhoods] == ["HbgHood"]

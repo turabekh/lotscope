@@ -18,6 +18,7 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   const polygon = ref<GeoJSON.Polygon | null>(null)
   const neighborhood = ref<string | null>(null)
   const neighborhoods = ref<string[]>([])
+  const loadedNeighborhoodMarket = ref<string | null>(null)
   const radiusM = ref(DEFAULT_RADIUS_M)
   const minValue = ref<number | null>(null)
   const maxValue = ref<number | null>(null)
@@ -64,9 +65,11 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   }
 
   async function loadNeighborhoods(): Promise<void> {
-    if (neighborhoods.value.length > 0) return
-    const response = await api.getNeighborhoods()
+    const market = useMarketStore().active
+    if (loadedNeighborhoodMarket.value === market && neighborhoods.value.length > 0) return
+    const response = await api.getNeighborhoods(market)
     neighborhoods.value = response.neighborhoods.map((item) => item.name)
+    loadedNeighborhoodMarket.value = market
   }
 
   function toggle(): void {
