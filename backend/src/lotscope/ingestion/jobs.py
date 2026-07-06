@@ -8,6 +8,7 @@ from lotscope.core.config import Settings
 from lotscope.core.logging import get_logger
 from lotscope.ingestion.arcgis import ArcGisClient
 from lotscope.ingestion.carto import CartoClient
+from lotscope.ingestion.ckan import CkanDatastoreClient
 from lotscope.ingestion.extract import ExtractClient
 from lotscope.ingestion.filters import li_events_where, rtt_sales_where, zba_appeals_where
 from lotscope.ingestion.loaders import (
@@ -19,6 +20,7 @@ from lotscope.ingestion.loaders import (
     neighborhoods,
     opa,
     overlays,
+    pgh,
     pwd,
     rtt,
     sheriff,
@@ -365,6 +367,48 @@ async def ingest_hbg_repository(session_factory: SessionFactory, settings: Setti
     return result.loaded
 
 
+async def _pgh_source_config(session_factory: SessionFactory) -> dict[str, Any]:
+    async with session_factory() as session:
+        market = await session.get(Market, "pgh")
+        return dict(market.source_config) if market is not None else {}
+
+
+async def ingest_pgh_parcels(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _pgh_source_config(session_factory)
+    base_url = str(config["ckan_base_url"])
+    resource_id = str(config["assessment_resource_id"])
+    async with CkanDatastoreClient(settings, base_url) as ckan:
+        return await run_loader(
+            session_factory,
+            lambda session: pgh.load_pgh_parcels(session, ckan, resource_id=resource_id),
+            dataset=pgh.PGH_PARCELS_DATASET,
+            market_code="pgh",
+        )
+
+
+async def ingest_pgh_geometry(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _pgh_source_config(session_factory)
+    base_url = str(config["ckan_base_url"])
+    async with CkanDatastoreClient(settings, base_url) as ckan:
+        return await run_loader(
+            session_factory,
+            lambda session: pgh.load_pgh_geometry(
+                session,
+                ckan,
+                boundaries_resource_id=str(config["boundaries_resource_id"]),
+                assessment_resource_id=str(config["assessment_resource_id"]),
+            ),
+            dataset=pgh.PGH_GEOMETRY_DATASET,
+            market_code="pgh",
+        )
+
+
+_PGH_JOBS: dict[str, Job] = {
+    "parcels": ingest_pgh_parcels,
+    "geometry": ingest_pgh_geometry,
+}
+
+
 _HBG_JOBS: dict[str, Job] = {
     "parcels": ingest_hbg_parcels,
     "sales": ingest_hbg_sales,
@@ -380,6 +424,7 @@ _HBG_JOBS: dict[str, Job] = {
 INGEST_JOBS: dict[tuple[str, str], Job] = {
     **{("phl", dataset): job for dataset, job in _PHL_JOBS.items()},
     **{("hbg", dataset): job for dataset, job in _HBG_JOBS.items()},
+    **{("pgh", dataset): job for dataset, job in _PGH_JOBS.items()},
 }
 
 

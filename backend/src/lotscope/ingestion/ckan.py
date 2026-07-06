@@ -71,6 +71,7 @@ class CkanDatastoreClient:
         where: str | None = None,
     ) -> AsyncIterator[list[dict[str, Any]]]:
         table = f'"{resource_id}"'
+        key_field = key_column.strip('"')
         last_key: str | int | float | None = None
         while True:
             rows = await self.query(
@@ -88,4 +89,4 @@ class CkanDatastoreClient:
             yield rows
             if len(rows) < page_size:
                 return
-            last_key = rows[-1][key_column]
+            last_key = rows[-1][key_field]
