@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.ckan import CkanDatastoreClient
@@ -9,6 +9,7 @@ from lotscope.ingestion.normalizers import get_normalizer
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
+from lotscope.vacancy.derivation import derive_vacancy
 
 PGH_PARCELS_DATASET = "pgh_assessment"
 PGH_GEOMETRY_DATASET = "pgh_boundaries"
@@ -584,3 +585,36 @@ async def load_pgh_zoning_districts(
         market_code=_MARKET, row_count=total,
     )
     return total
+
+
+PGH_VACANCY_DATASET = "pgh_vacancy"
+
+_VACANCY_UPDATE = text(
+    "UPDATE parcel SET is_vacant = :is_vacant, vacancy_confidence = :conf "
+    "WHERE parcel_number = :parcel_number"
+)
+
+
+async def derive_pgh_vacancy(session: AsyncSession) -> int:
+    result = await session.execute(
+        select(Parcel.parcel_number, Parcel.land_use, Parcel.improvement_value).where(
+            Parcel.market_code == _MARKET
+        )
+    )
+    updates: list[dict[str, Any]] = []
+    vacant = 0
+    for row in result:
+        improvement = float(row.improvement_value) if row.improvement_value is not None else None
+        is_vacant, confidence = derive_vacancy(row.land_use, improvement, _MARKET)
+        updates.append(
+            {"parcel_number": row.parcel_number, "is_vacant": is_vacant, "conf": confidence}
+        )
+        if is_vacant:
+            vacant += 1
+    if updates:
+        await session.execute(_VACANCY_UPDATE, updates)
+    await record_freshness(
+        session, PGH_VACANCY_DATASET, status="success", success=True,
+        market_code=_MARKET, row_count=vacant,
+    )
+    return vacant
