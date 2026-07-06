@@ -1,6 +1,11 @@
 from typing import Any
 
 from lotscope.checklist.schemas import ChecklistItem, ChecklistStatus, ChecklistSummary
+from lotscope.markets.capabilities import (
+    checklist_category_state,
+    checklist_state_detail,
+    clear_detail_override,
+)
 from lotscope.verdict.schemas import VerdictResult
 
 _SEVERITY_STATUS: dict[str, ChecklistStatus] = {
@@ -63,14 +68,16 @@ def _risk_item(
     clear_detail: str,
     flags: list[Any],
     *,
-    unsupported: bool = False,
+    availability: str = "available",
+    state_detail: str = "",
 ) -> ChecklistItem:
-    if unsupported:
+    if availability != "available":
         return ChecklistItem(
             code=code,
             category=category,
             status="info",
-            detail="No data source for this market.",
+            detail=state_detail,
+            availability=availability,
         )
     matched = [flag for flag in flags if flag.get("code") in flag_codes]
     if not matched:
@@ -205,21 +212,24 @@ def build_checklist(
     verdict: VerdictResult,
     *,
     has_abatement: bool = False,
-    unsupported_categories: frozenset[str] = frozenset(),
+    market_code: str = "phl",
 ) -> tuple[list[ChecklistItem], ChecklistSummary]:
     flags = verdict.risk_flags
     items = [_zoning_item(verdict)]
-    items.extend(
-        _risk_item(
-            code,
-            category,
-            flag_codes,
-            clear_detail,
-            flags,
-            unsupported=code in unsupported_categories,
+    for code, category, flag_codes, clear_detail in _RISK_CATEGORIES:
+        state = checklist_category_state(market_code, code)
+        clear = clear_detail_override(market_code, code) or clear_detail
+        items.append(
+            _risk_item(
+                code,
+                category,
+                flag_codes,
+                clear,
+                flags,
+                availability=state,
+                state_detail=checklist_state_detail(market_code, code, state),
+            )
         )
-        for code, category, flag_codes, clear_detail in _RISK_CATEGORIES
-    )
     if has_abatement:
         items.append(_abatement_item())
     items.append(_valuation_item(verdict))
