@@ -55,3 +55,14 @@ Cited to §903.03 (each density subdistrict's Site Development Standards table).
 
 ## Recompute plan
 Standards + units are a data correction against `pgh-provisional-2026` — **no version bump** (lot-area precedent). Buildability is lazy-on-view, so it reflects the new values immediately; the batch `pgh` verdict compute in Slice 7 picks them up at v8.
+
+## Coverage v2 — after non-residential pass (page-context, header-matched)
+**24 districts authored / 57 resolved codes → 68.6% of Pittsburgh parcels have standards.**
+- **18 residential** (R1D/R1A/R2/R3/RM × densities) — height/setbacks/units, cited § 903.03.
+- **6 non-residential** with clean § 904 tables: **LNC** (FAR 2:1, cov 90%, 45 ft), **NDO** (FAR 3:1, cov 90%, 45 ft), **GI** (FAR 3:1, 75 ft), **H/Hillside** (min-lot 3,200, 40 ft, 50% max disturbance), **GT-A/GT-B** (FAR 13 — Ord. 2022, estimated capacity). Non-residential carry no by-right dwelling count.
+
+**Page-context rule caught two real traps this pass:** (1) the residential 3,000-vs-6,000 scramble; (2) the non-residential **page→district mis-mapping** (p17 "LNC" actually held the NDO table) — authored only from header-matched (`Site Development Standard <X> District`) full-table reads.
+
+**Not yet authored (~33 codes, resolve but read "standards not loaded" — honest):** the remaining commercial/industrial with layout-varied tables that bulk extraction couldn't confirm field-complete (UNC, HC, NDI, UI, P) and the specialized planned districts (SP-*, GPR-*, UC-*, UPR-*, RIV-*, EMI, AP, CP, MTOBOR, R-MU, RP, GT-C/D/E). These need a focused per-district read — deferred rather than guessed, per the corpus gate.
+
+**Authoring actuals (Baltimore):** 24 districts / ~68% parcel coverage from a 573-page code in ~1.x sessions; the density-subdistrict + §904 table structures were tractable, the specialized planned districts (a long tail) are the cost driver — budget them separately.
