@@ -86,3 +86,11 @@ Harrisburg `parcel.lot_area_sqft` is **polygon-derived** (`ST_Area(geom_local)`)
 We evaluated preferring the extract's stated area for hbg and **rejected it**: the only area field in the GIS extract, `DC_Parcels.acres`, is rounded to **2 decimals** — for small urban lots this is coarser than the polygon by up to ~50% (sampled 14 small lots; 11 differed >5% from the polygon; worst case PID 02-017-016: acres 0.01→436 sqft vs polygon 852 sqft). Preferring it would degrade lot area on exactly the infill parcels the product targets.
 
 **Field-test parcel 02-021-052 variance (recorded, not chased):** polygon `ST_Area` = **2,484 sqft** (retained); `DC_Parcels.acres` 0.05 → **2,178 sqft** (rounded, less precise); the county's third-party figure of **2,295 sqft** comes from the Dauphin **CAMA/assessment** system, which the GIS extract does not expose. If a precise CAMA deeded-area export becomes available, prefer it then (and set `lot_area_source` accordingly).
+
+## Common level ratio (assessment → market value)
+
+Dauphin County is a base-year assessment county: the assessed value is a fraction of market value, unlike Philadelphia's ~100% ratio. Assessment-comparison features (the "vs. assessment" gap and the over-assessment / tax-appeal signal) therefore compute against the **ratio-implied market value = assessed ÷ CLR**, labeled as such; Philadelphia's math runs at ratio 1.0 and is byte-identical.
+
+- **Dauphin County 2024 Common Level Ratio: 0.4042** (40.42%), effective **July 1 2025 – June 30 2026**.
+- Source: PA Bulletin Vol. 55, No. 27 (2024 Common Level Ratios); STEB / PA DCED Tax Equalization Division. Note: STEB states the CLR is for assessment-appeal use, not to create value.
+- `market.assessment_ratio`: phl = 1.0000, hbg = 0.4042. Refresh annually when STEB publishes the new CLR (effective each July 1).

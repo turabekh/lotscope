@@ -30,3 +30,4 @@ class Market(Base, TimestampMixin):
     )
     coverage_note: Mapped[str | None] = mapped_column(Text)
     launch_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="live")
+    assessment_ratio: Mapped[float | None] = mapped_column(Numeric(6, 4))

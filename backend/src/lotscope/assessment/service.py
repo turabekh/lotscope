@@ -12,7 +12,10 @@ from lotscope.assessment.analysis import (
 from lotscope.assessment.schemas import AssessmentResult
 from lotscope.valuation.service import value_parcel
 
-_PARCEL_SQL = text("SELECT market_value FROM parcel WHERE parcel_number = :parcel_number")
+_PARCEL_SQL = text(
+    "SELECT p.market_value, m.assessment_ratio FROM parcel p "
+    "JOIN market m ON m.code = p.market_code WHERE p.parcel_number = :parcel_number"
+)
 
 _SOURCES: list[dict[str, Any]] = [{"source": "opa_properties_public"}, {"source": "rtt_summary"}]
 
@@ -33,18 +36,33 @@ async def analyze_parcel_assessment(
     if parcel is None:
         return None
 
+    ratio = _as_float(parcel.assessment_ratio)
+    if ratio is None or ratio <= 0:
+        return None
+
+    assessed = _as_float(parcel.market_value)
+    implied_market_value = assessed / ratio if assessed is not None else None
+
     valuation = await value_parcel(
         session, parcel_number, radius_ft=radius_ft, years=years, since=since
     )
     analysis = analyze_assessment(
         AssessmentInputs(
-            assessed_market_value=_as_float(parcel.market_value),
+            assessed_market_value=implied_market_value,
             market_estimate=valuation.estimate if valuation is not None else None,
             market_low=valuation.low if valuation is not None else None,
             market_high=valuation.high if valuation is not None else None,
             valuation_confidence=valuation.confidence if valuation is not None else None,
         )
     )
+    reasons = list(analysis.reasons)
+    if ratio != 1.0:
+        reasons.insert(
+            0,
+            "Market value shown is implied from the assessed value via the county "
+            f"common level ratio ({ratio:.4f}); the raw assessment is a base-year figure.",
+        )
+
     return AssessmentResult(
         parcel_number=parcel_number,
         status=analysis.status,
@@ -58,7 +76,7 @@ async def analyze_parcel_assessment(
         estimated_annual_tax_savings=analysis.estimated_annual_tax_savings,
         tax_rate=analysis.tax_rate,
         confidence=analysis.confidence,
-        reasons=analysis.reasons,
+        reasons=reasons,
         disclaimer=ASSESSMENT_DISCLAIMER,
         sources=_SOURCES,
         computed_at=datetime.now(UTC),
