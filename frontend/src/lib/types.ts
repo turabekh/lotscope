@@ -17,6 +17,7 @@ export interface ParcelDetail {
   exempt_land: number | null
   exempt_building: number | null
   assessment_year: number | null
+  assessment_ratio: number | null
   lot_area_sqft: number | null
   lot_area_source: string | null
   frontage_ft: number | null

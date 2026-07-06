@@ -106,6 +106,18 @@ def _deal_is_infeasible(verdict: VerdictResult) -> bool:
     return verdict.max_allowable_offer is not None and verdict.max_allowable_offer <= 0
 
 
+def _assessed_value_fact(detail: ParcelDetail) -> str:
+    ratio = detail.assessment_ratio
+    if detail.market_value is not None and ratio is not None and ratio != 1.0:
+        implied = detail.market_value / ratio
+        return (
+            f"Assessed value: {detail.market_value} — this is a base-year assessment at the "
+            f"county common level ratio ({ratio:.4f}), NOT market value; the implied market "
+            f"value is about {implied:.0f}. Never present the raw assessment as market value."
+        )
+    return f"Assessed value: {detail.market_value}."
+
+
 def _summary_facts(
     detail: ParcelDetail,
     verdict: VerdictResult | None,
@@ -118,7 +130,7 @@ def _summary_facts(
         f"land use: {detail.land_use or 'unknown'}.",
         f"Lot area: {detail.lot_area_sqft} sqft; vacant: {detail.is_vacant}; "
         f"city-owned: {detail.is_city_owned}.",
-        f"Assessed value: {detail.market_value}.",
+        _assessed_value_fact(detail),
     ]
     if verdict is not None:
         if _deal_is_infeasible(verdict):

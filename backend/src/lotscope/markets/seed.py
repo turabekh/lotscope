@@ -26,6 +26,7 @@ PHILADELPHIA: dict[str, Any] = {
     },
     "coverage_note": None,
     "launch_status": "live",
+    "assessment_ratio": 1.0,
 }
 
 HARRISBURG: dict[str, Any] = {
@@ -53,6 +54,7 @@ HARRISBURG: dict[str, Any] = {
         "and no code-enforcement feed; zoning provisional pending review."
     ),
     "launch_status": "pilot",
+    "assessment_ratio": 0.4042,
 }
 
 

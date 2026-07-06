@@ -1,6 +1,7 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.markets.models import Market
 from lotscope.parcels.models import Parcel
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.zoning.service import resolve_district
@@ -17,6 +18,9 @@ async def get_parcel_detail(session: AsyncSession, parcel_number: str) -> Parcel
     if parcel is None:
         return None
     detail = ParcelDetail.model_validate(parcel)
+    market = await session.get(Market, parcel.market_code)
+    if market is not None and market.assessment_ratio is not None:
+        detail.assessment_ratio = float(market.assessment_ratio)
     centroid = (
         await session.execute(_CENTROID_SQL, {"parcel_number": parcel_number})
     ).one_or_none()

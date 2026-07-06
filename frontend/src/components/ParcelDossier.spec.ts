@@ -29,6 +29,7 @@ function makeDetail(overrides: Partial<ParcelDetail>): ParcelDetail {
     exempt_land: null,
     exempt_building: null,
     assessment_year: 2026,
+    assessment_ratio: 1.0,
     lot_area_sqft: 1342,
     lot_area_source: 'extract',
     frontage_ft: 20,
