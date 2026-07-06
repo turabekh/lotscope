@@ -499,6 +499,15 @@ async def ingest_pgh_zoning(session_factory: SessionFactory, settings: Settings)
     )
 
 
+async def ingest_pgh_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
+    return await run_loader(
+        session_factory,
+        pgh.derive_pgh_vacancy,
+        dataset=pgh.PGH_VACANCY_DATASET,
+        market_code="pgh",
+    )
+
+
 _PGH_JOBS: dict[str, Job] = {
     "parcels": ingest_pgh_parcels,
     "geometry": ingest_pgh_geometry,
@@ -509,6 +518,7 @@ _PGH_JOBS: dict[str, Job] = {
     "city_owned": ingest_pgh_city_owned,
     "condemned": ingest_pgh_condemned,
     "zoning": ingest_pgh_zoning,
+    "vacancy": ingest_pgh_vacancy,
 }
 
 

@@ -302,7 +302,7 @@ async def derive_hbg_vacancy(session: AsyncSession) -> int:
     vacant = 0
     for row in result:
         improvement = float(row.improvement_value) if row.improvement_value is not None else None
-        is_vacant, confidence = derive_vacancy(row.land_use, improvement)
+        is_vacant, confidence = derive_vacancy(row.land_use, improvement, _MARKET)
         updates.append(
             {"parcel_number": row.parcel_number, "is_vacant": is_vacant, "conf": confidence}
         )
