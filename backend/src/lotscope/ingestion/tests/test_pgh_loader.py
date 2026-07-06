@@ -105,3 +105,23 @@ def test_condemned_status_is_not_read_by_risk_scoring() -> None:
     from lotscope.risk import service
 
     assert "condemned_status" not in inspect.getsource(service)
+
+
+def test_district_row_maps_code_and_geometry() -> None:
+    from lotscope.ingestion.loaders.pgh import _district_row
+
+    row = _district_row(
+        {"_id": "42", "zon_new": "R1D-M", "full_zoning_type": "SINGLE-UNIT DETACHED RESIDENTIAL",
+         "geometry": "POLYGON ((592821 4468479, 592822 4468479, 592822 4468480, 592821 4468479))"}
+    )
+    assert row is not None
+    assert row["code"] == "R1D-M"
+    assert row["external_id"] == "pgh:42"
+    assert "geom_local" in row and "geom_4326" in row
+
+
+def test_district_row_skips_without_code_or_geom() -> None:
+    from lotscope.ingestion.loaders.pgh import _district_row
+
+    assert _district_row({"_id": "1", "zon_new": None, "geometry": "POLYGON(())"}) is None
+    assert _district_row({"_id": "1", "zon_new": "R1D-M", "geometry": None}) is None

@@ -524,3 +524,63 @@ async def load_pgh_condemned(
         market_code=_MARKET, row_count=len(parcels),
     )
     return len(parcels)
+
+
+PGH_ZONING_DATASET = "pgh_zoning_districts"
+_ZONING_SRID = 26917
+_ZONING_COLUMNS = ('"_id"', '"zon_new"', '"full_zoning_type"', '"geometry"')
+
+
+def _district_row(record: dict[str, Any]) -> dict[str, Any] | None:
+    code = _txt(record.get("zon_new"))
+    external = _txt(record.get("_id"))
+    wkt = _txt(record.get("geometry"))
+    if code is None or external is None or wkt is None:
+        return None
+    geom_source = func.ST_SetSRID(func.ST_GeomFromText(wkt), _ZONING_SRID)
+    return {
+        "external_id": f"{_MARKET}:{external}",
+        "code": code,
+        "long_code": _txt(record.get("full_zoning_type")),
+        "category": _txt(record.get("full_zoning_type")),
+        "market_code": _MARKET,
+        "geom_4326": func.ST_Transform(geom_source, 4326),
+        "geom_local": func.ST_Transform(geom_source, _LOCAL_SRID),
+        "source": PGH_ZONING_DATASET,
+    }
+
+
+async def load_pgh_zoning_districts(
+    session: AsyncSession,
+    ckan: CkanDatastoreClient,
+    *,
+    resource_id: str,
+    page_size: int = 500,
+) -> int:
+    from lotscope.zoning.models import ZoningDistrict
+
+    total = 0
+    async for records in ckan.paginate_by_key(
+        resource_id=resource_id,
+        columns=_ZONING_COLUMNS,
+        key_column='"_id"',
+        page_size=page_size,
+    ):
+        rows = [row for row in (_district_row(r) for r in records) if row is not None]
+        if rows:
+            await upsert(
+                session,
+                ZoningDistrict,
+                rows,
+                index_elements=["external_id"],
+                update_columns=[
+                    "code", "long_code", "category", "market_code",
+                    "geom_4326", "geom_local", "source",
+                ],
+            )
+            total += len(rows)
+    await record_freshness(
+        session, PGH_ZONING_DATASET, status="success", success=True,
+        market_code=_MARKET, row_count=total,
+    )
+    return total
