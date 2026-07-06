@@ -4,13 +4,14 @@ import { computed, ref } from 'vue'
 import { api } from '@/lib/api'
 import type { MarketInfo } from '@/lib/types'
 
-export const MARKETS = ['philadelphia', 'harrisburg'] as const
+export const MARKETS = ['philadelphia', 'harrisburg', 'pittsburgh'] as const
 export type Market = (typeof MARKETS)[number]
 export const DEFAULT_MARKET: Market = 'philadelphia'
 
 export const MARKET_LABELS: Record<Market, string> = {
   philadelphia: 'Philadelphia',
   harrisburg: 'Harrisburg',
+  pittsburgh: 'Pittsburgh',
 }
 
 const STORAGE_KEY = 'lotscope.market'

@@ -58,9 +58,30 @@ class HbgKeyNormalizer:
         return f"{self.market}{_MARKET_KEY_SEP}{local}"
 
 
+class PghKeyNormalizer:
+    market = "pgh"
+    _strip = re.compile(r"[\s\-.]+")
+    _canonical = re.compile(r"^[0-9A-Z]{16}$")
+
+    def normalize_local_key(self, raw: str | int | None) -> str | None:
+        if raw is None:
+            return None
+        cleaned = self._strip.sub("", str(raw).strip().upper())
+        if self._canonical.match(cleaned):
+            return cleaned
+        return None
+
+    def to_canonical(self, raw: str | int | None) -> str | None:
+        local = self.normalize_local_key(raw)
+        if local is None:
+            return None
+        return f"{self.market}{_MARKET_KEY_SEP}{local}"
+
+
 KEY_NORMALIZERS: dict[str, KeyNormalizer] = {
     "phl": PhlKeyNormalizer(),
     "hbg": HbgKeyNormalizer(),
+    "pgh": PghKeyNormalizer(),
 }
 
 

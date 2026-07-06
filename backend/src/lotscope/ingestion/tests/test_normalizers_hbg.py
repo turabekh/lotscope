@@ -41,4 +41,4 @@ def test_hbg_to_canonical_prefixes_market() -> None:
 def test_registry_exposes_hbg() -> None:
     assert get_normalizer("hbg").market == "hbg"
     with pytest.raises(KeyError):
-        get_normalizer("pgh")
+        get_normalizer("nope")
