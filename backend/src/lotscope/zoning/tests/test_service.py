@@ -47,6 +47,39 @@ async def test_assess_parcel_resolves_spatially(db_session: AsyncSession) -> Non
     assert any(source["source"] == "zoning_standard" for source in result.sources)
 
 
+async def test_assess_parcel_resolves_overlap_by_majority_area(db_session: AsyncSession) -> None:
+    await _add_standard(db_session, "RSA-5")
+    await _add_standard(db_session, "RM-1")
+    await db_session.execute(
+        text(
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RM-1', "
+            "ST_GeomFromText('POLYGON((-100 -100,-100 100,100 100,100 -100,-100 -100))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RSA-5', "
+            "ST_GeomFromText('POLYGON((-100 -100,-100 100,5 100,5 -100,-100 -100))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
+            "base_zoning_code, geom_local) VALUES "
+            "('000000010', 1600, 18, 90, 'CMX-2', "
+            "ST_GeomFromText('POLYGON((-90 0,-90 10,90 10,90 0,-90 0))', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    first = await assess_parcel(db_session, "000000010")
+    second = await assess_parcel(db_session, "000000010")
+    assert first is not None
+    assert second is not None
+    assert first.district_code == "RM-1"
+    assert first.district_code == second.district_code
+
+
 async def test_assess_parcel_falls_back_to_opa_attribute(db_session: AsyncSession) -> None:
     await _add_standard(db_session, "RSA-5")
     await db_session.execute(
