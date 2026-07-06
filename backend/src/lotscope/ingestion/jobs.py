@@ -403,9 +403,37 @@ async def ingest_pgh_geometry(session_factory: SessionFactory, settings: Setting
         )
 
 
+async def ingest_pgh_sales(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _pgh_source_config(session_factory)
+    base_url = str(config["ckan_base_url"])
+    resource_id = str(config["sales_resource_id"])
+    async with CkanDatastoreClient(settings, base_url) as ckan:
+        return await run_loader(
+            session_factory,
+            lambda session: pgh.load_pgh_sales(session, ckan, resource_id=resource_id),
+            dataset=pgh.PGH_SALES_DATASET,
+            market_code="pgh",
+        )
+
+
+async def ingest_pgh_liens(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _pgh_source_config(session_factory)
+    base_url = str(config["ckan_base_url"])
+    resource_id = str(config["liens_resource_id"])
+    async with CkanDatastoreClient(settings, base_url) as ckan:
+        return await run_loader(
+            session_factory,
+            lambda session: pgh.load_pgh_liens(session, ckan, resource_id=resource_id),
+            dataset=pgh.PGH_LIENS_DATASET,
+            market_code="pgh",
+        )
+
+
 _PGH_JOBS: dict[str, Job] = {
     "parcels": ingest_pgh_parcels,
     "geometry": ingest_pgh_geometry,
+    "sales": ingest_pgh_sales,
+    "liens": ingest_pgh_liens,
 }
 
 
