@@ -157,6 +157,10 @@ function reset(): void {
               />
               <q-btn flat no-caps color="grey-7" label="Reset" @click="reset" />
             </div>
+            <div class="text-caption text-grey-6 q-mt-sm">
+              Assumptions:
+              {{ deal.assumptions_source === 'calibrated' ? 'calibrated for this market' : 'market default' }}
+            </div>
           </div>
         </q-expansion-item>
 

@@ -544,6 +544,7 @@ export interface DealResult {
   comp_count: number
   confidence: 'high' | 'medium' | 'low'
   assumptions: DealAssumptions
+  assumptions_source?: 'market_default' | 'calibrated'
   reasons: string[]
   sources: unknown[]
   computed_at: string

@@ -23,6 +23,9 @@ from lotscope.zoning.service import compute_envelope
 _SUBJECT_SQL = text(
     "SELECT market_value, base_zoning_code FROM parcel WHERE parcel_number = :parcel_number"
 )
+_MARKET_OVERRIDES_SQL = text(
+    "SELECT deal_assumption_overrides FROM market WHERE code = :market_code"
+)
 
 
 def _as_float(value: Any) -> float | None:
@@ -239,8 +242,12 @@ async def build_deal(
         assumptions,
     )
 
+    market_code = parcel_number.split(":", 1)[0] if ":" in parcel_number else "phl"
+    overrides = await session.scalar(_MARKET_OVERRIDES_SQL, {"market_code": market_code})
+
     return DealResult(
         parcel_number=parcel_number,
+        assumptions_source="calibrated" if overrides else "market_default",
         units=units,
         arv=analysis.arv,
         per_unit_value=analysis.per_unit_value,
