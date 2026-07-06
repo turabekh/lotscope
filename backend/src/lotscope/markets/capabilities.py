@@ -62,11 +62,13 @@ def clear_detail_override(market_code: str, category: str) -> str | None:
 _FORCED_SALE_LABEL: dict[str, str] = {
     "phl": "Sheriff sale",
     "hbg": "Tax sale (RETSL)",
+    "pgh": "Treasurer's sale",
 }
 
 _FORCED_SALE_SURFACE_LABEL: dict[str, str] = {
     "phl": "Sheriff sales",
     "hbg": "Tax sales",
+    "pgh": "Treasurer's sale",
 }
 
 
@@ -85,6 +87,7 @@ _ZONING_CITATION: dict[str, str] = {
 
 _HIDDEN_SURFACES: dict[str, frozenset[str]] = {
     "hbg": frozenset({"zba_variance"}),
+    "pgh": frozenset({"zba_variance", "sheriff_sales", "owner_portfolio"}),
 }
 
 

@@ -36,3 +36,41 @@ def test_geometry_row_builds_transformed_geom() -> None:
 
 def test_geometry_row_skips_without_wkb() -> None:
     assert _geometry_row({"PIN": "0001B00024000000", "wkb_hex": None}) is None
+
+
+def test_sale_row_filters_and_maps() -> None:
+    from lotscope.ingestion.loaders.pgh import _sale_row
+
+    known = {"pgh:0001B00024000000"}
+    row = _sale_row(
+        {"PARID": "0001B00024000000", "SALEDATE": "2024-03-15", "PRICE": "250000",
+         "DEEDBOOK": "18965", "DEEDPAGE": "204", "INSTRTYPDESC": "DEED"},
+        known,
+    )
+    assert row is not None
+    assert row["document_id"] == "18965-204"
+    assert row["sale_price"] == 250000.0
+    assert row["sale_date"].isoformat() == "2024-03-15"
+
+
+def test_sale_row_skips_unknown_parcel() -> None:
+    from lotscope.ingestion.loaders.pgh import _sale_row
+
+    assert _sale_row({"PARID": "0001B00024000000", "PRICE": "1"}, set()) is None
+
+
+def test_pgh_forced_sale_named_treasurers_sale() -> None:
+    from lotscope.markets.capabilities import forced_sale_label, forced_sale_surface_label
+
+    assert forced_sale_surface_label("pgh") == "Treasurer's sale"
+    assert forced_sale_label("pgh") == "Treasurer's sale"
+    assert forced_sale_surface_label("phl") == "Sheriff sales"
+
+
+def test_pgh_hidden_surfaces_owner_and_forced_sale_off() -> None:
+    from lotscope.markets.capabilities import hidden_surfaces
+
+    hidden = hidden_surfaces("pgh")
+    assert "owner_portfolio" in hidden  # Ordinance 3478-07
+    assert "zba_variance" in hidden
+    assert "sheriff_sales" in hidden  # hidden until foreclosure calendar exists
