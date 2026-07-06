@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.parcels.models import Parcel
 from lotscope.parcels.schemas import ParcelDetail
+from lotscope.zoning.service import resolve_district
 
 _CENTROID_SQL = text(
     "SELECT ST_X(ST_Centroid(geom_4326)) AS longitude, "
@@ -22,4 +23,14 @@ async def get_parcel_detail(session: AsyncSession, parcel_number: str) -> Parcel
     if centroid is not None:
         detail.longitude = centroid.longitude
         detail.latitude = centroid.latitude
+    if parcel.base_zoning_code:
+        detail.resolved_zoning_code = parcel.base_zoning_code
+        detail.zoning_resolution = "attribute"
+    else:
+        resolution = await resolve_district(
+            session, parcel_number, base_zoning_code=None, has_geometry=True
+        )
+        if resolution is not None:
+            detail.resolved_zoning_code = resolution.code
+            detail.zoning_resolution = resolution.method
     return detail
