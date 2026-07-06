@@ -65,7 +65,7 @@ def test_display_name_citation_and_hidden_surfaces() -> None:
     assert market_display_name("hbg") == "Harrisburg"
     assert zoning_citation_label("phl") == "Title 14"
     assert zoning_citation_label("hbg") == "Harrisburg Zoning Code"
-    assert hidden_surfaces("hbg") == {"zba_variance", "sheriff_sales"}
+    assert hidden_surfaces("hbg") == {"zba_variance"}
     assert hidden_surfaces("phl") == frozenset()
     # prompts carry the market city, not a hardcoded literal
     assert "Harrisburg real estate" in for_market(SUMMARY_SYSTEM_PROMPT, "Harrisburg")

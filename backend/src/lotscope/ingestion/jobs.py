@@ -1,15 +1,19 @@
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.core.config import Settings
+from lotscope.core.logging import get_logger
 from lotscope.ingestion.arcgis import ArcGisClient
 from lotscope.ingestion.carto import CartoClient
+from lotscope.ingestion.extract import ExtractClient
 from lotscope.ingestion.filters import li_events_where, rtt_sales_where, zba_appeals_where
 from lotscope.ingestion.loaders import (
     flood,
     hbg,
+    hbg_repository,
     historic,
     li,
     neighborhoods,
@@ -324,6 +328,43 @@ async def ingest_hbg_neighborhoods(session_factory: SessionFactory, settings: Se
     )
 
 
+_REPO_CSV_FIXTURE = (
+    Path(__file__).resolve().parents[4] / "docs" / "dauphin-repository-list-2026-06-25.csv"
+)
+
+
+def _pdf_text(content: bytes) -> str:
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    reader = PdfReader(BytesIO(content))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+async def ingest_hbg_repository(session_factory: SessionFactory, settings: Settings) -> int:
+    logger = get_logger("ingestion.hbg_repository")
+    rows: list[dict[str, Any]] | None = None
+    try:
+        async with ExtractClient(settings) as extract:
+            download = await extract.download(hbg_repository.REPOSITORY_PDF_URL)
+        parsed = hbg_repository.parse_repository_pdf_text(_pdf_text(download.content))
+        if parsed:
+            rows = parsed
+            logger.info("hbg_repository_source", source="prod_pdf", rows=len(parsed))
+    except Exception as exc:
+        logger.warning("hbg_repository_pdf_unavailable", error=str(exc))
+    if rows is None and _REPO_CSV_FIXTURE.exists():
+        rows = hbg_repository.read_repository_csv(_REPO_CSV_FIXTURE)
+        logger.info("hbg_repository_source", source="csv_fixture", rows=len(rows))
+    if not rows:
+        return 0
+    async with session_factory() as session:
+        result = await hbg_repository.load_hbg_repository(session, rows)
+        await session.commit()
+    return result.loaded
+
+
 _HBG_JOBS: dict[str, Job] = {
     "parcels": ingest_hbg_parcels,
     "sales": ingest_hbg_sales,
@@ -333,6 +374,7 @@ _HBG_JOBS: dict[str, Job] = {
     "neighborhoods": ingest_hbg_neighborhoods,
     "vacancy": ingest_hbg_vacancy,
     "public": ingest_hbg_public,
+    "repository": ingest_hbg_repository,
 }
 
 INGEST_JOBS: dict[tuple[str, str], Job] = {

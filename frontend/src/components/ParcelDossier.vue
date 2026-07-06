@@ -4,6 +4,7 @@ import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
 
 import AskBox from '@/components/AskBox.vue'
+import RepositoryBadge from '@/components/RepositoryBadge.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import AssessmentPanel from '@/components/AssessmentPanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
@@ -343,6 +344,7 @@ async function toggleSave(): Promise<void> {
             </q-tooltip>
           </q-chip>
         </div>
+        <RepositoryBadge :parcel-number="detail.parcel_number" />
       </header>
 
       <q-tabs

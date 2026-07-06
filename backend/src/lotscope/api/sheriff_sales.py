@@ -8,8 +8,8 @@ from lotscope.accounts.models import User
 from lotscope.accounts.tiers import sheriff_calendar_access
 from lotscope.api.deps import get_current_user, get_session
 from lotscope.core.errors import QuotaExceededError
-from lotscope.risk.schemas import SheriffSaleCalendar
-from lotscope.risk.service import list_sheriff_sales
+from lotscope.risk.schemas import RepositoryList, SheriffSaleCalendar
+from lotscope.risk.service import list_repository, list_sheriff_sales
 
 router = APIRouter(prefix="/sheriff-sales", tags=["sheriff-sales"])
 
@@ -39,3 +39,13 @@ async def sheriff_sales(
         zip_code=zip_code,
         limit=limit,
     )
+
+
+@router.get("/repository", response_model=RepositoryList)
+async def repository(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    market: Annotated[str, Query()] = "hbg",
+    limit: Annotated[int, Query(ge=1, le=1000)] = 500,
+) -> RepositoryList:
+    return await list_repository(session, market_code=market, limit=limit)

@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.markets.capabilities import forced_sale_label
 from lotscope.risk.schemas import (
     NextSheriffSale,
+    RepositoryEntry,
+    RepositoryList,
+    RepositoryStatus,
     RiskFlagSchema,
     RiskResult,
     SheriffSaleCalendar,
@@ -304,3 +307,47 @@ async def get_next_sheriff_sale(
         opening_bid=_as_float(row.opening_bid),
         days_until=(row.sale_date - as_of).days,
     )
+
+
+_REPO_STATUS_SQL = text(
+    "SELECT city_status, bid_pending, list_as_of, source_url "
+    "FROM repository_listing WHERE parcel_number = :parcel_number"
+)
+_REPO_LIST_SQL = text(
+    "SELECT r.parcel_number, p.address, r.city_status, r.bid_pending, r.list_as_of "
+    "FROM repository_listing r JOIN parcel p ON p.parcel_number = r.parcel_number "
+    "WHERE p.market_code = :market_code "
+    "ORDER BY r.bid_pending DESC, p.address NULLS LAST, r.parcel_number LIMIT :limit"
+)
+
+
+async def get_repository_status(session: AsyncSession, parcel_number: str) -> RepositoryStatus:
+    row = (await session.execute(_REPO_STATUS_SQL, {"parcel_number": parcel_number})).one_or_none()
+    if row is None:
+        return RepositoryStatus(in_repository=False)
+    return RepositoryStatus(
+        in_repository=True,
+        city_status=row.city_status,
+        bid_pending=row.bid_pending,
+        list_as_of=row.list_as_of,
+        source_url=row.source_url,
+    )
+
+
+async def list_repository(
+    session: AsyncSession, *, market_code: str, limit: int = 500
+) -> RepositoryList:
+    rows = (
+        await session.execute(_REPO_LIST_SQL, {"market_code": market_code, "limit": limit})
+    ).all()
+    items = [
+        RepositoryEntry(
+            parcel_number=row.parcel_number,
+            address=row.address,
+            city_status=row.city_status,
+            bid_pending=row.bid_pending,
+        )
+        for row in rows
+    ]
+    list_as_of = next((row.list_as_of for row in rows if row.list_as_of is not None), None)
+    return RepositoryList(items=items, list_as_of=list_as_of, total=len(items))

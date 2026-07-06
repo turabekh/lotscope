@@ -50,3 +50,24 @@ class RiskResult(BaseModel):
     confidence: Literal["high", "medium", "low"]
     sources: list[dict[str, Any]]
     computed_at: datetime
+
+
+class RepositoryStatus(BaseModel):
+    in_repository: bool
+    city_status: str | None = None
+    bid_pending: bool = False
+    list_as_of: date | None = None
+    source_url: str | None = None
+
+
+class RepositoryEntry(BaseModel):
+    parcel_number: str
+    address: str | None
+    city_status: str | None
+    bid_pending: bool
+
+
+class RepositoryList(BaseModel):
+    items: list[RepositoryEntry]
+    list_as_of: date | None
+    total: int
