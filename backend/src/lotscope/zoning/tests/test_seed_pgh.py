@@ -7,8 +7,19 @@ def _by_code() -> dict[str, dict]:
 
 def test_all_residential_suffixed_codes_present() -> None:
     codes = {r["code"] for r in PGH_STANDARDS}
-    assert len(codes) == 18
+    residential = {c for c in codes if c[0] == "R" and "-" in c and c.split("-")[1] in
+                   {"VL", "L", "M", "H", "VH"}}
+    assert len(residential) == 18
     assert {"R1D-VL", "R1D-M", "R1D-H", "R1A-VH", "R2-M", "R3-L", "RM-H"} <= codes
+
+
+def test_non_residential_authored_with_far_and_citations() -> None:
+    rows = {r["code"]: r for r in PGH_STANDARDS}
+    assert rows["LNC"]["max_height_ft"] == 45
+    assert rows["LNC"]["max_floor_area_ratio_pct"] == 200
+    assert rows["GI"]["max_height_ft"] == 75
+    assert rows["GT-A"]["max_floor_area_ratio_pct"] == 1300  # FAR 13, estimated capacity
+    assert "max_units" not in rows["LNC"]  # non-residential: no by-right dwelling count
 
 
 def test_density_suffix_drives_distinct_standards() -> None:
@@ -33,6 +44,24 @@ def test_unconfirmed_fields_are_null_not_guessed() -> None:
     assert rows["R1D-VH"]["min_lot_area_sqft"] is None
     assert rows["RM-VH"]["min_lot_area_sqft"] is None
     # no row invents min_lot_width / occupancy / permitted_uses (use table not yet loaded)
+    # min_lot_width has no district-wide dimensional floor (use-condition only) -> NULL stands
     for r in PGH_STANDARDS:
         assert "min_lot_width_ft" not in r
-        assert "permitted_uses" not in r
+
+
+def test_by_right_units_from_district_type() -> None:
+    rows = _by_code()
+    assert rows["R1D-M"]["max_units"] == 1
+    assert rows["R1A-H"]["max_units"] == 1
+    assert rows["R2-M"]["max_units"] == 2
+    assert rows["R3-L"]["max_units"] == 3
+    # RM is envelope-governed -> estimated, not a firm by-right count
+    assert rows["RM-H"]["max_units"] is None
+    assert rows["RM-M"]["max_units"] is None
+
+
+def test_primary_residential_use_authored() -> None:
+    rows = _by_code()
+    assert rows["R1D-M"]["permitted_uses"] == ["Single-Unit Detached Residential"]
+    assert rows["R2-M"]["permitted_uses"] == ["Two-Unit Residential"]
+    assert rows["RM-H"]["permitted_uses"] == ["Multi-Unit Residential"]

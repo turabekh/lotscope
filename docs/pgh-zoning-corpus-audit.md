@@ -46,3 +46,23 @@ Cited to §903.03 (each density subdistrict's Site Development Standards table).
 | permitted_uses | 0/18 | Use Table (§ 911.02) not yet parsed — pass 2 |
 
 **Districts authored: 18 residential (R1D/R1A/R2/R3/RM × their density suffixes).** Not yet authored: ~22 non-residential (LNC/HC/GT-A..E/UI/EMI/RIV-* + P/H/AP/CP) — they resolve spatially but read "standards not loaded" until pass 2. **Authoring actuals for Baltimore calibration:** residential pass = 18 suffixed codes from a 573-page code, ~1 focused session; the density-subdistrict table structure (shared setbacks/height across base districts, varying by density) made it far more tractable than per-district authoring would suggest.
+
+## Pass 2 flag determinations (§ 903.03 / § 911.02, page-context rule)
+- **Flag 1 — VH min-lot:** the Very-High-Density Site Development Standards table has **no Minimum Lot Size row** (page 15 goes straight to setbacks). NULL is *correct* — the corpus states no VH lot-size floor (consistent with very-high-density infill), not a page artifact. Recorded, not filled.
+- **Flag 2 — per-lot vs per-unit:** the "Minimum Lot Size" is a **single per-lot value per density subdistrict** (1,200 s.f. High applies to the whole subdistrict, not per base district), so it is a **per-lot minimum** — encoded as `min_lot_area_sqft`. Pittsburgh RM density is **envelope-governed**: § 903.03 has no minimum-lot-area-per-dwelling-unit rule (the only per-unit figure is a 450 s.f./unit *bonus* cap + the INTENSITY-OF-USE definition). So RM has no `lot_area_per_unit_sqft`; RM units are an **estimated capacity, never a firm by-right count**. This differs from Philadelphia's per-unit RM-1.
+- **Flag 3 — by-right units (the deliverable):** derived from the district definition (§ 903 — Single/Two/Three/Multi-Unit): **R1D/R1A → 1, R2 → 2, R3 → 3** (firm `max_units`, verified live); **RM → NULL** (envelope-governed estimate). Primary residential use authored into `permitted_uses` from the district definition, cited. Buildability now answers height, setbacks, **and units**.
+- **Min-lot-width sweep (Article IX + district intent):** the code states **no district-wide minimum lot width**; "Lot Width" appears only as a **use-permission condition** (R1A attached use if width ≤ 35 ft), not a dimensional floor. `min_lot_width_ft` NULL stands, noted.
+
+## Recompute plan
+Standards + units are a data correction against `pgh-provisional-2026` — **no version bump** (lot-area precedent). Buildability is lazy-on-view, so it reflects the new values immediately; the batch `pgh` verdict compute in Slice 7 picks them up at v8.
+
+## Coverage v2 — after non-residential pass (page-context, header-matched)
+**24 districts authored / 57 resolved codes → 68.6% of Pittsburgh parcels have standards.**
+- **18 residential** (R1D/R1A/R2/R3/RM × densities) — height/setbacks/units, cited § 903.03.
+- **6 non-residential** with clean § 904 tables: **LNC** (FAR 2:1, cov 90%, 45 ft), **NDO** (FAR 3:1, cov 90%, 45 ft), **GI** (FAR 3:1, 75 ft), **H/Hillside** (min-lot 3,200, 40 ft, 50% max disturbance), **GT-A/GT-B** (FAR 13 — Ord. 2022, estimated capacity). Non-residential carry no by-right dwelling count.
+
+**Page-context rule caught two real traps this pass:** (1) the residential 3,000-vs-6,000 scramble; (2) the non-residential **page→district mis-mapping** (p17 "LNC" actually held the NDO table) — authored only from header-matched (`Site Development Standard <X> District`) full-table reads.
+
+**Not yet authored (~33 codes, resolve but read "standards not loaded" — honest):** the remaining commercial/industrial with layout-varied tables that bulk extraction couldn't confirm field-complete (UNC, HC, NDI, UI, P) and the specialized planned districts (SP-*, GPR-*, UC-*, UPR-*, RIV-*, EMI, AP, CP, MTOBOR, R-MU, RP, GT-C/D/E). These need a focused per-district read — deferred rather than guessed, per the corpus gate.
+
+**Authoring actuals (Baltimore):** 24 districts / ~68% parcel coverage from a 573-page code in ~1.x sessions; the density-subdistrict + §904 table structures were tractable, the specialized planned districts (a long tail) are the cost driver — budget them separately.
