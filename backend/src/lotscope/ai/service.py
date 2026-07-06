@@ -14,6 +14,7 @@ from lotscope.ai.prompts import (
     build_report_prompt,
     build_summary_prompt,
     build_user_prompt,
+    for_market,
 )
 from lotscope.ai.retrieval import (
     embed_and_search,
@@ -31,6 +32,7 @@ from lotscope.assessment.schemas import AssessmentResult
 from lotscope.assessment.service import analyze_parcel_assessment
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
+from lotscope.markets.capabilities import market_display_name
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.verdict.schemas import VerdictResult
@@ -46,6 +48,7 @@ def zoning_retrieval_scope(market_code: str) -> tuple[str, str | None]:
     if market_code == "phl":
         return TITLE_14_SOURCE, None
     return ZONING_SOURCE, market_code
+
 
 _HIGH_COVERAGE_MIN = 3
 _MEDIUM_COVERAGE_MIN = 2
@@ -165,7 +168,9 @@ async def summarize_parcel(
 
     facts = _summary_facts(detail, verdict, distress, assessment)
     raw = await generator.generate(
-        system=SUMMARY_SYSTEM_PROMPT, user=build_summary_prompt(facts), schema=ParcelSummary
+        system=for_market(SUMMARY_SYSTEM_PROMPT, market_display_name(detail.market_code)),
+        user=build_summary_prompt(facts),
+        schema=ParcelSummary,
     )
     try:
         summary = ParcelSummary.model_validate(raw)
@@ -226,7 +231,9 @@ async def draft_parcel_report(
 
     facts = _report_facts(detail, verdict, distress, assessment, cited_section)
     raw = await generator.generate(
-        system=REPORT_SYSTEM_PROMPT, user=build_report_prompt(facts), schema=ParcelReport
+        system=for_market(REPORT_SYSTEM_PROMPT, market_display_name(detail.market_code)),
+        user=build_report_prompt(facts),
+        schema=ParcelReport,
     )
     try:
         report = ParcelReport.model_validate(raw)
@@ -284,7 +291,11 @@ async def ask_the_parcel(
     documents = documents + deeds
     user_prompt = build_user_prompt(question, _parcel_facts(detail, verdict), documents)
 
-    raw = await generator.generate(system=SYSTEM_PROMPT, user=user_prompt, schema=ParcelAnswer)
+    raw = await generator.generate(
+        system=for_market(SYSTEM_PROMPT, market_display_name(detail.market_code)),
+        user=user_prompt,
+        schema=ParcelAnswer,
+    )
     try:
         answer = ParcelAnswer.model_validate(raw)
     except ValidationError as error:

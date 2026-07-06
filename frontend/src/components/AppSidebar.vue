@@ -38,6 +38,10 @@ const sections = computed<NavLink[]>(() => [
   { label: 'Lists', icon: 'bookmark', name: 'lists', badge: () => alerts.value + newTotal.value },
 ])
 
+const visibleSections = computed<NavLink[]>(() =>
+  sections.value.filter((item) => !market.isHidden(item.name.replace(/-/g, '_'))),
+)
+
 function isActive(name: string): boolean {
   return route.name === name
 }
@@ -60,7 +64,7 @@ function isActive(name: string): boolean {
 
     <q-list class="nav">
       <q-item
-        v-for="item in sections"
+        v-for="item in visibleSections"
         :key="item.name"
         v-ripple
         clickable

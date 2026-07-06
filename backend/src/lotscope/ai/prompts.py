@@ -5,7 +5,7 @@ from lotscope.ai.schemas import RetrievedDocument
 PROMPT_VERSION = "ask-the-parcel-v1"
 
 SYSTEM_PROMPT = (
-    "You are LotScope's parcel assistant for Philadelphia real estate.\n"
+    "You are LotScope's parcel assistant for {market} real estate.\n"
     "Answer the user's question about the specific parcel using ONLY the CONTEXT provided.\n"
     "Rules:\n"
     "- Ground every statement in the CONTEXT. If the answer is not supported by the CONTEXT, "
@@ -21,7 +21,7 @@ SYSTEM_PROMPT = (
 SUMMARY_PROMPT_VERSION = "parcel-summary-v1"
 
 SUMMARY_SYSTEM_PROMPT = (
-    "You are LotScope's parcel analyst for Philadelphia real estate.\n"
+    "You are LotScope's parcel analyst for {market} real estate.\n"
     "Write ONE short paragraph (3-5 sentences) that reads like a savvy investor's plain-English "
     "take on the parcel, using ONLY the FACTS provided.\n"
     "Rules:\n"
@@ -60,7 +60,7 @@ def build_summary_prompt(parcel_facts: str) -> str:
 
 
 REPORT_SYSTEM_PROMPT = (
-    "You are LotScope's parcel analyst for Philadelphia real estate.\n"
+    "You are LotScope's parcel analyst for {market} real estate.\n"
     "Draft a concise investment memo for the parcel, using ONLY the FACTS provided.\n"
     "Structure it as sections in this order: Overview, Buildability, Valuation & deal, Risks — "
     "each two to four sentences. Omit a section only if the FACTS say nothing about it.\n"
@@ -94,3 +94,7 @@ def build_user_prompt(
         f"CONTEXT - PARCEL FACTS:\n{parcel_facts}\n\n"
         f"CONTEXT - SOURCE DOCUMENTS:\n{document_lines}\n"
     )
+
+
+def for_market(system_prompt: str, city: str) -> str:
+    return system_prompt.replace("{market}", city)
