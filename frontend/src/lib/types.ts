@@ -873,3 +873,24 @@ export interface Usage {
   ask: UsageMetric
   parcel_views: UsageMetric
 }
+
+export interface RepositoryStatus {
+  in_repository: boolean
+  city_status: string | null
+  bid_pending: boolean
+  list_as_of: string | null
+  source_url: string | null
+}
+
+export interface RepositoryEntry {
+  parcel_number: string
+  address: string | null
+  city_status: string | null
+  bid_pending: boolean
+}
+
+export interface RepositoryList {
+  items: RepositoryEntry[]
+  list_as_of: string | null
+  total: number
+}
