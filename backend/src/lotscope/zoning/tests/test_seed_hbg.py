@@ -46,8 +46,9 @@ async def test_standard_lookup_is_market_scoped(db_session: AsyncSession) -> Non
 
     hbg = await _get_standard(db_session, "RM", "hbg")
     phl = await _get_standard(db_session, "RM", "phl")
-    assert hbg is not None and hbg.min_lot_area_sqft == 1500
-    assert phl is not None and phl.min_lot_area_sqft == 9999
-    # a Harrisburg-only district is invisible to phl
+    assert hbg is not None
+    assert hbg.min_lot_area_sqft == 1500
+    assert phl is not None
+    assert phl.min_lot_area_sqft == 9999
     assert await _get_standard(db_session, "RF", "phl") is None
     assert (await _get_standard(db_session, "RF", "hbg")) is not None

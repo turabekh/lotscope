@@ -38,7 +38,8 @@ def test_classify_skips_long_trailer_key_shape() -> None:
 
 def test_bid_pending_true_parsed() -> None:
     r = classify_repository_row(_row(bid_pending="true"))
-    assert r is not None and r["bid_pending"] is True
+    assert r is not None
+    assert r["bid_pending"] is True
 
 
 def test_pdf_parser_produces_the_csv_schema() -> None:

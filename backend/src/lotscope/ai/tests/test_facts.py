@@ -98,7 +98,9 @@ def test_snapshot_uses_resolved_district_when_attribute_is_null() -> None:
 
 def test_snapshot_keeps_attribute_zoning_for_phl_unchanged() -> None:
     facts = _summary_facts(
-        _detail(base_zoning_code="RSA5", resolved_zoning_code="RSA5", zoning_resolution="attribute"),
+        _detail(
+            base_zoning_code="RSA5", resolved_zoning_code="RSA5", zoning_resolution="attribute"
+        ),
         _verdict(),
         None,
         None,

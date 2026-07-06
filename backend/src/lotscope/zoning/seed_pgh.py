@@ -36,16 +36,26 @@ _DISTRICT_NAME: dict[str, str] = {
     "R3": "Three-Unit Residential",
     "RM": "Multi-Unit Residential",
 }
-# By-right primary-use unit count from the district definition (§ 903 — Single/Two/Three/Multi-Unit).
-# RM is None: Pittsburgh multi-unit density is envelope-governed (no per-unit lot-area rule in
-# § 903.03), so units are an estimated capacity, never a firm by-right count.
 _BASE_UNITS: dict[str, int | None] = {"R1D": 1, "R1A": 1, "R2": 2, "R3": 3, "RM": None}
 _RESIDENTIAL_CODES: tuple[str, ...] = (
-    "R1D-VL", "R1D-L", "R1D-M", "R1D-H", "R1D-VH",
-    "R1A-M", "R1A-H", "R1A-VH",
-    "R2-L", "R2-M", "R2-H", "R2-VH",
-    "R3-L", "R3-M",
-    "RM-VL", "RM-M", "RM-H", "RM-VH",
+    "R1D-VL",
+    "R1D-L",
+    "R1D-M",
+    "R1D-H",
+    "R1D-VH",
+    "R1A-M",
+    "R1A-H",
+    "R1A-VH",
+    "R2-L",
+    "R2-M",
+    "R2-H",
+    "R2-VH",
+    "R3-L",
+    "R3-M",
+    "RM-VL",
+    "RM-M",
+    "RM-H",
+    "RM-VH",
 )
 
 
@@ -69,7 +79,8 @@ def _residential_standard(full_code: str) -> dict[str, Any]:
             "units_basis": "district-type (§ 903)"
             if _BASE_UNITS[base] is not None
             else "envelope-governed / estimated (§ 903.03)",
-            "note": "Setback shown is the minimum interior sideyard; other yards vary — see § 903.03.",
+            "note": "Setback shown is the minimum interior sideyard; "
+            "other yards vary — see § 903.03.",
         },
     }
 
@@ -100,32 +111,58 @@ async def seed_pgh_zoning_standards(session: AsyncSession) -> int:
 # corpus states are filled; the rest NULL. Non-residential -> no by-right dwelling count.
 _NONRES_STANDARDS: tuple[dict[str, Any], ...] = (
     {
-        "code": "LNC", "name": "Local Neighborhood Commercial", "citation": "§ 904.02",
-        "max_floor_area_ratio_pct": 200, "max_occupancy_pct": 90,
-        "front_setback_ft": 0, "rear_setback_ft": 20, "side_setback_ft": 0, "max_height_ft": 45,
+        "code": "LNC",
+        "name": "Local Neighborhood Commercial",
+        "citation": "§ 904.02",
+        "max_floor_area_ratio_pct": 200,
+        "max_occupancy_pct": 90,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 20,
+        "side_setback_ft": 0,
+        "max_height_ft": 45,
     },
     {
-        "code": "NDO", "name": "Neighborhood Office", "citation": "§ 904.01",
-        "max_floor_area_ratio_pct": 300, "max_occupancy_pct": 90,
-        "front_setback_ft": 0, "rear_setback_ft": 20, "side_setback_ft": 0, "max_height_ft": 45,
-    },
-    {
-        "code": "GI", "name": "General Industrial", "citation": "§ 904.06",
+        "code": "NDO",
+        "name": "Neighborhood Office",
+        "citation": "§ 904.01",
         "max_floor_area_ratio_pct": 300,
-        "front_setback_ft": 0, "rear_setback_ft": 20, "side_setback_ft": 10, "max_height_ft": 75,
+        "max_occupancy_pct": 90,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 20,
+        "side_setback_ft": 0,
+        "max_height_ft": 45,
     },
     {
-        "code": "H", "name": "Hillside", "citation": "§ 904 (Hillside Regulations)",
+        "code": "GI",
+        "name": "General Industrial",
+        "citation": "§ 904.06",
+        "max_floor_area_ratio_pct": 300,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 20,
+        "side_setback_ft": 10,
+        "max_height_ft": 75,
+    },
+    {
+        "code": "H",
+        "name": "Hillside",
+        "citation": "§ 904 (Hillside Regulations)",
         "min_lot_area_sqft": 3200,
-        "front_setback_ft": 0, "rear_setback_ft": 0, "side_setback_ft": 0, "max_height_ft": 40,
+        "front_setback_ft": 0,
+        "rear_setback_ft": 0,
+        "side_setback_ft": 0,
+        "max_height_ft": 40,
         "dimensional_extra": {"max_area_of_disturbance_pct": 50},
     },
     {
-        "code": "GT-A", "name": "Golden Triangle Subdistrict A", "citation": "§ 907 (Ord. 2022, FAR 13)",
+        "code": "GT-A",
+        "name": "Golden Triangle Subdistrict A",
+        "citation": "§ 907 (Ord. 2022, FAR 13)",
         "max_floor_area_ratio_pct": 1300,
     },
     {
-        "code": "GT-B", "name": "Golden Triangle Subdistrict B", "citation": "§ 907 (Ord. 2022, FAR 13)",
+        "code": "GT-B",
+        "name": "Golden Triangle Subdistrict B",
+        "citation": "§ 907 (Ord. 2022, FAR 13)",
         "max_floor_area_ratio_pct": 1300,
     },
 )
@@ -138,13 +175,19 @@ def _nonres_row(spec: dict[str, Any]) -> dict[str, Any]:
         "dimensional": {
             "district_name": spec["name"],
             "citation": spec["citation"],
-            "units_basis": "non-residential (no by-right dwelling count; FAR-governed capacity is estimated)",
+            "units_basis": "non-residential (no by-right dwelling count; "
+            "FAR-governed capacity is estimated)",
             **spec.get("dimensional_extra", {}),
         },
     }
     for field in (
-        "min_lot_area_sqft", "max_floor_area_ratio_pct", "max_occupancy_pct",
-        "front_setback_ft", "rear_setback_ft", "side_setback_ft", "max_height_ft",
+        "min_lot_area_sqft",
+        "max_floor_area_ratio_pct",
+        "max_occupancy_pct",
+        "front_setback_ft",
+        "rear_setback_ft",
+        "side_setback_ft",
+        "max_height_ft",
     ):
         if field in spec:
             row[field] = spec[field]

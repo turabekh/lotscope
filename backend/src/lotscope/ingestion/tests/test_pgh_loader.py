@@ -31,7 +31,8 @@ def test_geometry_row_builds_transformed_geom() -> None:
     row = _geometry_row({"PIN": "0001B00024000000", "wkb_hex": "00000000030000000100"})
     assert row is not None
     assert row["parcel_number"] == "pgh:0001B00024000000"
-    assert "geom_4326" in row and "geom_local" in row
+    assert "geom_4326" in row
+    assert "geom_local" in row
 
 
 def test_geometry_row_skips_without_wkb() -> None:
@@ -43,8 +44,14 @@ def test_sale_row_filters_and_maps() -> None:
 
     known = {"pgh:0001B00024000000"}
     row = _sale_row(
-        {"PARID": "0001B00024000000", "SALEDATE": "2024-03-15", "PRICE": "250000",
-         "DEEDBOOK": "18965", "DEEDPAGE": "204", "INSTRTYPDESC": "DEED"},
+        {
+            "PARID": "0001B00024000000",
+            "SALEDATE": "2024-03-15",
+            "PRICE": "250000",
+            "DEEDBOOK": "18965",
+            "DEEDPAGE": "204",
+            "INSTRTYPDESC": "DEED",
+        },
         known,
     )
     assert row is not None
@@ -81,9 +88,13 @@ def test_violation_row_maps_and_filters() -> None:
 
     known = {"pgh:0042M00227000000"}
     row = _violation_row(
-        {"parcel_id": "0042M00227000000", "casefile_number": "CF-2026-1",
-         "status": "In Violation", "investigation_date": "2026-01-10",
-         "violation_description": "Overgrowth"},
+        {
+            "parcel_id": "0042M00227000000",
+            "casefile_number": "CF-2026-1",
+            "status": "In Violation",
+            "investigation_date": "2026-01-10",
+            "violation_description": "Overgrowth",
+        },
         known,
     )
     assert row is not None
@@ -111,13 +122,21 @@ def test_district_row_maps_code_and_geometry() -> None:
     from lotscope.ingestion.loaders.pgh import _district_row
 
     row = _district_row(
-        {"_id": "42", "zon_new": "R1D-M", "full_zoning_type": "SINGLE-UNIT DETACHED RESIDENTIAL",
-         "geometry": "POLYGON ((592821 4468479, 592822 4468479, 592822 4468480, 592821 4468479))"}
+        {
+            "_id": "42",
+            "zon_new": "R1D-M",
+            "full_zoning_type": "SINGLE-UNIT DETACHED RESIDENTIAL",
+            "geometry": (
+                "POLYGON ((592821 4468479, 592822 4468479, "
+                "592822 4468480, 592821 4468479))"
+            ),
+        }
     )
     assert row is not None
     assert row["code"] == "R1D-M"
     assert row["external_id"] == "pgh:42"
-    assert "geom_local" in row and "geom_4326" in row
+    assert "geom_local" in row
+    assert "geom_4326" in row
 
 
 def test_district_row_skips_without_code_or_geom() -> None:

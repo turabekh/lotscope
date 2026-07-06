@@ -27,7 +27,10 @@ _SPATIAL_DISTRICT_SQL = text(
     "SELECT zd.code FROM parcel p "
     "JOIN zoning_district zd ON zd.market_code = p.market_code "
     "AND ST_Contains(zd.geom_local, ST_Centroid(p.geom_local)) "
-    "WHERE p.parcel_number = :parcel_number LIMIT 1"
+    "WHERE p.parcel_number = :parcel_number "
+    "ORDER BY ST_Area(ST_Intersection("
+    "ST_MakeValid(zd.geom_local), ST_MakeValid(p.geom_local))) DESC, zd.code ASC "
+    "LIMIT 1"
 )
 _PARCEL_OVERLAYS_SQL = text(
     "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
