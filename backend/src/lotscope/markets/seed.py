@@ -58,13 +58,51 @@ HARRISBURG: dict[str, Any] = {
 }
 
 
+PITTSBURGH: dict[str, Any] = {
+    "code": "pgh",
+    "name": "Pittsburgh",
+    "state": "PA",
+    "url_slug": "pittsburgh",
+    "local_srid": 2272,
+    "map_center": [-79.9959, 40.4406],
+    "map_bounds": [[-80.0954, 40.3610], [-79.8656, 40.5012]],
+    "default_zoom": 12.5,
+    "timezone": "America/New_York",
+    "recorder_url_template": (
+        "https://gis.alleghenycounty.us/RealEstate/SearchResults.aspx?ParcelID={local_key}"
+    ),
+    "deal_assumption_overrides": {},
+    "source_config": {
+        "ckan_base_url": "https://data.wprdc.org",
+        "municipality_filter": "PITTSBURGH",
+        "assessment_resource_id": "65855e14-549e-4992-b5be-d629afc676fa",
+        "boundaries_resource_id": "3f50d47a-ab54-4da2-9f03-8519006e9fc9",
+        "sales_resource_id": "5bbe6c55-bce6-4edb-9d04-68edeb6bf7b1",
+        "liens_resource_id": "d1e80180-5b2e-4dab-8ec3-be621628649e",
+        "violations_resource_id": "70c06278-92c5-4040-ab28-17671866f81c",
+        "condemned_resource_id": "0a963f26-eb4b-4325-bbbc-3ddf6a871410",
+        "city_owned_resource_id": "e1dcee82-9179-4306-8167-5891915b62a7",
+        "foreclosures_resource_id": "859bccfd-0e12-4161-a348-313d734f25fd",
+        "zoning_resource_id": "6127f35e-f36b-4a53-80b3-f4409609e9df",
+        "neighborhoods_resource_id": "4af8e160-57e9-4ebf-a501-76ca1b42fc99",
+    },
+    "coverage_note": (
+        "Pittsburgh city pilot — Allegheny County assessment + geometry via WPRDC; "
+        "validation-filtered sale comps; PLI violations live; owner surfaces disabled "
+        "(Ordinance 3478-07); zoning provisional pending review."
+    ),
+    "launch_status": "pilot",
+    "assessment_ratio": 0.5014,
+}
+
+
 def market_source_url(source_config: dict[str, Any], key: str, settings: Any) -> str | None:
     value = source_config.get(key)
     if value:
         return str(value)
     return getattr(settings, key, None)
 
-_SEED_MARKETS: tuple[dict[str, Any], ...] = (PHILADELPHIA, HARRISBURG)
+_SEED_MARKETS: tuple[dict[str, Any], ...] = (PHILADELPHIA, HARRISBURG, PITTSBURGH)
 
 
 async def seed_markets(session: AsyncSession) -> int:
