@@ -33,6 +33,24 @@ def test_unconfirmed_fields_are_null_not_guessed() -> None:
     assert rows["R1D-VH"]["min_lot_area_sqft"] is None
     assert rows["RM-VH"]["min_lot_area_sqft"] is None
     # no row invents min_lot_width / occupancy / permitted_uses (use table not yet loaded)
+    # min_lot_width has no district-wide dimensional floor (use-condition only) -> NULL stands
     for r in PGH_STANDARDS:
         assert "min_lot_width_ft" not in r
-        assert "permitted_uses" not in r
+
+
+def test_by_right_units_from_district_type() -> None:
+    rows = _by_code()
+    assert rows["R1D-M"]["max_units"] == 1
+    assert rows["R1A-H"]["max_units"] == 1
+    assert rows["R2-M"]["max_units"] == 2
+    assert rows["R3-L"]["max_units"] == 3
+    # RM is envelope-governed -> estimated, not a firm by-right count
+    assert rows["RM-H"]["max_units"] is None
+    assert rows["RM-M"]["max_units"] is None
+
+
+def test_primary_residential_use_authored() -> None:
+    rows = _by_code()
+    assert rows["R1D-M"]["permitted_uses"] == ["Single-Unit Detached Residential"]
+    assert rows["R2-M"]["permitted_uses"] == ["Two-Unit Residential"]
+    assert rows["RM-H"]["permitted_uses"] == ["Multi-Unit Residential"]

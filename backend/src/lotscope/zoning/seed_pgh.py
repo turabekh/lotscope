@@ -36,6 +36,10 @@ _DISTRICT_NAME: dict[str, str] = {
     "R3": "Three-Unit Residential",
     "RM": "Multi-Unit Residential",
 }
+# By-right primary-use unit count from the district definition (§ 903 — Single/Two/Three/Multi-Unit).
+# RM is None: Pittsburgh multi-unit density is envelope-governed (no per-unit lot-area rule in
+# § 903.03), so units are an estimated capacity, never a firm by-right count.
+_BASE_UNITS: dict[str, int | None] = {"R1D": 1, "R1A": 1, "R2": 2, "R3": 3, "RM": None}
 _RESIDENTIAL_CODES: tuple[str, ...] = (
     "R1D-VL", "R1D-L", "R1D-M", "R1D-H", "R1D-VH",
     "R1A-M", "R1A-H", "R1A-VH",
@@ -56,10 +60,15 @@ def _residential_standard(full_code: str) -> dict[str, Any]:
         "rear_setback_ft": values["rear"],
         "side_setback_ft": values["side"],
         "max_height_ft": values["height"],
+        "max_units": _BASE_UNITS[base],
+        "permitted_uses": [_DISTRICT_NAME[base]],
         "dimensional": {
             "district_name": _DISTRICT_NAME[base],
             "density_subdistrict": density,
-            "max_height_stories": {40: 3, 55: 4, 85: 9}.get(values["height"]),
+            "max_height_stories": {40: 3, 55: 4, 85: 9, 180: None}.get(values["height"]),
+            "units_basis": "district-type (§ 903)"
+            if _BASE_UNITS[base] is not None
+            else "envelope-governed / estimated (§ 903.03)",
             "note": "Setback shown is the minimum interior sideyard; other yards vary — see § 903.03.",
         },
     }
