@@ -767,6 +767,19 @@ watch(basemap, (id) => {
   void applyBasemap(id)
 })
 
+watch(
+  () => marketStore.active,
+  () => {
+    map?.flyTo({
+      center: homeCenter.value,
+      zoom: homeZoom.value,
+      pitch: 0,
+      duration: 900,
+      essential: true,
+    })
+  },
+)
+
 watch([vacantOnly, useClasses], () => {
   if (!map?.getLayer('parcels-fill')) return
   map.setFilter('parcels-fill', parcelFilter())
