@@ -79,7 +79,7 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    data.value = await api.getNeighborhoodMarket()
+    data.value = await api.getNeighborhoodMarket(market.active)
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Could not load market data.'
   } finally {

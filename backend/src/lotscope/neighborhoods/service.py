@@ -27,16 +27,19 @@ _MARKET_STATS_SQL = text(
     "LEFT JOIN parcel_distress pd ON pd.parcel_number = p.parcel_number "
     "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
+    "WHERE n.market_code = :market "
     "GROUP BY n.name "
     "ORDER BY vacant_lots DESC, n.name"
 )
 
 
-async def list_neighborhoods(session: AsyncSession) -> list[NeighborhoodSummary]:
+async def list_neighborhoods(
+    session: AsyncSession, market_code: str
+) -> list[NeighborhoodSummary]:
     rows = (
         await session.execute(
             select(distinct(Neighborhood.name))
-            .where(Neighborhood.name.isnot(None))
+            .where(Neighborhood.name.isnot(None), Neighborhood.market_code == market_code)
             .order_by(Neighborhood.name)
         )
     ).all()
@@ -47,8 +50,10 @@ def _round(value: Any, digits: int = 1) -> float | None:
     return round(float(value), digits) if value is not None else None
 
 
-async def neighborhood_market_stats(session: AsyncSession) -> NeighborhoodMarketResponse:
-    rows = (await session.execute(_MARKET_STATS_SQL)).all()
+async def neighborhood_market_stats(
+    session: AsyncSession, market_code: str
+) -> NeighborhoodMarketResponse:
+    rows = (await session.execute(_MARKET_STATS_SQL, {"market": market_code})).all()
     neighborhoods = [
         NeighborhoodMarketStats(
             name=row.name,
