@@ -208,6 +208,16 @@ def test_no_geometry_does_not_flag_access() -> None:
     assert "no_street_access" not in _codes(signals)
 
 
+def test_no_street_data_for_market_does_not_flag_access() -> None:
+    signals = RiskSignals(
+        li=LiSignal(),
+        access=AccessSignal(
+            has_geometry=True, has_street_frontage=False, street_data_available=False
+        ),
+    )
+    assert "no_street_access" not in _codes(signals)
+
+
 def test_historic_district_is_flagged() -> None:
     signals = RiskSignals(
         li=LiSignal(),

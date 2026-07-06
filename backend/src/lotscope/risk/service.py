@@ -65,6 +65,12 @@ _ACCESS_SQL = text(
     "WHERE s.market_code = p.market_code AND ST_DWithin(s.geom_local, p.geom_local, :max)"
     ") AS has_frontage"
 )
+_MARKET_STREETS_SQL = text(
+    "SELECT EXISTS("
+    "SELECT 1 FROM street_centerline s JOIN parcel p ON p.parcel_number = :parcel_number "
+    "WHERE s.market_code = p.market_code"
+    ") AS has_streets"
+)
 _HISTORIC_SQL = text(
     "SELECT hd.name FROM parcel p "
     "JOIN historic_district hd ON hd.market_code = p.market_code "
@@ -149,6 +155,11 @@ async def _has_street_frontage(session: AsyncSession, parcel_number: str) -> boo
     return bool(has_frontage)
 
 
+async def _market_has_streets(session: AsyncSession, parcel_number: str) -> bool:
+    exists = await session.scalar(_MARKET_STREETS_SQL, {"parcel_number": parcel_number})
+    return bool(exists)
+
+
 async def _historic_signal(session: AsyncSession, parcel_number: str) -> HistoricSignal:
     name = await session.scalar(_HISTORIC_SQL, {"parcel_number": parcel_number})
     return HistoricSignal(in_district=name is not None, district_name=name)
@@ -176,6 +187,9 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
     has_frontage = (
         await _has_street_frontage(session, parcel_number) if parcel.has_geometry else False
     )
+    street_data = (
+        await _market_has_streets(session, parcel_number) if parcel.has_geometry else True
+    )
     historic = (
         await _historic_signal(session, parcel_number)
         if parcel.has_geometry
@@ -192,7 +206,11 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
             is_city_owned=parcel.is_city_owned,
             flood_zones=flood_zones,
             title=TitleSignal(owner=parcel.owner),
-            access=AccessSignal(has_geometry=parcel.has_geometry, has_street_frontage=has_frontage),
+            access=AccessSignal(
+                has_geometry=parcel.has_geometry,
+                has_street_frontage=has_frontage,
+                street_data_available=street_data,
+            ),
             historic=historic,
             overlays=overlays,
             rco=rco,

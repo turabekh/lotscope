@@ -50,6 +50,7 @@ class TitleSignal:
 class AccessSignal:
     has_geometry: bool
     has_street_frontage: bool
+    street_data_available: bool = True
 
 
 @dataclass(frozen=True)
@@ -219,7 +220,7 @@ def _title_flags(title: TitleSignal) -> list[RiskFlag]:
 
 
 def _access_flag(access: AccessSignal) -> RiskFlag | None:
-    if not access.has_geometry or access.has_street_frontage:
+    if not access.has_geometry or access.has_street_frontage or not access.street_data_available:
         return None
     return RiskFlag(
         "no_street_access",
