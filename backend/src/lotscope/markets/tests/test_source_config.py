@@ -17,6 +17,4 @@ def test_source_config_value_takes_precedence() -> None:
 
 def test_falls_back_to_settings_when_missing() -> None:
     assert market_source_url({}, "carto_sql_url", _settings()) == "https://settings.example/sql"
-    assert (
-        market_source_url({}, "arcgis_hub_url", _settings()) == "https://settings.example/arcgis"
-    )
+    assert market_source_url({}, "arcgis_hub_url", _settings()) == "https://settings.example/arcgis"

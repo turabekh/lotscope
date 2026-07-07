@@ -422,9 +422,7 @@ async def _run() -> None:
             count = await seed_zoning_standards(session)
             hbg_count = await seed_hbg_zoning_standards(session)
             await session.commit()
-            get_logger("zoning.seed").info(
-                "seeded_zoning_standards", phl=count, hbg=hbg_count
-            )
+            get_logger("zoning.seed").info("seeded_zoning_standards", phl=count, hbg=hbg_count)
     finally:
         await engine.dispose()
 

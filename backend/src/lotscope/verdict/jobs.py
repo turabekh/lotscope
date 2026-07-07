@@ -45,9 +45,7 @@ async def recompute_all_verdicts(
     market: str | None = None,
 ) -> int:
     async with session_factory() as session:
-        parcel_numbers = await _parcel_numbers(
-            session, vacant_only=vacant_only, market=market
-        )
+        parcel_numbers = await _parcel_numbers(session, vacant_only=vacant_only, market=market)
 
     logger = get_logger("verdict.jobs")
     total = 0

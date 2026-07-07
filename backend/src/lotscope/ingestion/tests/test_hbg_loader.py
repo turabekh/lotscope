@@ -142,9 +142,7 @@ async def test_load_hbg_parcels_writes_spine_geometry_and_freshness(
 def test_district_row_maps_code_and_market() -> None:
     from lotscope.ingestion.loaders.hbg import _district_row
 
-    feature = ArcGisFeature(
-        id=42, geometry=_GEOMETRY_4326, properties={"MAP_ACRONY": "CG"}
-    )
+    feature = ArcGisFeature(id=42, geometry=_GEOMETRY_4326, properties={"MAP_ACRONY": "CG"})
     row = _district_row(feature)
     assert row is not None
     assert row["external_id"] == "hbg:42"

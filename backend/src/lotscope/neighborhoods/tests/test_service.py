@@ -7,9 +7,7 @@ from lotscope.neighborhoods.service import neighborhood_market_stats
 pytestmark = pytest.mark.integration
 
 
-async def _neighborhood(
-    session: AsyncSession, name: str, wkt: str, market: str = "phl"
-) -> None:
+async def _neighborhood(session: AsyncSession, name: str, wkt: str, market: str = "phl") -> None:
     await session.execute(
         text(
             "INSERT INTO neighborhood (name, market_code, geom_local) "

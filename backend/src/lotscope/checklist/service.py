@@ -21,9 +21,7 @@ async def build_parcel_checklist(
         detail.exempt_land, detail.exempt_building
     )
     market = parcel_number.split(":", 1)[0]
-    items, summary = build_checklist(
-        verdict, has_abatement=has_abatement, market_code=market
-    )
+    items, summary = build_checklist(verdict, has_abatement=has_abatement, market_code=market)
     return ParcelChecklist(
         parcel_number=parcel_number,
         items=items,

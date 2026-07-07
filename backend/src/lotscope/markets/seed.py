@@ -102,6 +102,7 @@ def market_source_url(source_config: dict[str, Any], key: str, settings: Any) ->
         return str(value)
     return getattr(settings, key, None)
 
+
 _SEED_MARKETS: tuple[dict[str, Any], ...] = (PHILADELPHIA, HARRISBURG, PITTSBURGH)
 
 

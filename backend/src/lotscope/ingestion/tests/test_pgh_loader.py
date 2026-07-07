@@ -127,8 +127,7 @@ def test_district_row_maps_code_and_geometry() -> None:
             "zon_new": "R1D-M",
             "full_zoning_type": "SINGLE-UNIT DETACHED RESIDENTIAL",
             "geometry": (
-                "POLYGON ((592821 4468479, 592822 4468479, "
-                "592822 4468480, 592821 4468479))"
+                "POLYGON ((592821 4468479, 592822 4468479, 592822 4468480, 592821 4468479))"
             ),
         }
     )

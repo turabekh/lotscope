@@ -103,16 +103,18 @@ async def load_pgh_parcels(
             )
             total += len(rows)
     await record_freshness(
-        session, PGH_PARCELS_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=total,
+        session,
+        PGH_PARCELS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
     )
     return total
 
 
 async def _pittsburgh_municodes(ckan: CkanDatastoreClient, resource_id: str) -> list[str]:
-    rows = await ckan.query(
-        f'SELECT DISTINCT "MUNICODE" FROM "{resource_id}" WHERE {_CITY_WHERE}'
-    )
+    rows = await ckan.query(f'SELECT DISTINCT "MUNICODE" FROM "{resource_id}" WHERE {_CITY_WHERE}')
     return sorted({str(r["MUNICODE"]) for r in rows if r.get("MUNICODE") is not None})
 
 
@@ -140,7 +142,7 @@ async def load_pgh_geometry(
 ) -> int:
     municodes = await _pittsburgh_municodes(ckan, assessment_resource_id)
     muni_list = ", ".join(f"'{m}'" for m in municodes) or "''"
-    columns = ('"PIN"', 'encode("dataspatial_wkb", \'hex\') AS wkb_hex')
+    columns = ('"PIN"', "encode(\"dataspatial_wkb\", 'hex') AS wkb_hex")
     total = 0
     async for records in ckan.paginate_by_key(
         resource_id=boundaries_resource_id,
@@ -160,14 +162,18 @@ async def load_pgh_geometry(
             )
             total += len(rows)
     await record_freshness(
-        session, PGH_GEOMETRY_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=total,
+        session,
+        PGH_GEOMETRY_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
     )
     return total
 
 
 PGH_SALES_DATASET = "pgh_sales"
-_VALID_SALE_WHERE = f"{_CITY_WHERE} AND \"SALEDESC\" = 'VALID SALE' AND \"PRICE\" > 0"
+_VALID_SALE_WHERE = f'{_CITY_WHERE} AND "SALEDESC" = \'VALID SALE\' AND "PRICE" > 0'
 _SALES_COLUMNS = (
     '"_id"',
     '"PARID"',
@@ -250,8 +256,12 @@ async def load_pgh_sales(
             )
             total += len(rows)
     await record_freshness(
-        session, PGH_SALES_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=total,
+        session,
+        PGH_SALES_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
     )
     return total
 
@@ -308,8 +318,12 @@ async def load_pgh_liens(
             update_columns=["is_delinquent", "total_due", "lien_count"],
         )
     await record_freshness(
-        session, PGH_LIENS_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=len(rows),
+        session,
+        PGH_LIENS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=len(rows),
     )
     return len(rows)
 
@@ -369,16 +383,20 @@ async def load_pgh_foreclosures(
             update_columns=["in_sheriff_sale", "as_of_date"],
         )
     await record_freshness(
-        session, PGH_FORECLOSURES_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=len(rows),
+        session,
+        PGH_FORECLOSURES_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=len(rows),
     )
     return len(rows)
 
 
 PGH_VIOLATIONS_DATASET = "pgh_violations"
 _VIOLATION_WHERE = (
-    "\"parcel_id\" IS NOT NULL "
-    "AND \"violation_description\" IS NOT NULL AND \"violation_description\" <> 'None'"
+    '"parcel_id" IS NOT NULL '
+    'AND "violation_description" IS NOT NULL AND "violation_description" <> \'None\''
 )
 _VIOLATION_COLUMNS = (
     '"_id"',
@@ -445,8 +463,12 @@ async def load_pgh_violations(
             )
             total += len(rows)
     await record_freshness(
-        session, PGH_VIOLATIONS_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=total,
+        session,
+        PGH_VIOLATIONS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
     )
     return total
 
@@ -482,8 +504,12 @@ async def load_pgh_city_owned(
             update(Parcel).where(Parcel.parcel_number.in_(parcels)).values(is_city_owned=True)
         )
     await record_freshness(
-        session, PGH_CITY_OWNED_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=len(parcels),
+        session,
+        PGH_CITY_OWNED_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=len(parcels),
     )
     return len(parcels)
 
@@ -521,8 +547,12 @@ async def load_pgh_condemned(
             .values(condemned_status="condemned_or_dead_end")
         )
     await record_freshness(
-        session, PGH_CONDEMNED_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=len(parcels),
+        session,
+        PGH_CONDEMNED_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=len(parcels),
     )
     return len(parcels)
 
@@ -575,20 +605,29 @@ async def load_pgh_zoning_districts(
                 rows,
                 index_elements=["external_id"],
                 update_columns=[
-                    "code", "long_code", "category", "market_code",
-                    "geom_4326", "geom_local", "source",
+                    "code",
+                    "long_code",
+                    "category",
+                    "market_code",
+                    "geom_4326",
+                    "geom_local",
+                    "source",
                 ],
             )
             total += len(rows)
     await record_freshness(
-        session, PGH_ZONING_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=total,
+        session,
+        PGH_ZONING_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
     )
     return total
 
 
 PGH_NEIGHBORHOODS_DATASET = "pgh_neighborhoods"
-_NEIGHBORHOOD_COLUMNS = ('"_id"', '"hood"', 'encode("dataspatial_wkb", \'hex\') AS wkb_hex')
+_NEIGHBORHOOD_COLUMNS = ('"_id"', '"hood"', "encode(\"dataspatial_wkb\", 'hex') AS wkb_hex")
 
 
 def _neighborhood_row(record: dict[str, Any]) -> dict[str, Any] | None:
@@ -635,8 +674,12 @@ async def load_pgh_neighborhoods(
             )
             total += len(rows)
     await record_freshness(
-        session, PGH_NEIGHBORHOODS_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=total,
+        session,
+        PGH_NEIGHBORHOODS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
     )
     return total
 
@@ -668,7 +711,11 @@ async def derive_pgh_vacancy(session: AsyncSession) -> int:
     if updates:
         await session.execute(_VACANCY_UPDATE, updates)
     await record_freshness(
-        session, PGH_VACANCY_DATASET, status="success", success=True,
-        market_code=_MARKET, row_count=vacant,
+        session,
+        PGH_VACANCY_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=vacant,
     )
     return vacant

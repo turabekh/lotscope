@@ -1,5 +1,3 @@
-
-
 def test_assumptions_source_requires_explicit_calibration_marker() -> None:
     from lotscope.deal.service import assumptions_source
 

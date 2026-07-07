@@ -1,10 +1,12 @@
+from typing import Any
+
 from lotscope.ingestion.loaders.hbg_repository import (
     classify_repository_row,
     parse_repository_pdf_text,
 )
 
 
-def _row(**over):
+def _row(**over: Any) -> dict[str, Any]:
     base = {
         "parcel_number": "02-030-005",
         "site_address": "409 S 14th St",

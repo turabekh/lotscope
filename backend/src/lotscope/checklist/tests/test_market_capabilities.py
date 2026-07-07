@@ -60,9 +60,7 @@ def test_pgh_overlays_and_access_are_pending_not_false_clean() -> None:
     assert checklist_category_state("pgh", "overlays") == "pending_load"
     assert checklist_category_state("pgh", "access") == "pending_load"
     for code_name in ("overlays", "access"):
-        code, category, flag_codes, clear = next(
-            c for c in _RISK_CATEGORIES if c[0] == code_name
-        )
+        code, category, flag_codes, clear = next(c for c in _RISK_CATEGORIES if c[0] == code_name)
         detail = checklist_state_detail("pgh", code_name, "pending_load")
         item = _risk_item(
             code, category, flag_codes, clear, [], availability="pending_load", state_detail=detail
