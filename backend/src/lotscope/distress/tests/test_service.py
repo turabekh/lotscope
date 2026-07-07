@@ -4,6 +4,8 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.distress.jobs import _assert_market_coverage
+from lotscope.distress.profiles import UnknownMarketProfileError
 from lotscope.distress.service import (
     assess_parcel_distress,
     find_leads,
@@ -12,6 +14,16 @@ from lotscope.distress.service import (
 )
 
 pytestmark = pytest.mark.integration
+
+
+async def _market(session: AsyncSession, code: str) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO market (code, name, url_slug, local_srid, map_center, default_zoom, "
+            "timezone) VALUES (:c, :c, :c, 2248, CAST(:center AS jsonb), 12, 'UTC')"
+        ),
+        {"c": code, "center": '{"lat": 39.3, "lng": -76.6}'},
+    )
 
 
 async def _parcel(
@@ -144,6 +156,11 @@ async def test_leads_rank_and_exclude(db_session: AsyncSession) -> None:
     parcel = await assess_parcel_distress(db_session, "000000001")
     assert parcel is not None
     assert top.score == parcel.score  # precomputed lead score and live per-parcel scorer agree
+    assert parcel.profile_id == "philly-distress-v1"
+    stored_profile = await db_session.scalar(
+        text("SELECT profile_id FROM parcel_distress WHERE parcel_number = '000000001'")
+    )
+    assert stored_profile == parcel.profile_id  # precomputed and live agree on the profile
 
 
 async def test_long_tenure_absentee_from_old_deed(db_session: AsyncSession) -> None:
@@ -249,3 +266,52 @@ async def test_leads_respect_min_score_and_vacant_filter(db_session: AsyncSessio
 
     assert await find_leads(db_session, limit=50, min_score=30) == []
     assert await find_leads(db_session, limit=50, min_score=1, vacant_only=True) == []
+
+
+async def test_coverage_check_fails_loudly_on_unregistered_market(
+    db_session: AsyncSession,
+) -> None:
+    await _market(db_session, "bal")
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, owner, address, mailing_address) "
+            "VALUES ('bal:1', 'bal', 'OWNER', '1 A ST', '1 A ST')"
+        )
+    )
+    await db_session.flush()
+
+    with pytest.raises(UnknownMarketProfileError) as excinfo:
+        await _assert_market_coverage(db_session)
+    assert "bal" in str(excinfo.value)
+
+
+async def test_unprofiled_market_parcel_raises_on_live_scoring(
+    db_session: AsyncSession,
+) -> None:
+    await _market(db_session, "bal")
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, owner, address, mailing_address) "
+            "VALUES ('bal:2', 'bal', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY')"
+        )
+    )
+    await db_session.flush()
+
+    with pytest.raises(UnknownMarketProfileError):
+        await assess_parcel_distress(db_session, "bal:2")
+
+
+async def test_leads_long_held_factor_is_profile_driven(db_session: AsyncSession) -> None:
+    await _parcel(db_session, "000000020", address="20 A ST", mailing="99 ZZ AVE, NEW YORK NY")
+    await _tax(db_session, "000000020", delinquent=True, due=25000, years=5)
+    await _deed(db_session, "000000020", "D-20", "2005-01-01")
+    await _parcel(db_session, "000000021", address="21 A ST", mailing="99 ZZ AVE, NEW YORK NY")
+    await _tax(db_session, "000000021", delinquent=True, due=25000, years=5)
+    await _deed(db_session, "000000021", "D-21", "2023-01-01")
+    await db_session.flush()
+    await recompute_distress(db_session, ["000000020", "000000021"])
+
+    leads = {lead.parcel_number: lead for lead in await find_leads(db_session, limit=50)}
+    old = next(f for f in leads["000000020"].top_factors if f.startswith("Long-held"))
+    assert old
+    assert all(not f.startswith("Long-held") for f in leads["000000021"].top_factors)
