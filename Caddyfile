@@ -4,8 +4,9 @@ parcelphl.online {
 		reverse_proxy api:8000
 	}
 	handle_path /tiles/* {
-		header Cache-Control "public, max-age=3600"
-		reverse_proxy martin:3000
+		reverse_proxy martin:3000 {
+			header_down Cache-Control "public, max-age=3600"
+		}
 	}
 	handle {
 		reverse_proxy web:80
