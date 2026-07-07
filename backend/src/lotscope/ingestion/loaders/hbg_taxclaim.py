@@ -83,9 +83,7 @@ async def load_hbg_tax_claim(
     repository = repository_parcel_numbers(classified)
     if repository:
         await session.execute(
-            update(Parcel)
-            .where(Parcel.parcel_number.in_(repository))
-            .values(is_city_owned=True)
+            update(Parcel).where(Parcel.parcel_number.in_(repository)).values(is_city_owned=True)
         )
     await record_freshness(
         session,

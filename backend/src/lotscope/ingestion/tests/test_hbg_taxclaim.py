@@ -59,10 +59,7 @@ async def test_load_hbg_tax_claim_flags_forced_sale_and_labels_freshness(
 ) -> None:
     for local in ("04-038-028", "09-001-001", "13-003-100"):
         await db_session.execute(
-            text(
-                "INSERT INTO parcel (parcel_number, market_code) "
-                f"VALUES ('hbg:{local}', 'hbg')"
-            )
+            text(f"INSERT INTO parcel (parcel_number, market_code) VALUES ('hbg:{local}', 'hbg')")
         )
     await db_session.flush()
 

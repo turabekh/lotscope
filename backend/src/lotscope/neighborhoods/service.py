@@ -33,9 +33,7 @@ _MARKET_STATS_SQL = text(
 )
 
 
-async def list_neighborhoods(
-    session: AsyncSession, market_code: str
-) -> list[NeighborhoodSummary]:
+async def list_neighborhoods(session: AsyncSession, market_code: str) -> list[NeighborhoodSummary]:
     rows = (
         await session.execute(
             select(distinct(Neighborhood.name))

@@ -56,9 +56,7 @@ def is_absentee(address: str | None, mailing_address: str | None) -> bool:
     return address.strip().upper() not in mailing_address.strip().upper()
 
 
-def score_distress(
-    signals: DistressSignals, profile: DistressScoringProfile
-) -> DistressAssessment:
+def score_distress(signals: DistressSignals, profile: DistressScoringProfile) -> DistressAssessment:
     if signals.is_city_owned:
         return DistressAssessment(score=0, tier="none", factors=[])
 

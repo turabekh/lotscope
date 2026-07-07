@@ -25,9 +25,7 @@ def _legacy_score(s: DistressSignals) -> tuple[int, str, list[_LegacyFactor]]:
         due = s.total_due or 0.0
         factors.append(("tax_delinquent", f"Tax delinquent (${due:,.0f})", 15))
         if due >= 10000.0 or (s.years_owed or 0) >= 3:
-            factors.append(
-                ("severe_delinquency", "Severe or long-running tax delinquency", 15)
-            )
+            factors.append(("severe_delinquency", "Severe or long-running tax delinquency", 15))
     if (s.lien_count or 0) > 0:
         factors.append(("liens", f"{s.lien_count} tax lien(s)", 10))
     if s.has_imminently_dangerous or s.has_unsafe:
@@ -50,9 +48,7 @@ def _legacy_score(s: DistressSignals) -> tuple[int, str, list[_LegacyFactor]]:
     if s.is_tired_landlord:
         factors.append(("portfolio_distress", "Tired landlord (portfolio-wide violations)", 10))
     score = min(100, sum(weight for _, _, weight in factors))
-    tier = (
-        "high" if score >= 60 else "medium" if score >= 30 else "low" if score > 0 else "none"
-    )
+    tier = "high" if score >= 60 else "medium" if score >= 30 else "low" if score > 0 else "none"
     return score, tier, factors
 
 
@@ -71,17 +67,11 @@ _MATRIX: dict[str, DistressSignals] = {
     "unsafe_flag": DistressSignals(has_imminently_dangerous=True),
     "portfolio_distress": DistressSignals(is_tired_landlord=True),
     "severe_due_exactly_10000": DistressSignals(is_delinquent=True, total_due=10000.0),
-    "just_below_severe_due": DistressSignals(
-        is_delinquent=True, total_due=9999.0, years_owed=2
-    ),
+    "just_below_severe_due": DistressSignals(is_delinquent=True, total_due=9999.0, years_owed=2),
     "severe_years_exactly_3": DistressSignals(is_delinquent=True, years_owed=3),
     "just_below_severe_years": DistressSignals(is_delinquent=True, years_owed=2, total_due=500),
-    "long_tenure_exactly_15": DistressSignals(
-        is_absentee_owner=True, years_since_last_sale=15.0
-    ),
-    "just_below_long_tenure": DistressSignals(
-        is_absentee_owner=True, years_since_last_sale=14.999
-    ),
+    "long_tenure_exactly_15": DistressSignals(is_absentee_owner=True, years_since_last_sale=15.0),
+    "just_below_long_tenure": DistressSignals(is_absentee_owner=True, years_since_last_sale=14.999),
     "long_tenure_needs_absentee": DistressSignals(
         is_absentee_owner=False, years_since_last_sale=40.0
     ),

@@ -43,6 +43,7 @@ _RISK_COVERAGE_NOTE: dict[str, str] = {
 def risk_coverage_note(market_code: str) -> str | None:
     return _RISK_COVERAGE_NOTE.get(market_code)
 
+
 # Categories whose Philadelphia clear-detail wording references concepts a market
 # lacks (e.g. RCO is a Philadelphia Title-14 construct) get a market-neutral clear detail.
 _CLEAR_DETAIL_OVERRIDE: dict[tuple[str, str], str] = {
@@ -70,6 +71,7 @@ def checklist_state_detail(market_code: str, category: str, state: str) -> str:
 def clear_detail_override(market_code: str, category: str) -> str | None:
     return _CLEAR_DETAIL_OVERRIDE.get((market_code, category))
 
+
 _FORCED_SALE_LABEL: dict[str, str] = {
     "phl": "Sheriff sale",
     "hbg": "Tax sale (RETSL)",
@@ -85,6 +87,7 @@ _FORCED_SALE_SURFACE_LABEL: dict[str, str] = {
 
 def forced_sale_surface_label(market_code: str) -> str:
     return _FORCED_SALE_SURFACE_LABEL.get(market_code, "Sheriff sales")
+
 
 _DISPLAY_NAME: dict[str, str] = {
     "phl": "Philadelphia",

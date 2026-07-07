@@ -1,3 +1,5 @@
+import pytest
+
 from lotscope.ingestion.loaders.hbg_violations import (
     ViolationFieldMap,
     _normalize_status,
@@ -44,7 +46,7 @@ def test_status_normalization_maps_synonyms() -> None:
     assert _normalize_status("Referred to court") == "REFERRED TO COURT"
 
 
-def test_rtkl_note_appears_only_when_filed(monkeypatch) -> None:
+def test_rtkl_note_appears_only_when_filed(monkeypatch: pytest.MonkeyPatch) -> None:
     from lotscope.markets import capabilities
 
     base = capabilities.checklist_state_detail("hbg", "li", "no_data_source")

@@ -1,14 +1,19 @@
+from typing import Any
+
 from lotscope.zoning.seed_pgh import PGH_STANDARDS
 
 
-def _by_code() -> dict[str, dict]:
+def _by_code() -> dict[str, dict[str, Any]]:
     return {r["code"]: r for r in PGH_STANDARDS}
 
 
 def test_all_residential_suffixed_codes_present() -> None:
     codes = {r["code"] for r in PGH_STANDARDS}
-    residential = {c for c in codes if c[0] == "R" and "-" in c and c.split("-")[1] in
-                   {"VL", "L", "M", "H", "VH"}}
+    residential = {
+        c
+        for c in codes
+        if c[0] == "R" and "-" in c and c.split("-")[1] in {"VL", "L", "M", "H", "VH"}
+    }
     assert len(residential) == 18
     assert {"R1D-VL", "R1D-M", "R1D-H", "R1A-VH", "R2-M", "R3-L", "RM-H"} <= codes
 

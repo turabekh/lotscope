@@ -278,6 +278,7 @@ _PHL_JOBS: dict[str, Job] = {
     "zba": ingest_zba,
 }
 
+
 async def ingest_hbg_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
     return await run_loader(
         session_factory,
@@ -469,41 +470,51 @@ async def _run_pgh_ckan(
 
 async def ingest_pgh_violations(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_pgh_ckan(
-        session_factory, settings,
+        session_factory,
+        settings,
         resource_key="violations_resource_id",
-        dataset=pgh.PGH_VIOLATIONS_DATASET, loader=pgh.load_pgh_violations,
+        dataset=pgh.PGH_VIOLATIONS_DATASET,
+        loader=pgh.load_pgh_violations,
     )
 
 
 async def ingest_pgh_city_owned(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_pgh_ckan(
-        session_factory, settings,
+        session_factory,
+        settings,
         resource_key="city_owned_resource_id",
-        dataset=pgh.PGH_CITY_OWNED_DATASET, loader=pgh.load_pgh_city_owned,
+        dataset=pgh.PGH_CITY_OWNED_DATASET,
+        loader=pgh.load_pgh_city_owned,
     )
 
 
 async def ingest_pgh_condemned(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_pgh_ckan(
-        session_factory, settings,
+        session_factory,
+        settings,
         resource_key="condemned_resource_id",
-        dataset=pgh.PGH_CONDEMNED_DATASET, loader=pgh.load_pgh_condemned,
+        dataset=pgh.PGH_CONDEMNED_DATASET,
+        loader=pgh.load_pgh_condemned,
     )
 
 
 async def ingest_pgh_zoning(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_pgh_ckan(
-        session_factory, settings,
+        session_factory,
+        settings,
         resource_key="zoning_resource_id",
-        dataset=pgh.PGH_ZONING_DATASET, loader=pgh.load_pgh_zoning_districts,
+        dataset=pgh.PGH_ZONING_DATASET,
+        loader=pgh.load_pgh_zoning_districts,
     )
 
 
 async def ingest_pgh_neighborhoods(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_pgh_ckan(
-        session_factory, settings,
+        session_factory,
+        settings,
         resource_key="neighborhoods_resource_id",
-        dataset=pgh.PGH_NEIGHBORHOODS_DATASET, loader=pgh.load_pgh_neighborhoods,
+        dataset=pgh.PGH_NEIGHBORHOODS_DATASET,
+        loader=pgh.load_pgh_neighborhoods,
     )
 
 

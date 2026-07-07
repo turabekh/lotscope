@@ -187,9 +187,7 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
     has_frontage = (
         await _has_street_frontage(session, parcel_number) if parcel.has_geometry else False
     )
-    street_data = (
-        await _market_has_streets(session, parcel_number) if parcel.has_geometry else True
-    )
+    street_data = await _market_has_streets(session, parcel_number) if parcel.has_geometry else True
     historic = (
         await _historic_signal(session, parcel_number)
         if parcel.has_geometry
