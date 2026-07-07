@@ -20,7 +20,7 @@ async def _insert_parcel(session: AsyncSession, parcel_number: str, *, vacant: b
     )
 
 
-async def _covering_tile(session: AsyncSession) -> tuple[int, int]:
+async def _covering_tile(session: AsyncSession, z: int = _ZOOM) -> tuple[int, int]:
     result = await session.execute(
         text(
             "WITH pt AS (SELECT ST_Centroid(ST_GeomFromText(:geom, 4326)) AS g) "
@@ -29,7 +29,7 @@ async def _covering_tile(session: AsyncSession) -> tuple[int, int]:
             "/ 2 * (2 ^ :z))::int AS y "
             "FROM pt"
         ),
-        {"geom": _POLYGON, "z": _ZOOM},
+        {"geom": _POLYGON, "z": z},
     )
     x, y = result.one()
     return int(x), int(y)
@@ -69,3 +69,29 @@ async def test_vacant_lots_tile_filters_to_vacant(db_session: AsyncSession) -> N
     )
     assert after is not None
     assert after > 0
+
+
+async def test_parcels_tile_is_vacant_only_below_zoom_15(db_session: AsyncSession) -> None:
+    await _insert_parcel(db_session, "000000001", vacant=False)
+    await db_session.flush()
+
+    x13, y13 = await _covering_tile(db_session, 13)
+    only_nonvacant_low = await db_session.scalar(
+        text(f"SELECT length({PARCELS_FUNCTION}(13, {x13}, {y13}))")
+    )
+    assert only_nonvacant_low == 0
+
+    x16, y16 = await _covering_tile(db_session, 16)
+    nonvacant_high = await db_session.scalar(
+        text(f"SELECT length({PARCELS_FUNCTION}(16, {x16}, {y16}))")
+    )
+    assert nonvacant_high is not None
+    assert nonvacant_high > 0
+
+    await _insert_parcel(db_session, "000000002", vacant=True)
+    await db_session.flush()
+    with_vacant_low = await db_session.scalar(
+        text(f"SELECT length({PARCELS_FUNCTION}(13, {x13}, {y13}))")
+    )
+    assert with_vacant_low is not None
+    assert with_vacant_low > 0
