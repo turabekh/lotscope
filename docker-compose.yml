@@ -49,6 +49,8 @@ services:
 
   martin:
     image: ghcr.io/maplibre/martin:v0.14.2
+    ports:
+      - "127.0.0.1:3000:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
     depends_on:
