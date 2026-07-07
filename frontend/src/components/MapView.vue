@@ -47,7 +47,7 @@ let draw: TerraDraw | undefined
 let drawStarted = false
 
 const container = ref<HTMLDivElement | null>(null)
-const martinUrl = import.meta.env.VITE_MARTIN_URL ?? 'http://localhost:3000'
+const martinUrl = import.meta.env.VITE_MARTIN_URL ?? '/tiles'
 const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 
 const marketStore = useMarketStore()
