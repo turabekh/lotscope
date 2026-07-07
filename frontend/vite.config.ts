@@ -13,6 +13,20 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  server: {
+    proxy: {
+      '/tiles': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/tiles/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes) => {
+            proxyRes.headers['cache-control'] = 'public, max-age=3600'
+          })
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,
