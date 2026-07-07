@@ -1443,3 +1443,31 @@ async def test_webhook_requires_signature(db_session: AsyncSession) -> None:
         resp = await client.post("/billing/webhook", content=b"{}")
 
     assert resp.status_code == 422
+
+
+@pytest.mark.integration
+async def test_distress_endpoint_returns_clean_error_for_unprofiled_market(
+    db_session: AsyncSession,
+) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO market (code, name, url_slug, local_srid, map_center, default_zoom, "
+            "timezone) VALUES ('bal', 'Baltimore', 'baltimore', 2248, CAST(:center AS jsonb), "
+            "12, 'UTC')"
+        ),
+        {"center": '{"lat": 39.3, "lng": -76.6}'},
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, owner, address, mailing_address) "
+            "VALUES ('bal:1', 'bal', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY')"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/parcels/bal:1/distress")
+
+    assert resp.status_code == 503
+    assert resp.json()["error"] == "UnknownMarketProfileError"

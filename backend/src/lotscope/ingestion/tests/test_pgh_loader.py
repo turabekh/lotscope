@@ -150,7 +150,11 @@ def test_neighborhood_row_maps_name_and_geometry() -> None:
     from lotscope.ingestion.loaders.pgh import _neighborhood_row
 
     row = _neighborhood_row(
-        {"_id": "64", "hood": "Point Breeze North", "wkb_hex": "0101000000000000000000f03f0000000000000040"}
+        {
+            "_id": "64",
+            "hood": "Point Breeze North",
+            "wkb_hex": "0101000000000000000000f03f0000000000000040",
+        }
     )
     assert row is not None
     assert row["name"] == "Point Breeze North"

@@ -8,6 +8,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.distress.models import ParcelDistress
+from lotscope.distress.profiles import DistressScoringProfile, profile_for_market
 from lotscope.distress.schemas import (
     DistressFactor,
     DistressResult,
@@ -16,7 +17,6 @@ from lotscope.distress.schemas import (
     build_mail_recipients,
 )
 from lotscope.distress.scoring import (
-    _LONG_TENURE_YEARS,
     DISTRESS_VERSION,
     DistressSignals,
     is_absentee,
@@ -63,7 +63,8 @@ _ONE_OWNER_TIRED_SQL = text(
 )
 
 _PARCEL_DISTRESS_SQL = text(
-    "SELECT p.is_vacant, p.is_city_owned, p.address, p.mailing_address, p.owner_key, "
+    "SELECT p.market_code, p.is_vacant, p.is_city_owned, p.address, p.mailing_address, "
+    "p.owner_key, "
     "ts.is_delinquent, ts.total_due, ts.years_owed, ts.lien_count, ts.in_sheriff_sale, "
     "coalesce(li.dangerous, false) AS dangerous, "
     "coalesce(li.violations, 0) AS violations, "
@@ -84,8 +85,8 @@ _PARCEL_DISTRESS_SQL = text(
 )
 
 _BULK_SIGNALS_SQL = text(
-    "SELECT p.parcel_number, p.is_vacant, p.is_city_owned, p.address, p.mailing_address, "
-    "p.owner_key, "
+    "SELECT p.parcel_number, p.market_code, p.is_vacant, p.is_city_owned, p.address, "
+    "p.mailing_address, p.owner_key, "
     "ts.is_delinquent, ts.total_due, ts.years_owed, ts.lien_count, ts.in_sheriff_sale, "
     "coalesce(li.dangerous, false) AS dangerous, "
     "coalesce(li.violations, 0) AS violations, "
@@ -231,14 +232,16 @@ async def assess_parcel_distress(
     ).one_or_none()
     if row is None:
         return None
+    profile = profile_for_market(row.market_code)
     tired = await _owner_is_tired(session, row.owner_key)
     tired_owner_keys = frozenset({row.owner_key}) if tired and row.owner_key else frozenset()
-    assessment = score_distress(_signals(row, tired_owner_keys))
+    assessment = score_distress(_signals(row, tired_owner_keys), profile)
     return DistressResult(
         parcel_number=parcel_number,
         score=assessment.score,
         tier=assessment.tier,
         version=DISTRESS_VERSION,
+        profile_id=profile.profile_id,
         factors=[
             DistressFactor(code=f.code, label=f.label, weight=f.weight) for f in assessment.factors
         ],
@@ -261,14 +264,20 @@ async def recompute_distress(
         return 0
     now = datetime.now(UTC)
     values = []
+    profiles: dict[str, DistressScoringProfile] = {}
     for row in rows:
-        assessment = score_distress(_signals(row, tired_owner_keys))
+        profile = profiles.get(row.market_code)
+        if profile is None:
+            profile = profile_for_market(row.market_code)
+            profiles[row.market_code] = profile
+        assessment = score_distress(_signals(row, tired_owner_keys), profile)
         values.append(
             {
                 "parcel_number": row.parcel_number,
                 "score": assessment.score,
                 "tier": assessment.tier,
                 "version": DISTRESS_VERSION,
+                "profile_id": profile.profile_id,
                 "sources": _SOURCES,
                 "computed_at": now,
             }
@@ -280,6 +289,7 @@ async def recompute_distress(
             "score": statement.excluded.score,
             "tier": statement.excluded.tier,
             "version": statement.excluded.version,
+            "profile_id": statement.excluded.profile_id,
             "sources": statement.excluded.sources,
             "computed_at": statement.excluded.computed_at,
         },
@@ -288,7 +298,7 @@ async def recompute_distress(
     return len(values)
 
 
-def _lead_top_factors(row: Row[Any]) -> list[str]:
+def _lead_top_factors(row: Row[Any], profile: DistressScoringProfile) -> list[str]:
     factors: list[str] = []
     if row.in_sheriff_sale:
         factors.append("Sheriff sale")
@@ -297,7 +307,7 @@ def _lead_top_factors(row: Row[Any]) -> list[str]:
     if (
         is_absentee(row.address, row.mailing_address)
         and row.years_since_last_sale is not None
-        and row.years_since_last_sale >= _LONG_TENURE_YEARS
+        and row.years_since_last_sale >= profile.long_tenure_years
     ):
         factors.append(f"Long-held (~{int(row.years_since_last_sale)} yrs)")
     if row.total_due:
@@ -328,8 +338,9 @@ async def find_leads(
             },
         )
     ).all()
+    profile = profile_for_market(market_code)
     signals = await get_deal_signals(session, [row.parcel_number for row in rows])
-    return [_lead_item(row, signals.get(row.parcel_number)) for row in rows]
+    return [_lead_item(row, signals.get(row.parcel_number), profile) for row in rows]
 
 
 async def export_leads(
@@ -373,7 +384,9 @@ async def export_leads(
     ]
 
 
-def _lead_item(row: Row[Any], signal: DealSignal | None) -> LeadItem:
+def _lead_item(
+    row: Row[Any], signal: DealSignal | None, profile: DistressScoringProfile
+) -> LeadItem:
     return LeadItem(
         parcel_number=row.parcel_number,
         address=row.address,
@@ -384,7 +397,7 @@ def _lead_item(row: Row[Any], signal: DealSignal | None) -> LeadItem:
         total_due=_as_float(row.total_due),
         in_sheriff_sale=row.in_sheriff_sale,
         score=int(row.score),
-        top_factors=_lead_top_factors(row),
+        top_factors=_lead_top_factors(row, profile),
         deal_score=signal.deal_score if signal is not None else None,
         max_allowable_offer=signal.max_allowable_offer if signal is not None else None,
         is_underpriced=signal.is_underpriced if signal is not None else None,

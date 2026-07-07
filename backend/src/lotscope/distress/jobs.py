@@ -7,10 +7,21 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.distress.profiles import UnknownMarketProfileError, registered_markets
 from lotscope.distress.service import recompute_distress, tired_landlord_owner_keys
 
 _PARCEL_NUMBERS_SQL = text("SELECT parcel_number FROM parcel ORDER BY parcel_number")
+_DISTINCT_MARKETS_SQL = text("SELECT DISTINCT market_code FROM parcel")
 _DEFAULT_BATCH_SIZE = 1000
+
+
+async def _assert_market_coverage(session: AsyncSession) -> None:
+    present = {row[0] for row in await session.execute(_DISTINCT_MARKETS_SQL)}
+    uncovered = sorted(present - registered_markets())
+    if uncovered:
+        raise UnknownMarketProfileError(
+            "No distress scoring profile registered for market(s): " + ", ".join(uncovered)
+        )
 
 
 def _chunks(items: Sequence[str], size: int) -> Iterator[list[str]]:
@@ -24,6 +35,7 @@ async def recompute_all_distress(
     batch_size: int = _DEFAULT_BATCH_SIZE,
 ) -> int:
     async with session_factory() as session:
+        await _assert_market_coverage(session)
         result = await session.execute(_PARCEL_NUMBERS_SQL)
         parcel_numbers = [row[0] for row in result]
         tired_owners = await tired_landlord_owner_keys(session)

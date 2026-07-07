@@ -111,6 +111,7 @@ def test_full_dossier_renders_all_sections() -> None:
         score=60,
         tier="high",
         version="v2",
+        profile_id="philly-distress-v1",
         factors=[DistressFactor(code="sheriff_sale", label="Sheriff-sale exposure", weight=30)],
         sources=[],
         computed_at=_NOW,
