@@ -33,7 +33,8 @@ const {
   truncated: areaTruncated,
 } = storeToRefs(areaSearch)
 const filters = useFiltersStore()
-const { activeCount: buyBoxCount, vacantOnly, useClasses } = storeToRefs(filters)
+const { vacantOnly, useClasses } = storeToRefs(filters)
+const buyBoxCount = computed(() => filters.activeCount + areaSearch.activeCount)
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()

@@ -65,20 +65,7 @@ function onSlider(target: 'score' | 'distress', value: number): void {
   else minDistress.value = clean
 }
 
-const activeCount = computed(() => {
-  let n = 0
-  if (vacantOnly.value) n += 1
-  if (useClasses.value.length > 0) n += 1
-  if (minValue.value !== null || maxValue.value !== null) n += 1
-  if (minLotArea.value !== null || maxLotArea.value !== null) n += 1
-  if (minScore.value !== null) n += 1
-  if (minDistress.value !== null) n += 1
-  if (delinquentOnly.value) n += 1
-  if (sheriffSaleOnly.value) n += 1
-  if (underpricedOnly.value) n += 1
-  if (byRightOnly.value) n += 1
-  return n
-})
+const activeCount = computed(() => filters.activeCount + areaSearch.activeCount)
 
 function reset(): void {
   vacantOnly.value = false
