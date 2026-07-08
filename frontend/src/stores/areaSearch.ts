@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { api } from '@/lib/api'
 import type { AreaSearchRequest, GeoPoint, SpatialParcelResult } from '@/lib/types'
@@ -36,11 +36,26 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   const total = ref(0)
   const truncated = ref(false)
 
+  const activeCount = computed(
+    () =>
+      (minValue.value !== null || maxValue.value !== null ? 1 : 0) +
+      (minLotArea.value !== null || maxLotArea.value !== null ? 1 : 0) +
+      (minScore.value !== null ? 1 : 0) +
+      (minDistress.value !== null ? 1 : 0) +
+      (delinquentOnly.value ? 1 : 0) +
+      (sheriffSaleOnly.value ? 1 : 0) +
+      (underpricedOnly.value ? 1 : 0) +
+      (byRightOnly.value ? 1 : 0),
+  )
+
   function criteria(): Partial<AreaSearchRequest> {
+    const filters = useFiltersStore()
     const c: Partial<AreaSearchRequest> = {
       market: useMarketStore().active,
-      vacant_only: useFiltersStore().vacantOnly,
+      vacant_only: filters.vacantOnly,
     }
+    if (filters.useClasses.length > 0 && filters.useClasses.length < 4)
+      c.zoning_use_classes = [...filters.useClasses]
     if (minValue.value !== null) c.min_market_value = minValue.value
     if (maxValue.value !== null) c.max_market_value = maxValue.value
     if (minLotArea.value !== null) c.min_lot_area_sqft = minLotArea.value
@@ -217,6 +232,7 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     count,
     total,
     truncated,
+    activeCount,
     clear,
     toggle,
     setShape,

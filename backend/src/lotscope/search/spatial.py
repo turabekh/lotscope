@@ -31,6 +31,7 @@ def build_filters(
     market: str = "phl",
     vacant_only: bool,
     zoning_codes: list[str],
+    zoning_use_classes: list[str] | None = None,
     min_lot_area_sqft: float | None = None,
     max_lot_area_sqft: float | None = None,
     min_market_value: float | None = None,
@@ -49,6 +50,9 @@ def build_filters(
     if zoning_codes:
         conditions.append("p.base_zoning_code = ANY(:zoning_codes)")
         params["zoning_codes"] = [code.strip().upper() for code in zoning_codes if code.strip()]
+    if zoning_use_classes:
+        conditions.append("upper(left(p.base_zoning_code, 1)) = ANY(:use_classes)")
+        params["use_classes"] = [c.strip().upper() for c in zoning_use_classes if c.strip()]
     if min_lot_area_sqft is not None:
         conditions.append("p.lot_area_sqft >= :min_lot_area")
         params["min_lot_area"] = min_lot_area_sqft
@@ -83,6 +87,7 @@ def _filters_for(request: AreaSearchRequest) -> tuple[str, dict[str, Any]]:
         market=market_code(request.market),
         vacant_only=request.vacant_only,
         zoning_codes=request.zoning_codes,
+        zoning_use_classes=request.zoning_use_classes,
         min_lot_area_sqft=request.min_lot_area_sqft,
         max_lot_area_sqft=request.max_lot_area_sqft,
         min_market_value=request.min_market_value,

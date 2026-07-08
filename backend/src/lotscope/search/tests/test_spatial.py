@@ -49,6 +49,20 @@ def test_build_filters_vacant_and_zoning_normalized() -> None:
     assert params["zoning_codes"] == ["RSA5", "RM1"]
 
 
+def test_build_filters_zoning_use_classes_prefix() -> None:
+    where, params = build_filters(
+        vacant_only=False, zoning_codes=[], zoning_use_classes=[" r ", "c", ""]
+    )
+    assert "upper(left(p.base_zoning_code, 1)) = ANY(:use_classes)" in where
+    assert params["use_classes"] == ["R", "C"]
+
+
+def test_build_filters_zoning_use_classes_empty_is_noop() -> None:
+    where, params = build_filters(vacant_only=False, zoning_codes=[], zoning_use_classes=[])
+    assert "use_classes" not in where
+    assert "use_classes" not in params
+
+
 def test_build_filters_buy_box_criteria() -> None:
     where, params = build_filters(
         vacant_only=False,
