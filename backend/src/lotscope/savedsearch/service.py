@@ -40,7 +40,9 @@ SAVED_SEARCH_EXPORT_HEADER: list[str] = [
 
 _DETAIL_MATCH_SQL = text(
     "SELECT m.parcel_number, m.first_seen_at, m.notified, "
-    "p.address, p.owner, p.base_zoning_code, p.is_vacant, p.market_value, "
+    "p.address, p.owner, "
+    "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    "p.is_vacant, p.market_value, "
     "round(pv.opportunity_score)::int AS opportunity_score "
     "FROM saved_search_match m "
     "JOIN parcel p ON p.parcel_number = m.parcel_number "

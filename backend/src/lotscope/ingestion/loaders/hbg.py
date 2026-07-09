@@ -12,6 +12,7 @@ from lotscope.parcels.models import Parcel
 from lotscope.vacancy.derivation import derive_vacancy
 from lotscope.valuation.models import Sale
 from lotscope.zoning.models import ZoningDistrict
+from lotscope.zoning.service import refresh_resolved_districts
 
 HBG_PARCELS_DATASET = "dc_parcels"
 HBG_SALES_DATASET = "dc_deed_references"
@@ -275,6 +276,7 @@ async def load_hbg_zoning_districts(
                 update_columns=["code", "market_code", "geom_local", "geom_4326", "source"],
             )
             total += len(rows)
+    await refresh_resolved_districts(session, _MARKET)
     await record_freshness(
         session,
         HBG_ZONING_DATASET,

@@ -36,7 +36,9 @@ _PARCEL_STATE_SQL = text(
 )
 _LIST_SQL = text(
     f"SELECT sp.parcel_number, sp.tags, sp.note, sp.created_at, sp.snapshot, "
-    f"p.address, p.owner, p.base_zoning_code, {_STATE_SELECT} "
+    f"p.address, p.owner, "
+    f"coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    f"{_STATE_SELECT} "
     f"FROM saved_parcel sp JOIN parcel p ON p.parcel_number = sp.parcel_number {_STATE_JOINS} "
     "WHERE sp.user_id = :user_id ORDER BY sp.created_at DESC"
 )

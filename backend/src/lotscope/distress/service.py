@@ -107,7 +107,8 @@ _BULK_SIGNALS_SQL = text(
 )
 
 _LEADS_SQL = text(
-    "SELECT p.parcel_number, p.address, p.mailing_address, p.owner, p.base_zoning_code, "
+    "SELECT p.parcel_number, p.address, p.mailing_address, p.owner, "
+    "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
     "p.is_vacant, p.market_value, ts.total_due, ts.in_sheriff_sale, pd.score, "
     "(tired.owner_key IS NOT NULL) AS is_tired_landlord, "
     "(SELECT (CURRENT_DATE - max(s.sale_date))::float / 365.25 FROM sale s "
@@ -130,7 +131,8 @@ _LEADS_SQL = text(
 
 _LEADS_EXPORT_SQL = text(
     "SELECT p.parcel_number, p.address, p.owner, p.mailing_address, p.zip_code, "
-    "p.base_zoning_code, p.is_vacant, p.market_value, ts.total_due, ts.in_sheriff_sale, pd.score "
+    "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    "p.is_vacant, p.market_value, ts.total_due, ts.in_sheriff_sale, pd.score "
     "FROM parcel_distress pd "
     "JOIN parcel p ON p.parcel_number = pd.parcel_number "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "

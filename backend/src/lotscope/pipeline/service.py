@@ -11,7 +11,9 @@ from lotscope.pipeline.schemas import DealCreate, DealItem, DealUpdate
 _PARCEL_EXISTS_SQL = text("SELECT 1 FROM parcel WHERE parcel_number = :parcel_number")
 _LIST_SQL = text(
     "SELECT d.id, d.parcel_number, d.stage, d.note, d.target_price, d.updated_at, "
-    "p.address, p.base_zoning_code, p.is_vacant, p.market_value, "
+    "p.address, "
+    "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    "p.is_vacant, p.market_value, "
     "round(pv.opportunity_score)::int AS opportunity_score "
     "FROM deal d "
     "JOIN parcel p ON p.parcel_number = d.parcel_number "

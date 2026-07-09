@@ -294,9 +294,10 @@ async def ask_the_parcel(
         source=zoning_source,
         market=zoning_market,
     )
-    if detail.base_zoning_code:
+    zoning_code = detail.resolved_zoning_code or detail.base_zoning_code
+    if zoning_code:
         pinned = await fetch_district_documents(
-            session, detail.base_zoning_code, source=zoning_source, market=zoning_market
+            session, zoning_code, source=zoning_source, market=zoning_market
         )
         if pinned:
             seen = {document.id for document in pinned}

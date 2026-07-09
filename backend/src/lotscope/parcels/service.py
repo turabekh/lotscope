@@ -30,6 +30,9 @@ async def get_parcel_detail(session: AsyncSession, parcel_number: str) -> Parcel
     if parcel.base_zoning_code:
         detail.resolved_zoning_code = parcel.base_zoning_code
         detail.zoning_resolution = "attribute"
+    elif parcel.resolved_zoning_code:
+        detail.resolved_zoning_code = parcel.resolved_zoning_code
+        detail.zoning_resolution = parcel.resolved_zoning_source or "spatial"
     else:
         resolution = await resolve_district(
             session, parcel_number, base_zoning_code=None, has_geometry=True
