@@ -1,9 +1,11 @@
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { Quasar } from 'quasar'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import VerdictHero from '@/components/VerdictHero.vue'
-import type { VerdictResult } from '@/lib/types'
+import type { MarketInfo, VerdictResult } from '@/lib/types'
+import { useMarketStore } from '@/stores/market'
 
 function makeVerdict(overrides: Partial<VerdictResult>): VerdictResult {
   return {
@@ -35,24 +37,73 @@ function makeVerdict(overrides: Partial<VerdictResult>): VerdictResult {
   } as VerdictResult
 }
 
-describe('VerdictHero buildability gating', () => {
+function makeMarket(overrides: Partial<MarketInfo>): MarketInfo {
+  return {
+    code: 'phl',
+    name: 'Philadelphia',
+    state: 'PA',
+    url_slug: 'philadelphia',
+    map_center: [-75.16, 39.95],
+    map_bounds: null,
+    default_zoom: 12,
+    launch_status: 'live',
+    coverage_note: null,
+    hidden_surfaces: [],
+    risk_coverage_note: null,
+    ...overrides,
+  }
+}
+
+function mountHero(verdict: VerdictResult) {
+  return mount(VerdictHero, {
+    props: { verdict },
+    global: {
+      plugins: [[Quasar, {}]],
+      stubs: { QTooltip: { template: '<div class="q-tooltip-stub"><slot /></div>' } },
+    },
+  })
+}
+
+describe('VerdictHero', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   it('shows "Variance likely" for a not-by-right parcel even when by_right_units is set', () => {
-    const wrapper = mount(VerdictHero, {
-      props: { verdict: makeVerdict({ can_build_by_right: false, needs_variance: true }) },
-      global: { plugins: [[Quasar, {}]] },
-    })
+    const wrapper = mountHero(makeVerdict({ can_build_by_right: false, needs_variance: true }))
     expect(wrapper.text()).toContain('Variance likely')
     expect(wrapper.text()).not.toContain('By-right')
   })
 
   it('shows the by-right unit count when the parcel is buildable by-right', () => {
-    const wrapper = mount(VerdictHero, {
-      props: {
-        verdict: makeVerdict({ can_build_by_right: true, needs_variance: false, by_right_units: 1 }),
-      },
-      global: { plugins: [[Quasar, {}]] },
-    })
+    const wrapper = mountHero(
+      makeVerdict({ can_build_by_right: true, needs_variance: false, by_right_units: 1 }),
+    )
     expect(wrapper.text()).toContain('By-right')
     expect(wrapper.text()).not.toContain('Variance likely')
+  })
+
+  it('qualifies the clean risk pillar with the market coverage note when present', () => {
+    const store = useMarketStore()
+    store.active = 'harrisburg'
+    store.infos = [
+      makeMarket({
+        code: 'hbg',
+        url_slug: 'harrisburg',
+        launch_status: 'pilot',
+        risk_coverage_note: 'based on available Harrisburg sources',
+      }),
+    ]
+    const wrapper = mountHero(makeVerdict({ risk_score: 0, risk_flags: [] }))
+    expect(wrapper.text()).toContain('based on available Harrisburg sources')
+  })
+
+  it('leaves the clean risk pillar unqualified for a market with full coverage', () => {
+    const store = useMarketStore()
+    store.active = 'philadelphia'
+    store.infos = [makeMarket({ risk_coverage_note: null })]
+    const wrapper = mountHero(makeVerdict({ risk_score: 0, risk_flags: [] }))
+    expect(wrapper.text()).toContain('No major risk flags found')
+    expect(wrapper.text()).not.toContain('based on available')
   })
 })

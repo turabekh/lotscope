@@ -3,8 +3,11 @@ import { computed } from 'vue'
 
 import { formatRange, scoreLabel, scoreVar } from '@/lib/format'
 import type { VerdictResult } from '@/lib/types'
+import { useMarketStore } from '@/stores/market'
 
 const props = defineProps<{ verdict: VerdictResult; developed?: boolean }>()
+
+const market = useMarketStore()
 
 interface Pillar {
   key: string
@@ -77,8 +80,12 @@ const valuePillar = computed<Pillar>(() => {
 const riskPillar = computed<Pillar>(() => {
   const score = props.verdict.risk_score
   const count = props.verdict.risk_flags.length
+  const coverageNote = market.activeInfo?.risk_coverage_note
   const tone: Pillar['tone'] =
     score == null ? 'neutral' : score >= 50 ? 'caution' : score >= 20 ? 'warning' : 'positive'
+  const cleanHint = coverageNote
+    ? `No major risk flags found ${coverageNote} — absent feeds mean this is not a proven clean result.`
+    : 'No major risk flags found.'
   return {
     key: 'risk',
     label: 'Risk',
@@ -88,7 +95,7 @@ const riskPillar = computed<Pillar>(() => {
     hint:
       count > 0
         ? `${count} flag${count > 1 ? 's' : ''} — see the Verdict tab. Higher score is riskier.`
-        : 'No major risk flags found.',
+        : cleanHint,
   }
 })
 
