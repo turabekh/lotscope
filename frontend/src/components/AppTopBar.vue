@@ -7,14 +7,22 @@ import DataCoverageChip from '@/components/DataCoverageChip.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import MarketSwitcher from '@/components/MarketSwitcher.vue'
 import UserMenu from '@/components/UserMenu.vue'
+import { useMarketStore } from '@/stores/market'
 import { useThemeStore } from '@/stores/theme'
 
 const route = useRoute()
+const market = useMarketStore()
 const theme = useThemeStore()
 const $q = useQuasar()
 
 const isMobile = computed(() => $q.screen.lt.md)
-const title = computed(() => (isMobile.value ? '' : (route.meta.title ?? '')))
+const title = computed(() => {
+  if (isMobile.value) return ''
+  if (route.name === 'sheriff-sales' && market.activeInfo?.forced_sale_surface_label) {
+    return market.activeInfo.forced_sale_surface_label
+  }
+  return route.meta.title ?? ''
+})
 </script>
 
 <template>

@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.api.deps import get_session
-from lotscope.markets.capabilities import hidden_surfaces, risk_coverage_note
+from lotscope.markets.capabilities import (
+    forced_sale_surface_label,
+    hidden_surfaces,
+    risk_coverage_note,
+)
 from lotscope.markets.schemas import MarketInfo
 from lotscope.markets.service import list_markets
 
@@ -21,6 +25,7 @@ async def markets(session: SessionDep) -> list[MarketInfo]:
             update={
                 "hidden_surfaces": sorted(hidden_surfaces(row.code)),
                 "risk_coverage_note": risk_coverage_note(row.code),
+                "forced_sale_surface_label": forced_sale_surface_label(row.code),
             }
         )
         for row in rows

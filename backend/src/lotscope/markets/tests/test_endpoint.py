@@ -25,3 +25,4 @@ async def test_markets_endpoint_lists_philadelphia(db_session: AsyncSession) -> 
     assert len(phl["map_center"]) == 2
     assert phl["default_zoom"] > 0
     assert phl["launch_status"] == "live"
+    assert phl["forced_sale_surface_label"] == "Sheriff sales"

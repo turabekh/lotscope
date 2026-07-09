@@ -234,6 +234,7 @@ export interface MarketInfo {
   coverage_note: string | null
   hidden_surfaces: string[]
   risk_coverage_note: string | null
+  forced_sale_surface_label: string
 }
 
 export interface AreaSearchRequest {

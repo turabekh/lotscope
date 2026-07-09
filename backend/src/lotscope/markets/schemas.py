@@ -17,3 +17,4 @@ class MarketInfo(BaseModel):
     coverage_note: str | None
     hidden_surfaces: list[str] = []
     risk_coverage_note: str | None = None
+    forced_sale_surface_label: str = "Sheriff sales"
