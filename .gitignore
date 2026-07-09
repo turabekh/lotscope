@@ -147,3 +147,4 @@ desktop.ini
 mynotes.txt
 # Corpus source binaries (parsed into JSONL/DB; never commit the raw PDFs)
 backend/corpus/**/*.pdf
+sync-db.sh
