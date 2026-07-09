@@ -54,6 +54,8 @@ class Parcel(Base, TimestampMixin, IngestionMixin):
     land_use: Mapped[str | None] = mapped_column(String(120))
     category: Mapped[str | None] = mapped_column(String(120))
     base_zoning_code: Mapped[str | None] = mapped_column(String(20), index=True)
+    resolved_zoning_code: Mapped[str | None] = mapped_column(String(20))
+    resolved_zoning_source: Mapped[str | None] = mapped_column(String(20))
 
     market_value: Mapped[float | None] = mapped_column(Numeric(14, 2))
     land_value: Mapped[float | None] = mapped_column(Numeric(14, 2))

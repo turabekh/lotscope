@@ -40,7 +40,9 @@ _NEIGHBORS_SQL = text(
     "  SELECT owner, base_zoning_code, geom_local, market_code "
     "  FROM parcel WHERE parcel_number = :parcel_number"
     ") "
-    "SELECT n.parcel_number, n.address, n.owner, n.base_zoning_code, n.lot_area_sqft, "
+    "SELECT n.parcel_number, n.address, n.owner, "
+    "coalesce(nullif(n.base_zoning_code, ''), n.resolved_zoning_code) AS base_zoning_code, "
+    "n.lot_area_sqft, "
     "n.frontage_ft, n.market_value, n.is_vacant, n.is_city_owned, "
     "(n.owner IS NOT NULL AND t.owner IS NOT NULL "
     " AND lower(btrim(n.owner)) = lower(btrim(t.owner))) AS same_owner, "
@@ -179,7 +181,7 @@ async def compute_assemblage(session: AsyncSession, parcel_number: str) -> Assem
 
 
 _META_SQL = text(
-    "SELECT p.base_zoning_code, "
+    "SELECT coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
     "(SELECT n.name FROM neighborhood n "
     " WHERE p.geom_local IS NOT NULL AND n.market_code = p.market_code "
     " AND ST_Contains(n.geom_local, ST_Centroid(p.geom_local)) "
@@ -242,7 +244,9 @@ async def recompute_assemblage(session: AsyncSession, parcel_numbers: Sequence[s
 _TOP_SELECT = (
     "SELECT pa.parcel_number, p.address, pa.potential, pa.candidate_count, "
     "pa.combined_lot_area_sqft, pa.by_right_units_current, pa.by_right_units_combined, "
-    "pa.unit_unlock, pa.base_zoning_code, pa.neighborhood "
+    "pa.unit_unlock, "
+    "coalesce(nullif(pa.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    "pa.neighborhood "
     "FROM parcel_assemblage pa JOIN parcel p ON p.parcel_number = pa.parcel_number"
 )
 

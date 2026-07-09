@@ -41,7 +41,7 @@ interface Row {
 }
 
 const ROWS: Row[] = [
-  { label: 'Zoning', value: (i) => i.detail.base_zoning_code ?? '—' },
+  { label: 'Zoning', value: (i) => i.detail.resolved_zoning_code ?? i.detail.base_zoning_code ?? '—' },
   { label: 'Vacant', value: (i) => yesNo(i.detail.is_vacant) },
   { label: 'Lot area', value: (i) => num(i.detail.lot_area_sqft, ' sq ft') },
   {

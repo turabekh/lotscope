@@ -1,8 +1,8 @@
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import text
+from sqlalchemy import CursorResult, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -86,6 +86,34 @@ async def resolve_district(
     if base_zoning_code:
         return DistrictResolution(code=base_zoning_code, method="opa_attribute")
     return None
+
+
+_REFRESH_RESOLVED_DISTRICT_SQL = text(
+    "UPDATE parcel p SET resolved_zoning_code = sub.code, "
+    "resolved_zoning_source = 'spatial', updated_at = now() "
+    "FROM ("
+    "  SELECT DISTINCT ON (p2.parcel_number) p2.parcel_number, zd.code "
+    "  FROM parcel p2 "
+    "  JOIN zoning_district zd ON zd.market_code = p2.market_code "
+    "    AND ST_Contains(zd.geom_local, ST_Centroid(p2.geom_local)) "
+    "  WHERE p2.market_code = :market_code "
+    "    AND (p2.base_zoning_code IS NULL OR p2.base_zoning_code = '') "
+    "    AND p2.geom_local IS NOT NULL "
+    "  ORDER BY p2.parcel_number, "
+    "    ST_Area(ST_Intersection(ST_MakeValid(zd.geom_local), ST_MakeValid(p2.geom_local))) DESC, "
+    "    zd.code ASC"
+    ") sub "
+    "WHERE p.parcel_number = sub.parcel_number "
+    "AND p.resolved_zoning_code IS DISTINCT FROM sub.code"
+)
+
+
+async def refresh_resolved_districts(session: AsyncSession, market_code: str) -> int:
+    result = cast(
+        "CursorResult[Any]",
+        await session.execute(_REFRESH_RESOLVED_DISTRICT_SQL, {"market_code": market_code}),
+    )
+    return result.rowcount or 0
 
 
 async def _get_standard(

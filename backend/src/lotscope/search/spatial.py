@@ -13,7 +13,9 @@ MAX_RADIUS_M = 5000.0
 _POLYGON_TYPES = frozenset({"Polygon", "MultiPolygon"})
 
 _SELECT = (
-    "p.parcel_number, p.address, p.owner, p.base_zoning_code, p.is_vacant, p.market_value, "
+    "p.parcel_number, p.address, p.owner, "
+    "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    "p.is_vacant, p.market_value, "
     "round(pv.opportunity_score)::int AS opportunity_score, "
     "ST_X(ST_PointOnSurface(p.geom_4326)) AS lng, "
     "ST_Y(ST_PointOnSurface(p.geom_4326)) AS lat"

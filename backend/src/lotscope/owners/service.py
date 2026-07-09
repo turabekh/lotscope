@@ -20,7 +20,9 @@ _AGG_SQL = text(
 )
 
 _LIST_SQL = text(
-    "SELECT p.parcel_number, p.address, p.base_zoning_code, p.is_vacant, p.market_value, "
+    "SELECT p.parcel_number, p.address, "
+    "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    "p.is_vacant, p.market_value, "
     "round(pv.opportunity_score)::int AS opportunity_score "
     "FROM parcel p LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
     "WHERE p.owner_key = :owner_key AND p.parcel_number <> :parcel_number "

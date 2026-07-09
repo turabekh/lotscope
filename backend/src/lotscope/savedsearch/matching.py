@@ -11,13 +11,16 @@ MATCH_BASE = (
 )
 
 MATCH_SELECT = (
-    "p.parcel_number, p.address, p.owner, p.base_zoning_code, p.is_vacant, p.market_value, "
+    "p.parcel_number, p.address, p.owner, "
+    "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    "p.is_vacant, p.market_value, "
     "round(pv.opportunity_score)::int AS opportunity_score"
 )
 
 MATCH_EXPORT_SELECT = (
     "p.parcel_number, p.address, p.owner, p.mailing_address, p.zip_code, "
-    "p.base_zoning_code, p.is_vacant, p.market_value, "
+    "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
+    "p.is_vacant, p.market_value, "
     "round(pv.opportunity_score)::int AS opportunity_score"
 )
 
