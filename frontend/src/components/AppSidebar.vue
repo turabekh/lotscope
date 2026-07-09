@@ -30,7 +30,11 @@ const sections = computed<NavLink[]>(() => [
   { label: 'Home', icon: 'home', name: 'home' },
   { label: 'Explore', icon: 'travel_explore', name: 'explore' },
   { label: 'Feed', icon: 'bolt', name: 'feed' },
-  { label: 'Sheriff sales', icon: 'gavel', name: 'sheriff-sales' },
+  {
+    label: market.activeInfo?.forced_sale_surface_label ?? 'Sheriff sales',
+    icon: 'gavel',
+    name: 'sheriff-sales',
+  },
   { label: 'Top plays', icon: 'dashboard_customize', name: 'top-plays' },
   { label: 'Market', icon: 'insights', name: 'market' },
   { label: 'Leads', icon: 'sell', name: 'leads' },

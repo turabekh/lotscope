@@ -7,7 +7,26 @@ import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { routes } from '@/router'
 import { useAuthStore } from '@/stores/auth'
-import type { User } from '@/lib/types'
+import { useMarketStore } from '@/stores/market'
+import type { MarketInfo, User } from '@/lib/types'
+
+function makeMarket(overrides: Partial<MarketInfo>): MarketInfo {
+  return {
+    code: 'phl',
+    name: 'Philadelphia',
+    state: 'PA',
+    url_slug: 'philadelphia',
+    map_center: [-75.16, 39.95],
+    map_bounds: null,
+    default_zoom: 12,
+    launch_status: 'live',
+    coverage_note: null,
+    hidden_surfaces: [],
+    risk_coverage_note: null,
+    forced_sale_surface_label: 'Sheriff sales',
+    ...overrides,
+  }
+}
 
 function makeRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes })
@@ -50,6 +69,30 @@ describe('AppSidebar', () => {
     await router.push({ name: 'leads', params: { market: 'philadelphia' } })
     const wrapper = await mountSidebar(router)
     expect(wrapper.find('.nav-active').text()).toContain('Leads')
+  })
+
+  it('labels the forced-sale nav item per market', async () => {
+    setUser('user')
+    const store = useMarketStore()
+    store.infos = [
+      makeMarket({}),
+      makeMarket({
+        code: 'hbg',
+        url_slug: 'harrisburg',
+        launch_status: 'pilot',
+        forced_sale_surface_label: 'Tax sales',
+      }),
+    ]
+
+    store.active = 'philadelphia'
+    const phl = await mountSidebar(makeRouter())
+    expect(phl.text()).toContain('Sheriff sales')
+    expect(phl.text()).not.toContain('Tax sales')
+
+    store.active = 'harrisburg'
+    const hbg = await mountSidebar(makeRouter())
+    expect(hbg.text()).toContain('Tax sales')
+    expect(hbg.text()).not.toContain('Sheriff sales')
   })
 
   it('hides Admin for non-admins and shows it for admins', async () => {

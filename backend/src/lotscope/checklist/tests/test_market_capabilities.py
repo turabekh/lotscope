@@ -3,6 +3,7 @@ from lotscope.markets.capabilities import (
     checklist_category_state,
     checklist_state_detail,
     forced_sale_label,
+    forced_sale_surface_label,
 )
 from lotscope.risk.scoring import RiskFlag
 from lotscope.risk.service import _flag_schema
@@ -79,6 +80,12 @@ def test_forced_sale_flag_relabelled_retsl_for_hbg() -> None:
     assert phl.label == "Sheriff-sale exposure"
     assert "RETSL" in hbg.label
     assert forced_sale_label("hbg") in hbg.detail
+
+
+def test_forced_sale_surface_label_is_market_aware() -> None:
+    assert forced_sale_surface_label("phl") == "Sheriff sales"
+    assert forced_sale_surface_label("hbg") == "Tax sales"
+    assert forced_sale_surface_label("zzz") == "Sheriff sales"
 
 
 def test_display_name_citation_and_hidden_surfaces() -> None:

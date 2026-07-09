@@ -16,6 +16,7 @@ const PHL: MarketInfo = {
   coverage_note: null,
   hidden_surfaces: [],
   risk_coverage_note: null,
+  forced_sale_surface_label: 'Sheriff sales',
 }
 
 vi.mock('@/lib/api', () => ({
