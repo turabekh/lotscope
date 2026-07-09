@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from typing import Any
 
+from lotscope.core.sql import resolved_zoning_code_sql
 from lotscope.savedsearch.schemas import SearchCriteria
 
 MATCH_BASE = (
@@ -38,7 +39,7 @@ def build_where(
     if criteria.vacant_only:
         conditions.append("coalesce(p.is_vacant, false) = true")
     if criteria.zoning_codes:
-        conditions.append("p.base_zoning_code = ANY(:zoning_codes)")
+        conditions.append(f"{resolved_zoning_code_sql('p')} = ANY(:zoning_codes)")
         params["zoning_codes"] = criteria.zoning_codes
     if criteria.zip_code is not None:
         conditions.append("p.zip_code = :zip_code")

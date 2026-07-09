@@ -25,6 +25,7 @@ from lotscope.assemblage.schemas import (
     AssemblageTopResponse,
     Potential,
 )
+from lotscope.core.sql import resolved_zoning_code_sql
 from lotscope.zoning.service import assemblage_unit_estimate
 
 _ADJACENCY_TOLERANCE_FT = 2.0
@@ -264,12 +265,17 @@ async def top_plays(
         conditions.append("pa.neighborhood ILIKE :neighborhood")
         params["neighborhood"] = neighborhood
     if zoning is not None:
-        conditions.append("pa.base_zoning_code ILIKE :zoning || '%'")
+        conditions.append(f"{resolved_zoning_code_sql('pa', 'p')} ILIKE :zoning || '%'")
         params["zoning"] = zoning
     where = " AND ".join(conditions) if conditions else "TRUE"
 
     total = await session.scalar(
-        text(f"SELECT count(*) FROM parcel_assemblage pa WHERE {where}"), params
+        text(
+            "SELECT count(*) FROM parcel_assemblage pa "
+            "JOIN parcel p ON p.parcel_number = pa.parcel_number "
+            f"WHERE {where}"
+        ),
+        params,
     )
     rows = (
         await session.execute(
