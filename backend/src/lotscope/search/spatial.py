@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import ValidationError
 from lotscope.core.markets import market_code
+from lotscope.core.sql import resolved_zoning_code_sql
 from lotscope.search.schemas import AreaSearchRequest, SpatialParcelResult
 
 MAX_RADIUS_M = 5000.0
@@ -50,10 +51,10 @@ def build_filters(
     if vacant_only:
         conditions.append("coalesce(p.is_vacant, false) = true")
     if zoning_codes:
-        conditions.append("p.base_zoning_code = ANY(:zoning_codes)")
+        conditions.append(f"{resolved_zoning_code_sql('p')} = ANY(:zoning_codes)")
         params["zoning_codes"] = [code.strip().upper() for code in zoning_codes if code.strip()]
     if zoning_use_classes:
-        conditions.append("upper(left(p.base_zoning_code, 1)) = ANY(:use_classes)")
+        conditions.append(f"upper(left({resolved_zoning_code_sql('p')}, 1)) = ANY(:use_classes)")
         params["use_classes"] = [c.strip().upper() for c in zoning_use_classes if c.strip()]
     if min_lot_area_sqft is not None:
         conditions.append("p.lot_area_sqft >= :min_lot_area")

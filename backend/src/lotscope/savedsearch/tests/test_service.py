@@ -100,6 +100,29 @@ async def test_non_matching_parcel_is_ignored(db_session: AsyncSession) -> None:
     assert detail.match_count == 0
 
 
+async def test_zoning_criteria_matches_resolved_only_parcel(db_session: AsyncSession) -> None:
+    user_id = await _user(db_session)
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel "
+            "(parcel_number, address, base_zoning_code, resolved_zoning_code, is_vacant, "
+            "is_city_owned, market_value) "
+            "VALUES ('hbg:000000001', '1 A ST', '', 'RM', true, false, 50000)"
+        )
+    )
+    search = await create_search(
+        db_session,
+        user_id,
+        SavedSearchCreate(name="RM only", criteria=SearchCriteria(zoning_codes=["RM"])),
+        limit=None,
+    )
+
+    detail = await get_search(db_session, user_id, search.id)
+    assert detail.match_count == 1
+    assert [m.parcel_number for m in detail.matches] == ["hbg:000000001"]
+    assert detail.matches[0].base_zoning_code == "RM"
+
+
 async def test_limit_enforced(db_session: AsyncSession) -> None:
     user_id = await _user(db_session)
     await create_search(db_session, user_id, SavedSearchCreate(name="a"), limit=1)

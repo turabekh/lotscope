@@ -45,7 +45,10 @@ def test_build_filters_default_requires_geometry() -> None:
 def test_build_filters_vacant_and_zoning_normalized() -> None:
     where, params = build_filters(vacant_only=True, zoning_codes=[" rsa5 ", "rm1", ""])
     assert "coalesce(p.is_vacant, false) = true" in where
-    assert "p.base_zoning_code = ANY(:zoning_codes)" in where
+    assert (
+        "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) = ANY(:zoning_codes)"
+        in where
+    )
     assert params["zoning_codes"] == ["RSA5", "RM1"]
 
 
@@ -53,7 +56,10 @@ def test_build_filters_zoning_use_classes_prefix() -> None:
     where, params = build_filters(
         vacant_only=False, zoning_codes=[], zoning_use_classes=[" r ", "c", ""]
     )
-    assert "upper(left(p.base_zoning_code, 1)) = ANY(:use_classes)" in where
+    assert (
+        "upper(left(coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code), 1)) "
+        "= ANY(:use_classes)" in where
+    )
     assert params["use_classes"] == ["R", "C"]
 
 
@@ -181,6 +187,38 @@ async def test_radius_respects_vacant_and_zoning_filters(db_session: AsyncSessio
     )
     assert zoned_total == 1
     assert [r.parcel_number for r in zoned] == ["000000002"]
+
+
+@pytest.mark.integration
+async def test_zoning_filter_matches_resolved_only_parcel(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel "
+            "(parcel_number, base_zoning_code, resolved_zoning_code, is_vacant, geom_4326) "
+            "VALUES (:pn, '', 'RM', true, ST_GeomFromText(:wkt, 4326))"
+        ),
+        {"pn": "000000009", "wkt": _square(-75.1600, 39.9500)},
+    )
+    await db_session.flush()
+
+    by_code, code_total = await search_area(
+        db_session,
+        AreaSearchRequest(
+            center=GeoPoint(lat=39.9500, lng=-75.1600), radius_m=500, zoning_codes=["RM"]
+        ),
+    )
+    assert code_total == 1
+    assert [r.parcel_number for r in by_code] == ["000000009"]
+    assert by_code[0].base_zoning_code == "RM"
+
+    by_use_class, use_total = await search_area(
+        db_session,
+        AreaSearchRequest(
+            center=GeoPoint(lat=39.9500, lng=-75.1600), radius_m=500, zoning_use_classes=["R"]
+        ),
+    )
+    assert use_total == 1
+    assert [r.parcel_number for r in by_use_class] == ["000000009"]
 
 
 @pytest.mark.integration

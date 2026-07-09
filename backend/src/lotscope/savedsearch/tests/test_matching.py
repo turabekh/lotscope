@@ -37,7 +37,10 @@ def test_all_filters_are_parametrized() -> None:
     where, params = build_where(criteria)
 
     assert "coalesce(p.is_vacant, false) = true" in where
-    assert "p.base_zoning_code = ANY(:zoning_codes)" in where
+    assert (
+        "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) = ANY(:zoning_codes)"
+        in where
+    )
     assert params["zoning_codes"] == ["RSA-5", "RM-1"]
     assert params["zip_code"] == "19147"
     assert params["min_market_value"] == 10000
