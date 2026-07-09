@@ -50,6 +50,7 @@ function makeMarket(overrides: Partial<MarketInfo>): MarketInfo {
     coverage_note: null,
     hidden_surfaces: [],
     risk_coverage_note: null,
+    forced_sale_surface_label: 'Sheriff sales',
     ...overrides,
   }
 }
