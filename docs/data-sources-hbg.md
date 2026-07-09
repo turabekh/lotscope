@@ -94,3 +94,9 @@ Dauphin County is a base-year assessment county: the assessed value is a fractio
 - **Dauphin County 2024 Common Level Ratio: 0.4042** (40.42%), effective **July 1 2025 – June 30 2026**.
 - Source: PA Bulletin Vol. 55, No. 27 (2024 Common Level Ratios); STEB / PA DCED Tax Equalization Division. Note: STEB states the CLR is for assessment-appeal use, not to create value.
 - `market.assessment_ratio`: phl = 1.0000, hbg = 0.4042. Refresh annually when STEB publishes the new CLR (effective each July 1).
+
+## Tax-claim / delinquency feed — built, deliberately unregistered
+
+The Dauphin tax-claim loader (`ingestion/loaders/hbg_taxclaim.py`, `load_hbg_tax_claim`) is built and unit-tested but is **not** in the JOBS registry (`ingestion/jobs.py`), so it does not run on the daily `ingest_market('hbg')`. This is intentional, not an oversight: Dauphin publishes delinquency through its **seasonal** upset/judicial sale lists (the upset list publishes ~August for the September sale), and the fetch is prod-origin (the build environment cannot reach dauphincounty.gov). Registering it now would schedule a job against a source that has nothing to return.
+
+**When the ~August 2026 upset list publishes:** register `ingest_hbg_tax_claim` in `_HBG_JOBS` (environment-aware, prod-origin), point it at the published list, and the checklist `liens_taxes` state flips from `pending_load` toward `live` for the parcels it covers. Until then the truthful `pending_load` state (ADR: field-test Slice 2 / `markets/capabilities.py`) is correct. The **repository** list (county-held, purchasable year-round) is already wired and refreshing monthly — that is a distinct feed from delinquency.
