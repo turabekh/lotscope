@@ -7,6 +7,7 @@ from lotscope.core.config import get_settings
 from lotscope.core.errors import (
     AuthError,
     ConfigurationError,
+    ConflictError,
     ForbiddenError,
     LotScopeError,
     NotFoundError,
@@ -30,6 +31,7 @@ _STATUS_BY_EXCEPTION: dict[type[LotScopeError], int] = {
     AuthError: 401,
     ForbiddenError: 403,
     QuotaExceededError: 429,
+    ConflictError: 409,
     UpstreamError: 502,
     ConfigurationError: 503,
 }

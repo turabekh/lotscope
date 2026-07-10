@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { api } from '@/lib/api'
-import type { AdminOverview, DatasetStatus, User } from '@/lib/types'
+import type {
+  AdminOverview,
+  DatasetStatus,
+  JobCatalogEntry,
+  JobRunSummary,
+  User,
+} from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
 const $q = useQuasar()
@@ -18,6 +24,60 @@ const datasets = ref<DatasetStatus[]>([])
 const users = ref<User[]>([])
 const usersTotal = ref(0)
 const loading = ref(false)
+
+const jobs = ref<JobCatalogEntry[]>([])
+const jobRuns = ref<JobRunSummary[]>([])
+const submittingJob = ref<string | null>(null)
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+const jobGroups = computed(() => {
+  const grouped = new Map<string, JobCatalogEntry[]>()
+  for (const job of jobs.value) {
+    const title = job.kind === 'ingest' ? `${(job.market ?? 'other').toUpperCase()} ingestion` : 'Recompute'
+    const bucket = grouped.get(title) ?? []
+    bucket.push(job)
+    grouped.set(title, bucket)
+  }
+  return [...grouped.entries()].map(([title, items]) => ({ title, items }))
+})
+
+const hasActiveRun = computed(() =>
+  jobRuns.value.some((run) => run.status === 'queued' || run.status === 'running'),
+)
+
+function jobIsBusy(job: JobCatalogEntry): boolean {
+  if (submittingJob.value === job.id) return true
+  const status = job.latest_run?.status
+  return status === 'queued' || status === 'running'
+}
+
+function syncPolling(): void {
+  if (hasActiveRun.value && pollTimer === null) {
+    pollTimer = setInterval(() => void loadJobs(), 3000)
+  } else if (!hasActiveRun.value && pollTimer !== null) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+async function loadJobs(): Promise<void> {
+  jobs.value = await api.getJobCatalog()
+  jobRuns.value = await api.getJobRuns(25)
+  syncPolling()
+}
+
+async function runJob(job: JobCatalogEntry): Promise<void> {
+  submittingJob.value = job.id
+  try {
+    await api.runJob(job.id)
+    $q.notify({ type: 'positive', message: `Queued ${job.label}.` })
+    await loadJobs()
+  } catch {
+    $q.notify({ type: 'negative', message: `Could not start ${job.label}.` })
+  } finally {
+    submittingJob.value = null
+  }
+}
 
 const TIERS = ['free', 'pro', 'enterprise']
 const ROLES = ['user', 'admin']
@@ -39,6 +99,8 @@ const overviewCards = computed(() => {
 function statusColor(status: string): string {
   if (status === 'success') return 'positive'
   if (status === 'failed') return 'negative'
+  if (status === 'running') return 'primary'
+  if (status === 'queued') return 'orange'
   return 'grey-6'
 }
 
@@ -56,6 +118,7 @@ async function load(): Promise<void> {
     const page = await api.getAdminUsers(100, 0)
     users.value = page.users
     usersTotal.value = page.total
+    await loadJobs()
   } finally {
     loading.value = false
   }
@@ -77,6 +140,10 @@ async function patchUser(
 }
 
 onMounted(() => void load())
+
+onBeforeUnmount(() => {
+  if (pollTimer !== null) clearInterval(pollTimer)
+})
 </script>
 
 <template>
@@ -96,6 +163,70 @@ onMounted(() => void load())
           <div class="stat-label">{{ card.label }}</div>
         </q-card>
       </div>
+
+      <div class="text-subtitle2 q-mt-md q-mb-xs">
+        Jobs
+        <q-spinner v-if="hasActiveRun" color="primary" size="14px" class="q-ml-xs" />
+      </div>
+      <div class="job-groups">
+        <q-card v-for="group in jobGroups" :key="group.title" flat bordered class="job-group">
+          <div class="job-group-title">{{ group.title }}</div>
+          <div v-for="job in group.items" :key="job.id" class="job-row">
+            <div class="job-meta">
+              <div class="job-label">{{ job.label }}</div>
+              <div class="job-sub">
+                <q-badge
+                  v-if="job.latest_run"
+                  :color="statusColor(job.latest_run.status)"
+                  text-color="white"
+                >
+                  {{ job.latest_run.status }}
+                </q-badge>
+                <span class="job-time">{{
+                  job.latest_run ? formatTime(job.latest_run.finished_at ?? job.latest_run.created_at) : 'never run'
+                }}</span>
+              </div>
+            </div>
+            <q-btn
+              dense
+              unelevated
+              color="primary"
+              label="Run"
+              :loading="submittingJob === job.id"
+              :disable="jobIsBusy(job)"
+              @click="() => runJob(job)"
+            />
+          </div>
+        </q-card>
+      </div>
+
+      <div class="text-subtitle2 q-mt-md q-mb-xs">Recent runs</div>
+      <q-markup-table flat bordered dense>
+        <thead>
+          <tr>
+            <th class="text-left">Job</th>
+            <th class="text-left">Status</th>
+            <th class="text-right">Rows</th>
+            <th class="text-left">Started</th>
+            <th class="text-left">Finished</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="run in jobRuns" :key="run.id">
+            <td class="text-left">{{ run.label }}</td>
+            <td class="text-left">
+              <q-badge :color="statusColor(run.status)" text-color="white">{{ run.status }}</q-badge>
+              <q-tooltip v-if="run.error">{{ run.error }}</q-tooltip>
+            </td>
+            <td class="text-right">{{ run.result_count?.toLocaleString() ?? '—' }}</td>
+            <td class="text-left">{{ formatTime(run.started_at) }}</td>
+            <td class="text-left">{{ formatTime(run.finished_at) }}</td>
+          </tr>
+          <tr v-if="jobRuns.length === 0">
+            <td colspan="5" class="text-grey-6">No jobs have been triggered yet.</td>
+          </tr>
+        </tbody>
+      </q-markup-table>
 
       <div class="text-subtitle2 q-mt-md q-mb-xs">Dataset freshness</div>
       <q-markup-table flat bordered dense>
@@ -200,5 +331,47 @@ onMounted(() => void load())
 .empty {
   text-align: center;
   padding: 64px 16px;
+}
+.job-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+.job-group {
+  padding: 10px 12px;
+  border-radius: var(--lot-radius);
+}
+.job-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lot-muted);
+  margin-bottom: 6px;
+}
+.job-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--lot-hairline, rgba(0, 0, 0, 0.06));
+}
+.job-row:first-of-type {
+  border-top: none;
+}
+.job-label {
+  font-size: 13px;
+  color: var(--lot-ink);
+}
+.job-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.job-time {
+  font-size: 11px;
+  color: var(--lot-muted);
 }
 </style>

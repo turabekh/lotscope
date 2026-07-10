@@ -46,6 +46,8 @@ import type {
   AreaSearchResponse,
   DatasetStatus,
   DeedRestrictionsResponse,
+  JobCatalogEntry,
+  JobRunSummary,
   NeighborhoodListResponse,
   OwnerPortfolio,
   RegisterPayload,
@@ -368,6 +370,15 @@ export const api = {
   },
   updateAdminUser(userId: number, payload: AdminUserUpdate): Promise<User> {
     return request(`/admin/users/${userId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+  },
+  getJobCatalog(): Promise<JobCatalogEntry[]> {
+    return request('/admin/jobs')
+  },
+  getJobRuns(limit = 50): Promise<JobRunSummary[]> {
+    return request(`/admin/jobs/runs?limit=${limit}`)
+  },
+  runJob(jobId: string): Promise<JobRunSummary> {
+    return request('/admin/jobs/run', { method: 'POST', body: JSON.stringify({ job_id: jobId }) })
   },
   getSavedSearches(): Promise<SavedSearchListResponse> {
     return request('/saved-searches')

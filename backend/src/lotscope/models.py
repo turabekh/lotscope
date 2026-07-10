@@ -1,4 +1,5 @@
 from lotscope.accounts.models import User
+from lotscope.admin.models import JobRun
 from lotscope.ai.models import Document
 from lotscope.appeal.models import AppealPacketEntitlement
 from lotscope.assemblage.models import ParcelAssemblage
@@ -23,6 +24,7 @@ __all__ = [
     "Document",
     "FloodZone",
     "HistoricDistrict",
+    "JobRun",
     "LiEvent",
     "Market",
     "Neighborhood",

@@ -38,3 +38,34 @@ class AdminUserUpdate(BaseModel):
     role: Literal["user", "admin"] | None = None
     tier: Literal["free", "pro", "investor", "enterprise"] | None = None
     is_active: bool | None = None
+
+
+class JobRunSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    job_id: str
+    label: str
+    kind: str
+    market_code: str | None
+    status: str
+    started_at: datetime | None
+    finished_at: datetime | None
+    result_count: int | None
+    error: str | None
+    triggered_by: int
+    created_at: datetime
+
+
+class JobCatalogEntry(BaseModel):
+    id: str
+    label: str
+    kind: str
+    description: str
+    market: str | None
+    dataset: str | None
+    latest_run: JobRunSummary | None
+
+
+class JobRunRequest(BaseModel):
+    job_id: str

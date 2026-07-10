@@ -735,6 +735,31 @@ export interface AdminUserUpdate {
   is_active?: boolean
 }
 
+export interface JobRunSummary {
+  id: number
+  job_id: string
+  label: string
+  kind: string
+  market_code: string | null
+  status: string
+  started_at: string | null
+  finished_at: string | null
+  result_count: number | null
+  error: string | null
+  triggered_by: number
+  created_at: string
+}
+
+export interface JobCatalogEntry {
+  id: string
+  label: string
+  kind: string
+  description: string
+  market: string | null
+  dataset: string | null
+  latest_run: JobRunSummary | null
+}
+
 export interface TokenResponse {
   access_token: string
   token_type: string

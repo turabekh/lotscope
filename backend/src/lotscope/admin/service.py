@@ -1,16 +1,31 @@
+from datetime import UTC, datetime
+from typing import Any, Protocol
+
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
 from lotscope.accounts.schemas import UserRead
+from lotscope.admin.catalog import CATALOG, CATALOG_BY_ID
+from lotscope.admin.models import JobRun
 from lotscope.admin.schemas import (
     AdminOverview,
     AdminUsersResponse,
     AdminUserUpdate,
     DatasetStatus,
+    JobCatalogEntry,
+    JobRunSummary,
 )
-from lotscope.core.errors import NotFoundError
+from lotscope.core.errors import ConflictError, NotFoundError
 from lotscope.ingestion.models import DatasetFreshness
+
+_ACTIVE_STATUSES = ("queued", "running")
+_ERROR_LIMIT = 2000
+
+
+class JobEnqueuer(Protocol):
+    async def enqueue_job(self, function: str, *args: Any, **kwargs: Any) -> Any: ...
+
 
 _COUNTS_SQL = text(
     "SELECT "
@@ -76,3 +91,93 @@ async def update_user(session: AsyncSession, user_id: int, data: AdminUserUpdate
         user.is_active = data.is_active
     await session.flush()
     return UserRead.model_validate(user)
+
+
+async def _latest_runs_by_job(session: AsyncSession) -> dict[str, JobRun]:
+    rows = (
+        await session.execute(
+            select(JobRun).order_by(JobRun.job_id, JobRun.id.desc()).distinct(JobRun.job_id)
+        )
+    ).scalars()
+    return {run.job_id: run for run in rows}
+
+
+async def job_catalog(session: AsyncSession) -> list[JobCatalogEntry]:
+    latest = await _latest_runs_by_job(session)
+    return [
+        JobCatalogEntry(
+            id=spec.id,
+            label=spec.label,
+            kind=spec.kind,
+            description=spec.description,
+            market=spec.market,
+            dataset=spec.dataset,
+            latest_run=(
+                JobRunSummary.model_validate(latest[spec.id]) if spec.id in latest else None
+            ),
+        )
+        for spec in CATALOG
+    ]
+
+
+async def list_job_runs(session: AsyncSession, *, limit: int = 50) -> list[JobRunSummary]:
+    rows = (await session.execute(select(JobRun).order_by(JobRun.id.desc()).limit(limit))).scalars()
+    return [JobRunSummary.model_validate(row) for row in rows]
+
+
+async def enqueue_job(
+    session: AsyncSession, enqueuer: JobEnqueuer, *, job_id: str, triggered_by: int
+) -> JobRunSummary:
+    spec = CATALOG_BY_ID.get(job_id)
+    if spec is None:
+        raise NotFoundError(f"Job {job_id!r} is not in the catalog.")
+    active = await session.scalar(
+        select(JobRun.id)
+        .where(JobRun.job_id == job_id, JobRun.status.in_(_ACTIVE_STATUSES))
+        .limit(1)
+    )
+    if active is not None:
+        raise ConflictError(f"Job {job_id!r} already has a run in progress.")
+    run = JobRun(
+        job_id=spec.id,
+        label=spec.label,
+        kind=spec.kind,
+        market_code=spec.market,
+        status="queued",
+        triggered_by=triggered_by,
+    )
+    session.add(run)
+    await session.flush()
+    arq_job = await enqueuer.enqueue_job("run_admin_job", run.id)
+    run.arq_job_id = getattr(arq_job, "job_id", None)
+    await session.flush()
+    return JobRunSummary.model_validate(run)
+
+
+async def mark_job_running(session: AsyncSession, job_run_id: int) -> JobRun:
+    run = await session.get(JobRun, job_run_id)
+    if run is None:
+        raise NotFoundError(f"Job run {job_run_id} was not found.")
+    run.status = "running"
+    run.started_at = datetime.now(UTC)
+    await session.flush()
+    return run
+
+
+async def mark_job_finished(
+    session: AsyncSession,
+    job_run_id: int,
+    *,
+    status: str,
+    result_count: int | None = None,
+    error: str | None = None,
+) -> JobRun:
+    run = await session.get(JobRun, job_run_id)
+    if run is None:
+        raise NotFoundError(f"Job run {job_run_id} was not found.")
+    run.status = status
+    run.result_count = result_count
+    run.error = error[:_ERROR_LIMIT] if error is not None else None
+    run.finished_at = datetime.now(UTC)
+    await session.flush()
+    return run

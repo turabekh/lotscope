@@ -32,3 +32,7 @@ class ForbiddenError(LotScopeError):
 
 class QuotaExceededError(LotScopeError):
     default_message = "You have reached your plan's usage limit."
+
+
+class ConflictError(LotScopeError):
+    default_message = "The request conflicts with the current state."
