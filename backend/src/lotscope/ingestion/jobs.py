@@ -1,4 +1,5 @@
 from collections.abc import Awaitable, Callable
+from datetime import date
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -15,6 +16,7 @@ from lotscope.ingestion.loaders import (
     flood,
     hbg,
     hbg_repository,
+    hbg_taxclaim,
     historic,
     li,
     neighborhoods,
@@ -368,6 +370,20 @@ async def ingest_hbg_repository(session_factory: SessionFactory, settings: Setti
     return result.loaded
 
 
+async def ingest_hbg_tax_claim(
+    session_factory: SessionFactory, settings: Settings, *, list_url: str, list_date: date
+) -> int:
+    async with ExtractClient(settings) as extract:
+        return await run_loader(
+            session_factory,
+            lambda session: hbg_taxclaim.load_hbg_tax_claim(
+                session, extract, list_url=list_url, list_date=list_date
+            ),
+            dataset=hbg_taxclaim.HBG_TAX_CLAIM_DATASET,
+            market_code="hbg",
+        )
+
+
 async def _pgh_source_config(session_factory: SessionFactory) -> dict[str, Any]:
     async with session_factory() as session:
         market = await session.get(Market, "pgh")
@@ -558,6 +574,12 @@ INGEST_JOBS: dict[tuple[str, str], Job] = {
     **{("phl", dataset): job for dataset, job in _PHL_JOBS.items()},
     **{("hbg", dataset): job for dataset, job in _HBG_JOBS.items()},
     **{("pgh", dataset): job for dataset, job in _PGH_JOBS.items()},
+}
+
+ParamJob = Callable[..., Awaitable[int]]
+
+PARAM_INGEST_JOBS: dict[tuple[str, str], ParamJob] = {
+    ("hbg", "tax_claim"): ingest_hbg_tax_claim,
 }
 
 

@@ -20,8 +20,8 @@ from lotscope.admin.service import enqueue_job, job_catalog
 from lotscope.api.app import create_app
 from lotscope.api.deps import get_arq_pool, get_current_user, get_session
 from lotscope.core.config import Settings
-from lotscope.core.errors import ConflictError, NotFoundError
-from lotscope.ingestion.jobs import INGEST_JOBS
+from lotscope.core.errors import ConflictError, NotFoundError, ValidationError
+from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS
 from lotscope.worker import run_admin_job
 
 
@@ -64,7 +64,10 @@ async def _admin_user(session: AsyncSession) -> int:
 
 
 def test_catalog_covers_every_ingest_job() -> None:
-    ingest_ids = {ingest_job_id(market, dataset) for (market, dataset) in INGEST_JOBS}
+    ingest_ids = {
+        ingest_job_id(market, dataset)
+        for (market, dataset) in set(INGEST_JOBS) | set(PARAM_INGEST_JOBS)
+    }
     catalog_ingest_ids = {spec.id for spec in CATALOG if spec.kind == INGEST_KIND}
     assert ingest_ids == catalog_ingest_ids
     assert len(CATALOG_BY_ID) == len(CATALOG)
@@ -73,9 +76,10 @@ def test_catalog_covers_every_ingest_job() -> None:
 def test_worker_dispatch_stays_in_sync_with_catalog() -> None:
     recompute_ids = {spec.id for spec in CATALOG if spec.kind == RECOMPUTE_KIND}
     assert recompute_ids == set(worker._RECOMPUTE_DISPATCH)
+    runnable = set(INGEST_JOBS) | set(PARAM_INGEST_JOBS)
     for spec in CATALOG:
         if spec.kind == INGEST_KIND:
-            assert (spec.market, spec.dataset) in INGEST_JOBS
+            assert (spec.market, spec.dataset) in runnable
 
 
 @pytest.mark.integration
@@ -118,7 +122,9 @@ async def test_enqueue_rejects_duplicate_active_run(db_session: AsyncSession) ->
 async def test_run_admin_job_marks_success(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def _dispatch(session_factory: Any, settings: Any, job_id: str) -> int:
+    async def _dispatch(
+        session_factory: Any, settings: Any, job_id: str, params: dict[str, str]
+    ) -> int:
         return 42
 
     monkeypatch.setattr(worker, "_dispatch_admin_job", _dispatch)
@@ -150,7 +156,9 @@ async def test_run_admin_job_marks_success(
 async def test_run_admin_job_records_failure(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def _boom(session_factory: Any, settings: Any, job_id: str) -> int:
+    async def _boom(
+        session_factory: Any, settings: Any, job_id: str, params: dict[str, str]
+    ) -> int:
         raise RuntimeError("upstream 500")
 
     monkeypatch.setattr(worker, "_dispatch_admin_job", _boom)
@@ -207,6 +215,79 @@ async def test_job_catalog_reports_latest_run(db_session: AsyncSession) -> None:
     assert distress.latest_run.status == "failed"
     untriggered = next(entry for entry in catalog if entry.id == "recompute:assemblage")
     assert untriggered.latest_run is None
+
+
+def test_tax_claim_job_declares_params() -> None:
+    spec = CATALOG_BY_ID["ingest:hbg:tax_claim"]
+    assert {param.name for param in spec.params} == {"list_url", "list_date"}
+    assert ("hbg", "tax_claim") in PARAM_INGEST_JOBS
+
+
+@pytest.mark.integration
+async def test_enqueue_validates_required_params(db_session: AsyncSession) -> None:
+    user_id = await _admin_user(db_session)
+    with pytest.raises(ValidationError):
+        await enqueue_job(
+            db_session,
+            _FakeEnqueuer(),
+            job_id="ingest:hbg:tax_claim",
+            triggered_by=user_id,
+            params={"list_url": "https://example.test/list.csv"},
+        )
+
+
+@pytest.mark.integration
+async def test_enqueue_stores_parsed_params(db_session: AsyncSession) -> None:
+    user_id = await _admin_user(db_session)
+    summary = await enqueue_job(
+        db_session,
+        _FakeEnqueuer(),
+        job_id="ingest:hbg:tax_claim",
+        triggered_by=user_id,
+        params={"list_url": "https://example.test/list.csv", "list_date": "2026-08-01"},
+    )
+    run = await db_session.get(JobRun, summary.id)
+    assert run is not None
+    assert run.params == {"list_url": "https://example.test/list.csv", "list_date": "2026-08-01"}
+
+
+@pytest.mark.integration
+async def test_run_admin_job_passes_params_to_dispatch(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    received: dict[str, Any] = {}
+
+    async def _dispatch(
+        session_factory: Any, settings: Any, job_id: str, params: dict[str, str]
+    ) -> int:
+        received["job_id"] = job_id
+        received["params"] = params
+        return 7
+
+    monkeypatch.setattr(worker, "_dispatch_admin_job", _dispatch)
+    user_id = await _admin_user(db_session)
+    run = JobRun(
+        job_id="ingest:hbg:tax_claim",
+        label="HBG · tax_claim",
+        kind="ingest",
+        market_code="hbg",
+        params={"list_url": "https://example.test/list.csv", "list_date": "2026-08-01"},
+        status="queued",
+        triggered_by=user_id,
+    )
+    db_session.add(run)
+    await db_session.flush()
+
+    result = await run_admin_job(
+        {"session_factory": _reusing_factory(db_session), "settings": None}, run.id
+    )
+
+    assert result == 7
+    assert received["job_id"] == "ingest:hbg:tax_claim"
+    assert received["params"] == {
+        "list_url": "https://example.test/list.csv",
+        "list_date": "2026-08-01",
+    }
 
 
 def _admin_app(session: AsyncSession, pool: Any, *, admin_id: int) -> FastAPI:

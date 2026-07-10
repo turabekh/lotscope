@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
 from lotscope.accounts.schemas import UserRead
-from lotscope.admin.catalog import CATALOG, CATALOG_BY_ID
+from lotscope.admin.catalog import CATALOG, CATALOG_BY_ID, storable_params
 from lotscope.admin.models import JobRun
 from lotscope.admin.schemas import (
     AdminOverview,
@@ -14,6 +14,7 @@ from lotscope.admin.schemas import (
     AdminUserUpdate,
     DatasetStatus,
     JobCatalogEntry,
+    JobParamSpec,
     JobRunSummary,
 )
 from lotscope.core.errors import ConflictError, NotFoundError
@@ -112,6 +113,10 @@ async def job_catalog(session: AsyncSession) -> list[JobCatalogEntry]:
             description=spec.description,
             market=spec.market,
             dataset=spec.dataset,
+            params=[
+                JobParamSpec(name=p.name, label=p.label, type=p.type, required=p.required)
+                for p in spec.params
+            ],
             latest_run=(
                 JobRunSummary.model_validate(latest[spec.id]) if spec.id in latest else None
             ),
@@ -126,11 +131,17 @@ async def list_job_runs(session: AsyncSession, *, limit: int = 50) -> list[JobRu
 
 
 async def enqueue_job(
-    session: AsyncSession, enqueuer: JobEnqueuer, *, job_id: str, triggered_by: int
+    session: AsyncSession,
+    enqueuer: JobEnqueuer,
+    *,
+    job_id: str,
+    triggered_by: int,
+    params: dict[str, str] | None = None,
 ) -> JobRunSummary:
     spec = CATALOG_BY_ID.get(job_id)
     if spec is None:
         raise NotFoundError(f"Job {job_id!r} is not in the catalog.")
+    stored = storable_params(spec, params or {})
     active = await session.scalar(
         select(JobRun.id)
         .where(JobRun.job_id == job_id, JobRun.status.in_(_ACTIVE_STATUSES))
@@ -143,6 +154,7 @@ async def enqueue_job(
         label=spec.label,
         kind=spec.kind,
         market_code=spec.market,
+        params=stored or None,
         status="queued",
         triggered_by=triggered_by,
     )

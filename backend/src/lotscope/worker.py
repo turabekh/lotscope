@@ -6,7 +6,7 @@ from arq import cron
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from lotscope.admin.catalog import CATALOG_BY_ID, INGEST_KIND, RECOMPUTE_KIND
+from lotscope.admin.catalog import CATALOG_BY_ID, INGEST_KIND, RECOMPUTE_KIND, parse_params
 from lotscope.admin.service import mark_job_finished, mark_job_running
 from lotscope.appeal.jobs import grant_investor_appeal_packets
 from lotscope.assemblage.jobs import recompute_all_assemblage
@@ -15,7 +15,7 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.errors import NotFoundError
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.distress.jobs import recompute_all_distress
-from lotscope.ingestion.jobs import INGEST_JOBS, ingest_market, markets
+from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS, ingest_market, markets
 from lotscope.ingestion.retention import sweep_retention
 from lotscope.notifications.email import get_email_sender
 from lotscope.notifications.push import get_push_sender
@@ -117,7 +117,10 @@ _RECOMPUTE_DISPATCH: dict[str, _RecomputeFn] = {
 
 
 async def _dispatch_admin_job(
-    session_factory: async_sessionmaker[AsyncSession], settings: Any, job_id: str
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Any,
+    job_id: str,
+    params: dict[str, str],
 ) -> int:
     spec = CATALOG_BY_ID.get(job_id)
     if spec is None:
@@ -125,7 +128,12 @@ async def _dispatch_admin_job(
     if spec.kind == INGEST_KIND:
         if spec.market is None or spec.dataset is None:
             raise NotFoundError(f"Job {job_id!r} is missing ingest coordinates.")
-        return await INGEST_JOBS[(spec.market, spec.dataset)](session_factory, settings)
+        key = (spec.market, spec.dataset)
+        if key in PARAM_INGEST_JOBS:
+            return await PARAM_INGEST_JOBS[key](
+                session_factory, settings, **parse_params(spec, params)
+            )
+        return await INGEST_JOBS[key](session_factory, settings)
     if spec.kind == RECOMPUTE_KIND:
         return await _RECOMPUTE_DISPATCH[spec.id](session_factory)
     raise NotFoundError(f"Job {job_id!r} has an unsupported kind {spec.kind!r}.")
@@ -136,9 +144,10 @@ async def run_admin_job(ctx: dict[str, Any], job_run_id: int) -> int:
     async with session_factory() as session:
         run = await mark_job_running(session, job_run_id)
         job_id = run.job_id
+        params = dict(run.params or {})
         await session.commit()
     try:
-        rows = await _dispatch_admin_job(session_factory, ctx["settings"], job_id)
+        rows = await _dispatch_admin_job(session_factory, ctx["settings"], job_id, params)
     except Exception as error:
         async with session_factory() as session:
             await mark_job_finished(session, job_run_id, status="failed", error=str(error))

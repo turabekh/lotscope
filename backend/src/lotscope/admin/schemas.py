@@ -48,6 +48,7 @@ class JobRunSummary(BaseModel):
     label: str
     kind: str
     market_code: str | None
+    params: dict[str, str] | None
     status: str
     started_at: datetime | None
     finished_at: datetime | None
@@ -57,6 +58,13 @@ class JobRunSummary(BaseModel):
     created_at: datetime
 
 
+class JobParamSpec(BaseModel):
+    name: str
+    label: str
+    type: str
+    required: bool
+
+
 class JobCatalogEntry(BaseModel):
     id: str
     label: str
@@ -64,8 +72,10 @@ class JobCatalogEntry(BaseModel):
     description: str
     market: str | None
     dataset: str | None
+    params: list[JobParamSpec]
     latest_run: JobRunSummary | None
 
 
 class JobRunRequest(BaseModel):
     job_id: str
+    params: dict[str, str] = {}

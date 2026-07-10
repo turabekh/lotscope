@@ -377,8 +377,11 @@ export const api = {
   getJobRuns(limit = 50): Promise<JobRunSummary[]> {
     return request(`/admin/jobs/runs?limit=${limit}`)
   },
-  runJob(jobId: string): Promise<JobRunSummary> {
-    return request('/admin/jobs/run', { method: 'POST', body: JSON.stringify({ job_id: jobId }) })
+  runJob(jobId: string, params: Record<string, string> = {}): Promise<JobRunSummary> {
+    return request('/admin/jobs/run', {
+      method: 'POST',
+      body: JSON.stringify({ job_id: jobId, params }),
+    })
   },
   getSavedSearches(): Promise<SavedSearchListResponse> {
     return request('/saved-searches')

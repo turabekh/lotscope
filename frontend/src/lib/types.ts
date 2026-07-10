@@ -735,12 +735,20 @@ export interface AdminUserUpdate {
   is_active?: boolean
 }
 
+export interface JobParamSpec {
+  name: string
+  label: string
+  type: string
+  required: boolean
+}
+
 export interface JobRunSummary {
   id: number
   job_id: string
   label: string
   kind: string
   market_code: string | null
+  params: Record<string, string> | null
   status: string
   started_at: string | null
   finished_at: string | null
@@ -757,6 +765,7 @@ export interface JobCatalogEntry {
   description: string
   market: string | null
   dataset: string | null
+  params: JobParamSpec[]
   latest_run: JobRunSummary | null
 }
 
