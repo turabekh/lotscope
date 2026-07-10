@@ -34,6 +34,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
     label: 'Recompute distress index',
     kind: 'recompute',
     market_code: null,
+    params: null,
     status: 'success',
     started_at: '2026-07-10T00:00:00Z',
     finished_at: '2026-07-10T00:01:00Z',
@@ -50,6 +51,20 @@ vi.mock('@/lib/api', async (importOriginal) => {
       description: 'Ingest the zoning dataset for HBG.',
       market: 'hbg',
       dataset: 'zoning',
+      params: [],
+      latest_run: null,
+    },
+    {
+      id: 'ingest:hbg:tax_claim',
+      label: 'HBG · tax_claim',
+      kind: 'ingest',
+      description: 'Ingest the tax_claim dataset for HBG.',
+      market: 'hbg',
+      dataset: 'tax_claim',
+      params: [
+        { name: 'list_url', label: 'Upset / judicial list CSV URL', type: 'string', required: true },
+        { name: 'list_date', label: 'List date', type: 'date', required: true },
+      ],
       latest_run: null,
     },
     {
@@ -59,6 +74,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
       description: 'Recompute the distress index.',
       market: null,
       dataset: null,
+      params: [],
       latest_run: latestRun,
     },
   ]
@@ -116,12 +132,22 @@ describe('AdminPage jobs console', () => {
     expect(wrapper.text()).toContain('Recompute distress index')
   })
 
-  it('triggers a job when Run is clicked', async () => {
+  it('triggers a paramless job directly when Run is clicked', async () => {
     const wrapper = await mountAdmin()
     const target = wrapper.findAll('button').find((button) => button.text() === 'Run')
     expect(target).toBeTruthy()
     await target!.trigger('click')
     await flushPromises()
-    expect(runJobMock).toHaveBeenCalledWith('ingest:hbg:zoning')
+    expect(runJobMock).toHaveBeenCalledWith('ingest:hbg:zoning', {})
+  })
+
+  it('opens a param dialog for a job with parameters', async () => {
+    const wrapper = await mountAdmin()
+    const runWithParams = wrapper.findAll('button').find((button) => button.text() === 'Run…')
+    expect(runWithParams).toBeTruthy()
+    await runWithParams!.trigger('click')
+    await flushPromises()
+    expect(document.body.textContent).toContain('Upset / judicial list CSV URL')
+    expect(runJobMock).not.toHaveBeenCalled()
   })
 })

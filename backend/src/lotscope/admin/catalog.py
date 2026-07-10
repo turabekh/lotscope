@@ -1,9 +1,20 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import date
+from typing import Any
 
-from lotscope.ingestion.jobs import INGEST_JOBS
+from lotscope.core.errors import ValidationError
+from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS
 
 INGEST_KIND = "ingest"
 RECOMPUTE_KIND = "recompute"
+
+
+@dataclass(frozen=True)
+class JobParam:
+    name: str
+    label: str
+    type: str
+    required: bool = True
 
 
 @dataclass(frozen=True)
@@ -14,6 +25,15 @@ class JobSpec:
     description: str
     market: str | None = None
     dataset: str | None = None
+    params: tuple[JobParam, ...] = field(default_factory=tuple)
+
+
+_INGEST_PARAMS: dict[tuple[str, str], tuple[JobParam, ...]] = {
+    ("hbg", "tax_claim"): (
+        JobParam(name="list_url", label="Upset / judicial list CSV URL", type="string"),
+        JobParam(name="list_date", label="List date", type="date"),
+    ),
+}
 
 
 _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
@@ -55,6 +75,7 @@ def ingest_job_id(market: str, dataset: str) -> str:
 
 
 def _build_catalog() -> list[JobSpec]:
+    keys = set(INGEST_JOBS) | set(PARAM_INGEST_JOBS)
     ingest = [
         JobSpec(
             id=ingest_job_id(market, dataset),
@@ -63,11 +84,40 @@ def _build_catalog() -> list[JobSpec]:
             description=f"Ingest the {dataset} dataset for {market.upper()}.",
             market=market,
             dataset=dataset,
+            params=_INGEST_PARAMS.get((market, dataset), ()),
         )
-        for (market, dataset) in sorted(INGEST_JOBS)
+        for (market, dataset) in sorted(keys)
     ]
     return ingest + list(_RECOMPUTE_SPECS)
 
 
 CATALOG: list[JobSpec] = _build_catalog()
 CATALOG_BY_ID: dict[str, JobSpec] = {spec.id: spec for spec in CATALOG}
+
+
+def parse_params(spec: JobSpec, raw: dict[str, Any]) -> dict[str, Any]:
+    parsed: dict[str, Any] = {}
+    for param in spec.params:
+        value = raw.get(param.name)
+        if value is None or value == "":
+            if param.required:
+                raise ValidationError(f"Missing required parameter {param.name!r}.")
+            continue
+        if param.type == "date":
+            try:
+                parsed[param.name] = date.fromisoformat(str(value))
+            except ValueError as error:
+                raise ValidationError(
+                    f"Parameter {param.name!r} must be an ISO date (YYYY-MM-DD)."
+                ) from error
+        else:
+            parsed[param.name] = str(value)
+    return parsed
+
+
+def storable_params(spec: JobSpec, raw: dict[str, Any]) -> dict[str, str]:
+    parsed = parse_params(spec, raw)
+    return {
+        key: value.isoformat() if isinstance(value, date) else str(value)
+        for key, value in parsed.items()
+    }

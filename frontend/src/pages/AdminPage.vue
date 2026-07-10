@@ -28,6 +28,9 @@ const loading = ref(false)
 const jobs = ref<JobCatalogEntry[]>([])
 const jobRuns = ref<JobRunSummary[]>([])
 const submittingJob = ref<string | null>(null)
+const paramDialog = ref(false)
+const paramJob = ref<JobCatalogEntry | null>(null)
+const paramValues = ref<Record<string, string>>({})
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const jobGroups = computed(() => {
@@ -66,10 +69,10 @@ async function loadJobs(): Promise<void> {
   syncPolling()
 }
 
-async function runJob(job: JobCatalogEntry): Promise<void> {
+async function runJob(job: JobCatalogEntry, params: Record<string, string> = {}): Promise<void> {
   submittingJob.value = job.id
   try {
-    await api.runJob(job.id)
+    await api.runJob(job.id, params)
     $q.notify({ type: 'positive', message: `Queued ${job.label}.` })
     await loadJobs()
   } catch {
@@ -77,6 +80,23 @@ async function runJob(job: JobCatalogEntry): Promise<void> {
   } finally {
     submittingJob.value = null
   }
+}
+
+function startRun(job: JobCatalogEntry): void {
+  if (job.params.length > 0) {
+    paramJob.value = job
+    paramValues.value = Object.fromEntries(job.params.map((param) => [param.name, '']))
+    paramDialog.value = true
+  } else {
+    void runJob(job)
+  }
+}
+
+function submitParams(): void {
+  const job = paramJob.value
+  if (job === null) return
+  paramDialog.value = false
+  void runJob(job, { ...paramValues.value })
 }
 
 const TIERS = ['free', 'pro', 'enterprise']
@@ -191,10 +211,10 @@ onBeforeUnmount(() => {
               dense
               unelevated
               color="primary"
-              label="Run"
+              :label="job.params.length > 0 ? 'Run…' : 'Run'"
               :loading="submittingJob === job.id"
               :disable="jobIsBusy(job)"
-              @click="() => runJob(job)"
+              @click="() => startRun(job)"
             />
           </div>
         </q-card>
@@ -298,6 +318,28 @@ onBeforeUnmount(() => {
           </tr>
         </tbody>
       </q-markup-table>
+
+      <q-dialog v-model="paramDialog">
+        <q-card class="param-card">
+          <div class="text-subtitle1 q-mb-sm">{{ paramJob?.label }}</div>
+          <div v-if="paramJob" class="param-fields">
+            <q-input
+              v-for="param in paramJob.params"
+              :key="param.name"
+              v-model="paramValues[param.name]"
+              :label="param.label"
+              :type="param.type === 'date' ? 'date' : 'text'"
+              dense
+              outlined
+              stack-label
+            />
+          </div>
+          <div class="param-actions">
+            <q-btn flat label="Cancel" @click="paramDialog = false" />
+            <q-btn unelevated color="primary" label="Run" @click="submitParams" />
+          </div>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -373,5 +415,20 @@ onBeforeUnmount(() => {
 .job-time {
   font-size: 11px;
   color: var(--lot-muted);
+}
+.param-card {
+  padding: 16px;
+  min-width: 340px;
+}
+.param-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.param-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
 }
 </style>

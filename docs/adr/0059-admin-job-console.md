@@ -49,11 +49,16 @@ Add an admin-only, ARQ-backed job console.
 - The catalog and the worker's recompute dispatch map are two halves of one contract; a test asserts they
   stay in sync (every catalog id resolves to a dispatch, every ingest id exists in `INGEST_JOBS`) so drift
   fails CI rather than at runtime.
-- Parameterless jobs only, in this slice. The orphaned Harrisburg loaders `load_hbg_tax_claim`
-  (needs a list URL + date) and `load_hbg_violations` (needs an uploaded export + field map) take runtime
-  inputs, so they require typed job parameters / file upload — a follow-up that extends `JobSpec` with a
-  parameter schema. The catalog is shaped to admit that without rework. `load_hbg_flood` is not yet
-  written; it is out of scope until the loader exists.
+- Typed job parameters (follow-up, landed 2026-07-10). `JobSpec` gained a `params` schema; a parameter
+  registry `PARAM_INGEST_JOBS` holds jobs that take runtime inputs; `job_run.params` (JSONB, migration
+  `e5a1c8b0f2d9`) records what an operator supplied. `POST /admin/jobs/run` validates params against the
+  spec (required present, dates parseable) and stores them; the worker coerces and passes them to the
+  loader. The UI shows a "Run…" button that opens a parameter dialog. First parameterized job registered:
+  **`hbg tax_claim`** (list URL + date) — the Dauphin upset/judicial list is reachable from the prod VM,
+  so an operator can now pull it from the browser.
+- `load_hbg_violations` stays deferred: it needs an uploaded export plus a field map, and the export does
+  not exist until the RTKL request is answered — building its upload/column-mapping now would be
+  speculative and untestable. `load_hbg_flood` is likewise out of scope until the loader is written.
 - Failures are recorded, not retried: `run_admin_job` records a failed run and does not re-raise, so ARQ
   does not silently retry an ingestion. The operator sees the failure in the console and re-runs
   deliberately.

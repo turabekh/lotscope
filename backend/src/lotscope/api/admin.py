@@ -80,6 +80,8 @@ async def admin_job_runs(
 async def admin_run_job(
     data: JobRunRequest, session: SessionDep, admin: AdminDep, pool: ArqPoolDep
 ) -> JobRunSummary:
-    result = await enqueue_job(session, pool, job_id=data.job_id, triggered_by=admin.id)
+    result = await enqueue_job(
+        session, pool, job_id=data.job_id, triggered_by=admin.id, params=data.params
+    )
     await session.commit()
     return result
