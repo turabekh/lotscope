@@ -436,7 +436,7 @@ async def derive_hbg_public_ownership(session: AsyncSession) -> int:
 
 HBG_HISTORIC_DATASET = "city_municipal_hd"
 HBG_NEIGHBORHOODS_DATASET = "city_neighborhoods"
-_CITY_ARCGIS = "https://services5.arcgis.com/9n3LUAMi3B692MBL/arcgis/rest/services"
+CITY_ARCGIS = "https://services5.arcgis.com/9n3LUAMi3B692MBL/arcgis/rest/services"
 
 
 def _geo_feature_row(
@@ -458,7 +458,7 @@ def _geo_feature_row(
 async def load_hbg_historic(session: AsyncSession, arcgis: ArcGisClient) -> int:
     from lotscope.historic.models import HistoricDistrict
 
-    layer = f"{_CITY_ARCGIS}/MunicipalHD/FeatureServer/0/query"
+    layer = f"{CITY_ARCGIS}/MunicipalHD/FeatureServer/0/query"
     total = 0
     async for features in arcgis.paginate(layer, page_size=1000):
         rows = [
@@ -491,7 +491,7 @@ async def load_hbg_historic(session: AsyncSession, arcgis: ArcGisClient) -> int:
 async def load_hbg_neighborhoods(session: AsyncSession, arcgis: ArcGisClient) -> int:
     from lotscope.neighborhoods.models import Neighborhood
 
-    layer = f"{_CITY_ARCGIS}/Neighborhood_Associations/FeatureServer/0/query"
+    layer = f"{CITY_ARCGIS}/Neighborhood_Associations/FeatureServer/0/query"
     total = 0
     async for features in arcgis.paginate(layer, page_size=1000):
         rows = [

@@ -59,6 +59,12 @@ Add an admin-only, ARQ-backed job console.
 - `load_hbg_violations` stays deferred: it needs an uploaded export plus a field map, and the export does
   not exist until the RTKL request is answered — building its upload/column-mapping now would be
   speculative and untestable. `load_hbg_flood` is likewise out of scope until the loader is written.
+- Server-side source puller (follow-up, 2026-07-10). `GET /admin/fetch?url=` (admin-only) fetches a URL
+  server-side and streams the raw bytes back as a browser download; `GET /admin/fetch/sources` lists
+  known Harrisburg source shortcuts. This turns the US-based server into a fetch proxy for sources it can
+  reach but the operator's machine can't (Dauphin, city GIS), with no ingestion or DB write — the file
+  lands directly in the browser. URLs are restricted to http(s); the fetch is a full in-memory download,
+  so it targets modest files (exports, layer GeoJSON, PDFs), not bulk mirrors.
 - Failures are recorded, not retried: `run_admin_job` records a failed run and does not re-raise, so ARQ
   does not silently retry an ingestion. The operator sees the failure in the console and re-runs
   deliberately.

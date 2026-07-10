@@ -98,6 +98,15 @@ vi.mock('@/lib/api', async (importOriginal) => {
       getAdminUsers: vi.fn(() => Promise.resolve({ total: 0, users: [] })),
       getJobCatalog: vi.fn(() => Promise.resolve(catalog)),
       getJobRuns: vi.fn(() => Promise.resolve([latestRun])),
+      getFetchSources: vi.fn(() =>
+        Promise.resolve([
+          {
+            label: 'Dauphin repository list (PDF)',
+            url: 'https://example.test/repo.pdf',
+            description: 'Master repository list.',
+          },
+        ]),
+      ),
       runJob: runJobMock,
     },
   }
@@ -139,6 +148,12 @@ describe('AdminPage jobs console', () => {
     await target!.trigger('click')
     await flushPromises()
     expect(runJobMock).toHaveBeenCalledWith('ingest:hbg:zoning', {})
+  })
+
+  it('renders the server data puller with known-source shortcuts', async () => {
+    const wrapper = await mountAdmin()
+    expect(wrapper.text()).toContain('Pull data from the server')
+    expect(wrapper.text()).toContain('Dauphin repository list (PDF)')
   })
 
   it('opens a param dialog for a job with parameters', async () => {
