@@ -86,7 +86,7 @@ def _flood_flag_for(zones: list[str]) -> RiskFlag | None:
     return next((f for f in result.flags if f.code == "flood_zone"), None)
 
 
-@pytest.mark.parametrize("zone", ["A", "AE", "AH", "AO", "AR", "A99", "V", "VE"])
+@pytest.mark.parametrize("zone", ["A", "AE", "AH", "AO", "AR", "A99", "V", "VE", "100 Year"])
 def test_sfha_flood_zones_flag_high(zone: str) -> None:
     flood = _flood_flag_for([zone])
     assert flood is not None
@@ -99,7 +99,9 @@ def test_minimal_flood_zones_are_not_flagged(zone: str) -> None:
     assert _flood_flag_for([zone]) is None
 
 
-@pytest.mark.parametrize("zone", ["X (SHADED)", "0.2 PCT ANNUAL CHANCE FLOOD HAZARD", "B"])
+@pytest.mark.parametrize(
+    "zone", ["X (SHADED)", "0.2 PCT ANNUAL CHANCE FLOOD HAZARD", "B", "500 Year"]
+)
 def test_moderate_flood_zones_are_info_only(zone: str) -> None:
     flood = _flood_flag_for([zone])
     assert flood is not None
