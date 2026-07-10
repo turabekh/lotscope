@@ -1,7 +1,6 @@
 _CHECKLIST_CATEGORY_STATE: dict[str, dict[str, str]] = {
     "hbg": {
         "li": "no_data_source",
-        "flood": "pending_load",
         "liens_taxes": "pending_load",
     },
     "pgh": {
@@ -19,7 +18,6 @@ _NO_SOURCE_DETAIL: dict[tuple[str, str], str] = {
 _RTKL_FILED: frozenset[tuple[str, str]] = frozenset()
 
 _PENDING_DETAIL: dict[tuple[str, str], str] = {
-    ("hbg", "flood"): "FEMA flood-zone data is being loaded for Harrisburg.",
     ("pgh", "flood"): "FEMA flood-zone data is not yet loaded for Pittsburgh; "
     "flood exposure is unconfirmed for this parcel.",
     ("pgh", "access"): "Street-centerline data is not yet loaded for Pittsburgh; "
