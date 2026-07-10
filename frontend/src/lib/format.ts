@@ -6,6 +6,11 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 
 const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 
+export function marketCodeFromParcelNumber(parcelNumber: string): string {
+  const separator = parcelNumber.indexOf(':')
+  return separator > 0 ? parcelNumber.slice(0, separator) : 'phl'
+}
+
 export function formatCurrency(value: number | null | undefined): string {
   if (value == null) return '—'
   return currencyFormatter.format(value)

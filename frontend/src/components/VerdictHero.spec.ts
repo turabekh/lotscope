@@ -84,7 +84,7 @@ describe('VerdictHero', () => {
     expect(wrapper.text()).not.toContain('Variance likely')
   })
 
-  it('qualifies the clean risk pillar with the market coverage note when present', () => {
+  it('qualifies the clean risk pillar with the coverage note of the parcel market', () => {
     const store = useMarketStore()
     store.active = 'harrisburg'
     store.infos = [
@@ -95,7 +95,9 @@ describe('VerdictHero', () => {
         risk_coverage_note: 'based on available Harrisburg sources',
       }),
     ]
-    const wrapper = mountHero(makeVerdict({ risk_score: 0, risk_flags: [] }))
+    const wrapper = mountHero(
+      makeVerdict({ parcel_number: 'hbg:000000001', risk_score: 0, risk_flags: [] }),
+    )
     expect(wrapper.text()).toContain('based on available Harrisburg sources')
   })
 
@@ -106,5 +108,24 @@ describe('VerdictHero', () => {
     const wrapper = mountHero(makeVerdict({ risk_score: 0, risk_flags: [] }))
     expect(wrapper.text()).toContain('No major risk flags found')
     expect(wrapper.text()).not.toContain('based on available')
+  })
+
+  it('does not leak the active market note onto a parcel from another market', () => {
+    const store = useMarketStore()
+    store.active = 'harrisburg'
+    store.infos = [
+      makeMarket({ code: 'phl', url_slug: 'philadelphia', risk_coverage_note: null }),
+      makeMarket({
+        code: 'hbg',
+        url_slug: 'harrisburg',
+        launch_status: 'pilot',
+        risk_coverage_note: 'based on available Harrisburg sources',
+      }),
+    ]
+    const wrapper = mountHero(
+      makeVerdict({ parcel_number: 'phl:875100090', risk_score: 0, risk_flags: [] }),
+    )
+    expect(wrapper.text()).toContain('No major risk flags found')
+    expect(wrapper.text()).not.toContain('based on available Harrisburg sources')
   })
 })

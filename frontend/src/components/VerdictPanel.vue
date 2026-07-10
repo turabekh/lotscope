@@ -8,6 +8,7 @@ import {
   formatPercent,
   formatRange,
   formatSqft,
+  marketCodeFromParcelNumber,
   severityColor,
   severityIcon,
   severityVar,
@@ -18,6 +19,12 @@ import { useMarketStore } from '@/stores/market'
 const props = defineProps<{ verdict: VerdictResult; developed?: boolean }>()
 
 const market = useMarketStore()
+
+const coverageNote = computed(
+  () =>
+    market.infoByCode(marketCodeFromParcelNumber(props.verdict.parcel_number))
+      ?.risk_coverage_note ?? null,
+)
 
 interface Status {
   label: string
@@ -197,9 +204,8 @@ const buildStatus = computed<Status>(() => {
         <q-icon name="verified" size="18px" color="positive" class="q-mr-xs" />
         No major risk flags found.
       </div>
-      <div v-if="market.activeInfo?.risk_coverage_note" class="risk-coverage">
-        Risk {{ market.activeInfo.risk_coverage_note }} — absent feeds mean this is not a
-        proven clean result.
+      <div v-if="coverageNote" class="risk-coverage">
+        Risk {{ coverageNote }} — absent feeds mean this is not a proven clean result.
       </div>
     </q-card-section>
   </q-card>

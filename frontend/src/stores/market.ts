@@ -44,9 +44,13 @@ export const useMarketStore = defineStore('market', () => {
     return infos.value.find((m) => m.url_slug === slug)?.launch_status
   }
 
+  function infoByCode(code: string): MarketInfo | null {
+    return infos.value.find((m) => m.code === code) ?? null
+  }
+
   function isHidden(surface: string): boolean {
     return activeInfo.value?.hidden_surfaces?.includes(surface) ?? false
   }
 
-  return { active, infos, activeInfo, set, load, statusOf, isHidden }
+  return { active, infos, activeInfo, set, load, statusOf, isHidden, infoByCode }
 })
