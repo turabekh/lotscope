@@ -145,6 +145,9 @@ ehthumbs.db
 desktop.ini
 
 mynotes.txt
-# Corpus source binaries (parsed into JSONL/DB; never commit the raw PDFs)
+# Corpus source binaries + raw GIS pulls (parsed into JSONL/DB; never commit the raw data)
 backend/corpus/**/*.pdf
+backend/corpus/**/*.json
+backend/corpus/**/*.geojson
+backend/corpus/**/*.csv
 sync-db.sh
