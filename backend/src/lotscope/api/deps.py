@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from typing import Annotated, cast
 
 import jwt
+from arq.connections import ArqRedis
 from fastapi import Depends, Path, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
@@ -51,6 +52,10 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
 
 def get_redis(request: Request) -> Redis:
     return cast(Redis, request.app.state.redis)
+
+
+def get_arq_pool(request: Request) -> ArqRedis:
+    return cast(ArqRedis, request.app.state.arq_pool)
 
 
 def get_embedder(request: Request) -> Embedder:

@@ -1,13 +1,18 @@
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 from arq import cron
 from arq.connections import RedisSettings
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from lotscope.admin.catalog import CATALOG_BY_ID, INGEST_KIND, RECOMPUTE_KIND
+from lotscope.admin.service import mark_job_finished, mark_job_running
 from lotscope.appeal.jobs import grant_investor_appeal_packets
 from lotscope.assemblage.jobs import recompute_all_assemblage
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
+from lotscope.core.errors import NotFoundError
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.jobs import INGEST_JOBS, ingest_market, markets
@@ -100,6 +105,53 @@ async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
     return count
 
 
+_RecomputeFn = Callable[[async_sessionmaker[AsyncSession]], Awaitable[int]]
+
+_RECOMPUTE_DISPATCH: dict[str, _RecomputeFn] = {
+    "recompute:verdicts": recompute_all_verdicts,
+    "recompute:vacant_verdicts": lambda factory: recompute_all_verdicts(factory, vacant_only=True),
+    "recompute:distress": recompute_all_distress,
+    "recompute:vacancy": recompute_all_vacancy_confidence,
+    "recompute:assemblage": recompute_all_assemblage,
+}
+
+
+async def _dispatch_admin_job(
+    session_factory: async_sessionmaker[AsyncSession], settings: Any, job_id: str
+) -> int:
+    spec = CATALOG_BY_ID.get(job_id)
+    if spec is None:
+        raise NotFoundError(f"Job {job_id!r} is not in the catalog.")
+    if spec.kind == INGEST_KIND:
+        if spec.market is None or spec.dataset is None:
+            raise NotFoundError(f"Job {job_id!r} is missing ingest coordinates.")
+        return await INGEST_JOBS[(spec.market, spec.dataset)](session_factory, settings)
+    if spec.kind == RECOMPUTE_KIND:
+        return await _RECOMPUTE_DISPATCH[spec.id](session_factory)
+    raise NotFoundError(f"Job {job_id!r} has an unsupported kind {spec.kind!r}.")
+
+
+async def run_admin_job(ctx: dict[str, Any], job_run_id: int) -> int:
+    session_factory = ctx["session_factory"]
+    async with session_factory() as session:
+        run = await mark_job_running(session, job_run_id)
+        job_id = run.job_id
+        await session.commit()
+    try:
+        rows = await _dispatch_admin_job(session_factory, ctx["settings"], job_id)
+    except Exception as error:
+        async with session_factory() as session:
+            await mark_job_finished(session, job_run_id, status="failed", error=str(error))
+            await session.commit()
+        _logger.error("admin_job_failed", job_id=job_id, error=str(error))
+        return 0
+    async with session_factory() as session:
+        await mark_job_finished(session, job_run_id, status="success", result_count=rows)
+        await session.commit()
+    _logger.info("admin_job_finished", job_id=job_id, rows=rows)
+    return rows
+
+
 async def grant_investor_skiptrace_credits(ctx: dict[str, Any]) -> int:
     month = datetime.now(UTC).strftime("%Y-%m")
     count = await grant_investor_credits(ctx["session_factory"], month=month)
@@ -152,6 +204,7 @@ class WorkerSettings:
     functions: ClassVar = [
         ingest_dataset,
         ingest_all,
+        run_admin_job,
         sweep_ingestion_retention,
         recompute_verdicts,
         recompute_vacant_verdicts,

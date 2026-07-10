@@ -1,6 +1,8 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from arq import create_pool
+from arq.connections import RedisSettings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
@@ -42,9 +44,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
     app.state.redis = Redis.from_url(settings.redis_url)
+    app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
     try:
         yield
     finally:
+        await app.state.arq_pool.close()
         await app.state.redis.aclose()
         await engine.dispose()
 
