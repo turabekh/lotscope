@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  absoluteTileBaseUrl,
   formatCurrency,
   formatPercent,
   formatRange,
@@ -68,5 +69,19 @@ describe('marketCodeFromParcelNumber', () => {
 
   it('defaults to phl when there is no prefix', () => {
     expect(marketCodeFromParcelNumber('875100090')).toBe('phl')
+  })
+})
+
+describe('absoluteTileBaseUrl', () => {
+  it('resolves a relative path against the origin (MapLibre needs an absolute URL)', () => {
+    expect(absoluteTileBaseUrl('/tiles', 'http://localhost:5173')).toBe(
+      'http://localhost:5173/tiles',
+    )
+  })
+
+  it('leaves an absolute url unchanged', () => {
+    expect(absoluteTileBaseUrl('https://parcelphl.online/tiles', 'http://localhost:5173')).toBe(
+      'https://parcelphl.online/tiles',
+    )
   })
 })

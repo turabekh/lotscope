@@ -11,6 +11,10 @@ export function marketCodeFromParcelNumber(parcelNumber: string): string {
   return separator > 0 ? parcelNumber.slice(0, separator) : 'phl'
 }
 
+export function absoluteTileBaseUrl(raw: string, origin: string): string {
+  return /^https?:\/\//.test(raw) ? raw : new URL(raw, origin).toString()
+}
+
 export function formatCurrency(value: number | null | undefined): string {
   if (value == null) return '—'
   return currencyFormatter.format(value)
