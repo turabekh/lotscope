@@ -9,6 +9,7 @@ from lotscope.ingestion.normalizers import get_normalizer
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
+from lotscope.risk.models import FloodZone
 from lotscope.vacancy.derivation import derive_vacancy
 from lotscope.valuation.models import Sale
 from lotscope.zoning.models import ZoningDistrict
@@ -515,6 +516,60 @@ async def load_hbg_neighborhoods(session: AsyncSession, arcgis: ArcGisClient) ->
     await record_freshness(
         session,
         HBG_NEIGHBORHOODS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
+    )
+    return total
+
+
+HBG_FLOOD_DATASET = "city_flood_parcels"
+
+_FLOOD_ABSENT = frozenset({"n/a", "na", "none", "no", "0"})
+
+
+def flood_zone_value(properties: dict[str, Any]) -> str | None:
+    zone = _txt(properties.get("floodzone"))
+    if zone is None or zone.lower() in _FLOOD_ABSENT:
+        return None
+    return zone
+
+
+def hbg_flood_row(feature: ArcGisFeature) -> dict[str, Any] | None:
+    if feature.geometry is None or feature.id is None:
+        return None
+    zone = flood_zone_value(feature.properties)
+    if zone is None:
+        return None
+    geom_4326 = func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(feature.geometry)), 4326)
+    return {
+        "external_id": f"{_MARKET}:flood:{feature.id}",
+        "zone": zone,
+        "market_code": _MARKET,
+        "geom_4326": geom_4326,
+        "geom_local": func.ST_Transform(geom_4326, _LOCAL_SRID),
+        "source": HBG_FLOOD_DATASET,
+    }
+
+
+async def load_hbg_flood(session: AsyncSession, arcgis: ArcGisClient) -> int:
+    layer = f"{CITY_ARCGIS}/Flood_Parcels/FeatureServer/0/query"
+    total = 0
+    async for features in arcgis.paginate(layer, page_size=1000):
+        rows = [row for feature in features if (row := hbg_flood_row(feature))]
+        if rows:
+            await upsert(
+                session,
+                FloodZone,
+                rows,
+                index_elements=["external_id"],
+                update_columns=["zone", "market_code", "geom_4326", "geom_local", "source"],
+            )
+            total += len(rows)
+    await record_freshness(
+        session,
+        HBG_FLOOD_DATASET,
         status="success",
         success=True,
         market_code=_MARKET,
