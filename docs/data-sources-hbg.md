@@ -28,7 +28,7 @@ The PRD assumed assessment data is extract-only ("no query API for assessments, 
 | Municipal boundaries | `Municipal_Boundari` | ArcGisClient | `NAME` | `NAME='HARRISBURG'` (FID 27). City-membership fallback (spatial) if `MUNICIPALI` proves dirty. |
 | Street centerlines | `DC_Streets` (+ `DC_StreetClass`, `DC_StreetAlias`) | ArcGisClient | — | Landlocked flag. |
 | County zoning (generalized) | `TCRP_CountyZoning_Dauphin` | ArcGisClient | `MAP_ACRONY` | **TCRPC generalized regional layer, per municipality — NOT the city's official district geometry.** Usable as a first pass; **must be validated against Harrisburg's official zoning map in the 25-parcel packet** (Slice 4). Locate the city's authoritative districts layer if this diverges. |
-| Flood | `Flood Zone Map (PA DCED)` / existing FEMA loader | ArcGisClient | — | SFHA-only calibration applies as-is. |
+| Flood | **City hub `Flood_Parcels`** (`services5.arcgis.com/9n3LUAMi3B692MBL`) via `load_hbg_flood` | ArcGisClient | `floodzone` | **Loaded 2026-07-10.** Parcel polygons pre-tagged `floodzone` (`100 Year` = SFHA, `500 Year` = 0.2%-annual). Kept the non-`N/A` polygons as hbg `FloodZone` rows (`external_id = hbg:flood:{oid}`); the existing spatial-`ST_Intersects` risk join flags parcels — no risk/verdict code change. Chosen over the FEMA NFHL layer (originally planned) because this city layer is already parcel-accurate and reachable. ~3,200 flood polygons. Capability `flood` stays `pending_load` until run on prod + hbg verdict recompute. |
 
 ## Sales / valuation — honest degradation (critical)
 
