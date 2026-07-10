@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { formatRange, scoreLabel, scoreVar } from '@/lib/format'
+import { formatRange, marketCodeFromParcelNumber, scoreLabel, scoreVar } from '@/lib/format'
 import type { VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 
@@ -80,7 +80,9 @@ const valuePillar = computed<Pillar>(() => {
 const riskPillar = computed<Pillar>(() => {
   const score = props.verdict.risk_score
   const count = props.verdict.risk_flags.length
-  const coverageNote = market.activeInfo?.risk_coverage_note
+  const coverageNote = market.infoByCode(
+    marketCodeFromParcelNumber(props.verdict.parcel_number),
+  )?.risk_coverage_note
   const tone: Pillar['tone'] =
     score == null ? 'neutral' : score >= 50 ? 'caution' : score >= 20 ? 'warning' : 'positive'
   const cleanHint = coverageNote

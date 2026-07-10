@@ -4,6 +4,7 @@ import {
   formatCurrency,
   formatPercent,
   formatRange,
+  marketCodeFromParcelNumber,
   scoreColor,
   scoreLabel,
   severityColor,
@@ -56,5 +57,16 @@ describe('severityColor', () => {
     expect(severityColor('high')).toBe('negative')
     expect(severityColor('medium')).toBe('warning')
     expect(severityColor('unknown')).toBe('grey-7')
+  })
+})
+
+describe('marketCodeFromParcelNumber', () => {
+  it('reads the market prefix', () => {
+    expect(marketCodeFromParcelNumber('hbg:02-021-052')).toBe('hbg')
+    expect(marketCodeFromParcelNumber('phl:875100090')).toBe('phl')
+  })
+
+  it('defaults to phl when there is no prefix', () => {
+    expect(marketCodeFromParcelNumber('875100090')).toBe('phl')
   })
 })
