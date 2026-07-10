@@ -1,7 +1,9 @@
+import mimetypes
 from typing import Annotated
+from urllib.parse import unquote, urlparse
 
 from arq.connections import ArqRedis
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
@@ -11,6 +13,7 @@ from lotscope.admin.schemas import (
     AdminUsersResponse,
     AdminUserUpdate,
     DatasetStatus,
+    FetchSource,
     JobCatalogEntry,
     JobRunRequest,
     JobRunSummary,
@@ -24,13 +27,27 @@ from lotscope.admin.service import (
     platform_overview,
     update_user,
 )
-from lotscope.api.deps import get_arq_pool, get_session, require_admin
+from lotscope.admin.sources import KNOWN_SOURCES
+from lotscope.api.deps import (
+    SourceFetcher,
+    get_arq_pool,
+    get_session,
+    get_source_fetcher,
+    require_admin,
+)
+from lotscope.core.errors import ValidationError
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 AdminDep = Annotated[User, Depends(require_admin)]
 ArqPoolDep = Annotated[ArqRedis, Depends(get_arq_pool)]
+FetcherDep = Annotated[SourceFetcher, Depends(get_source_fetcher)]
+
+
+def _filename_from_url(url: str) -> str:
+    tail = unquote(urlparse(url).path.rsplit("/", 1)[-1]).strip()
+    return tail or "download"
 
 
 @router.get("/overview", response_model=AdminOverview)
@@ -85,3 +102,28 @@ async def admin_run_job(
     )
     await session.commit()
     return result
+
+
+@router.get("/fetch/sources", response_model=list[FetchSource])
+async def admin_fetch_sources(admin: AdminDep) -> list[FetchSource]:
+    return KNOWN_SOURCES
+
+
+@router.get("/fetch")
+async def admin_fetch_source(
+    url: str,
+    admin: AdminDep,
+    fetcher: FetcherDep,
+    filename: Annotated[str | None, Query(max_length=200)] = None,
+) -> Response:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValidationError("Only http(s) URLs can be fetched.")
+    content = await fetcher(url)
+    name = filename or _filename_from_url(url)
+    media_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )

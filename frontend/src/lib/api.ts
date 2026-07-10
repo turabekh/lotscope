@@ -46,6 +46,7 @@ import type {
   AreaSearchResponse,
   DatasetStatus,
   DeedRestrictionsResponse,
+  FetchSource,
   JobCatalogEntry,
   JobRunSummary,
   NeighborhoodListResponse,
@@ -382,6 +383,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ job_id: jobId, params }),
     })
+  },
+  getFetchSources(): Promise<FetchSource[]> {
+    return request('/admin/fetch/sources')
+  },
+  pullSource(url: string, filename: string): Promise<void> {
+    return downloadFile(`/admin/fetch?url=${encodeURIComponent(url)}`, filename)
   },
   getSavedSearches(): Promise<SavedSearchListResponse> {
     return request('/saved-searches')

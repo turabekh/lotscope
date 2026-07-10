@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import type {
   AdminOverview,
   DatasetStatus,
+  FetchSource,
   JobCatalogEntry,
   JobRunSummary,
   User,
@@ -31,7 +32,33 @@ const submittingJob = ref<string | null>(null)
 const paramDialog = ref(false)
 const paramJob = ref<JobCatalogEntry | null>(null)
 const paramValues = ref<Record<string, string>>({})
+const fetchSources = ref<FetchSource[]>([])
+const fetchUrl = ref('')
+const pulling = ref(false)
 let pollTimer: ReturnType<typeof setInterval> | null = null
+
+function fetchFilename(url: string): string {
+  try {
+    const path = new URL(url).pathname
+    const tail = decodeURIComponent(path.slice(path.lastIndexOf('/') + 1)).trim()
+    return tail || 'download'
+  } catch {
+    return 'download'
+  }
+}
+
+async function pullSource(url: string): Promise<void> {
+  if (url.trim() === '') return
+  pulling.value = true
+  try {
+    await api.pullSource(url.trim(), fetchFilename(url.trim()))
+    $q.notify({ type: 'positive', message: 'Downloaded from the server.' })
+  } catch {
+    $q.notify({ type: 'negative', message: 'Fetch failed — check the URL is reachable.' })
+  } finally {
+    pulling.value = false
+  }
+}
 
 const jobGroups = computed(() => {
   const grouped = new Map<string, JobCatalogEntry[]>()
@@ -66,6 +93,7 @@ function syncPolling(): void {
 async function loadJobs(): Promise<void> {
   jobs.value = await api.getJobCatalog()
   jobRuns.value = await api.getJobRuns(25)
+  fetchSources.value = await api.getFetchSources()
   syncPolling()
 }
 
@@ -247,6 +275,46 @@ onBeforeUnmount(() => {
           </tr>
         </tbody>
       </q-markup-table>
+
+      <div class="text-subtitle2 q-mt-md q-mb-xs">Pull data from the server</div>
+      <q-card flat bordered class="pull-card">
+        <div class="text-caption text-grey-7 q-mb-sm">
+          The server fetches the URL and streams the file to your browser — use it for sources this
+          server can reach but your machine can't.
+        </div>
+        <div class="pull-row">
+          <q-input
+            v-model="fetchUrl"
+            label="URL to fetch"
+            dense
+            outlined
+            class="pull-input"
+            @keyup.enter="() => pullSource(fetchUrl)"
+          />
+          <q-btn
+            unelevated
+            color="primary"
+            label="Pull"
+            :loading="pulling"
+            :disable="fetchUrl.trim() === ''"
+            @click="() => pullSource(fetchUrl)"
+          />
+        </div>
+        <div v-if="fetchSources.length > 0" class="pull-shortcuts">
+          <q-chip
+            v-for="source in fetchSources"
+            :key="source.url"
+            clickable
+            dense
+            color="grey-3"
+            text-color="grey-9"
+            @click="() => (fetchUrl = source.url)"
+          >
+            {{ source.label }}
+            <q-tooltip>{{ source.description }}</q-tooltip>
+          </q-chip>
+        </div>
+      </q-card>
 
       <div class="text-subtitle2 q-mt-md q-mb-xs">Dataset freshness</div>
       <q-markup-table flat bordered dense>
@@ -430,5 +498,23 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 14px;
+}
+.pull-card {
+  padding: 12px;
+  border-radius: var(--lot-radius);
+}
+.pull-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pull-input {
+  flex: 1;
+}
+.pull-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 </style>

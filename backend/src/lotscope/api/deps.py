@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Annotated, cast
 
 import jwt
@@ -16,6 +16,7 @@ from lotscope.ai.client import AnthropicGenerator, StructuredGenerator
 from lotscope.ai.embeddings import Embedder, VoyageEmbedder
 from lotscope.core.config import Settings
 from lotscope.core.errors import AuthError, ForbiddenError
+from lotscope.ingestion.extract import ExtractClient
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -56,6 +57,20 @@ def get_redis(request: Request) -> Redis:
 
 def get_arq_pool(request: Request) -> ArqRedis:
     return cast(ArqRedis, request.app.state.arq_pool)
+
+
+SourceFetcher = Callable[[str], Awaitable[bytes]]
+
+
+def get_source_fetcher(request: Request) -> SourceFetcher:
+    settings = get_app_settings(request)
+
+    async def _fetch(url: str) -> bytes:
+        async with ExtractClient(settings) as extract:
+            download = await extract.download(url)
+        return download.content
+
+    return _fetch
 
 
 def get_embedder(request: Request) -> Embedder:
