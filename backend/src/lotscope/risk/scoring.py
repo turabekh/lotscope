@@ -7,7 +7,8 @@ Confidence = Literal["high", "medium", "low"]
 
 _WEIGHT: dict[Severity, float] = {"high": 40.0, "medium": 20.0, "low": 10.0, "info": 0.0}
 _SFHA_ZONE_PREFIXES = ("A", "V")
-_MODERATE_HAZARD_MARKERS = ("0.2", "SHADED")
+_SFHA_HAZARD_MARKERS = ("100 YEAR", "1% ANNUAL", "1 PCT ANNUAL")
+_MODERATE_HAZARD_MARKERS = ("0.2", "SHADED", "500 YEAR")
 _MINIMAL_HAZARD_MARKERS = ("MINIMAL", "OPEN WATER")
 _LEGACY_MODERATE_ZONE = "B"
 _TAX_HIGH_DUE = 10000.0
@@ -284,7 +285,9 @@ def _classify_flood_zone(zone: str) -> Literal["sfha", "moderate", "minimal"]:
         marker in normalized for marker in _MODERATE_HAZARD_MARKERS
     ):
         return "moderate"
-    if normalized.startswith(_SFHA_ZONE_PREFIXES):
+    if normalized.startswith(_SFHA_ZONE_PREFIXES) or any(
+        marker in normalized for marker in _SFHA_HAZARD_MARKERS
+    ):
         return "sfha"
     return "minimal"
 
