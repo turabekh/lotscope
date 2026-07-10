@@ -12,6 +12,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { api } from '@/lib/api'
 import type { MapBounds } from '@/lib/explore'
+import { absoluteTileBaseUrl } from '@/lib/format'
 import { useAreaSearchStore } from '@/stores/areaSearch'
 import { useFiltersStore } from '@/stores/filters'
 import { useMarketStore } from '@/stores/market'
@@ -47,7 +48,10 @@ let draw: TerraDraw | undefined
 let drawStarted = false
 
 const container = ref<HTMLDivElement | null>(null)
-const martinUrl = import.meta.env.VITE_MARTIN_URL ?? '/tiles'
+const martinUrl = absoluteTileBaseUrl(
+  import.meta.env.VITE_MARTIN_URL ?? '/tiles',
+  window.location.origin,
+)
 const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 
 const marketStore = useMarketStore()
