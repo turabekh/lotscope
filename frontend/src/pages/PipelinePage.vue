@@ -33,7 +33,7 @@ async function exportCsv(): Promise<void> {
   }
 }
 
-const tab = ref<'board' | 'today'>('board')
+const tab = ref<'board' | 'today'>($q.screen.lt.md ? 'today' : 'board')
 const dragging = ref<string | null>(null)
 const dragOver = ref<DealStage | null>(null)
 
@@ -468,6 +468,18 @@ async function saveContact(): Promise<void> {
   display: flex;
   flex-direction: column;
   transition: background 0.12s ease;
+}
+@media (max-width: 1023px) {
+  .board {
+    flex-direction: column;
+    overflow-x: visible;
+    align-items: stretch;
+  }
+  .column {
+    flex: 1 1 auto;
+    width: 100%;
+    max-height: none;
+  }
 }
 .column.over {
   background: var(--lot-accent-soft);

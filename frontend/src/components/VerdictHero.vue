@@ -143,6 +143,7 @@ const accent = computed(() => scoreVar(props.verdict.opportunity_score))
         <div class="pillar-text">
           <div class="pillar-label">{{ pillar.label }}</div>
           <div class="pillar-value lot-numeric">{{ pillar.value }}</div>
+          <div class="pillar-hint">{{ pillar.hint }}</div>
         </div>
         <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">{{ pillar.hint }}</q-tooltip>
       </div>
@@ -219,6 +220,27 @@ const accent = computed(() => scoreVar(props.verdict.opportunity_score))
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-top: 14px;
+}
+.pillar-hint {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .pillars {
+    grid-template-columns: 1fr;
+  }
+  .pillar {
+    align-items: flex-start;
+  }
+  .pillar-value {
+    white-space: normal;
+  }
+  .pillar-hint {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.3;
+    color: var(--lot-faint);
+  }
 }
 .pillar {
   display: flex;

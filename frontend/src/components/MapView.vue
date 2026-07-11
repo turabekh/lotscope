@@ -868,6 +868,21 @@ onBeforeUnmount(() => {
   box-shadow: var(--lot-shadow-lg);
   border: 1px solid var(--lot-border);
 }
+@media (max-width: 1023px) {
+  .map-home {
+    min-width: 44px;
+    min-height: 44px;
+    top: 16px;
+    left: 16px;
+  }
+  .map-home :deep(.q-icon) {
+    font-size: 22px;
+  }
+  :deep(.maplibregl-ctrl-group button) {
+    width: 40px;
+    height: 40px;
+  }
+}
 .envelope-caption {
   position: absolute;
   bottom: 18px;
