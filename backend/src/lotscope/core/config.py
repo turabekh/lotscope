@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     )
 
     app_env: AppEnv = AppEnv.LOCAL
+    git_sha: str = "unknown"
     log_level: str = "INFO"
     secret_key: str = "change-me-in-env"
     access_token_expire_minutes: int = 720

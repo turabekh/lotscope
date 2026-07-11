@@ -795,6 +795,7 @@ export interface OpsFleetMarketRow {
 
 export interface OpsFleetOverview {
   markets: OpsFleetMarketRow[]
+  git_sha: string
   generated_at: string
 }
 

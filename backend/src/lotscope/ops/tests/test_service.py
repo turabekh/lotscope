@@ -45,8 +45,9 @@ async def _seed_phl(session: AsyncSession) -> None:
 async def test_fleet_overview_rolls_up_worst_dataset_status(db_session: AsyncSession) -> None:
     await _seed_phl(db_session)
 
-    overview = await fleet_overview(db_session, _NOW)
+    overview = await fleet_overview(db_session, _NOW, "abc1234")
 
+    assert overview.git_sha == "abc1234"
     phl = next(m for m in overview.markets if m.market_code == "phl")
     assert phl.health.status == "red"
     assert phl.health.red == 1

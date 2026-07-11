@@ -50,7 +50,7 @@ async def test_fetch_streams_bytes_as_attachment() -> None:
 
 async def test_fetch_rejects_non_http_url() -> None:
     app = _admin_app()
-    app.dependency_overrides[get_source_fetcher] = lambda: (lambda url: None)
+    app.dependency_overrides[get_source_fetcher] = lambda: lambda url: None
     async with _client(app) as client:
         resp = await client.get("/admin/fetch", params={"url": "file:///etc/passwd"})
     assert resp.status_code == 422
