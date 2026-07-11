@@ -496,6 +496,47 @@ async def test_leads_export_streams_csv_for_paid_tier(db_session: AsyncSession) 
 
 
 @pytest.mark.integration
+async def test_pipeline_export_is_blocked_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/pipeline/export")
+    assert resp.status_code == 429
+
+
+@pytest.mark.integration
+async def test_pipeline_export_streams_csv_for_paid_tier(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'member@example.com', 'x', 'user', 'pro', true)"
+        )
+    )
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, address) VALUES ('phl:000000001', '1 A ST')")
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO deal (user_id, parcel_number, stage, target_price, next_action, "
+            "stage_entered_at) VALUES (1, 'phl:000000001', 'offer', 120000, 'Call owner', now())"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.get("/pipeline/export")
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    body = resp.text
+    assert "opportunity_score" in body.splitlines()[0]
+    assert "phl:000000001" in body
+    assert "Call owner" in body
+    assert "Fair Housing" in body
+
+
+@pytest.mark.integration
 async def test_outreach_letters_blocked_for_free_tier(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     async with _client(app) as client:
