@@ -6,6 +6,7 @@ import type { VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 
 const props = defineProps<{ verdict: VerdictResult; developed?: boolean }>()
+const emit = defineEmits<{ explain: [] }>()
 
 const market = useMarketStore()
 
@@ -132,6 +133,7 @@ const accent = computed(() => scoreVar(props.verdict.opportunity_score))
         </div>
         <div class="hero-label">{{ scoreLabel(verdict.opportunity_score) }}</div>
         <div class="hero-summary">{{ verdict.summary }}</div>
+        <button type="button" class="why-link" @click="emit('explain')">Why this score?</button>
       </div>
     </div>
 
@@ -198,6 +200,19 @@ const accent = computed(() => scoreVar(props.verdict.opportunity_score))
   color: var(--lot-muted);
   line-height: 1.35;
   margin-top: 3px;
+}
+.why-link {
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--q-primary);
+  cursor: pointer;
+}
+.why-link:hover {
+  text-decoration: underline;
 }
 .pillars {
   display: grid;
