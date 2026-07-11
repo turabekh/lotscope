@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -7,10 +8,19 @@ from lotscope.accounts.models import User
 from lotscope.accounts.tiers import pipeline_limit
 from lotscope.api.deps import ParcelKeyDep, canonicalize_parcel_key, get_current_user, get_session
 from lotscope.core.errors import NotFoundError
-from lotscope.pipeline.schemas import DealCreate, DealItem, DealUpdate, PipelineResponse
+from lotscope.pipeline.schemas import (
+    DealActivityItem,
+    DealCreate,
+    DealItem,
+    DealUpdate,
+    PipelineResponse,
+    TodayResponse,
+)
 from lotscope.pipeline.service import (
     add_deal,
+    deals_due,
     get_deal,
+    list_activity,
     list_deals,
     remove_deal,
     update_deal,
@@ -26,6 +36,19 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 async def get_pipeline(session: SessionDep, user: CurrentUserDep) -> PipelineResponse:
     deals = await list_deals(session, user.id)
     return PipelineResponse(limit=pipeline_limit(user.tier), used=len(deals), deals=deals)
+
+
+@router.get("/today", response_model=TodayResponse)
+async def get_pipeline_today(session: SessionDep, user: CurrentUserDep) -> TodayResponse:
+    today = datetime.now(UTC).date()
+    return TodayResponse(deals=await deals_due(session, user.id, today))
+
+
+@router.get("/{parcel_number}/activity", response_model=list[DealActivityItem])
+async def get_pipeline_activity(
+    parcel_number: ParcelKeyDep, session: SessionDep, user: CurrentUserDep
+) -> list[DealActivityItem]:
+    return await list_activity(session, user.id, parcel_number)
 
 
 @router.get("/{parcel_number}", response_model=DealItem)

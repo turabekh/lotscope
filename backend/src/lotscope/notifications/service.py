@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
@@ -11,6 +11,8 @@ from lotscope.core.config import Settings
 from lotscope.core.logging import get_logger
 from lotscope.feed.service import get_feed
 from lotscope.notifications.digest import (
+    DealReminderContent,
+    DealReminderItem,
     DigestChange,
     DigestContent,
     DigestParcel,
@@ -20,9 +22,12 @@ from lotscope.notifications.digest import (
     MatchAlertContent,
     MatchAlertParcel,
     MatchAlertSearch,
+    deal_reminder_subject,
     digest_subject,
     feed_digest_subject,
     match_alert_subject,
+    render_deal_reminder_html,
+    render_deal_reminder_text,
     render_digest_html,
     render_digest_text,
     render_feed_digest_html,
@@ -33,6 +38,7 @@ from lotscope.notifications.digest import (
 from lotscope.notifications.email import EmailSender
 from lotscope.notifications.models import PushSubscription
 from lotscope.notifications.push import PushExpiredError, PushSender, PushSubscriptionInfo
+from lotscope.pipeline.service import deals_due
 from lotscope.savedsearch.schemas import SavedSearchAlert
 from lotscope.savedsearch.service import (
     alerting_user_ids,
@@ -366,4 +372,93 @@ async def send_feed_digests(
                 logger.exception("feed_digest_failed", user_id=user_id)
 
     logger.info("feed_digests_sent", count=sent)
+    return sent
+
+
+def _due_label(due: date, today: date) -> tuple[str, bool]:
+    overdue_days = (today - due).days
+    if overdue_days <= 0:
+        return "Due today", False
+    unit = "day" if overdue_days == 1 else "days"
+    return f"{overdue_days} {unit} overdue", True
+
+
+async def send_user_deal_reminder(
+    session: AsyncSession, sender: EmailSender, settings: Settings, user: User
+) -> bool:
+    today = datetime.now(UTC).date()
+    due = await deals_due(session, user.id, today)
+    if not due:
+        return False
+    items: list[DealReminderItem] = []
+    for deal in due:
+        if deal.next_action_due is None:
+            continue
+        label, overdue = _due_label(deal.next_action_due, today)
+        items.append(
+            DealReminderItem(
+                address=deal.address or deal.parcel_number,
+                stage=deal.stage,
+                next_action=deal.next_action,
+                due_label=label,
+                overdue=overdue,
+            )
+        )
+    if not items:
+        return False
+    content = DealReminderContent(items=items)
+    token = create_unsubscribe_token(settings, user_id=user.id)
+    pipeline_url = f"{settings.app_base_url.rstrip('/')}/philadelphia/pipeline"
+    unsubscribe_url = f"{settings.api_base_url.rstrip('/')}/digests/unsubscribe?token={token}"
+    await sender.send(
+        to=user.email,
+        subject=deal_reminder_subject(content),
+        html=render_deal_reminder_html(
+            content,
+            pipeline_url=pipeline_url,
+            unsubscribe_url=unsubscribe_url,
+            postal_address=settings.company_postal_address,
+        ),
+        text=render_deal_reminder_text(
+            content,
+            pipeline_url=pipeline_url,
+            unsubscribe_url=unsubscribe_url,
+            postal_address=settings.company_postal_address,
+        ),
+    )
+    return True
+
+
+async def send_deal_reminders(
+    session_factory: async_sessionmaker[AsyncSession],
+    sender: EmailSender | None,
+    settings: Settings,
+) -> int:
+    logger = get_logger("notifications")
+    if sender is None:
+        logger.info("deal_reminders_skipped_unconfigured")
+        return 0
+
+    async with session_factory() as session:
+        user_ids = list(
+            (
+                await session.execute(
+                    select(User.id).where(User.is_active.is_(True), User.digest_frequency != "off")
+                )
+            ).scalars()
+        )
+
+    sent = 0
+    for user_id in user_ids:
+        async with session_factory() as session:
+            user = await session.get(User, user_id)
+            if user is None or not user.is_active:
+                continue
+            try:
+                if await send_user_deal_reminder(session, sender, settings, user):
+                    sent += 1
+            except Exception:
+                logger.exception("deal_reminder_failed", user_id=user_id)
+
+    logger.info("deal_reminders_sent", count=sent)
     return sent

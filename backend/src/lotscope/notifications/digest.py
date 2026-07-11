@@ -262,3 +262,84 @@ def render_feed_digest_html(
         f'<a href="{escape(unsubscribe_url)}" style="color:#90a4ae;">Unsubscribe</a>.<br>'
         f"{escape(postal_address)}</div></div></div>"
     )
+
+
+@dataclass(frozen=True)
+class DealReminderItem:
+    address: str
+    stage: str
+    next_action: str | None
+    due_label: str
+    overdue: bool
+
+
+@dataclass(frozen=True)
+class DealReminderContent:
+    items: list[DealReminderItem]
+
+    @property
+    def overdue_count(self) -> int:
+        return sum(1 for item in self.items if item.overdue)
+
+
+def deal_reminder_subject(content: DealReminderContent) -> str:
+    total = len(content.items)
+    overdue = content.overdue_count
+    deals = "deal" if total == 1 else "deals"
+    if overdue:
+        return f"{total} {deals} need action ({overdue} overdue)"
+    return f"{total} {deals} due today"
+
+
+def render_deal_reminder_text(
+    content: DealReminderContent, *, pipeline_url: str, unsubscribe_url: str, postal_address: str
+) -> str:
+    lines = ["Deals that need action:", ""]
+    for item in content.items:
+        lines.append(f"{item.address} [{item.stage}] — {item.due_label}")
+        if item.next_action:
+            lines.append(f"  Next: {item.next_action}")
+    lines.append("")
+    lines.append(f"Open your pipeline: {pipeline_url}")
+    lines.append("")
+    lines.append("Informational only — not legal, financial, or real-estate advice.")
+    lines.append(f"Unsubscribe: {unsubscribe_url}")
+    lines.append(postal_address)
+    return "\n".join(lines)
+
+
+def render_deal_reminder_html(
+    content: DealReminderContent, *, pipeline_url: str, unsubscribe_url: str, postal_address: str
+) -> str:
+    rows: list[str] = []
+    for item in content.items:
+        due_color = "#c62828" if item.overdue else "#ef6c00"
+        action = (
+            f'<div style="color:#546e7a;font-size:13px;">{escape(item.next_action)}</div>'
+            if item.next_action
+            else ""
+        )
+        rows.append(
+            f'<div style="padding:10px 0;border-bottom:1px solid #eceff1;">'
+            f'<div style="font-weight:600;font-size:15px;color:#1f2933;">{escape(item.address)}'
+            f'</div><div style="font-size:13px;color:#607d8b;">{escape(item.stage)} · '
+            f'<span style="color:{due_color};font-weight:600;">{escape(item.due_label)}</span>'
+            f"</div>{action}</div>"
+        )
+    body = "".join(rows)
+    return (
+        '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;'
+        'color:#1f2933;">'
+        '<div style="background:#0f4ba8;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;">'
+        '<div style="font-size:18px;font-weight:700;">LotScope PHL</div>'
+        '<div style="font-size:13px;opacity:0.85;">Deals that need action</div></div>'
+        f'<div style="padding:8px 20px 16px;border:1px solid #eceff1;border-top:none;">{body}'
+        f'<div style="margin-top:18px;text-align:center;">'
+        f'<a href="{escape(pipeline_url)}" style="display:inline-block;background:#1565c0;'
+        'color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">'
+        "Open your pipeline</a></div>"
+        '<div style="margin-top:18px;font-size:11px;color:#90a4ae;line-height:1.5;">'
+        "Informational only — not legal, financial, or real-estate advice. "
+        f'<a href="{escape(unsubscribe_url)}" style="color:#90a4ae;">Unsubscribe</a>.<br>'
+        f"{escape(postal_address)}</div></div></div>"
+    )
