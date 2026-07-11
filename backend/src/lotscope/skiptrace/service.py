@@ -5,10 +5,12 @@ from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.core.errors import QuotaExceededError, ValidationError
+from lotscope.core.errors import ForbiddenError, QuotaExceededError, ValidationError
+from lotscope.markets.capabilities import hidden_surfaces
 from lotscope.skiptrace.models import (
     APPEAL_PACKET_REASONS,
     REASON_APPEAL_PACKET_BURN,
+    REASON_REFUND,
     REASON_SKIPTRACE_BURN,
     SKIPTRACE_REASONS,
     CreditLedgerEntry,
@@ -22,10 +24,12 @@ from lotscope.skiptrace.schemas import (
     SkipTraceResultOut,
 )
 
-CACHE_TTL_DAYS = 90
+CACHE_TTL_DAYS = 30
+_SKIP_TRACE_SURFACE = "skip_trace"
 
 _OWNER_SQL = text(
-    "SELECT owner, owner_key, mailing_address FROM parcel WHERE parcel_number = :parcel_number"
+    "SELECT owner, owner_key, mailing_address, market_code "
+    "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _BALANCE_SQL = text(
     "SELECT coalesce(sum(delta), 0) FROM credit_ledger "
@@ -111,19 +115,27 @@ async def _has_traced(session: AsyncSession, user_id: int, owner_key: str) -> bo
     )
 
 
-async def _cached_payload(session: AsyncSession, owner_key: str) -> dict[str, Any] | None:
-    cutoff = datetime.now(UTC) - timedelta(days=CACHE_TTL_DAYS)
+async def _cached_payload(
+    session: AsyncSession, owner_key: str, ttl_days: int
+) -> dict[str, Any] | None:
+    cutoff = datetime.now(UTC) - timedelta(days=ttl_days)
     result = await session.get(SkipTraceResult, owner_key)
     if result is None or result.traced_at < cutoff:
         return None
     return result.payload
 
 
-async def _burn(session: AsyncSession, user_id: int, owner_key: str) -> None:
-    session.add(
-        CreditLedgerEntry(user_id=user_id, delta=-1, reason=REASON_SKIPTRACE_BURN, ref=owner_key)
+async def _burn(session: AsyncSession, user_id: int, owner_key: str) -> int:
+    entry = CreditLedgerEntry(
+        user_id=user_id, delta=-1, reason=REASON_SKIPTRACE_BURN, ref=owner_key
     )
+    session.add(entry)
     await session.flush()
+    return entry.id
+
+
+def _is_no_hit(payload: dict[str, Any]) -> bool:
+    return not (payload.get("phones") or payload.get("emails"))
 
 
 def _contacts_out(payload: dict[str, Any]) -> SkipTraceContactsOut:
@@ -137,15 +149,19 @@ async def trace_owner(
     provider: SkipTraceProvider,
     user_id: int,
     parcel_number: str,
+    *,
+    ttl_days: int = CACHE_TTL_DAYS,
 ) -> SkipTraceResultOut:
     subject = (await session.execute(_OWNER_SQL, {"parcel_number": parcel_number})).one_or_none()
     if subject is None:
         raise ValidationError(f"Parcel {parcel_number} was not found.")
+    if _SKIP_TRACE_SURFACE in hidden_surfaces(subject.market_code):
+        raise ForbiddenError("Skip trace is not available in this market.")
     if subject.owner_key is None:
         raise ValidationError("This parcel has no owner on record to trace.")
     owner_key = subject.owner_key
 
-    cached = await _cached_payload(session, owner_key)
+    cached = await _cached_payload(session, owner_key, ttl_days)
     if cached is not None and await _has_traced(session, user_id, owner_key):
         balance = await credit_balance(session, user_id)
         return SkipTraceResultOut(
@@ -182,13 +198,18 @@ async def trace_owner(
         )
         provider_used = provider.name
 
-    await _burn(session, user_id, owner_key)
+    burn_id = await _burn(session, user_id, owner_key)
+    credits_spent = 1
+    if _is_no_hit(payload):
+        await grant_credits(session, user_id, 1, REASON_REFUND, f"nohit:{burn_id}")
+        credits_spent = 0
+
     balance = await credit_balance(session, user_id)
     return SkipTraceResultOut(
         parcel_number=parcel_number,
         owner=subject.owner,
         contacts=_contacts_out(payload),
-        credits_spent=1,
+        credits_spent=credits_spent,
         credits_remaining=balance,
         cached=provider_used == "cache",
     )

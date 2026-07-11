@@ -80,6 +80,8 @@ class Settings(BaseSettings):
     stripe_price_appeal_packet: str | None = None
     skiptrace_provider: str | None = None
     skiptrace_api_key: str | None = None
+    skiptrace_api_url: str = "https://api.batchdata.com/api/v1/property/skip-trace"
+    skiptrace_cache_ttl_days: int = 30
     billing_success_url: str = "http://localhost:5173/account?checkout=success"
     billing_cancel_url: str = "http://localhost:5173/account?checkout=cancel"
     billing_portal_return_url: str = "http://localhost:5173/account"
