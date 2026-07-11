@@ -11,7 +11,7 @@ from lotscope.risk.service import _flag_schema
 
 def test_hbg_category_states_are_distinct() -> None:
     assert checklist_category_state("hbg", "li") == "no_data_source"
-    assert checklist_category_state("hbg", "flood") == "pending_load"
+    assert checklist_category_state("hbg", "flood") == "available"
     assert checklist_category_state("hbg", "overlays") == "available"
     assert checklist_category_state("hbg", "access") == "available"
     assert checklist_category_state("phl", "li") == "available"
