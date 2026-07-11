@@ -63,7 +63,7 @@ Acquisition is decoupled from the record contract (`SheriffSaleRecord`) behind a
 - **CSV/file adapter** (`CsvSheriffSource`, `SHERIFF_SALE_CSV_PATH`) — the default and the operational fallback if the scrape breaks.
 - **CivilView HTML adapter** (`CivilViewSheriffSource`, `SHERIFF_SALE_SOURCE=civilview`) — fetches the `countyId` list (`SHERIFF_SALE_COUNTY_ID`, phl = 60) then each per-property detail page, primed by a session cookie the list response sets (detail pages 302 to home without it). Parsing is a pure, fixture-tested function over saved HTML (**selectolax**); the list supplies Book & Writ / OPA # / address / plaintiff, the detail page adds sale type / current status / sale date / minimum (opening) bid. Polite pacing via `SHERIFF_SALE_CIVILVIEW_REQUEST_DELAY_SECONDS`; `SHERIFF_SALE_CIVILVIEW_DETAIL_LIMIT` caps detail fetches for smoke runs. CivilView serves no `robots.txt` (404); scraping stays low-volume and honors ToS.
 
-Loader is staged (raw→staging→merge, ADR-0036): a new case emits a dated `sheriff_sale` event.
+Loader is staged (raw→staging→merge, ADR-0036): a new case emits a dated `sheriff_sale` event. Turning the live scraper on in production is an env flip — see the sheriff-sale section of [runbook.md](runbook.md).
 
 **Reconciliation:** OPA # → `normalize_account` → `parcel_number`; rows with no resolvable OPA are retained in `raw` but skipped from core/events (address-match is a follow-up). CSV columns expected by `CsvSheriffSource`: `case_number, opa_number, address, sale_type, status, sale_date, opening_bid, plaintiff`.
 
