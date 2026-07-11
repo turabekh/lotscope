@@ -13,6 +13,7 @@ from lotscope.accounts.usage import reserve_export
 from lotscope.api.deps import get_current_user, get_redis, get_session
 from lotscope.core.errors import QuotaExceededError
 from lotscope.distress.service import LEADS_EXPORT_HEADER, export_leads
+from lotscope.pipeline.service import PIPELINE_EXPORT_HEADER, export_deals
 from lotscope.reports.csv_export import EXPORT_DISCLAIMER, stream_csv
 from lotscope.savedsearch.service import SAVED_SEARCH_EXPORT_HEADER, export_search_matches
 
@@ -63,6 +64,19 @@ async def export_leads_csv(
         zip_code=zip_code,
     )
     return _csv_response(LEADS_EXPORT_HEADER, rows, "lotscope-leads.csv")
+
+
+@router.get("/pipeline/export")
+async def export_pipeline_csv(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    redis: RedisDep,
+) -> StreamingResponse:
+    await _reserve_export(redis, current_user)
+    rows = await export_deals(
+        session, current_user.id, row_limit=export_row_limit(current_user.tier)
+    )
+    return _csv_response(PIPELINE_EXPORT_HEADER, rows, "lotscope-pipeline.csv")
 
 
 @router.get("/saved-searches/{search_id}/export")

@@ -166,6 +166,61 @@ async def list_deals(session: AsyncSession, user_id: int) -> list[DealItem]:
     return [_item(row) for row in rows]
 
 
+PIPELINE_EXPORT_HEADER: list[str] = [
+    "parcel_number",
+    "address",
+    "stage",
+    "next_action",
+    "next_action_due",
+    "target_price",
+    "opportunity_score",
+    "max_allowable_offer",
+    "arv",
+    "est_profit",
+    "est_margin",
+    "is_underpriced",
+    "zoning",
+    "market_value",
+    "vacant",
+    "contact_name",
+    "contact_phone",
+    "contact_email",
+    "updated_at",
+]
+
+
+async def export_deals(
+    session: AsyncSession, user_id: int, *, row_limit: int
+) -> list[tuple[Any, ...]]:
+    if row_limit <= 0:
+        return []
+    deals = await list_deals(session, user_id)
+    return [
+        (
+            deal.parcel_number,
+            deal.address,
+            deal.stage,
+            deal.next_action,
+            deal.next_action_due.isoformat() if deal.next_action_due else None,
+            deal.target_price,
+            deal.opportunity_score,
+            deal.max_allowable_offer,
+            deal.arv,
+            deal.est_profit,
+            deal.est_margin,
+            deal.is_underpriced,
+            deal.base_zoning_code,
+            deal.market_value,
+            deal.is_vacant,
+            deal.contact_name,
+            deal.contact_phone,
+            deal.contact_email,
+            deal.updated_at.isoformat() if deal.updated_at else None,
+        )
+        for deal in deals[:row_limit]
+    ]
+
+
 async def deals_due(session: AsyncSession, user_id: int, today: date) -> list[DealItem]:
     rows = (await session.execute(_TODAY_SQL, {"user_id": user_id, "today": today})).all()
     return [_item(row) for row in rows]
