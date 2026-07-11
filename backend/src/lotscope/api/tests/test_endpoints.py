@@ -1179,13 +1179,31 @@ def _billing_settings() -> Settings:
     )
 
 
+def _founding_settings() -> Settings:
+    return Settings(
+        _env_file=None,
+        stripe_secret_key="sk_test",
+        stripe_webhook_secret="wh_test",
+        stripe_price_pro_monthly="price_monthly",
+        stripe_price_pro_annual="price_annual",
+        stripe_price_pro_founding="price_founding",
+        founding_cap=2,
+        founding_cutoff="2099-12-31",
+        founding_price_monthly_cents=4900,
+    )
+
+
 class _FakeGateway:
-    def __init__(self, event: dict[str, Any] | None = None) -> None:
+    def __init__(self, event: dict[str, Any] | None = None, founding_count: int = 0) -> None:
         self.event = event
         self.checkout_args: dict[str, Any] | None = None
+        self.founding_count = founding_count
 
     async def create_customer(self, *, email: str, user_id: int) -> str:
         return "cus_test"
+
+    async def count_active_subscriptions_for_price(self, *, price_id: str) -> int:
+        return self.founding_count
 
     async def create_checkout_session(
         self, *, customer_id: str, price_id: str, success_url: str, cancel_url: str
@@ -1260,6 +1278,57 @@ async def test_checkout_returns_session_url(db_session: AsyncSession) -> None:
     assert resp.status_code == 200
     assert resp.json()["url"] == "https://checkout.test/session"
     assert gateway.checkout_args == {"customer_id": "cus_test", "price_id": "price_annual"}
+
+
+async def test_billing_plans_exposes_founding_offer_when_configured() -> None:
+    app = create_app()
+    app.dependency_overrides[get_app_settings] = _founding_settings
+    app.dependency_overrides[get_optional_user] = lambda: None
+    async with _client(app) as client:
+        resp = await client.get("/billing/plans")
+
+    offer = resp.json()["founding_offer"]
+    assert offer == {"price_monthly_cents": 4900, "cutoff": "2099-12-31"}
+
+
+async def test_billing_plans_has_no_founding_offer_by_default() -> None:
+    app = create_app()
+    app.dependency_overrides[get_app_settings] = _billing_settings
+    app.dependency_overrides[get_optional_user] = lambda: None
+    async with _client(app) as client:
+        resp = await client.get("/billing/plans")
+
+    assert resp.json()["founding_offer"] is None
+
+
+@pytest.mark.integration
+async def test_founding_checkout_uses_founding_price_under_cap(db_session: AsyncSession) -> None:
+    app = _app_with_session(db_session)
+    gateway = _FakeGateway(founding_count=1)
+    app.dependency_overrides[get_app_settings] = _founding_settings
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_stripe_gateway] = lambda: gateway
+
+    async with _client(app) as client:
+        resp = await client.post("/billing/checkout", json={"founding": True})
+
+    assert resp.status_code == 200
+    assert gateway.checkout_args == {"customer_id": "cus_test", "price_id": "price_founding"}
+
+
+@pytest.mark.integration
+async def test_founding_checkout_rejected_when_cap_reached(db_session: AsyncSession) -> None:
+    app = _app_with_session(db_session)
+    gateway = _FakeGateway(founding_count=2)
+    app.dependency_overrides[get_app_settings] = _founding_settings
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_stripe_gateway] = lambda: gateway
+
+    async with _client(app) as client:
+        resp = await client.post("/billing/checkout", json={"founding": True})
+
+    assert resp.status_code == 422
+    assert gateway.checkout_args is None
 
 
 async def test_portal_requires_existing_customer(db_session: AsyncSession) -> None:

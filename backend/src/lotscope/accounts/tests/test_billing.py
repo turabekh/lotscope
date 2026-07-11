@@ -1,8 +1,12 @@
+from datetime import date
+
 import pytest
 
 from lotscope.accounts.billing import (
     appeal_packet_from_checkout,
     credit_grant_from_checkout,
+    founding_offer_available,
+    founding_offer_configured,
     granting_price_ids,
     interpret_event,
     investor_price_ids,
@@ -13,6 +17,8 @@ from lotscope.accounts.billing import (
 )
 from lotscope.core.config import Settings
 from lotscope.core.errors import ConfigurationError
+
+_TODAY = date(2026, 7, 11)
 
 
 def _settings(**overrides: object) -> Settings:
@@ -224,3 +230,40 @@ def test_appeal_packet_ignores_credit_checkout() -> None:
         )
         is None
     )
+
+
+def test_founding_price_grants_pro_tier() -> None:
+    settings = _settings(stripe_price_pro_founding="price_founding")
+    assert "price_founding" in pro_price_ids(settings)
+    assert tier_for_subscription("active", "price_founding", granting_price_ids(settings)) == "pro"
+
+
+def test_founding_offer_configured_requires_price_and_unexpired_cutoff() -> None:
+    assert founding_offer_configured(_settings(), today=_TODAY) is False
+    assert (
+        founding_offer_configured(
+            _settings(stripe_price_pro_founding="price_founding"), today=_TODAY
+        )
+        is True
+    )
+    assert (
+        founding_offer_configured(
+            _settings(stripe_price_pro_founding="price_founding", founding_cutoff="2026-07-10"),
+            today=_TODAY,
+        )
+        is False
+    )
+    assert (
+        founding_offer_configured(
+            _settings(stripe_price_pro_founding="price_founding", founding_cutoff="not-a-date"),
+            today=_TODAY,
+        )
+        is False
+    )
+
+
+def test_founding_offer_available_respects_cap() -> None:
+    settings = _settings(stripe_price_pro_founding="price_founding", founding_cap=50)
+    assert founding_offer_available(settings, active_count=49, today=_TODAY) is True
+    assert founding_offer_available(settings, active_count=50, today=_TODAY) is False
+    assert founding_offer_available(_settings(), active_count=0, today=_TODAY) is False

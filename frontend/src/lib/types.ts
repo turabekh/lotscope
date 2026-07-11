@@ -1024,9 +1024,15 @@ export interface PlanInfo {
   is_current: boolean
 }
 
+export interface FoundingOffer {
+  price_monthly_cents: number
+  cutoff: string | null
+}
+
 export interface PlansResponse {
   plans: PlanInfo[]
   contact_url: string
+  founding_offer: FoundingOffer | null
 }
 
 export interface CheckoutResponse {

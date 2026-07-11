@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, Literal, Protocol, cast
 
 import stripe
@@ -32,10 +33,35 @@ def _parse_price_list(raw: str | None) -> frozenset[str]:
 def pro_price_ids(settings: Settings) -> frozenset[str]:
     current = frozenset(
         price
-        for price in (settings.stripe_price_pro_monthly, settings.stripe_price_pro_annual)
+        for price in (
+            settings.stripe_price_pro_monthly,
+            settings.stripe_price_pro_annual,
+            settings.stripe_price_pro_founding,
+        )
         if price
     )
     return current | _parse_price_list(settings.stripe_price_pro_legacy)
+
+
+def _cutoff_passed(cutoff_raw: str | None, today: date) -> bool:
+    if not cutoff_raw:
+        return False
+    try:
+        return today > date.fromisoformat(cutoff_raw)
+    except ValueError:
+        return True
+
+
+def founding_offer_configured(settings: Settings, *, today: date) -> bool:
+    if not settings.stripe_price_pro_founding:
+        return False
+    return not _cutoff_passed(settings.founding_cutoff, today)
+
+
+def founding_offer_available(settings: Settings, *, active_count: int, today: date) -> bool:
+    if not founding_offer_configured(settings, today=today):
+        return False
+    return active_count < settings.founding_cap
 
 
 def investor_price_ids(settings: Settings) -> frozenset[str]:
@@ -208,6 +234,8 @@ class StripeGateway(Protocol):
 
     async def create_portal_session(self, *, customer_id: str, return_url: str) -> str: ...
 
+    async def count_active_subscriptions_for_price(self, *, price_id: str) -> int: ...
+
     def parse_event(self, *, payload: bytes, signature: str) -> dict[str, Any]: ...
 
 
@@ -295,6 +323,16 @@ class StripeApiGateway:
             params={"customer": customer_id, "return_url": return_url}
         )
         return session.url
+
+    async def count_active_subscriptions_for_price(self, *, price_id: str) -> int:
+        count = 0
+        params: dict[str, Any] = {"price": price_id, "status": "active", "limit": 100}
+        while True:
+            page = await self._client.v1.subscriptions.list_async(params=cast("Any", params))
+            count += len(page.data)
+            if not page.has_more or not page.data:
+                return count
+            params["starting_after"] = page.data[-1].id
 
     def parse_event(self, *, payload: bytes, signature: str) -> dict[str, Any]:
         if not self._webhook_secret:

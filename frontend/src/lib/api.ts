@@ -513,6 +513,12 @@ export const api = {
       body: JSON.stringify({ tier, cadence }),
     })
   },
+  createFoundingCheckout(): Promise<CheckoutResponse> {
+    return request('/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ tier: 'pro', cadence: 'monthly', founding: true }),
+    })
+  },
   createPortal(): Promise<PortalResponse> {
     return request('/billing/portal', { method: 'POST' })
   },
