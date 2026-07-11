@@ -70,6 +70,14 @@ def clear_detail_override(market_code: str, category: str) -> str | None:
     return _CLEAR_DETAIL_OVERRIDE.get((market_code, category))
 
 
+def market_capability_notes(market_code: str) -> list[tuple[str, str, str]]:
+    states = _CHECKLIST_CATEGORY_STATE.get(market_code, {})
+    return [
+        (category, state, checklist_state_detail(market_code, category, state))
+        for category, state in sorted(states.items())
+    ]
+
+
 _FORCED_SALE_LABEL: dict[str, str] = {
     "phl": "Sheriff sale",
     "hbg": "Tax sale (RETSL)",
