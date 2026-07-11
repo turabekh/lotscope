@@ -220,3 +220,29 @@ def test_hbg_parcel_row_records_geometry_lot_area_source() -> None:
     from lotscope.ingestion.loaders.hbg import _UPDATE_COLUMNS
 
     assert "lot_area_source" in _UPDATE_COLUMNS
+
+
+@pytest.mark.integration
+async def test_derive_hbg_lot_width_uses_oriented_envelope_short_side(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.ingestion.loaders.hbg import derive_hbg_lot_width
+
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, geom_local) VALUES "
+            "('hbg:99-000-001', 'hbg', "
+            "ST_SetSRID(ST_GeomFromText('POLYGON((0 0, 30 0, 30 120, 0 120, 0 0))'), 2272))"
+        )
+    )
+    await db_session.flush()
+
+    updated = await derive_hbg_lot_width(db_session)
+    await db_session.flush()
+    width = await db_session.scalar(
+        text("SELECT frontage_ft FROM parcel WHERE parcel_number = 'hbg:99-000-001'")
+    )
+
+    assert updated >= 1
+    assert width is not None
+    assert abs(float(width) - 30.0) < 0.5
