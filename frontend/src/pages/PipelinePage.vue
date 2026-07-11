@@ -4,10 +4,11 @@ import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { api } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { DealActivityItem, DealItem, DealStage } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
+import { useCreditsStore } from '@/stores/credits'
 import { useMarketStore } from '@/stores/market'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 
@@ -16,6 +17,7 @@ const router = useRouter()
 const market = useMarketStore()
 const auth = useAuthStore()
 const pipeline = usePipelineStore()
+const credits = useCreditsStore()
 const { user } = storeToRefs(auth)
 const { deals, today, loading } = storeToRefs(pipeline)
 
@@ -143,7 +145,9 @@ async function openDetail(deal: DealItem): Promise<void> {
     contact_email: deal.contact_email ?? '',
   }
   activity.value = []
+  traceProvenance.value = null
   detailOpen.value = true
+  void credits.ensureLoaded()
   activity.value = await pipeline.loadActivity(deal.parcel_number)
 }
 
@@ -151,6 +155,39 @@ async function saveContact(): Promise<void> {
   if (!detailDeal.value) return
   await pipeline.updateDeal(detailDeal.value.parcel_number, { ...contactDraft.value })
   detailOpen.value = false
+}
+
+const tracing = ref(false)
+const traceProvenance = ref<string | null>(null)
+
+async function skipTraceContact(): Promise<void> {
+  if (!detailDeal.value) return
+  tracing.value = true
+  traceProvenance.value = null
+  try {
+    const result = await api.skipTrace(detailDeal.value.parcel_number)
+    credits.set(result.credits_remaining)
+    const phone = result.contacts.phones[0] ?? ''
+    const email = result.contacts.emails[0] ?? ''
+    if (!phone && !email) {
+      $q.notify({ type: 'info', message: 'No contact info found — your credit was refunded.' })
+      return
+    }
+    contactDraft.value = {
+      contact_name: contactDraft.value.contact_name || (result.owner ?? ''),
+      contact_phone: phone || contactDraft.value.contact_phone,
+      contact_email: email || contactDraft.value.contact_email,
+    }
+    const provider = result.cached ? 'cached result' : 'skip trace'
+    traceProvenance.value = `Filled via ${provider} · ${new Date().toLocaleDateString('en-US')}`
+  } catch (cause) {
+    $q.notify({
+      type: 'negative',
+      message: cause instanceof ApiError ? cause.message : 'Skip trace failed.',
+    })
+  } finally {
+    tracing.value = false
+  }
 }
 </script>
 
@@ -398,9 +435,29 @@ async function saveContact(): Promise<void> {
           {{ detailDeal?.address ?? detailDeal?.parcel_number }}
         </q-card-section>
         <q-card-section class="q-gutter-sm">
+          <div v-if="!market.isHidden('skip_trace')" class="row items-center q-gutter-sm">
+            <q-btn
+              outline
+              no-caps
+              dense
+              color="primary"
+              icon="person_search"
+              label="Skip trace owner (1 credit)"
+              :loading="tracing"
+              @click="skipTraceContact"
+            />
+            <span v-if="credits.balance !== null" class="text-caption text-grey-7">
+              {{ credits.balance }} credits
+            </span>
+          </div>
+          <div v-if="traceProvenance" class="text-caption text-primary">{{ traceProvenance }}</div>
           <q-input v-model="contactDraft.contact_name" label="Contact name" dense />
           <q-input v-model="contactDraft.contact_phone" label="Phone" dense />
           <q-input v-model="contactDraft.contact_email" label="Email" dense />
+          <div class="text-caption text-grey-6">
+            Contact data is for real-estate outreach only — not for credit, employment, insurance, or
+            tenant-screening decisions. Outreach is subject to TCPA / Do-Not-Call rules.
+          </div>
         </q-card-section>
         <q-separator />
         <q-card-section>

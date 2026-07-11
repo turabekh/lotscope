@@ -195,30 +195,34 @@ async def export_deals(
     if row_limit <= 0:
         return []
     deals = await list_deals(session, user_id)
-    return [
-        (
-            deal.parcel_number,
-            deal.address,
-            deal.stage,
-            deal.next_action,
-            deal.next_action_due.isoformat() if deal.next_action_due else None,
-            deal.target_price,
-            deal.opportunity_score,
-            deal.max_allowable_offer,
-            deal.arv,
-            deal.est_profit,
-            deal.est_margin,
-            deal.is_underpriced,
-            deal.base_zoning_code,
-            deal.market_value,
-            deal.is_vacant,
-            deal.contact_name,
-            deal.contact_phone,
-            deal.contact_email,
-            deal.updated_at.isoformat() if deal.updated_at else None,
+    rows: list[tuple[Any, ...]] = []
+    for deal in deals[:row_limit]:
+        traced = bool(deal.contact_phone or deal.contact_email)
+        contact_name = deal.contact_name if traced else "not traced"
+        rows.append(
+            (
+                deal.parcel_number,
+                deal.address,
+                deal.stage,
+                deal.next_action,
+                deal.next_action_due.isoformat() if deal.next_action_due else None,
+                deal.target_price,
+                deal.opportunity_score,
+                deal.max_allowable_offer,
+                deal.arv,
+                deal.est_profit,
+                deal.est_margin,
+                deal.is_underpriced,
+                deal.base_zoning_code,
+                deal.market_value,
+                deal.is_vacant,
+                contact_name,
+                deal.contact_phone,
+                deal.contact_email,
+                deal.updated_at.isoformat() if deal.updated_at else None,
+            )
         )
-        for deal in deals[:row_limit]
-    ]
+    return rows
 
 
 async def deals_due(session: AsyncSession, user_id: int, today: date) -> list[DealItem]:
