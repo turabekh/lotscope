@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import type { ParcelAnswer } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
@@ -22,6 +23,7 @@ const question = ref('')
 const answer = ref<ParcelAnswer | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const capReached = ref(false)
 
 const suggestions = [
   'What can I build by right?',
@@ -48,6 +50,7 @@ async function ask(): Promise<void> {
   if (text === '') return
   loading.value = true
   error.value = null
+  capReached.value = false
   try {
     answer.value = await api.ask(props.parcelNumber, text)
     question.value = ''
@@ -57,6 +60,8 @@ async function ask(): Promise<void> {
       auth.logout()
       goLogin()
       error.value = 'Your session expired — please sign in again.'
+    } else if (cause instanceof ApiError && cause.status === 429) {
+      capReached.value = true
     } else {
       error.value = cause instanceof ApiError ? cause.message : 'Failed to get an answer.'
     }
@@ -121,6 +126,8 @@ function askSuggestion(text: string): void {
       <q-banner v-if="error" dense class="bg-red-1 text-negative q-mt-sm rounded-borders">
         {{ error }}
       </q-banner>
+
+      <UpgradePrompt v-if="capReached" cap="ask" variant="banner" class="q-mt-sm" />
 
       <q-slide-transition>
         <div v-if="answer" class="answer-block q-mt-md">

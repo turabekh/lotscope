@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import OutreachMailerDialog, { type MailerFields } from '@/components/OutreachMailerDialog.vue'
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import type { LeadItem } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
@@ -157,18 +158,6 @@ onMounted(load)
         <q-icon name="workspace_premium" size="16px" class="q-mr-xs" />
         Showing the top {{ leads.length }} on your
         <b class="q-mx-xs text-capitalize">{{ user.tier }}</b> plan (max {{ limit }}).
-        <template v-if="user.tier === 'free'">
-          <q-btn
-            flat
-            dense
-            no-caps
-            size="sm"
-            color="primary"
-            label="Upgrade for more"
-            :to="{ name: 'account' }"
-            class="q-ml-xs"
-          />
-        </template>
         <q-space />
         <q-btn
           v-if="isFree"
@@ -222,6 +211,13 @@ onMounted(load)
           @click="mailerOpen = true"
         />
       </div>
+
+      <UpgradePrompt
+        v-if="isFree && leads.length > 0"
+        cap="leads"
+        variant="banner"
+        class="q-mb-md"
+      />
 
       <OutreachMailerDialog
         v-model="mailerOpen"
