@@ -26,6 +26,7 @@ from lotscope.ingestion.retention import sweep_retention
 from lotscope.notifications.email import get_email_sender
 from lotscope.notifications.push import get_push_sender
 from lotscope.notifications.service import (
+    send_deal_reminders,
     send_digests,
     send_feed_digests,
     send_push_alerts,
@@ -252,6 +253,14 @@ async def send_feed_digest_emails(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def send_deal_reminder_emails(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    sender = get_email_sender(settings)
+    count = await send_deal_reminders(ctx["session_factory"], sender, settings)
+    _logger.info("sent_deal_reminders", count=count)
+    return count
+
+
 async def send_ops_health_digest(ctx: dict[str, Any]) -> int:
     settings = ctx["settings"]
     sender = get_email_sender(settings)
@@ -287,6 +296,7 @@ class WorkerSettings:
         send_push_notifications,
         send_saved_search_match_alerts,
         send_feed_digest_emails,
+        send_deal_reminder_emails,
         send_ops_health_digest,
         send_ops_alerts,
     ]
@@ -311,4 +321,5 @@ class WorkerSettings:
         cron(send_weekly_digests, weekday="mon", hour=13, minute=30),
         cron(send_saved_search_match_alerts, hour=9, minute=0),
         cron(send_feed_digest_emails, hour=13, minute=15),
+        cron(send_deal_reminder_emails, hour=13, minute=45),
     ]

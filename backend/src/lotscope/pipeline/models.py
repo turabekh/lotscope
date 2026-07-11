@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from datetime import date, datetime
+
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -17,3 +19,22 @@ class Deal(Base, TimestampMixin):
     stage: Mapped[str] = mapped_column(String(20), nullable=False, server_default="lead")
     note: Mapped[str | None] = mapped_column(Text)
     target_price: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    next_action: Mapped[str | None] = mapped_column(Text)
+    next_action_due: Mapped[date | None] = mapped_column(Date, index=True)
+    stage_entered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    contact_name: Mapped[str | None] = mapped_column(String(160))
+    contact_phone: Mapped[str | None] = mapped_column(String(40))
+    contact_email: Mapped[str | None] = mapped_column(String(255))
+
+
+class DealActivity(Base, TimestampMixin):
+    __tablename__ = "deal_activity"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    deal_id: Mapped[int] = mapped_column(
+        ForeignKey("deal.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    from_stage: Mapped[str | None] = mapped_column(String(20))
+    to_stage: Mapped[str | None] = mapped_column(String(20))
+    body: Mapped[str | None] = mapped_column(Text)

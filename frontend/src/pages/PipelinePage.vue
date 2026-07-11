@@ -4,17 +4,23 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { formatCurrency } from '@/lib/format'
-import type { DealItem, DealStage } from '@/lib/types'
+import type { DealActivityItem, DealItem, DealStage } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 
 const router = useRouter()
 const market = useMarketStore()
 const pipeline = usePipelineStore()
-const { deals, loading } = storeToRefs(pipeline)
+const { deals, today, loading } = storeToRefs(pipeline)
 
+const tab = ref<'board' | 'today'>('board')
 const dragging = ref<string | null>(null)
 const dragOver = ref<DealStage | null>(null)
+
+const detailDeal = ref<DealItem | null>(null)
+const detailOpen = ref(false)
+const activity = ref<DealActivityItem[]>([])
+const contactDraft = ref({ contact_name: '', contact_phone: '', contact_email: '' })
 
 onMounted(() => void pipeline.load())
 
@@ -27,6 +33,47 @@ function scoreColor(score: number | null): string {
   if (score >= 65) return 'positive'
   if (score >= 45) return 'amber-8'
   return 'negative'
+}
+
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null
+  const due = new Date(iso)
+  due.setHours(0, 0, 0, 0)
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  return Math.round((due.getTime() - now.getTime()) / 86_400_000)
+}
+
+function dueLabel(iso: string | null): string {
+  const days = daysUntil(iso)
+  if (days === null) return ''
+  if (days < 0) return days === -1 ? '1 day overdue' : `${-days} days overdue`
+  if (days === 0) return 'Due today'
+  if (days === 1) return 'Due tomorrow'
+  return `Due in ${days} days`
+}
+
+function dueColor(iso: string | null): string {
+  const days = daysUntil(iso)
+  if (days === null) return 'grey-5'
+  if (days < 0) return 'negative'
+  if (days <= 2) return 'warning'
+  return 'primary'
+}
+
+function stageLabel(stage: DealStage): string {
+  return STAGES.find((entry) => entry.value === stage)?.label ?? stage
+}
+
+function whenLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function activityText(item: DealActivityItem): string {
+  if (item.kind === 'stage_change') {
+    return `Moved ${stageLabel(item.from_stage as DealStage)} → ${stageLabel(item.to_stage as DealStage)}`
+  }
+  return item.body ?? 'Next action set'
 }
 
 function openParcel(deal: DealItem): void {
@@ -54,10 +101,46 @@ function saveNote(deal: DealItem, value: string | null): void {
 function saveTarget(deal: DealItem, value: number | null): void {
   void pipeline.updateDeal(deal.parcel_number, { target_price: value })
 }
+
+function saveNextAction(deal: DealItem, value: string | null): void {
+  void pipeline.updateDeal(deal.parcel_number, { next_action: value ?? '' })
+}
+
+function saveDue(deal: DealItem, value: string | null): void {
+  void pipeline.updateDeal(deal.parcel_number, { next_action_due: value || null })
+}
+
+async function switchTab(value: string): Promise<void> {
+  tab.value = value as 'board' | 'today'
+  if (value === 'today') await pipeline.loadToday()
+}
+
+async function openDetail(deal: DealItem): Promise<void> {
+  detailDeal.value = deal
+  contactDraft.value = {
+    contact_name: deal.contact_name ?? '',
+    contact_phone: deal.contact_phone ?? '',
+    contact_email: deal.contact_email ?? '',
+  }
+  activity.value = []
+  detailOpen.value = true
+  activity.value = await pipeline.loadActivity(deal.parcel_number)
+}
+
+async function saveContact(): Promise<void> {
+  if (!detailDeal.value) return
+  await pipeline.updateDeal(detailDeal.value.parcel_number, { ...contactDraft.value })
+  detailOpen.value = false
+}
 </script>
 
 <template>
   <q-page class="pipeline-page">
+    <q-tabs v-model="tab" dense align="left" class="pipeline-tabs" @update:model-value="switchTab">
+      <q-tab name="board" label="Board" no-caps />
+      <q-tab name="today" label="Today" no-caps />
+    </q-tabs>
+
     <q-inner-loading :showing="loading" color="primary" />
     <div v-if="!loading && deals.length === 0" class="empty">
       <q-icon name="view_kanban" size="48px" color="grey-4" />
@@ -73,6 +156,30 @@ function saveTarget(deal: DealItem, value: number | null): void {
         label="Browse the map"
         :to="{ name: 'explore', params: { market: market.active } }"
       />
+    </div>
+
+    <div v-else-if="tab === 'today'" class="today-wrap">
+      <div v-if="today.length === 0" class="empty">
+        <q-icon name="event_available" size="42px" color="grey-4" />
+        <div class="text-subtitle1 text-grey-7 q-mt-sm">Nothing due</div>
+        <div class="text-body2 text-grey-6">Deals with a due date show up here when they’re due.</div>
+      </div>
+      <q-list v-else bordered separator class="today-list">
+        <q-item v-for="deal in today" :key="deal.id" clickable @click="openParcel(deal)">
+          <q-item-section>
+            <q-item-label>{{ deal.address ?? deal.parcel_number }}</q-item-label>
+            <q-item-label caption>
+              {{ stageLabel(deal.stage) }}
+              <span v-if="deal.next_action"> · {{ deal.next_action }}</span>
+            </q-item-label>
+          </q-item-section>
+          <q-item-section side>
+            <q-chip dense square :color="dueColor(deal.next_action_due)" text-color="white">
+              {{ dueLabel(deal.next_action_due) }}
+            </q-chip>
+          </q-item-section>
+        </q-item>
+      </q-list>
     </div>
 
     <div v-else class="board">
@@ -121,6 +228,9 @@ function saveTarget(deal: DealItem, value: number | null): void {
                       <q-item-section>{{ target.label }}</q-item-section>
                     </q-item>
                     <q-separator />
+                    <q-item clickable @click="openDetail(deal)">
+                      <q-item-section>Contact &amp; history</q-item-section>
+                    </q-item>
                     <q-item clickable @click="openParcel(deal)">
                       <q-item-section>Open on map</q-item-section>
                     </q-item>
@@ -147,6 +257,15 @@ function saveTarget(deal: DealItem, value: number | null): void {
               }}</span>
             </div>
 
+            <div v-if="deal.max_allowable_offer !== null || deal.est_profit !== null" class="deal-econ">
+              <q-chip v-if="deal.max_allowable_offer !== null" dense square color="blue-grey-1">
+                MAO {{ formatCurrency(deal.max_allowable_offer) }}
+              </q-chip>
+              <q-chip v-if="deal.est_profit !== null" dense square color="green-1">
+                {{ formatCurrency(deal.est_profit) }} profit
+              </q-chip>
+            </div>
+
             <div class="deal-target">
               Target:
               <span class="deal-target-value">{{ formatCurrency(deal.target_price) }}</span>
@@ -163,6 +282,40 @@ function saveTarget(deal: DealItem, value: number | null): void {
                   dense
                   autofocus
                 />
+              </q-popup-edit>
+            </div>
+
+            <div class="deal-next">
+              <q-icon name="bolt" size="14px" />
+              <span class="deal-next-text">{{ deal.next_action || 'Set next action…' }}</span>
+              <q-popup-edit
+                v-slot="scope"
+                :model-value="deal.next_action"
+                buttons
+                @save="(value) => saveNextAction(deal, value)"
+              >
+                <q-input v-model="scope.value" label="Next action" dense autofocus />
+              </q-popup-edit>
+            </div>
+
+            <div class="deal-due">
+              <q-chip
+                v-if="deal.next_action_due"
+                dense
+                square
+                :color="dueColor(deal.next_action_due)"
+                text-color="white"
+              >
+                {{ dueLabel(deal.next_action_due) }}
+              </q-chip>
+              <span v-else class="deal-due-empty">No due date</span>
+              <q-popup-edit
+                v-slot="scope"
+                :model-value="deal.next_action_due"
+                buttons
+                @save="(value) => saveDue(deal, value)"
+              >
+                <q-input v-model="scope.value" type="date" label="Due date" dense autofocus />
               </q-popup-edit>
             </div>
 
@@ -188,6 +341,36 @@ function saveTarget(deal: DealItem, value: number | null): void {
         </div>
       </div>
     </div>
+
+    <q-dialog v-model="detailOpen">
+      <q-card class="detail-card">
+        <q-card-section class="text-subtitle1">
+          {{ detailDeal?.address ?? detailDeal?.parcel_number }}
+        </q-card-section>
+        <q-card-section class="q-gutter-sm">
+          <q-input v-model="contactDraft.contact_name" label="Contact name" dense />
+          <q-input v-model="contactDraft.contact_phone" label="Phone" dense />
+          <q-input v-model="contactDraft.contact_email" label="Email" dense />
+        </q-card-section>
+        <q-separator />
+        <q-card-section>
+          <div class="text-caption text-grey-7 q-mb-xs">History</div>
+          <div v-if="activity.length === 0" class="text-body2 text-grey-6">No activity yet.</div>
+          <q-list v-else dense>
+            <q-item v-for="item in activity" :key="item.id">
+              <q-item-section>
+                <q-item-label>{{ activityText(item) }}</q-item-label>
+                <q-item-label caption>{{ whenLabel(item.created_at) }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Close" @click="detailOpen = false" />
+          <q-btn unelevated no-caps color="primary" label="Save contact" @click="saveContact" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -196,11 +379,26 @@ function saveTarget(deal: DealItem, value: number | null): void {
   position: relative;
   height: calc(100vh - 54px);
   height: calc(100dvh - 54px);
+  display: flex;
+  flex-direction: column;
+}
+.pipeline-tabs {
+  border-bottom: 1px solid var(--lot-border);
+  flex: 0 0 auto;
+}
+.today-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+.today-list {
+  max-width: 720px;
+  border-radius: var(--lot-radius);
 }
 .board {
   display: flex;
   gap: 12px;
-  height: 100%;
+  flex: 1;
   overflow-x: auto;
   padding: 14px;
   align-items: flex-start;
@@ -277,6 +475,12 @@ function saveTarget(deal: DealItem, value: number | null): void {
   font-size: 12px;
   color: var(--lot-muted);
 }
+.deal-econ {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
 .deal-target {
   margin-top: 6px;
   font-size: 12px;
@@ -286,6 +490,29 @@ function saveTarget(deal: DealItem, value: number | null): void {
 .deal-target-value {
   font-weight: 600;
   color: var(--lot-ink);
+}
+.deal-next {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--lot-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.deal-next-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deal-due {
+  margin-top: 6px;
+  cursor: pointer;
+}
+.deal-due-empty {
+  font-size: 12px;
+  color: var(--lot-faint);
 }
 .deal-note {
   margin-top: 6px;
@@ -297,5 +524,9 @@ function saveTarget(deal: DealItem, value: number | null): void {
 .empty {
   text-align: center;
   padding: 60px 16px;
+}
+.detail-card {
+  min-width: 340px;
+  max-width: 460px;
 }
 </style>

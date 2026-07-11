@@ -13,9 +13,11 @@ import type {
   FeedResponse,
   SheriffSalesResponse,
   AssemblageTopResponse,
+  DealActivityItem,
   DealItem,
   DealResult,
   DealStage,
+  DealUpdatePayload,
   DistressResult,
   NeighborhoodMarketResponse,
   NextSheriffSale,
@@ -344,14 +346,17 @@ export const api = {
       body: JSON.stringify({ parcel_number: parcelNumber, stage }),
     })
   },
-  updateDeal(
-    parcelNumber: string,
-    payload: { stage?: DealStage; note?: string | null; target_price?: number | null },
-  ): Promise<DealItem> {
+  updateDeal(parcelNumber: string, payload: DealUpdatePayload): Promise<DealItem> {
     return request(`/pipeline/${encodeURIComponent(parcelNumber)}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
     })
+  },
+  getPipelineToday(): Promise<{ deals: DealItem[] }> {
+    return request('/pipeline/today')
+  },
+  getDealActivity(parcelNumber: string): Promise<DealActivityItem[]> {
+    return request(`/pipeline/${encodeURIComponent(parcelNumber)}/activity`)
   },
   removeFromPipeline(parcelNumber: string): Promise<void> {
     return request(`/pipeline/${encodeURIComponent(parcelNumber)}`, { method: 'DELETE' })
