@@ -7,6 +7,7 @@ from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS
 
 INGEST_KIND = "ingest"
 RECOMPUTE_KIND = "recompute"
+MAINTENANCE_KIND = "maintenance"
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,17 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
 )
 
 
+_MAINTENANCE_SPECS: tuple[JobSpec, ...] = (
+    JobSpec(
+        id="maintenance:seed_zoning",
+        label="Seed zoning standards",
+        kind=MAINTENANCE_KIND,
+        description="Re-seed Title 14, Harrisburg, and Pittsburgh zoning standards "
+        "(permitted uses + dimensional standards) from code.",
+    ),
+)
+
+
 def ingest_job_id(market: str, dataset: str) -> str:
     return f"{INGEST_KIND}:{market}:{dataset}"
 
@@ -88,7 +100,7 @@ def _build_catalog() -> list[JobSpec]:
         )
         for (market, dataset) in sorted(keys)
     ]
-    return ingest + list(_RECOMPUTE_SPECS)
+    return ingest + list(_RECOMPUTE_SPECS) + list(_MAINTENANCE_SPECS)
 
 
 CATALOG: list[JobSpec] = _build_catalog()

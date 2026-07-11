@@ -12,6 +12,7 @@ from lotscope.admin.catalog import (
     CATALOG,
     CATALOG_BY_ID,
     INGEST_KIND,
+    MAINTENANCE_KIND,
     RECOMPUTE_KIND,
     ingest_job_id,
 )
@@ -76,6 +77,8 @@ def test_catalog_covers_every_ingest_job() -> None:
 def test_worker_dispatch_stays_in_sync_with_catalog() -> None:
     recompute_ids = {spec.id for spec in CATALOG if spec.kind == RECOMPUTE_KIND}
     assert recompute_ids == set(worker._RECOMPUTE_DISPATCH)
+    maintenance_ids = {spec.id for spec in CATALOG if spec.kind == MAINTENANCE_KIND}
+    assert maintenance_ids == set(worker._MAINTENANCE_DISPATCH)
     runnable = set(INGEST_JOBS) | set(PARAM_INGEST_JOBS)
     for spec in CATALOG:
         if spec.kind == INGEST_KIND:
