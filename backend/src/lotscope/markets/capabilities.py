@@ -98,7 +98,37 @@ def forced_sale_surface_label(market_code: str) -> str:
 _DISPLAY_NAME: dict[str, str] = {
     "phl": "Philadelphia",
     "hbg": "Harrisburg",
+    "pgh": "Pittsburgh",
 }
+
+_CALENDAR_SEASONAL_NOTE: dict[str, str] = {
+    "hbg": (
+        "Harrisburg's upset tax sale is seasonal — the list publishes in August for a "
+        "September sale. The pipeline is armed and populates automatically when the list lands."
+    ),
+}
+
+
+def sale_calendar_state(market_code: str, *, has_upcoming: bool) -> tuple[str, str | None]:
+    label = forced_sale_surface_label(market_code)
+    name = market_display_name(market_code)
+    if "sheriff_sales" in hidden_surfaces(market_code):
+        return (
+            "unavailable",
+            f"{label} for {name} surface on each parcel's distress signals; a scheduled-auction "
+            "calendar is not published for this market.",
+        )
+    if has_upcoming:
+        return ("live", None)
+    seasonal = _CALENDAR_SEASONAL_NOTE.get(market_code)
+    if seasonal is not None:
+        return ("seasonal", seasonal)
+    return (
+        "empty",
+        f"No upcoming {label.lower()} are currently loaded for {name}. Lists publish on a "
+        "rolling basis — check back or watch individual parcels.",
+    )
+
 
 _ZONING_CITATION: dict[str, str] = {
     "phl": "Title 14",

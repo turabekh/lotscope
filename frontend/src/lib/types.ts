@@ -989,6 +989,10 @@ export interface SheriffSaleItem {
 }
 
 export interface SheriffSalesResponse {
+  market: string
+  label: string
+  state: 'live' | 'empty' | 'seasonal' | 'unavailable'
+  note: string | null
   total: number
   returned: number
   items: SheriffSaleItem[]

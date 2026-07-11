@@ -828,6 +828,58 @@ async def test_sheriff_sales_ranked_by_bid_gap_for_paid_tier(db_session: AsyncSe
     assert [item["case_number"] for item in body["items"]] == ["BW-A", "BW-B"]
     assert body["items"][0]["bid_gap"] == 40000.0
     assert body["items"][0]["opportunity_score"] == 80
+    assert body["market"] == "phl"
+    assert body["label"] == "Sheriff sales"
+    assert body["state"] == "live"
+    assert body["note"] is None
+
+
+@pytest.mark.integration
+async def test_sheriff_calendar_reports_honest_empty_state(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.get("/sheriff-sales")
+
+    body = resp.json()
+    assert body["total"] == 0
+    assert body["state"] == "empty"
+    assert "No upcoming sheriff sales" in body["note"]
+
+
+@pytest.mark.integration
+async def test_sheriff_calendar_ics_feed(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, address) VALUES ('phl:000000001', '1 Main St')")
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale "
+            "(parcel_number, case_number, sale_date, status, opening_bid) VALUES "
+            "('phl:000000001', 'BW-A', '2026-08-05', 'Open', 10000)"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.get("/sheriff-sales/calendar.ics")
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/calendar")
+    text_body = resp.text
+    assert "BEGIN:VCALENDAR" in text_body
+    assert "BEGIN:VEVENT" in text_body
+    assert "DTSTART;VALUE=DATE:20260805" in text_body
+    assert "UID:BW-A@parcelphl.online" in text_body
+
+
+async def test_sheriff_calendar_ics_gated_for_free_tier(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        resp = await client.get("/sheriff-sales/calendar.ics")
+    assert resp.status_code == 429
 
 
 @pytest.mark.integration

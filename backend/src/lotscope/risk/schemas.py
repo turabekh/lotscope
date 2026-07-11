@@ -19,6 +19,10 @@ class SheriffSaleItem(BaseModel):
 
 
 class SheriffSaleCalendar(BaseModel):
+    market: str
+    label: str
+    state: str
+    note: str | None
     total: int
     returned: int
     items: list[SheriffSaleItem]

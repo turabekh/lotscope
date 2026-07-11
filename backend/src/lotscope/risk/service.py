@@ -4,7 +4,11 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.markets.capabilities import forced_sale_label
+from lotscope.markets.capabilities import (
+    forced_sale_label,
+    forced_sale_surface_label,
+    sale_calendar_state,
+)
 from lotscope.risk.schemas import (
     NextSheriffSale,
     RepositoryEntry,
@@ -292,7 +296,55 @@ async def list_sheriff_sales(
         )
         for row in rows
     ]
-    return SheriffSaleCalendar(total=int(total or 0), returned=len(items), items=items)
+    has_upcoming = any(item.sale_date is not None for item in items)
+    state, note = sale_calendar_state(market_code, has_upcoming=has_upcoming)
+    return SheriffSaleCalendar(
+        market=market_code,
+        label=forced_sale_surface_label(market_code),
+        state=state,
+        note=note,
+        total=int(total or 0),
+        returned=len(items),
+        items=items,
+    )
+
+
+def _ics_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+def sheriff_sale_ics(calendar: SheriffSaleCalendar, *, now: datetime) -> str:
+    stamp = now.strftime("%Y%m%dT%H%M%SZ")
+    lines: list[str] = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//LotScope//Sales Calendar//EN",
+        "CALSCALE:GREGORIAN",
+        f"X-WR-CALNAME:{_ics_escape(calendar.label)}",
+    ]
+    for item in calendar.items:
+        if item.sale_date is None:
+            continue
+        where = item.address or item.parcel_number
+        summary = f"{calendar.label}: {where}"
+        detail_parts = [f"Case {item.case_number}"]
+        if item.opening_bid is not None:
+            detail_parts.append(f"Opening bid ${round(item.opening_bid):,}")
+        if item.max_allowable_offer is not None:
+            detail_parts.append(f"Max allowable offer ${round(item.max_allowable_offer):,}")
+        lines.extend(
+            [
+                "BEGIN:VEVENT",
+                f"UID:{_ics_escape(item.case_number)}@parcelphl.online",
+                f"DTSTAMP:{stamp}",
+                f"DTSTART;VALUE=DATE:{item.sale_date.strftime('%Y%m%d')}",
+                f"SUMMARY:{_ics_escape(summary)}",
+                f"DESCRIPTION:{_ics_escape('. '.join(detail_parts))}",
+                "END:VEVENT",
+            ]
+        )
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(lines) + "\r\n"
 
 
 _NEXT_SHERIFF_SALE_SQL = text(
