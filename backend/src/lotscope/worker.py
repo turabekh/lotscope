@@ -16,6 +16,7 @@ from lotscope.admin.catalog import (
 from lotscope.admin.service import mark_job_finished, mark_job_running
 from lotscope.appeal.jobs import grant_investor_appeal_packets
 from lotscope.assemblage.jobs import recompute_all_assemblage
+from lotscope.buyers.jobs import recompute_all_buyers
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.errors import NotFoundError
@@ -113,6 +114,12 @@ async def recompute_assemblage(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def recompute_buyers(ctx: dict[str, Any]) -> int:
+    count = await recompute_all_buyers(ctx["session_factory"])
+    _logger.info("recomputed_buyers", count=count)
+    return count
+
+
 async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
     count = await recompute_all_vacancy_confidence(ctx["session_factory"])
     _logger.info("recomputed_vacancy_confidence", count=count)
@@ -133,6 +140,7 @@ _RECOMPUTE_DISPATCH: dict[str, _RecomputeFn] = {
     "recompute:distress": recompute_all_distress,
     "recompute:vacancy": recompute_all_vacancy_confidence,
     "recompute:assemblage": recompute_all_assemblage,
+    "recompute:buyers": recompute_all_buyers,
 }
 
 
@@ -320,6 +328,7 @@ class WorkerSettings:
         cron(recompute_vacant_verdicts, hour=7, minute=0),
         cron(recompute_distress, hour=8, minute=0),
         cron(recompute_assemblage, hour=8, minute=30),
+        cron(recompute_buyers, hour=9, minute=0),
         cron(snapshot_stats, hour=9, minute=30),
         cron(send_ops_alerts, hour=5, minute=30),
         cron(send_ops_health_digest, hour=10, minute=0),

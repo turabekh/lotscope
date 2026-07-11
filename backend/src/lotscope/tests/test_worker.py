@@ -18,6 +18,7 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "recompute_verdicts",
         "recompute_distress",
         "recompute_assemblage",
+        "recompute_buyers",
         "grant_investor_skiptrace_credits",
         "grant_investor_packet_credits",
         "send_daily_digests",

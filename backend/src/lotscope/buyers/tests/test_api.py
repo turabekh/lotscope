@@ -1,0 +1,73 @@
+from types import SimpleNamespace
+from typing import Any
+
+import httpx
+import pytest
+from fastapi import FastAPI
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from lotscope.api.app import create_app
+from lotscope.api.deps import get_current_user, get_session
+
+pytestmark = pytest.mark.integration
+
+
+def _app(db_session: AsyncSession, *, tier: str = "investor") -> FastAPI:
+    app = create_app()
+
+    async def _session() -> Any:
+        yield db_session
+
+    def _user() -> Any:
+        return SimpleNamespace(id=1, role="user", tier=tier)
+
+    app.dependency_overrides[get_session] = _session
+    app.dependency_overrides[get_current_user] = _user
+    return app
+
+
+def _client(app: FastAPI) -> httpx.AsyncClient:
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+
+
+async def _seed_buyer(db_session: AsyncSession, market: str = "phl") -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO buyer_profile (market_code, buyer_key, display_name, purchases_window, "
+            "lot_purchases_window, activity_centroid, computed_at) VALUES "
+            "(:m, 'THEDOOR LLC', 'THEDOOR LLC', 4, 4, ST_SetSRID(ST_MakePoint(5, 5), 2272), now())"
+        ),
+        {"m": market},
+    )
+    await db_session.flush()
+
+
+async def test_roster_requires_investor_tier(db_session: AsyncSession) -> None:
+    app = _app(db_session, tier="pro")
+    async with _client(app) as client:
+        resp = await client.get("/buyers")
+    assert resp.status_code == 429
+
+
+async def test_investor_sees_roster(db_session: AsyncSession) -> None:
+    await _seed_buyer(db_session)
+    app = _app(db_session, tier="investor")
+    async with _client(app) as client:
+        resp = await client.get("/buyers")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["available"] is True
+    assert body["total"] == 1
+    assert body["buyers"][0]["buyer_key"] == "THEDOOR LLC"
+
+
+async def test_pgh_market_returns_unavailable_state(db_session: AsyncSession) -> None:
+    app = _app(db_session, tier="investor")
+    async with _client(app) as client:
+        resp = await client.get("/buyers", params={"market": "pgh"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["available"] is False
+    assert body["buyers"] == []
+    assert body["note"]

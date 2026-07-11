@@ -62,6 +62,7 @@ CADENCE: dict[tuple[str, str], Cadence] = {
     ("phl", "demolitions"): Cadence("daily"),
     ("phl", "appeals"): Cadence("daily"),
     ("phl", "sheriff_sale"): Cadence("monthly"),
+    ("phl", "buyer_profile"): Cadence("daily"),
     ("phl", "vacant_indicators"): Cadence("monthly"),
     ("phl", "zoning_base_districts"): Cadence("monthly"),
     ("phl", "zoning_overlays"): Cadence("monthly"),

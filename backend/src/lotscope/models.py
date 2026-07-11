@@ -3,6 +3,7 @@ from lotscope.admin.models import JobRun
 from lotscope.ai.models import Document
 from lotscope.appeal.models import AppealPacketEntitlement
 from lotscope.assemblage.models import ParcelAssemblage
+from lotscope.buyers.models import BuyerProfile
 from lotscope.core.db import Base
 from lotscope.historic.models import HistoricDistrict
 from lotscope.ingestion.models import DatasetFreshness
@@ -21,6 +22,7 @@ metadata = Base.metadata
 
 __all__ = [
     "AppealPacketEntitlement",
+    "BuyerProfile",
     "DatasetFreshness",
     "Document",
     "FloodZone",

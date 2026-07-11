@@ -1,8 +1,9 @@
-import re
 from dataclasses import dataclass
 from datetime import date
 from statistics import mean, median, pstdev, quantiles
 from typing import Literal
+
+from lotscope.core.names import is_related_party as is_related_party
 
 Confidence = Literal["high", "medium", "low"]
 
@@ -13,47 +14,6 @@ _MEDIUM_MAX_CV = 0.5
 _MIN_COMPS_FOR_TRIM = 4
 _IQR_FENCE = 1.5
 _PERCENTILE_MIN_COMPS = 5
-
-_MIN_NAME_TOKEN_LEN = 3
-_NAME_STOPWORDS = frozenset(
-    {
-        "JR",
-        "SR",
-        "II",
-        "III",
-        "IV",
-        "LLC",
-        "INC",
-        "CO",
-        "CORP",
-        "LP",
-        "LLP",
-        "LTD",
-        "TRUST",
-        "TRUSTEE",
-        "TRUSTEES",
-        "ESTATE",
-        "ETAL",
-        "THE",
-        "AND",
-    }
-)
-_NAME_TOKEN_RE = re.compile(r"[A-Z]+")
-
-
-def _name_tokens(name: str | None) -> frozenset[str]:
-    if not name:
-        return frozenset()
-    tokens = _NAME_TOKEN_RE.findall(name.upper())
-    return frozenset(
-        token
-        for token in tokens
-        if len(token) >= _MIN_NAME_TOKEN_LEN and token not in _NAME_STOPWORDS
-    )
-
-
-def is_related_party(grantor: str | None, grantee: str | None) -> bool:
-    return bool(_name_tokens(grantor) & _name_tokens(grantee))
 
 
 @dataclass(frozen=True)
