@@ -104,9 +104,7 @@ async def test_export_marks_untraced_deals_not_traced(db_session: AsyncSession) 
     user_id = await _seed(db_session)
     await add_deal(db_session, user_id, DealCreate(parcel_number="000000001"), limit=None)
     await add_deal(db_session, user_id, DealCreate(parcel_number="000000002"), limit=None)
-    await update_deal(
-        db_session, user_id, "000000001", DealUpdate(contact_phone="215-555-0100")
-    )
+    await update_deal(db_session, user_id, "000000001", DealUpdate(contact_phone="215-555-0100"))
     await db_session.flush()
 
     rows = {row[0]: row for row in await export_deals(db_session, user_id, row_limit=100)}
