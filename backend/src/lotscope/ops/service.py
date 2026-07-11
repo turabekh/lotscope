@@ -4,7 +4,9 @@ from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.admin.models import JobRun
+from lotscope.ingestion.loaders.sheriff_civilview import CivilViewListRow, CivilViewSheriffSource
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.markets.capabilities import market_capability_notes, market_display_name
 from lotscope.markets.models import Market
 from lotscope.ops.cadence import FreshnessInput, cadence_for, evaluate_freshness
@@ -22,11 +24,70 @@ from lotscope.ops.schemas import (
     JobRunRow,
     MarketGates,
     MarketHealthDetail,
+    SheriffCoverage,
     VerdictVersionCount,
 )
+from lotscope.parcels.models import Parcel
 from lotscope.zoning.models import ZoningStandard
 
 _FAILED = "failed"
+_SHERIFF_COVERAGE_SAMPLE = 12
+
+
+def summarize_sheriff_coverage(
+    rows: list[CivilViewListRow],
+    existing_keys: set[str],
+    *,
+    market_code: str,
+    checked_at: datetime,
+) -> SheriffCoverage:
+    keys: set[str] = set()
+    without_opa = 0
+    for row in rows:
+        key = to_parcel_key(row.opa_number, market=market_code)
+        if key is None:
+            without_opa += 1
+        else:
+            keys.add(key)
+    reconciled_keys = keys & existing_keys
+    unreconciled_keys = keys - existing_keys
+    coverage_pct = round(len(reconciled_keys) / len(keys) * 100, 1) if keys else None
+    return SheriffCoverage(
+        market_code=market_code,
+        total_listings=len(rows),
+        with_opa=len(rows) - without_opa,
+        without_opa=without_opa,
+        unique_parcels=len(keys),
+        reconciled=len(reconciled_keys),
+        unreconciled=len(unreconciled_keys),
+        coverage_pct=coverage_pct,
+        sample_unreconciled=sorted(unreconciled_keys)[:_SHERIFF_COVERAGE_SAMPLE],
+        checked_at=checked_at,
+    )
+
+
+async def sheriff_sale_coverage(
+    session: AsyncSession,
+    source: CivilViewSheriffSource,
+    *,
+    market_code: str,
+    checked_at: datetime,
+) -> SheriffCoverage:
+    rows = await source.fetch_list()
+    candidate_keys = {
+        key
+        for row in rows
+        if (key := to_parcel_key(row.opa_number, market=market_code)) is not None
+    }
+    existing_keys: set[str] = set()
+    if candidate_keys:
+        result = await session.execute(
+            select(Parcel.parcel_number).where(Parcel.parcel_number.in_(candidate_keys))
+        )
+        existing_keys = set(result.scalars().all())
+    return summarize_sheriff_coverage(
+        rows, existing_keys, market_code=market_code, checked_at=checked_at
+    )
 
 
 def _rollup(healths: list[DatasetHealth]) -> HealthRollup:

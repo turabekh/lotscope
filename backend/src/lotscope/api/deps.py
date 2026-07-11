@@ -17,6 +17,7 @@ from lotscope.ai.embeddings import Embedder, VoyageEmbedder
 from lotscope.core.config import Settings
 from lotscope.core.errors import AuthError, ForbiddenError
 from lotscope.ingestion.extract import ExtractClient
+from lotscope.ingestion.loaders.sheriff_civilview import CivilViewSheriffSource
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -71,6 +72,10 @@ def get_source_fetcher(request: Request) -> SourceFetcher:
         return download.content
 
     return _fetch
+
+
+def get_sheriff_coverage_source(request: Request) -> CivilViewSheriffSource:
+    return CivilViewSheriffSource(get_app_settings(request))
 
 
 def get_embedder(request: Request) -> Embedder:

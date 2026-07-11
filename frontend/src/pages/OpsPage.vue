@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { api } from '@/lib/api'
-import type { OpsFleetOverview } from '@/lib/types'
+import type { OpsFleetOverview, OpsSheriffCoverage } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -56,6 +56,22 @@ async function load(): Promise<void> {
     fleet.value = await api.getOpsFleet()
   } finally {
     loading.value = false
+  }
+}
+
+const coverage = ref<OpsSheriffCoverage | null>(null)
+const coverageLoading = ref(false)
+const coverageError = ref<string | null>(null)
+
+async function runCoverage(): Promise<void> {
+  coverageLoading.value = true
+  coverageError.value = null
+  try {
+    coverage.value = await api.runSheriffCoverage()
+  } catch {
+    coverageError.value = 'Coverage check failed — the CivilView list could not be fetched.'
+  } finally {
+    coverageLoading.value = false
   }
 }
 
@@ -124,6 +140,47 @@ onMounted(() => {
         As of {{ formatTime(fleet.generated_at) }}
         <span class="deployed-sha">· deployed {{ shortSha(fleet.git_sha) }}</span>
       </div>
+
+      <div class="text-h6 q-mt-lg q-mb-sm">Sheriff-sale coverage</div>
+      <q-card flat bordered class="coverage-card">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-body2 text-grey-7">
+            Reconciles the live CivilView sheriff-sale list (Philadelphia) against loaded parcels.
+          </div>
+          <q-btn
+            color="primary"
+            unelevated
+            no-caps
+            icon="fact_check"
+            label="Run coverage check"
+            :loading="coverageLoading"
+            @click="runCoverage"
+          />
+        </q-card-section>
+
+        <q-card-section v-if="coverageError" class="text-negative">
+          {{ coverageError }}
+        </q-card-section>
+
+        <q-card-section v-else-if="coverage" class="coverage-result">
+          <div class="coverage-headline">
+            <span class="coverage-pct">{{ pct(coverage.coverage_pct) }}</span>
+            <span class="text-grey-7">
+              {{ count(coverage.reconciled) }} of {{ count(coverage.unique_parcels) }} parcels
+              reconciled
+            </span>
+          </div>
+          <div class="coverage-stats">
+            <span>{{ count(coverage.total_listings) }} listings</span>
+            <span>{{ count(coverage.unreconciled) }} unmatched</span>
+            <span>{{ count(coverage.without_opa) }} without OPA #</span>
+            <span class="text-grey-6">checked {{ formatTime(coverage.checked_at) }}</span>
+          </div>
+          <div v-if="coverage.sample_unreconciled.length" class="coverage-sample text-grey-7">
+            Unmatched sample: {{ coverage.sample_unreconciled.join(', ') }}
+          </div>
+        </q-card-section>
+      </q-card>
     </div>
   </q-page>
 </template>
@@ -159,6 +216,27 @@ onMounted(() => {
   color: #757575;
 }
 .deployed-sha {
+  font-family: monospace;
+}
+.coverage-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.coverage-pct {
+  font-size: 28px;
+  font-weight: 600;
+}
+.coverage-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+.coverage-sample {
+  margin-top: 8px;
+  font-size: 12px;
   font-family: monospace;
 }
 </style>

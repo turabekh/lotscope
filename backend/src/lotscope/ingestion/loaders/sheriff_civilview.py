@@ -176,13 +176,22 @@ class CivilViewSheriffSource:
         )
         return response.text
 
+    def _client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            follow_redirects=True, timeout=self._timeout, transport=self._transport
+        )
+
+    async def fetch_list(self) -> list[CivilViewListRow]:
+        list_url = f"{self._base_url}{_LIST_PATH}"
+        async with self._client() as client:
+            list_html = await self._get(client, list_url, {_COUNTY_ID_PARAM: str(self._county_id)})
+        return parse_sale_list(list_html)
+
     async def fetch(self) -> list[dict[str, Any]]:
         list_url = f"{self._base_url}{_LIST_PATH}"
         detail_url = f"{self._base_url}{_DETAIL_PATH}"
         records: list[dict[str, Any]] = []
-        async with httpx.AsyncClient(
-            follow_redirects=True, timeout=self._timeout, transport=self._transport
-        ) as client:
+        async with self._client() as client:
             list_html = await self._get(client, list_url, {_COUNTY_ID_PARAM: str(self._county_id)})
             rows = parse_sale_list(list_html)
             if self._detail_limit is not None:
