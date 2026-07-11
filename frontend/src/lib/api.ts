@@ -253,6 +253,9 @@ export const api = {
   exportSavedSearch(id: number): Promise<void> {
     return downloadFile(`/saved-searches/${id}/export`, `lotscope-search-${id}.csv`)
   },
+  exportPipeline(): Promise<void> {
+    return downloadFile('/pipeline/export', 'lotscope-pipeline.csv')
+  },
   generateOutreachLetters(params: {
     fromName: string
     fromContact: string

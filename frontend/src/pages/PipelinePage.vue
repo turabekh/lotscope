@@ -1,17 +1,37 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { onMounted, ref } from 'vue'
+import { useQuasar } from 'quasar'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { DealActivityItem, DealItem, DealStage } from '@/lib/types'
+import { useAuthStore } from '@/stores/auth'
 import { useMarketStore } from '@/stores/market'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 
+const $q = useQuasar()
 const router = useRouter()
 const market = useMarketStore()
+const auth = useAuthStore()
 const pipeline = usePipelineStore()
+const { user } = storeToRefs(auth)
 const { deals, today, loading } = storeToRefs(pipeline)
+
+const isFree = computed(() => (user.value?.tier ?? 'free') === 'free')
+const exporting = ref(false)
+
+async function exportCsv(): Promise<void> {
+  exporting.value = true
+  try {
+    await api.exportPipeline()
+  } catch {
+    $q.notify({ type: 'negative', message: 'Export failed — try again in a moment.' })
+  } finally {
+    exporting.value = false
+  }
+}
 
 const tab = ref<'board' | 'today'>('board')
 const dragging = ref<string | null>(null)
@@ -136,10 +156,40 @@ async function saveContact(): Promise<void> {
 
 <template>
   <q-page class="pipeline-page">
-    <q-tabs v-model="tab" dense align="left" class="pipeline-tabs" @update:model-value="switchTab">
-      <q-tab name="board" label="Board" no-caps />
-      <q-tab name="today" label="Today" no-caps />
-    </q-tabs>
+    <div class="pipeline-header">
+      <q-tabs v-model="tab" dense align="left" class="pipeline-tabs" @update:model-value="switchTab">
+        <q-tab name="board" label="Board" no-caps />
+        <q-tab name="today" label="Today" no-caps />
+      </q-tabs>
+      <q-space />
+      <q-btn
+        v-if="isFree"
+        outline
+        dense
+        no-caps
+        size="sm"
+        color="primary"
+        icon="lock"
+        label="Export CSV"
+        class="export-btn"
+        :to="{ name: 'account' }"
+      >
+        <q-tooltip>CSV export is a Pro feature — upgrade to download your pipeline.</q-tooltip>
+      </q-btn>
+      <q-btn
+        v-else
+        dense
+        no-caps
+        size="sm"
+        color="primary"
+        icon="download"
+        label="Export CSV"
+        class="export-btn"
+        :loading="exporting"
+        :disable="deals.length === 0"
+        @click="exportCsv"
+      />
+    </div>
 
     <q-inner-loading :showing="loading" color="primary" />
     <div v-if="!loading && deals.length === 0" class="empty">
@@ -382,9 +432,15 @@ async function saveContact(): Promise<void> {
   display: flex;
   flex-direction: column;
 }
-.pipeline-tabs {
+.pipeline-header {
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--lot-border);
+  padding-right: 12px;
   flex: 0 0 auto;
+}
+.export-btn {
+  margin-left: 8px;
 }
 .today-wrap {
   flex: 1;
