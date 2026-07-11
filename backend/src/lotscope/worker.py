@@ -31,6 +31,7 @@ from lotscope.notifications.service import (
     send_push_alerts,
     send_saved_search_alerts,
 )
+from lotscope.ops.stats import snapshot_market_stats
 from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
 from lotscope.verdict.jobs import recompute_all_verdicts
@@ -114,6 +115,12 @@ async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def snapshot_stats(ctx: dict[str, Any]) -> int:
+    count = await snapshot_market_stats(ctx["session_factory"])
+    _logger.info("snapshotted_market_stats", markets=count)
+    return count
+
+
 _RecomputeFn = Callable[[async_sessionmaker[AsyncSession]], Awaitable[int]]
 
 _RECOMPUTE_DISPATCH: dict[str, _RecomputeFn] = {
@@ -136,6 +143,7 @@ async def _seed_zoning_standards(session_factory: async_sessionmaker[AsyncSessio
 
 _MAINTENANCE_DISPATCH: dict[str, _RecomputeFn] = {
     "maintenance:seed_zoning": _seed_zoning_standards,
+    "maintenance:snapshot_stats": snapshot_market_stats,
 }
 
 
@@ -245,6 +253,7 @@ class WorkerSettings:
         recompute_distress,
         recompute_assemblage,
         recompute_vacancy_confidence,
+        snapshot_stats,
         grant_investor_skiptrace_credits,
         grant_investor_packet_credits,
         send_weekly_digests,
@@ -263,6 +272,7 @@ class WorkerSettings:
         cron(recompute_vacant_verdicts, hour=7, minute=0),
         cron(recompute_distress, hour=8, minute=0),
         cron(recompute_assemblage, hour=8, minute=30),
+        cron(snapshot_stats, hour=9, minute=30),
         cron(grant_investor_skiptrace_credits, day=1, hour=5, minute=0),
         cron(grant_investor_packet_credits, day=1, hour=5, minute=10),
         cron(recompute_verdicts, weekday="sun", hour=5, minute=0),

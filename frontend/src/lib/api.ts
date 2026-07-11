@@ -48,6 +48,8 @@ import type {
   DeedRestrictionsResponse,
   FetchSource,
   JobCatalogEntry,
+  OpsFleetOverview,
+  OpsMarketHealthDetail,
   JobRunSummary,
   NeighborhoodListResponse,
   OwnerPortfolio,
@@ -386,6 +388,12 @@ export const api = {
   },
   getFetchSources(): Promise<FetchSource[]> {
     return request('/admin/fetch/sources')
+  },
+  getOpsFleet(): Promise<OpsFleetOverview> {
+    return request('/admin/ops/fleet')
+  },
+  getOpsMarketHealth(marketCode: string): Promise<OpsMarketHealthDetail> {
+    return request(`/admin/ops/markets/${encodeURIComponent(marketCode)}`)
   },
   pullSource(url: string, filename: string): Promise<void> {
     return downloadFile(`/admin/fetch?url=${encodeURIComponent(url)}`, filename)

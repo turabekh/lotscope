@@ -46,6 +46,18 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin console' },
   },
   {
+    path: '/admin/ops',
+    name: 'ops',
+    component: () => import('@/pages/OpsPage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Fleet health' },
+  },
+  {
+    path: '/admin/ops/:market',
+    name: 'ops-market',
+    component: () => import('@/pages/MarketHealthPage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Market health' },
+  },
+  {
     path: '/:market',
     name: 'market-root',
     redirect: (to) => ({ name: 'home', params: { market: to.params.market } }),

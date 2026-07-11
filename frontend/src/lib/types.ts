@@ -735,6 +735,89 @@ export interface AdminUserUpdate {
   is_active?: boolean
 }
 
+export interface OpsHealthRollup {
+  status: string
+  red: number
+  amber: number
+  green: number
+}
+
+export interface OpsCoverageStats {
+  parcel_count: number | null
+  geometry_pct: number | null
+  verdict_pct: number | null
+  vacant_count: number | null
+  vacant_with_comp_pct: number | null
+  computed_at: string | null
+}
+
+export interface OpsFleetMarketRow {
+  market_code: string
+  name: string
+  launch_status: string
+  health: OpsHealthRollup
+  coverage: OpsCoverageStats
+  last_ingest_at: string | null
+  zoning_standard_count: number
+}
+
+export interface OpsFleetOverview {
+  markets: OpsFleetMarketRow[]
+  generated_at: string
+}
+
+export interface OpsDatasetHealth {
+  dataset: string
+  cadence: string
+  freshness: string
+  reason: string
+  ingest_status: string
+  last_success_at: string | null
+  last_attempt_at: string | null
+  row_count: number | null
+}
+
+export interface OpsCapabilityNote {
+  category: string
+  state: string
+  detail: string
+}
+
+export interface OpsVerdictVersionCount {
+  verdict_version: string | null
+  count: number
+}
+
+export interface OpsJobRunRow {
+  id: number
+  job_id: string
+  label: string
+  kind: string
+  market_code: string | null
+  status: string
+  started_at: string | null
+  finished_at: string | null
+  result_count: number | null
+  error: string | null
+  created_at: string
+}
+
+export interface OpsMarketHealthDetail {
+  market_code: string
+  name: string
+  launch_status: string
+  coverage_note: string | null
+  health: OpsHealthRollup
+  datasets: OpsDatasetHealth[]
+  coverage: OpsCoverageStats
+  zoning_standard_count: number
+  zoning_district_count: number
+  capabilities: OpsCapabilityNote[]
+  verdict_versions: OpsVerdictVersionCount[]
+  recent_jobs: OpsJobRunRow[]
+  generated_at: string
+}
+
 export interface JobParamSpec {
   name: string
   label: string
