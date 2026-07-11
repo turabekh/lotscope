@@ -578,6 +578,9 @@ export const api = {
       `${market}-sales.ics`,
     )
   },
+  getSheriffSubscribeUrl(market: string): Promise<{ url: string }> {
+    return request(`/sheriff-sales/calendar/subscribe?market=${encodeURIComponent(market)}`)
+  },
   getTopPlays(
     params: { neighborhood?: string; zoning?: string; limit?: number } = {},
   ): Promise<AssemblageTopResponse> {

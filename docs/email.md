@@ -46,7 +46,8 @@ unsubscribe token URL; ops/admin mail does not.
 Enabling SMTP activates **all** email paths on their crons (`worker.py`), not just one:
 
 - **User-facing:** watchlist digests (daily 13:00 / weekly Mon 13:30), feed digests (13:15), saved-search
-  match alerts (09:00), deal reminders (13:45).
+  match alerts (09:00), deal reminders (13:45), the "sales this week" calendar digest (Mon 08:00,
+  quiet-when-empty, Pro+ only).
 - **Admin-facing (ops):** ops health digest (10:00, quiet-when-green), failure alerts (05:30, post-ingest).
 
 So turning SMTP on in production means real users start receiving mail at the next scheduled run. Test

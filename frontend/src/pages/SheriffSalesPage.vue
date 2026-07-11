@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useQuasar } from 'quasar'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -8,6 +9,7 @@ import type { RepositoryList, SheriffSaleItem, SheriffSalesResponse } from '@/li
 import { useAuthStore } from '@/stores/auth'
 import { useMarketStore } from '@/stores/market'
 
+const $q = useQuasar()
 const router = useRouter()
 const market = useMarketStore()
 const auth = useAuthStore()
@@ -62,6 +64,20 @@ async function downloadIcs(): Promise<void> {
     await api.downloadSheriffIcs(market.active)
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Could not download the calendar feed.'
+  }
+}
+
+async function copySubscribeUrl(): Promise<void> {
+  try {
+    const { url } = await api.getSheriffSubscribeUrl(market.active)
+    await navigator.clipboard.writeText(url)
+    $q.notify({
+      type: 'positive',
+      message: 'Subscription link copied — add it as a calendar subscription in your calendar app.',
+    })
+  } catch (cause) {
+    error.value =
+      cause instanceof ApiError ? cause.message : 'Could not create the subscription link.'
   }
 }
 
@@ -141,15 +157,20 @@ onMounted(() => {
             </q-input>
           </div>
           <div class="col-auto">
-            <q-btn
-              outline
-              no-caps
-              color="primary"
-              icon="event"
-              label="Add to calendar (.ics)"
-              :disable="!result || result.items.length === 0"
-              @click="downloadIcs"
-            />
+            <q-btn-group outline>
+              <q-btn
+                outline
+                no-caps
+                color="primary"
+                icon="download"
+                label="Download .ics"
+                :disable="!result || result.items.length === 0"
+                @click="downloadIcs"
+              />
+              <q-btn outline no-caps color="primary" icon="event_repeat" label="Subscribe" @click="copySubscribeUrl">
+                <q-tooltip>Copy a personal subscription link to add in your calendar app.</q-tooltip>
+              </q-btn>
+            </q-btn-group>
           </div>
         </div>
 

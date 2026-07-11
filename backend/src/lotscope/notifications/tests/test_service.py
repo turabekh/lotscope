@@ -160,3 +160,31 @@ async def test_send_user_feed_digest_noop_without_events(db_session: AsyncSessio
     sender = _FakeSender()
     assert await send_user_feed_digest(db_session, sender, _settings(), user) is False
     assert sender.messages == []
+
+
+async def test_sales_week_content_quiet_when_no_upcoming(db_session: AsyncSession) -> None:
+    from lotscope.notifications.service import _sales_week_content
+
+    assert await _sales_week_content(db_session) is None
+
+
+async def test_sales_week_content_lists_upcoming_phl_sales(db_session: AsyncSession) -> None:
+    from lotscope.notifications.service import _sales_week_content
+
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, address) VALUES ('phl:000000009', '9 Elm St')")
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale (parcel_number, case_number, sale_date, status, opening_bid) "
+            "VALUES ('phl:000000009', 'BW-9', (now() + interval '3 days')::date, 'Open', 8000)"
+        )
+    )
+    await db_session.flush()
+
+    content = await _sales_week_content(db_session)
+    assert content is not None
+    assert content.label == "Sheriff sales"
+    assert len(content.items) == 1
+    assert content.items[0].address == "9 Elm St"
+    assert 0 <= content.items[0].days_until <= 7

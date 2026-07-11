@@ -56,3 +56,24 @@ def verify_unsubscribe_token(settings: Settings, token: str) -> int | None:
     if not isinstance(subject, str) or not subject.isdigit():
         return None
     return int(subject)
+
+
+_CALENDAR_PURPOSE = "calendar_feed"
+
+
+def create_calendar_token(settings: Settings, *, user_id: int) -> str:
+    payload: dict[str, Any] = {"sub": str(user_id), "purpose": _CALENDAR_PURPOSE}
+    return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
+
+
+def verify_calendar_token(settings: Settings, token: str) -> int | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != _CALENDAR_PURPOSE:
+        return None
+    subject = payload.get("sub")
+    if not isinstance(subject, str) or not subject.isdigit():
+        return None
+    return int(subject)

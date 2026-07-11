@@ -22,6 +22,8 @@ from lotscope.notifications.digest import (
     MatchAlertContent,
     MatchAlertParcel,
     MatchAlertSearch,
+    SalesWeekContent,
+    SalesWeekItem,
     deal_reminder_subject,
     digest_subject,
     feed_digest_subject,
@@ -34,11 +36,15 @@ from lotscope.notifications.digest import (
     render_feed_digest_text,
     render_match_alert_html,
     render_match_alert_text,
+    render_sales_week_html,
+    render_sales_week_text,
+    sales_week_subject,
 )
 from lotscope.notifications.email import EmailSender
 from lotscope.notifications.models import PushSubscription
 from lotscope.notifications.push import PushExpiredError, PushSender, PushSubscriptionInfo
 from lotscope.pipeline.service import deals_due
+from lotscope.risk.service import list_sheriff_sales
 from lotscope.savedsearch.schemas import SavedSearchAlert
 from lotscope.savedsearch.service import (
     alerting_user_ids,
@@ -465,4 +471,92 @@ async def send_deal_reminders(
                 logger.exception("deal_reminder_failed", user_id=user_id)
 
     logger.info("deal_reminders_sent", count=sent)
+    return sent
+
+
+_SALES_WEEK_WINDOW = timedelta(days=7)
+
+
+async def _sales_week_content(session: AsyncSession) -> SalesWeekContent | None:
+    today = datetime.now(UTC).date()
+    calendar = await list_sheriff_sales(
+        session,
+        market_code="phl",
+        date_from=today,
+        date_to=today + _SALES_WEEK_WINDOW,
+        limit=50,
+    )
+    items = [
+        SalesWeekItem(
+            address=item.address or item.parcel_number,
+            sale_date=item.sale_date.isoformat(),
+            days_until=(item.sale_date - today).days,
+            opening_bid=item.opening_bid,
+            opportunity_score=item.opportunity_score,
+        )
+        for item in calendar.items
+        if item.sale_date is not None
+    ]
+    if not items:
+        return None
+    return SalesWeekContent(label=calendar.label, items=items)
+
+
+async def send_sales_week_digest(
+    session_factory: async_sessionmaker[AsyncSession],
+    sender: EmailSender | None,
+    settings: Settings,
+) -> int:
+    logger = get_logger("notifications")
+    if sender is None:
+        logger.info("sales_week_skipped_unconfigured")
+        return 0
+
+    async with session_factory() as session:
+        content = await _sales_week_content(session)
+    if content is None:
+        logger.info("sales_week_quiet_when_empty")
+        return 0
+
+    async with session_factory() as session:
+        users = list(
+            (
+                await session.execute(
+                    select(User).where(User.is_active.is_(True), User.digest_frequency != "off")
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    calendar_url = f"{settings.app_base_url.rstrip('/')}/philadelphia/sheriff-sales"
+    sent = 0
+    for user in users:
+        if not feed_access(user.tier):
+            continue
+        token = create_unsubscribe_token(settings, user_id=user.id)
+        unsubscribe_url = f"{settings.api_base_url.rstrip('/')}/digests/unsubscribe?token={token}"
+        try:
+            await sender.send(
+                to=user.email,
+                subject=sales_week_subject(content),
+                html=render_sales_week_html(
+                    content,
+                    calendar_url=calendar_url,
+                    unsubscribe_url=unsubscribe_url,
+                    postal_address=settings.company_postal_address,
+                ),
+                text=render_sales_week_text(
+                    content,
+                    calendar_url=calendar_url,
+                    unsubscribe_url=unsubscribe_url,
+                    postal_address=settings.company_postal_address,
+                ),
+                list_unsubscribe=unsubscribe_url,
+            )
+            sent += 1
+        except Exception:
+            logger.exception("sales_week_send_failed", user_id=user.id)
+
+    logger.info("sales_week_sent", count=sent)
     return sent
