@@ -8,15 +8,19 @@ from lotscope.ingestion.models import DatasetFreshness
 from lotscope.markets.capabilities import market_capability_notes, market_display_name
 from lotscope.markets.models import Market
 from lotscope.ops.cadence import FreshnessInput, cadence_for, evaluate_freshness
-from lotscope.ops.models import MarketStats
+from lotscope.ops.models import MarketGateItem, MarketStats
 from lotscope.ops.schemas import (
     CapabilityNote,
     CoverageStats,
     DatasetHealth,
     FleetMarketRow,
     FleetOverview,
+    GateBoard,
+    GateItem,
+    GateSummary,
     HealthRollup,
     JobRunRow,
+    MarketGates,
     MarketHealthDetail,
     VerdictVersionCount,
 )
@@ -168,6 +172,46 @@ async def _recent_jobs(session: AsyncSession, market_code: str, limit: int) -> l
     return [JobRunRow.model_validate(row) for row in rows]
 
 
+async def _market_gates(session: AsyncSession, market_code: str) -> list[GateSummary]:
+    rows = (
+        await session.execute(
+            select(MarketGateItem)
+            .where(MarketGateItem.market_code == market_code)
+            .order_by(MarketGateItem.gate_type, MarketGateItem.ordinal)
+        )
+    ).scalars()
+    by_type: dict[str, list[GateItem]] = {}
+    for row in rows:
+        by_type.setdefault(row.gate_type, []).append(GateItem.model_validate(row))
+    return [
+        GateSummary(
+            gate_type=gate_type,
+            satisfied=sum(1 for item in items if item.satisfied),
+            total=len(items),
+            items=items,
+        )
+        for gate_type, items in sorted(by_type.items())
+    ]
+
+
+async def gate_board(session: AsyncSession, now: datetime) -> GateBoard:
+    markets = (await session.execute(select(Market).order_by(Market.code))).scalars().all()
+    rows: list[MarketGates] = []
+    for market in markets:
+        gates = await _market_gates(session, market.code)
+        if not gates:
+            continue
+        rows.append(
+            MarketGates(
+                market_code=market.code,
+                name=market.name,
+                launch_status=market.launch_status,
+                gates=gates,
+            )
+        )
+    return GateBoard(markets=rows, generated_at=now)
+
+
 async def market_health(
     session: AsyncSession, market_code: str, now: datetime, *, job_limit: int = 20
 ) -> MarketHealthDetail | None:
@@ -193,6 +237,7 @@ async def market_health(
         zoning_district_count=districts,
         capabilities=capabilities,
         verdict_versions=await _verdict_versions(session, market_code),
+        gates=await _market_gates(session, market_code),
         recent_jobs=await _recent_jobs(session, market_code, job_limit),
         generated_at=now,
     )

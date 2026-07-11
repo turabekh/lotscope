@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 
 from lotscope.api.admin import router as admin_router
-from lotscope.api.ops import router as ops_router
 from lotscope.api.assemblage import router as assemblage_router
 from lotscope.api.auth import router as auth_router
 from lotscope.api.billing import router as billing_router
@@ -22,6 +21,7 @@ from lotscope.api.leads import router as leads_router
 from lotscope.api.maps import router as maps_router
 from lotscope.api.markets import router as markets_router
 from lotscope.api.neighborhoods import router as neighborhoods_router
+from lotscope.api.ops import router as ops_router
 from lotscope.api.outreach import router as outreach_router
 from lotscope.api.parcels import router as parcels_router
 from lotscope.api.pipeline import router as pipeline_router

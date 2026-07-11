@@ -37,6 +37,19 @@ function stateColor(state: string): string {
   return 'warning'
 }
 
+function gateStatusColor(status: string): string {
+  if (status === 'met' || status === 'pass') return 'positive'
+  if (status === 'honest_degradation') return 'teal'
+  if (status === 'blocked') return 'negative'
+  return 'warning'
+}
+
+function gateLabel(gateType: string): string {
+  if (gateType === 'graduation') return 'Graduation gate'
+  if (gateType === 'parity') return 'Data-parity gate'
+  return gateType
+}
+
 function pct(value: number | null): string {
   return value === null ? '—' : `${value.toFixed(1)}%`
 }
@@ -174,6 +187,47 @@ watch(marketCode, () => {
           </q-card>
         </div>
 
+        <template v-for="gate in detail.gates" :key="gate.gate_type">
+          <div class="text-subtitle2 q-mt-md q-mb-xs">
+            {{ gateLabel(gate.gate_type) }}
+            <span class="gate-count">{{ gate.satisfied }} / {{ gate.total }} satisfied</span>
+          </div>
+          <q-markup-table flat bordered>
+            <thead>
+              <tr>
+                <th class="text-left">#</th>
+                <th class="text-left">Condition</th>
+                <th class="text-left">Status</th>
+                <th class="text-left">Threshold / measured</th>
+                <th class="text-left">Owner / evidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in gate.items" :key="item.ordinal">
+                <td class="text-left">{{ item.ordinal }}</td>
+                <td class="text-left">{{ item.title }}</td>
+                <td class="text-left">
+                  <q-badge :color="gateStatusColor(item.status)" text-color="white">
+                    {{ item.status }}
+                  </q-badge>
+                  <span v-if="item.qualifier" class="gate-qualifier">{{ item.qualifier }}</span>
+                </td>
+                <td class="text-left gate-measured">
+                  <template v-if="item.threshold">
+                    <b>{{ item.threshold }}</b>
+                    <div v-if="item.measured">{{ item.measured }}</div>
+                  </template>
+                  <span v-else>—</span>
+                </td>
+                <td class="text-left gate-evidence">
+                  <b v-if="item.owner">{{ item.owner }}</b>
+                  <div v-if="item.evidence">{{ item.evidence }}</div>
+                </td>
+              </tr>
+            </tbody>
+          </q-markup-table>
+        </template>
+
         <div class="text-subtitle2 q-mt-md q-mb-xs">Verdict versions</div>
         <div class="versions">
           <q-badge
@@ -292,6 +346,23 @@ watch(marketCode, () => {
 }
 .version-chip {
   font-size: 12px;
+}
+.gate-count {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #757575;
+}
+.gate-qualifier {
+  margin-left: 6px;
+  font-size: 12px;
+  color: #616161;
+}
+.gate-measured,
+.gate-evidence {
+  font-size: 13px;
+  color: #616161;
+  max-width: 320px;
 }
 .error-cell {
   color: #c10015;
