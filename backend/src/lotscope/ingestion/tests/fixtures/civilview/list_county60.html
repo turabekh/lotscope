@@ -1,0 +1,192 @@
+<!doctype html><html><head><title>Sales Search</title></head><body>
+<table class="table table-striped table-bordered">
+<thead>
+                <tr>
+                        <th class="hidden-print" aria-label="Property Link"></th>
+
+                            <th>Book &amp; Writ</th>
+                            <th>OPA #</th>
+                            <th>Address</th>
+                            <th>Plaintiff</th>
+
+                </tr>
+            </thead>
+<tbody>
+<tr>
+            <th>
+
+                    <h1>Philadelphia County, PA - Real Estate Sales Listing <span style="color:#595959; font-size:large;">(last updated: 7/11/2026 1:53:00 PM)</span></h1>
+                    <div>This site is provided as a public service by the Philadelphia County Sheriffs Office and is only intended to be a general summary information to the public. The Philadelphia County Sheriffs Office does not warrant the accuracy, completeness, or timeliness of this information.</div>
+                                
+                <span id="ErrorLabel" class="btn-danger" style="visibility:hidden"></span>
+            </th>
+           
+        </tr>
+    </table>
+
+<form action="/Sales/SalesSearch" class="form-horizontal" id="search_form" method="post" role="form">        <div class="hidden-print">
+        <br />
+        <div class="form-group">
+            <div class="col-sm-9 row">
+                <div class="col-sm-2">
+                    <input type="submit" value="Search" class="btn btn-primary" />
+                </div>
+                <div class="col-sm-2">
+                    <input type="button" value="Clear" class="btn btn-primary" onclick="doClearBtnClick()" />
+                </div>
+            </div>
+            <div class="row"> </div>
+            <br />
+                <div class="col-sm-12" row>
+                    <div class="col-sm-7">
+                    </div>
+                    <fieldset class="col-sm-5" row>
+                        <legend>Status</legend>
+                        <div class="col-sm-6">
+                            <input Checked="checked" checked="checked" id="open-radio" name="IsOpen" onClick="getSearchCriteria(true)" type="radio" value="true" /> 
+                            <label for="open-radio">Open </label>
+                        </div>
+                        <div class="col-sm-6">
+                            <input id="sold-radio" name="IsOpen" onClick="getSearchCriteria(false)" type="radio" value="false" /> 
+                            <label for="sold-radio">Sold\Cancelled </label>
+                        </div>
+                    </fieldset>
+                </div>
+        </div>
+  
+
+                <div class="form-group">
+                    <div class="col-sm-1 control-label text-nowrap"><label for="SheriffNumber">Sheriff #:</label></div>
+                    <div class="col-sm-4"><input class="form-control" id="SheriffNumber" name="SheriffNumber" type="text" value="" /></div>
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-1 control-label text-nowrap"><label for="BookWrit">Book &amp; Writ:</label></div>
+                    <div class="col-sm-4"><input class="form-control" id="BookWrit" name="BookWrit" type="text" value="" /></div>
+                </div>
+                <div class="form-group">
+                <div class="col-sm-1 control-label text-nowrap" style="font-weight: bold" for="PropertyStatusDate">Sales Date:</div>
+                <div class="col-sm-5 row">
+                    <div class="col-sm-5">
+                        <label for="PropertyStatusDate" class="sr-only">Sales Date</label>
+                        <select class="form-control" id="PropertyStatusDate" name="PropertyStatusDate" onChange="dateChanged(this)"><option value=""></option>
+<option value="07/15/2026">07/15/2026</option>
+<option value="07/16/2026">07/16/2026</option>
+<option value="07/21/2026">07/21/2026</option>
+<option value="07/24/2026">07/24/2026</option>
+<option value="08/04/2026">08/04/2026</option>
+<option value="08/19/2026">08/19/2026</option>
+<option value="08/25/2026">08/25/2026</option>
+<option value="08/28/2026">08/28/2026</option>
+<option value="09/01/2026">09/01/2026</option>
+<option value="09/16/2026">09/16/2026</option>
+<option value="10/06/2026">10/06/2026</option>
+<option value="10/21/2026">10/21/2026</option>
+<option value="11/03/2026">11/03/2026</option>
+<option value="11/18/2026">11/18/2026</option>
+<option value="11/19/2026">11/19/2026</option>
+<option value="12/01/2026">12/01/2026</option>
+<option value="12/16/2026">12/16/2026</option>
+<option value="03/06/2027">03/06/2027</option>
+</select>
+                    </div>
+                    <div class="col-sm-1 control-label text-nowrap" style="font-weight: bold">or</div>
+                    <div class="col-sm-5">
+                        <label for="MonthNumber" class="sr-only">Sales Month</label>
+                        <select class="form-control" data-val="true" data-val-number="The field MonthNumber must be a number." data-val-required="The MonthNumber field is required." id="MonthNumber" name="MonthNumber" onChange="monthChanged()"><option selected="selected" value="0"></option>
+<option value="3">March</option>
+<option value="7">July</option>
+<option value="8">August</option>
+<option value="9">September</option>
+<option value="10">October</option>
+<option value="11">November</option>
+<option value="12">December</option>
+</select>
+                    </div>
+                </div>
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-1 control-label text-nowrap"><label for="PlaintiffTitle">Plaintiff:</label></div>
+                    <div class="col-sm-4"><input class="form-control" id="PlaintiffTitle" name="PlaintiffTitle" type="text" value="" /></div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-1 control-label text-nowrap"><label for="Address">Address:</label></div>
+                    <div class="col-sm-4"><input class="form-control" id="Address" name="Address" type="text" value="" /></div>
+                    <div class="col-sm-1"></div>
+                    <div><label class="col-sm-1 control-label text-nowrap" for="CityDesc">City:</label></div>
+                    <div class="col-sm-5">
+                        <select class="form-control" id="CityDesc" name="CityDesc"><option value=""></option>
+<option value="NORTH WALES">NORTH WALES</option>
+<option value="PHILADELPHIA">PHILADELPHIA</option>
+</select>
+                    </div>
+                </div>
+
+    <div>
+
+        <br />
+    </div>
+    <h2><span style="color:#595959; font-size: large;" class="hidden-print">Click the Details link next to the property to view additional information. (1493 search results)</span></h2>
+</div>
+
+    <div>
+        <table class="table table-striped ">
+            <thead>
+                <tr>
+                        <th class="hidden-print" aria-label="Property Link"></th>
+
+                            <th>Book &amp; Writ</th>
+                            <th>OPA #</th>
+                            <th>Address</th>
+                            <th>Plaintiff</th>
+
+                </tr>
+            </thead>
+            <tr>
+                    <td class="hidden-print"><a href="/Sales/SaleDetails?PropertyId=2049301182" style="color: #255783;">View Details</a></td>
+
+                                    <td>2407-031</td>
+                                    <td>191165600</td>
+                                    <td>2346 NORTH BODINE STREET PHILADELPHIA PA 19133-3311</td>
+                                    <td>CITY OF PHILADELPHIA</td>
+            </tr>
+<tr>
+                    <td class="hidden-print"><a href="/Sales/SaleDetails?PropertyId=2049301183" style="color: #255783;">View Details</a></td>
+
+                                    <td>2407-016</td>
+                                    <td>242181300</td>
+                                    <td>636 NORTH 37TH STREET PHILADELPHIA PA 19104</td>
+                                    <td>CITY OF PHILADELPHIA</td>
+            </tr>
+<tr>
+                    <td class="hidden-print"><a href="/Sales/SaleDetails?PropertyId=2049301184" style="color: #255783;">View Details</a></td>
+
+                                    <td>2407-055</td>
+                                    <td>191242000</td>
+                                    <td>2258 NORTH LEITHGOW STREET PHILADELPHIA PA 19133</td>
+                                    <td>CITY OF PHILADELPHIA</td>
+            </tr>
+<tr>
+                    <td class="hidden-print"><a href="/Sales/SaleDetails?PropertyId=2049301208" style="color: #255783;">View Details</a></td>
+
+                                    <td>2410-038</td>
+                                    <td>362100300</td>
+                                    <td>2617 EARP STREET PHILADELPHIA PA 19146</td>
+                                    <td>CITY OF PHILADELPHIA</td>
+            </tr>
+<tr>
+                    <td class="hidden-print"><a href="/Sales/SaleDetails?PropertyId=2049301209" style="color: #255783;">View Details</a></td>
+
+                                    <td>2410-059</td>
+                                    <td>191239700</td>
+                                    <td>2216 NORTH LEITHGOW STREET PHILADELPHIA PA 19133</td>
+                                    <td>CITY OF PHILADELPHIA</td>
+            </tr>
+<tr>
+                    <td class="hidden-print"><a href="/Sales/SaleDetails?PropertyId=2049301210" style="color: #255783;">View Details</a></td>
+
+                                    <td>2410-060</td>
+                                    <td>191241900</td>
+                                    <td>2256 NORTH LEITHGOW STREET PHILADELPHIA PA 19133</td>
+                                    <td>CITY OF PHILADELPHIA</td>
+            </tr>
+</tbody>
+</table>
+</body></html>

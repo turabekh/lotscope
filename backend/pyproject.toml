@@ -25,6 +25,7 @@ dependencies = [
     "fpdf2>=2.8.7",
     "python-multipart>=0.0.32",
     "pypdf>=6.14.2",
+    "selectolax>=0.4.10",
 ]
 
 [project.optional-dependencies]

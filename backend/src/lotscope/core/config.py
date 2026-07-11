@@ -100,7 +100,12 @@ class Settings(BaseSettings):
 
     carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
     arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
+    sheriff_sale_source: str = "csv"
     sheriff_sale_csv_path: str | None = None
+    sheriff_sale_county_id: int = 60
+    sheriff_sale_civilview_base_url: str = "https://salesweb.civilview.com"
+    sheriff_sale_civilview_request_delay_seconds: float = 0.5
+    sheriff_sale_civilview_detail_limit: int | None = None
 
     rtt_min_sale_date: str = "2005-01-01"
     li_min_event_date: str = "2023-01-01"
