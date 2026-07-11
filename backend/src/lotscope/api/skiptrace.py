@@ -43,7 +43,13 @@ async def skip_trace(
     provider = get_skiptrace_provider(settings)
     if provider is None:
         raise ConfigurationError("Skip trace is not available yet.")
-    result = await trace_owner(session, provider, current_user.id, parcel_number)
+    result = await trace_owner(
+        session,
+        provider,
+        current_user.id,
+        parcel_number,
+        ttl_days=settings.skiptrace_cache_ttl_days,
+    )
     await session.commit()
     return result
 
