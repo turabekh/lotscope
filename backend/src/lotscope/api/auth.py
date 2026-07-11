@@ -1,4 +1,5 @@
 import contextlib
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -64,6 +65,17 @@ async def set_digest_preference(
 ) -> UserRead:
     user.digest_frequency = data.frequency
     await session.commit()
+    return UserRead.model_validate(user)
+
+
+@router.post("/onboarded", response_model=UserRead)
+async def mark_onboarded(
+    session: SessionDep,
+    user: Annotated[User, Depends(get_current_user)],
+) -> UserRead:
+    if user.onboarded_at is None:
+        user.onboarded_at = datetime.now(UTC)
+        await session.commit()
     return UserRead.model_validate(user)
 
 

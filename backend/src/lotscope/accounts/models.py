@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -21,3 +23,4 @@ class User(Base, TimestampMixin):
     digest_frequency: Mapped[str] = mapped_column(
         String(10), nullable=False, default="weekly", server_default="weekly"
     )
+    onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

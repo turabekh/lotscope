@@ -1101,6 +1101,38 @@ async def test_digest_preference_and_unsubscribe(db_session: AsyncSession) -> No
     assert frequency == "off"
 
 
+@pytest.mark.integration
+async def test_mark_onboarded_sets_timestamp_and_is_idempotent(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
+            "VALUES (1, 'ob@example.com', 'x', 'user', 'free', true)"
+        )
+    )
+    await db_session.flush()
+
+    app = _app_with_session(db_session)
+
+    async def _current() -> User:
+        fetched = await db_session.get(User, 1)
+        assert fetched is not None
+        return fetched
+
+    app.dependency_overrides[get_current_user] = _current
+
+    async with _client(app) as client:
+        first = await client.post("/auth/onboarded")
+        assert first.status_code == 200
+        first_at = first.json()["onboarded_at"]
+        assert first_at is not None
+
+        second = await client.post("/auth/onboarded")
+        assert second.json()["onboarded_at"] == first_at
+
+    stored = await db_session.scalar(text("SELECT onboarded_at FROM app_user WHERE id = 1"))
+    assert stored is not None
+
+
 async def test_basemap_session_unconfigured_returns_503() -> None:
     app = create_app()
     app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
