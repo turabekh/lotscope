@@ -27,7 +27,11 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    result.value = await api.getSheriffSales({ zip: zip.value.trim() || undefined, limit: 200 })
+    result.value = await api.getSheriffSales({
+      market: market.active,
+      zip: zip.value.trim() || undefined,
+      limit: 200,
+    })
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Could not load sheriff sales.'
   } finally {
@@ -37,6 +41,27 @@ async function load(): Promise<void> {
     repo.value = await api.getRepositoryList(market.active)
   } catch {
     repo.value = null
+  }
+}
+
+const monthGroups = computed(() => {
+  const groups = new Map<string, SheriffSaleItem[]>()
+  for (const item of result.value?.items ?? []) {
+    const key = item.sale_date
+      ? new Date(item.sale_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      : 'Date to be announced'
+    const bucket = groups.get(key)
+    if (bucket) bucket.push(item)
+    else groups.set(key, [item])
+  }
+  return [...groups.entries()].map(([month, items]) => ({ month, items }))
+})
+
+async function downloadIcs(): Promise<void> {
+  try {
+    await api.downloadSheriffIcs(market.active)
+  } catch (cause) {
+    error.value = cause instanceof ApiError ? cause.message : 'Could not download the calendar feed.'
   }
 }
 
@@ -115,6 +140,17 @@ onMounted(() => {
               </template>
             </q-input>
           </div>
+          <div class="col-auto">
+            <q-btn
+              outline
+              no-caps
+              color="primary"
+              icon="event"
+              label="Add to calendar (.ics)"
+              :disable="!result || result.items.length === 0"
+              @click="downloadIcs"
+            />
+          </div>
         </div>
 
         <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders q-mb-md">
@@ -123,44 +159,55 @@ onMounted(() => {
 
         <q-inner-loading :showing="loading" color="primary" />
 
-        <q-list v-if="result && result.items.length" bordered separator class="rounded-borders">
-          <q-item
-            v-for="item in result.items"
-            :key="item.case_number"
-            v-ripple
-            clickable
-            @click="openItem(item)"
-          >
-            <q-item-section avatar>
-              <q-chip dense square :color="countdownColor(item.sale_date)" text-color="white">
-                {{ countdownLabel(item.sale_date) }}
-              </q-chip>
-            </q-item-section>
-            <q-item-section>
-              <q-item-label class="ellipsis">{{ item.address ?? item.parcel_number }}</q-item-label>
-              <q-item-label caption class="ellipsis">
-                {{ item.sale_type ?? 'Sale' }} · {{ item.case_number }}
-                <span v-if="item.plaintiff"> · {{ item.plaintiff }}</span>
-              </q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <div class="row items-center q-gutter-xs">
-                <q-badge v-if="item.bid_gap !== null" color="positive" outline>
-                  Gap {{ money(item.bid_gap) }}
-                </q-badge>
-                <q-badge v-if="item.opportunity_score !== null" color="primary" outline>
-                  {{ item.opportunity_score }}
-                </q-badge>
-              </div>
-              <div class="text-caption text-grey-6 q-mt-xs">Bid {{ money(item.opening_bid) }}</div>
-            </q-item-section>
-          </q-item>
-        </q-list>
+        <template v-if="result && result.items.length">
+          <div v-for="group in monthGroups" :key="group.month" class="q-mb-md">
+            <div class="text-subtitle2 text-grey-7 q-mb-xs">{{ group.month }}</div>
+            <q-list bordered separator class="rounded-borders">
+              <q-item
+                v-for="item in group.items"
+                :key="item.case_number"
+                v-ripple
+                clickable
+                @click="openItem(item)"
+              >
+                <q-item-section avatar>
+                  <q-chip dense square :color="countdownColor(item.sale_date)" text-color="white">
+                    {{ countdownLabel(item.sale_date) }}
+                  </q-chip>
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="ellipsis">
+                    {{ item.address ?? item.parcel_number }}
+                  </q-item-label>
+                  <q-item-label caption class="ellipsis">
+                    {{ item.sale_type ?? 'Sale' }} · {{ item.case_number }}
+                    <span v-if="item.plaintiff"> · {{ item.plaintiff }}</span>
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <div class="row items-center q-gutter-xs">
+                    <q-badge v-if="item.bid_gap !== null" color="positive" outline>
+                      Gap {{ money(item.bid_gap) }}
+                    </q-badge>
+                    <q-badge v-if="item.opportunity_score !== null" color="primary" outline>
+                      {{ item.opportunity_score }}
+                    </q-badge>
+                  </div>
+                  <div class="text-caption text-grey-6 q-mt-xs">
+                    Bid {{ money(item.opening_bid) }}
+                  </div>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+        </template>
 
         <div v-else-if="result && !loading" class="empty">
-          <q-icon name="gavel" size="40px" color="grey-4" />
-          <div class="text-body1 q-mt-sm">No sheriff sales found.</div>
-          <div class="text-caption text-grey-6">Clear the ZIP filter to see the full calendar.</div>
+          <q-icon name="event_busy" size="40px" color="grey-4" />
+          <div class="text-body1 q-mt-sm">No upcoming {{ result.label.toLowerCase() }}</div>
+          <div class="text-caption text-grey-6">
+            {{ result.note ?? 'Clear the ZIP filter to see the full calendar.' }}
+          </div>
         </div>
 
         <div v-if="result && result.returned < result.total" class="text-caption text-grey-6 q-mt-sm">
