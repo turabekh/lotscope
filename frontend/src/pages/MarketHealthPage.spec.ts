@@ -49,6 +49,28 @@ const { getMarketHealthMock } = vi.hoisted(() => ({
         },
       ],
       verdict_versions: [{ verdict_version: 'v8', count: 20000 }],
+      gates: [
+        {
+          gate_type: 'graduation',
+          satisfied: 3,
+          total: 8,
+          items: [
+            {
+              ordinal: 4,
+              title: 'Repository wired; upset/judicial pipeline armed',
+              status: 'met',
+              satisfied: false,
+              qualifier: 'repository only',
+              threshold: null,
+              measured: null,
+              owner: null,
+              evidence: 'Repository list live; upset/judicial still armed.',
+              spec_ref: null,
+              as_of: '2026-07-06',
+            },
+          ],
+        },
+      ],
       recent_jobs: [],
       generated_at: '2026-07-11T12:00:00Z',
     }),
@@ -98,6 +120,13 @@ describe('MarketHealthPage', () => {
     expect(wrapper.text()).toContain('no_data_source')
     expect(wrapper.text()).toContain('does not publish a code-enforcement')
     expect(wrapper.text()).toContain('v8: 20,000')
+  })
+
+  it('renders the gate panel with the honest satisfied count', async () => {
+    const wrapper = await mountPage()
+    expect(wrapper.text()).toContain('Graduation gate')
+    expect(wrapper.text()).toContain('3 / 8 satisfied')
+    expect(wrapper.text()).toContain('repository only')
   })
 
   it('blocks non-admins', async () => {

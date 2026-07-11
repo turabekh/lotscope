@@ -802,6 +802,27 @@ export interface OpsJobRunRow {
   created_at: string
 }
 
+export interface OpsGateItem {
+  ordinal: number
+  title: string
+  status: string
+  satisfied: boolean
+  qualifier: string | null
+  threshold: string | null
+  measured: string | null
+  owner: string | null
+  evidence: string | null
+  spec_ref: string | null
+  as_of: string | null
+}
+
+export interface OpsGateSummary {
+  gate_type: string
+  satisfied: number
+  total: number
+  items: OpsGateItem[]
+}
+
 export interface OpsMarketHealthDetail {
   market_code: string
   name: string
@@ -814,6 +835,7 @@ export interface OpsMarketHealthDetail {
   zoning_district_count: number
   capabilities: OpsCapabilityNote[]
   verdict_versions: OpsVerdictVersionCount[]
+  gates: OpsGateSummary[]
   recent_jobs: OpsJobRunRow[]
   generated_at: string
 }
