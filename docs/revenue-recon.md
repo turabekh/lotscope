@@ -198,3 +198,21 @@ NOT needed — already done.**
 5. **phl calendar source** — is wiring a live Philadelphia Sheriff source (CivilView scrape / periodic CSV)
    in scope for Slice 4, or does the calendar ship honest-empty for phl until a source is provided? (This is
    the one thing standing between "renders real phl dates" and "renders honest states".)
+
+---
+
+## Decisions confirmed (owner, 2026-07-11)
+
+1. **Proceed as re-scoped** — build net-new only per §7; skip everything already shipped.
+2. **Skip-trace provider = BatchData.** Build the real client behind the existing protocol; **drop the
+   reuse TTL 90 → ≤30 days** to satisfy the cache-refresh clause and cite it in the ADR (0060). Owner
+   creates the account/keys + accepts terms (`SKIPTRACE_PROVIDER`/`SKIPTRACE_API_KEY`) — no paid commit
+   until written approval (invariant #4).
+3. **phl calendar ships honest states now, source later** — calendar + ICS + digest ship over the existing
+   backend; phl populates when a source lands (no new code). No CivilView scrape this pass.
+4. **Founding offer = distinct Stripe price, $49/mo locked-for-life, monthly-only, cap = first 50 OR
+   sprint-end (whichever first).** Owner provides the cutoff date + creates the Stripe founding price
+   (test+live). Cap enforced without a DB migration (count active subs on the founding price via the Stripe
+   gateway, cached in Redis).
+
+Mobile top-3 accepted as audited (Pipeline board, dossier touch-tooltips, map controls).
