@@ -31,6 +31,7 @@ from lotscope.notifications.service import (
     send_push_alerts,
     send_saved_search_alerts,
 )
+from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
 from lotscope.ops.gates import seed_market_gates
 from lotscope.ops.stats import snapshot_market_stats
 from lotscope.skiptrace.jobs import grant_investor_credits
@@ -251,6 +252,22 @@ async def send_feed_digest_emails(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def send_ops_health_digest(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    sender = get_email_sender(settings)
+    count = await send_ops_digest(ctx["session_factory"], sender, settings)
+    _logger.info("sent_ops_digest", recipients=count)
+    return count
+
+
+async def send_ops_alerts(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    sender = get_email_sender(settings)
+    count = await send_ops_failure_alerts(ctx["session_factory"], sender, settings)
+    _logger.info("sent_ops_alerts", recipients=count)
+    return count
+
+
 class WorkerSettings:
     functions: ClassVar = [
         ingest_dataset,
@@ -270,6 +287,8 @@ class WorkerSettings:
         send_push_notifications,
         send_saved_search_match_alerts,
         send_feed_digest_emails,
+        send_ops_health_digest,
+        send_ops_alerts,
     ]
     on_startup = startup
     on_shutdown = shutdown
@@ -282,6 +301,8 @@ class WorkerSettings:
         cron(recompute_distress, hour=8, minute=0),
         cron(recompute_assemblage, hour=8, minute=30),
         cron(snapshot_stats, hour=9, minute=30),
+        cron(send_ops_alerts, hour=5, minute=30),
+        cron(send_ops_health_digest, hour=10, minute=0),
         cron(grant_investor_skiptrace_credits, day=1, hour=5, minute=0),
         cron(grant_investor_packet_credits, day=1, hour=5, minute=10),
         cron(recompute_verdicts, weekday="sun", hour=5, minute=0),
