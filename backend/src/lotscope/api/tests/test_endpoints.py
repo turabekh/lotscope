@@ -883,6 +883,49 @@ async def test_sheriff_calendar_ics_gated_for_free_tier(db_session: AsyncSession
 
 
 @pytest.mark.integration
+async def test_sheriff_calendar_tokenized_subscribe_roundtrip(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, address) VALUES ('phl:000000001', '1 Main St')")
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale "
+            "(parcel_number, case_number, sale_date, status, opening_bid) VALUES "
+            "('phl:000000001', 'BW-A', '2026-08-05', 'Open', 10000)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO app_user (email, hashed_password, role, tier, is_active) "
+            "VALUES ('pro@example.com', 'x', 'user', 'pro', true)"
+        )
+    )
+    uid = await db_session.scalar(text("SELECT id FROM app_user WHERE email = 'pro@example.com'"))
+    await db_session.flush()
+
+    from lotscope.accounts.security import create_calendar_token
+
+    settings = Settings(_env_file=None)
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    app.dependency_overrides[get_app_settings] = lambda: settings
+    async with _client(app) as client:
+        sub = await client.get("/sheriff-sales/calendar/subscribe")
+        assert sub.status_code == 200
+        url = sub.json()["url"]
+        assert url.endswith(".ics?market=phl")
+
+        token = create_calendar_token(settings, user_id=int(uid))
+        feed = await client.get(f"/sheriff-sales/calendar/{token}.ics")
+        assert feed.status_code == 200
+        assert feed.headers["content-type"].startswith("text/calendar")
+        assert "BEGIN:VEVENT" in feed.text
+
+        bad = await client.get("/sheriff-sales/calendar/not-a-token.ics")
+        assert bad.status_code == 404
+
+
+@pytest.mark.integration
 async def test_assemblage_top_is_gated_for_free_tier(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     async with _client(app) as client:

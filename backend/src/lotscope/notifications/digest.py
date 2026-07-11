@@ -343,3 +343,73 @@ def render_deal_reminder_html(
         f'<a href="{escape(unsubscribe_url)}" style="color:#90a4ae;">Unsubscribe</a>.<br>'
         f"{escape(postal_address)}</div></div></div>"
     )
+
+
+@dataclass(frozen=True)
+class SalesWeekItem:
+    address: str
+    sale_date: str
+    days_until: int
+    opening_bid: float | None
+    opportunity_score: int | None
+
+
+@dataclass(frozen=True)
+class SalesWeekContent:
+    label: str
+    items: list[SalesWeekItem]
+
+
+def sales_week_subject(content: SalesWeekContent) -> str:
+    return f"{len(content.items)} {content.label.lower()} this week"
+
+
+def _sales_week_line(item: SalesWeekItem) -> str:
+    when = "today" if item.days_until == 0 else f"in {item.days_until} days"
+    bid = f" · opening ${round(item.opening_bid):,}" if item.opening_bid is not None else ""
+    return f"{item.address} — {item.sale_date} ({when}){bid}"
+
+
+def render_sales_week_text(
+    content: SalesWeekContent, *, calendar_url: str, unsubscribe_url: str, postal_address: str
+) -> str:
+    lines = [f"{content.label} in the next 7 days:", ""]
+    for item in content.items:
+        lines.append(f"  - {_sales_week_line(item)}")
+    lines.append("")
+    lines.append(f"Open the sales calendar: {calendar_url}")
+    lines.append("")
+    lines.append("Informational only — not legal, financial, or real-estate advice.")
+    lines.append(f"Unsubscribe: {unsubscribe_url}")
+    lines.append(postal_address)
+    return "\n".join(lines)
+
+
+def render_sales_week_html(
+    content: SalesWeekContent, *, calendar_url: str, unsubscribe_url: str, postal_address: str
+) -> str:
+    rows = "".join(
+        f'<div style="padding:8px 0;border-bottom:1px solid #eceff1;font-size:14px;color:#1f2933;">'
+        f"<b>{escape(item.address)}</b><br>"
+        f'<span style="color:#607d8b;font-size:13px;">{escape(item.sale_date)} · '
+        f"{'today' if item.days_until == 0 else f'in {item.days_until} days'}"
+        f"{f' · opening ${round(item.opening_bid):,}' if item.opening_bid is not None else ''}"
+        "</span></div>"
+        for item in content.items
+    )
+    return (
+        '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;'
+        'color:#1f2933;">'
+        '<div style="background:#0f4ba8;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;">'
+        '<div style="font-size:18px;font-weight:700;">LotScope PHL</div>'
+        f'<div style="font-size:13px;opacity:0.85;">{escape(content.label)} this week</div></div>'
+        f'<div style="padding:8px 20px 16px;border:1px solid #eceff1;border-top:none;">{rows}'
+        f'<div style="margin-top:18px;text-align:center;">'
+        f'<a href="{escape(calendar_url)}" style="display:inline-block;background:#1565c0;'
+        'color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">'
+        "Open the sales calendar</a></div>"
+        '<div style="margin-top:18px;font-size:11px;color:#90a4ae;line-height:1.5;">'
+        "Informational only — not legal, financial, or real-estate advice. "
+        f'<a href="{escape(unsubscribe_url)}" style="color:#90a4ae;">Unsubscribe</a>.<br>'
+        f"{escape(postal_address)}</div></div></div>"
+    )

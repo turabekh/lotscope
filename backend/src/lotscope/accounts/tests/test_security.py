@@ -3,9 +3,11 @@ import pytest
 
 from lotscope.accounts.security import (
     create_access_token,
+    create_calendar_token,
     create_unsubscribe_token,
     decode_access_token,
     hash_password,
+    verify_calendar_token,
     verify_password,
     verify_unsubscribe_token,
 )
@@ -60,3 +62,14 @@ def test_unsubscribe_token_rejects_tamper_and_wrong_purpose() -> None:
     assert verify_unsubscribe_token(settings, other) is None
     access = create_access_token(settings, subject="7", role="user")
     assert verify_unsubscribe_token(settings, access) is None
+
+
+def test_calendar_token_roundtrip_and_purpose_isolation() -> None:
+    settings = _settings()
+    token = create_calendar_token(settings, user_id=9)
+    assert verify_calendar_token(settings, token) == 9
+    # a calendar token must not validate as an unsubscribe token, and vice-versa
+    assert verify_unsubscribe_token(settings, token) is None
+    unsub = create_unsubscribe_token(settings, user_id=9)
+    assert verify_calendar_token(settings, unsub) is None
+    assert verify_calendar_token(settings, "nope") is None

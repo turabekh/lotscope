@@ -30,6 +30,7 @@ from lotscope.notifications.service import (
     send_digests,
     send_feed_digests,
     send_push_alerts,
+    send_sales_week_digest,
     send_saved_search_alerts,
 )
 from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
@@ -261,6 +262,14 @@ async def send_deal_reminder_emails(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def send_sales_week_emails(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    sender = get_email_sender(settings)
+    count = await send_sales_week_digest(ctx["session_factory"], sender, settings)
+    _logger.info("sent_sales_week", recipients=count)
+    return count
+
+
 async def send_ops_health_digest(ctx: dict[str, Any]) -> int:
     settings = ctx["settings"]
     sender = get_email_sender(settings)
@@ -297,6 +306,7 @@ class WorkerSettings:
         send_saved_search_match_alerts,
         send_feed_digest_emails,
         send_deal_reminder_emails,
+        send_sales_week_emails,
         send_ops_health_digest,
         send_ops_alerts,
     ]
@@ -313,6 +323,7 @@ class WorkerSettings:
         cron(snapshot_stats, hour=9, minute=30),
         cron(send_ops_alerts, hour=5, minute=30),
         cron(send_ops_health_digest, hour=10, minute=0),
+        cron(send_sales_week_emails, weekday="mon", hour=8, minute=0),
         cron(grant_investor_skiptrace_credits, day=1, hour=5, minute=0),
         cron(grant_investor_packet_credits, day=1, hour=5, minute=10),
         cron(recompute_verdicts, weekday="sun", hour=5, minute=0),
