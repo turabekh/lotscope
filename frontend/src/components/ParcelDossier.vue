@@ -4,6 +4,7 @@ import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
 
 import AskBox from '@/components/AskBox.vue'
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import RepositoryBadge from '@/components/RepositoryBadge.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import AssessmentPanel from '@/components/AssessmentPanel.vue'
@@ -457,26 +458,14 @@ async function toggleSave(): Promise<void> {
       </div>
     </template>
 
+    <div v-else-if="error && errorStatus === 429 && !loading" class="empty-state">
+      <UpgradePrompt cap="parcel_views" variant="card" cta="View account & plans" />
+    </div>
+
     <div v-else-if="error && !loading" class="empty-state">
-      <q-icon
-        :name="errorStatus === 429 ? 'lock_clock' : 'error_outline'"
-        size="52px"
-        :color="errorStatus === 429 ? 'amber-7' : 'grey-5'"
-      />
-      <div class="text-subtitle1 text-grey-8 q-mt-md">
-        {{ errorStatus === 429 ? 'Daily parcel limit reached' : 'Could not load parcel' }}
-      </div>
+      <q-icon name="error_outline" size="52px" color="grey-5" />
+      <div class="text-subtitle1 text-grey-8 q-mt-md">Could not load parcel</div>
       <div class="text-body2 text-grey-7 q-mt-xs">{{ error }}</div>
-      <q-btn
-        v-if="errorStatus === 429"
-        class="q-mt-md"
-        unelevated
-        no-caps
-        color="primary"
-        icon="workspace_premium"
-        label="View account & plans"
-        :to="{ name: 'account' }"
-      />
     </div>
 
     <div v-else-if="!loading" class="empty-state">

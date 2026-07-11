@@ -5,6 +5,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import OutreachMailerDialog, { type MailerFields } from '@/components/OutreachMailerDialog.vue'
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SavedSearchItem, SavedSearchMatchItem, SearchCriteria } from '@/lib/types'
@@ -208,17 +209,12 @@ function asNumber(value: string | number | null): number | null {
       />
     </div>
 
-    <q-banner
+    <UpgradePrompt
       v-if="atLimit && !showForm"
-      dense
-      class="bg-amber-1 text-amber-9 q-mb-sm rounded-borders"
-    >
-      <template #avatar><q-icon name="lock" color="amber-9" /></template>
-      You've reached your plan's saved-search limit.
-      <template #action>
-        <q-btn flat dense no-caps color="amber-9" label="Upgrade" :to="{ name: 'account' }" />
-      </template>
-    </q-banner>
+      cap="saved_search"
+      variant="banner"
+      class="q-mb-sm"
+    />
 
     <q-card v-if="showForm" flat bordered class="q-pa-md q-mb-md">
       <div class="text-subtitle2 q-mb-sm">New saved search</div>
