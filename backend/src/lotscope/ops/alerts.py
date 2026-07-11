@@ -83,17 +83,25 @@ async def detect_new_failures(session: AsyncSession, *, advance: bool) -> NewFai
     cursor = jobs_state.last_job_run_id if jobs_state and jobs_state.last_job_run_id else 0
 
     failed_jobs = (
-        await session.execute(
-            select(JobRun)
-            .where(JobRun.status.in_(_FAILED_STATUSES), JobRun.id > cursor)
-            .order_by(JobRun.id)
+        (
+            await session.execute(
+                select(JobRun)
+                .where(JobRun.status.in_(_FAILED_STATUSES), JobRun.id > cursor)
+                .order_by(JobRun.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     failed_datasets = (
-        await session.execute(
-            select(DatasetFreshness).where(DatasetFreshness.status.in_(_FAILED_STATUSES))
+        (
+            await session.execute(
+                select(DatasetFreshness).where(DatasetFreshness.status.in_(_FAILED_STATUSES))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     fresh_datasets: list[FailedDataset] = []
     for row in failed_datasets:
@@ -117,9 +125,7 @@ async def detect_new_failures(session: AsyncSession, *, advance: bool) -> NewFai
                     )
         return NewFailures(jobs=[], datasets=[])
 
-    jobs = [
-        FailedJob(job.id, job.label, job.market_code, job.error) for job in failed_jobs
-    ]
+    jobs = [FailedJob(job.id, job.label, job.market_code, job.error) for job in failed_jobs]
     if advance:
         if jobs:
             await _upsert_state(session, _JOBS_KEY, last_job_run_id=max(job.id for job in jobs))
