@@ -9,7 +9,10 @@ from lotscope.zoning.models import ZoningStandard
 
 HBG_MARKET = "hbg"
 HBG_CODE_VERSION = "hbg-provisional-2026"
-HBG_SOURCE = "Harrisburg Zoning Code § 7-307.3A Development Standards (Attachment 1, 2017-12-01)"
+HBG_SOURCE = (
+    "Harrisburg Zoning Code § 7-307.3A Development Standards (Attachment 1, 2017-12-01); "
+    "permitted uses provisional from § 7-305.4 district purposes, pending the § 7-305.7 use table"
+)
 _EFFECTIVE = date(2017, 12, 1)
 
 HBG_STANDARDS: tuple[dict[str, Any], ...] = (
@@ -164,6 +167,18 @@ HBG_STANDARDS: tuple[dict[str, Any], ...] = (
     },
 )
 
+_PERMITTED_USES: dict[str, list[str]] = {
+    "OSR": ["parks", "recreation"],
+    "RL": ["single_family"],
+    "RM": ["single_family", "two_family", "multi_family"],
+    "CN": ["single_family", "two_family", "multi_family", "commercial"],
+    "CG": ["multi_family", "commercial"],
+    "DC": ["multi_family", "commercial"],
+    "RF": ["single_family", "two_family"],
+    "INS": ["institutional", "civic", "commercial"],
+    "IND": ["commercial", "industrial"],
+}
+
 _COLUMNS = (
     "min_lot_area_sqft",
     "min_lot_width_ft",
@@ -184,7 +199,7 @@ def _row(entry: dict[str, Any]) -> dict[str, Any]:
         "code_version": HBG_CODE_VERSION,
         "source": HBG_SOURCE,
         "effective_date": _EFFECTIVE,
-        "permitted_uses": [],
+        "permitted_uses": _PERMITTED_USES.get(entry["code"], []),
         "requires_master_plan": False,
         "dimensional": entry.get("dimensional", {}),
     }

@@ -2,12 +2,43 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.zoning.seed_hbg import HBG_STANDARDS, seed_hbg_zoning_standards
+from lotscope.zoning.buildability import DistrictStandard, ParcelDimensions, assess_buildability
+from lotscope.zoning.seed_hbg import _PERMITTED_USES, HBG_STANDARDS, seed_hbg_zoning_standards
 from lotscope.zoning.service import _get_standard
 
 
 def _by_code() -> dict[str, dict[str, object]]:
     return {entry["code"]: entry for entry in HBG_STANDARDS}
+
+
+def test_permitted_uses_cover_every_district() -> None:
+    codes = {entry["code"] for entry in HBG_STANDARDS}
+    assert set(_PERMITTED_USES) == codes
+    assert all(uses for uses in _PERMITTED_USES.values())
+    assert _PERMITTED_USES["RL"] == ["single_family"]
+    assert "multi_family" in _PERMITTED_USES["RM"]
+    assert _PERMITTED_USES["IND"] == ["commercial", "industrial"]
+    assert "multi_family" not in _PERMITTED_USES["RF"]
+
+
+def test_conforming_hbg_lot_is_by_right_once_uses_are_recorded() -> None:
+    dims = ParcelDimensions(lot_area_sqft=6000.0, lot_width_ft=60.0)
+    with_uses = DistrictStandard(
+        code="RL",
+        code_version="hbg-provisional-2026",
+        permitted_uses=["single_family"],
+        min_lot_area_sqft=5000.0,
+        min_lot_width_ft=50.0,
+    )
+    without_uses = DistrictStandard(
+        code="RL",
+        code_version="hbg-provisional-2026",
+        permitted_uses=[],
+        min_lot_area_sqft=5000.0,
+        min_lot_width_ft=50.0,
+    )
+    assert assess_buildability(dims, with_uses).can_build_by_right is True
+    assert assess_buildability(dims, without_uses).can_build_by_right is False
 
 
 def test_hbg_standards_transcribe_the_verbatim_table() -> None:
