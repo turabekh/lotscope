@@ -9,12 +9,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.api.deps import get_redis, get_session
+from lotscope.core.config import Settings, get_settings
 
 router = APIRouter(tags=["health"])
 
 
 class LivenessResponse(BaseModel):
     status: Literal["ok"]
+    version: str
 
 
 class ReadinessResponse(BaseModel):
@@ -24,8 +26,10 @@ class ReadinessResponse(BaseModel):
 
 
 @router.get("/health", response_model=LivenessResponse)
-async def liveness() -> LivenessResponse:
-    return LivenessResponse(status="ok")
+async def liveness(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> LivenessResponse:
+    return LivenessResponse(status="ok", version=settings.git_sha)
 
 
 @router.get("/health/ready", response_model=ReadinessResponse)

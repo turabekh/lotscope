@@ -22,6 +22,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
       getOpsFleet: vi.fn(() =>
         Promise.resolve({
           generated_at: '2026-07-11T12:00:00Z',
+          git_sha: 'abc1234def',
           markets: [
             {
               market_code: 'phl',
@@ -75,6 +76,11 @@ describe('OpsPage fleet health', () => {
     expect(wrapper.text()).toContain('red')
     expect(wrapper.text()).toContain('93.7%')
     expect(wrapper.text()).toContain('1R / 0A / 4G')
+  })
+
+  it('shows the deployed short sha', async () => {
+    const wrapper = await mountPage()
+    expect(wrapper.text()).toContain('deployed abc1234')
   })
 
   it('navigates to the market health page on row click', async () => {

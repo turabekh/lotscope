@@ -31,6 +31,7 @@ class FleetMarketRow(BaseModel):
 
 class FleetOverview(BaseModel):
     markets: list[FleetMarketRow]
+    git_sha: str
     generated_at: datetime
 
 

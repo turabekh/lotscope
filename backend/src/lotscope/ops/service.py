@@ -125,7 +125,7 @@ async def _zoning_counts(session: AsyncSession, market_code: str) -> tuple[int, 
     return int(standards or 0), int(districts or 0)
 
 
-async def fleet_overview(session: AsyncSession, now: datetime) -> FleetOverview:
+async def fleet_overview(session: AsyncSession, now: datetime, git_sha: str) -> FleetOverview:
     markets = (await session.execute(select(Market).order_by(Market.code))).scalars().all()
     stats_by_market = {
         s.market_code: s for s in (await session.execute(select(MarketStats))).scalars()
@@ -145,7 +145,7 @@ async def fleet_overview(session: AsyncSession, now: datetime) -> FleetOverview:
                 zoning_standard_count=standards,
             )
         )
-    return FleetOverview(markets=rows, generated_at=now)
+    return FleetOverview(markets=rows, git_sha=git_sha, generated_at=now)
 
 
 async def _verdict_versions(session: AsyncSession, market_code: str) -> list[VerdictVersionCount]:

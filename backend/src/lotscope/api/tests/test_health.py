@@ -9,4 +9,6 @@ async def test_liveness_returns_ok() -> None:
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["version"] == "unknown"

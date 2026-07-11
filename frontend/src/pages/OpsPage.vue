@@ -42,6 +42,10 @@ function formatTime(value: string | null): string {
   return new Date(value).toLocaleString()
 }
 
+function shortSha(value: string): string {
+  return value === 'unknown' ? 'unknown' : value.slice(0, 7)
+}
+
 function openMarket(marketCode: string): void {
   void router.push({ name: 'ops-market', params: { market: marketCode } })
 }
@@ -116,7 +120,10 @@ onMounted(() => {
         </tbody>
       </q-markup-table>
 
-      <div v-if="fleet" class="generated">As of {{ formatTime(fleet.generated_at) }}</div>
+      <div v-if="fleet" class="generated">
+        As of {{ formatTime(fleet.generated_at) }}
+        <span class="deployed-sha">· deployed {{ shortSha(fleet.git_sha) }}</span>
+      </div>
     </div>
   </q-page>
 </template>
@@ -150,5 +157,8 @@ onMounted(() => {
   margin-top: 12px;
   font-size: 12px;
   color: #757575;
+}
+.deployed-sha {
+  font-family: monospace;
 }
 </style>
