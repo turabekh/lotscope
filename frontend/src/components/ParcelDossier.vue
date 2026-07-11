@@ -22,6 +22,7 @@ import SnapshotPanel from '@/components/SnapshotPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import VerdictHero from '@/components/VerdictHero.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
+import WhyScoreDrawer from '@/components/WhyScoreDrawer.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
@@ -38,6 +39,7 @@ const compare = useCompareStore()
 const market = useMarketStore()
 const $q = useQuasar()
 const saving = ref(false)
+const whyOpen = ref(false)
 const addingDeal = ref(false)
 const downloadingDossier = ref(false)
 const tab = ref('verdict')
@@ -387,7 +389,13 @@ async function toggleSave(): Promise<void> {
               <div class="developed-head">Already developed — {{ developedUse }}</div>
               <div class="developed-note">{{ developedNote }}</div>
             </q-banner>
-            <VerdictHero v-if="verdict" :verdict="verdict" :developed="isDeveloped" />
+            <VerdictHero
+              v-if="verdict"
+              :verdict="verdict"
+              :developed="isDeveloped"
+              @explain="whyOpen = true"
+            />
+            <WhyScoreDrawer v-if="verdict" v-model="whyOpen" :verdict="verdict" />
             <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
               <template #avatar><q-icon name="info" color="grey-7" /></template>
               No verdict yet.
