@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request
@@ -8,6 +9,8 @@ from lotscope.accounts.billing import (
     StripeGateway,
     appeal_packet_from_checkout,
     credit_grant_from_checkout,
+    founding_offer_available,
+    founding_offer_configured,
     interpret_event,
     price_id_for_cadence,
 )
@@ -15,6 +18,7 @@ from lotscope.accounts.models import User
 from lotscope.accounts.schemas import (
     CheckoutRequest,
     CheckoutResponse,
+    FoundingOffer,
     PlanInfo,
     PlansResponse,
     PortalResponse,
@@ -58,8 +62,15 @@ async def plans(
     user: Annotated[User | None, Depends(get_optional_user)],
 ) -> PlansResponse:
     current_tier = user.tier if user is not None else None
+    founding_offer = None
+    if founding_offer_configured(settings, today=datetime.now(UTC).date()):
+        founding_offer = FoundingOffer(
+            price_monthly_cents=settings.founding_price_monthly_cents,
+            cutoff=settings.founding_cutoff,
+        )
     return PlansResponse(
         contact_url=settings.enterprise_contact_url,
+        founding_offer=founding_offer,
         plans=[
             PlanInfo(
                 tier=entry.tier,
@@ -76,6 +87,18 @@ async def plans(
     )
 
 
+async def _resolve_founding_price(settings: Settings, gateway: StripeGateway) -> str:
+    price_id = settings.stripe_price_pro_founding
+    if not price_id:
+        raise ConfigurationError("The founding-member offer is not configured.")
+    active_count = await gateway.count_active_subscriptions_for_price(price_id=price_id)
+    if not founding_offer_available(
+        settings, active_count=active_count, today=datetime.now(UTC).date()
+    ):
+        raise ValidationError("The founding-member offer has ended.")
+    return price_id
+
+
 @router.post("/checkout", response_model=CheckoutResponse)
 async def checkout(
     data: CheckoutRequest,
@@ -84,7 +107,10 @@ async def checkout(
     settings: SettingsDep,
     gateway: GatewayDep,
 ) -> CheckoutResponse:
-    price_id = price_id_for_cadence(settings, data.tier, data.cadence)
+    if data.founding:
+        price_id = await _resolve_founding_price(settings, gateway)
+    else:
+        price_id = price_id_for_cadence(settings, data.tier, data.cadence)
     customer_id = await ensure_stripe_customer(session, gateway, user)
     url = await gateway.create_checkout_session(
         customer_id=customer_id,

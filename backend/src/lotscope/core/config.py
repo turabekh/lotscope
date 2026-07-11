@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     stripe_price_pro_monthly: str | None = None
     stripe_price_pro_annual: str | None = None
     stripe_price_pro_legacy: str | None = None
+    stripe_price_pro_founding: str | None = None
+    founding_cap: int = 50
+    founding_cutoff: str | None = None
+    founding_price_monthly_cents: int = 4900
     stripe_price_investor_monthly: str | None = None
     stripe_price_investor_annual: str | None = None
     stripe_price_credits_25: str | None = None

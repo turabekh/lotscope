@@ -56,6 +56,7 @@ class UsageResponse(BaseModel):
 class CheckoutRequest(BaseModel):
     tier: Literal["pro", "investor"] = "pro"
     cadence: Literal["monthly", "annual"] = "monthly"
+    founding: bool = False
 
 
 class CheckoutResponse(BaseModel):
@@ -77,6 +78,12 @@ class PlanInfo(BaseModel):
     is_current: bool
 
 
+class FoundingOffer(BaseModel):
+    price_monthly_cents: int
+    cutoff: str | None
+
+
 class PlansResponse(BaseModel):
     plans: list[PlanInfo]
     contact_url: str
+    founding_offer: FoundingOffer | None = None

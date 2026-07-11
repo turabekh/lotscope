@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
-import type { BillingCadence, CheckoutTier, PlanInfo } from '@/lib/types'
+import type { BillingCadence, CheckoutTier, FoundingOffer, PlanInfo } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -12,6 +12,7 @@ const { isAuthenticated } = storeToRefs(auth)
 const router = useRouter()
 
 const plans = ref<PlanInfo[]>([])
+const foundingOffer = ref<FoundingOffer | null>(null)
 const contactUrl = ref('')
 const cadence = ref<BillingCadence>('monthly')
 const loading = ref(false)
@@ -23,6 +24,7 @@ onMounted(async () => {
   try {
     const response = await api.getPlans()
     plans.value = response.plans
+    foundingOffer.value = response.founding_offer
     contactUrl.value = response.contact_url
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Could not load plans.'
@@ -69,6 +71,32 @@ const ctaFor = computed(() => {
     return { label: 'Get started', color: 'primary', disabled: false }
   }
 })
+
+function showFounding(plan: PlanInfo): boolean {
+  return foundingOffer.value !== null && plan.tier === 'pro' && !plan.is_current
+}
+
+function foundingPriceLabel(): string {
+  if (foundingOffer.value === null) return ''
+  return `$${Math.round(foundingOffer.value.price_monthly_cents / 100)}`
+}
+
+async function activateFounding(): Promise<void> {
+  error.value = null
+  if (!isAuthenticated.value) {
+    await router.push({ name: 'login', query: { redirect: '/account' } })
+    return
+  }
+  pendingTier.value = 'founding'
+  try {
+    const { url } = await api.createFoundingCheckout()
+    window.location.href = url
+  } catch (cause) {
+    error.value = cause instanceof ApiError ? cause.message : 'Could not start checkout.'
+  } finally {
+    pendingTier.value = null
+  }
+}
 
 async function activate(plan: PlanInfo): Promise<void> {
   error.value = null
@@ -163,11 +191,26 @@ async function activate(plan: PlanInfo): Promise<void> {
           </div>
         </q-card-section>
 
-        <q-card-actions class="q-pa-md">
+        <div v-if="showFounding(plan)" class="founding-banner">
+          <q-icon name="local_fire_department" size="16px" class="q-mr-xs" />
+          Founding rate — {{ foundingPriceLabel() }}/mo locked for life
+        </div>
+
+        <q-card-actions class="q-pa-md column q-gutter-sm">
+          <q-btn
+            v-if="showFounding(plan)"
+            class="full-width"
+            unelevated
+            no-caps
+            color="deep-orange"
+            :label="`Get founding rate — ${foundingPriceLabel()}/mo`"
+            :loading="pendingTier === 'founding'"
+            @click="activateFounding"
+          />
           <q-btn
             class="full-width"
-            :unelevated="plan.tier === 'pro'"
-            :outline="plan.tier !== 'pro'"
+            :unelevated="plan.tier === 'pro' && !showFounding(plan)"
+            :outline="plan.tier !== 'pro' || showFounding(plan)"
             no-caps
             :color="ctaFor(plan).color"
             :label="ctaFor(plan).label"
@@ -209,6 +252,18 @@ async function activate(plan: PlanInfo): Promise<void> {
 }
 .featured-badge {
   border-radius: 8px;
+}
+.founding-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  margin: 0 16px;
+  background: rgba(255, 112, 67, 0.12);
+  color: #e64a19;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
 }
 @media (max-width: 800px) {
   .plan-grid {
