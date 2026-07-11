@@ -86,6 +86,13 @@ _MAINTENANCE_SPECS: tuple[JobSpec, ...] = (
         description="Recompute the per-market coverage snapshot (spine, geometry, verdict, "
         "vacant, comp share) that the ops health pages read.",
     ),
+    JobSpec(
+        id="maintenance:seed_gates",
+        label="Seed market gates",
+        kind=MAINTENANCE_KIND,
+        description="Re-seed the graduation / parity gate items (transcribed from the gate "
+        "docs) that the ops gate board reads.",
+    ),
 )
 
 

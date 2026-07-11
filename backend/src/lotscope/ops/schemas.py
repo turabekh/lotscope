@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -72,6 +72,41 @@ class JobRunRow(BaseModel):
     created_at: datetime
 
 
+class GateItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    ordinal: int
+    title: str
+    status: str
+    satisfied: bool
+    qualifier: str | None
+    threshold: str | None
+    measured: str | None
+    owner: str | None
+    evidence: str | None
+    spec_ref: str | None
+    as_of: date | None
+
+
+class GateSummary(BaseModel):
+    gate_type: str
+    satisfied: int
+    total: int
+    items: list[GateItem]
+
+
+class MarketGates(BaseModel):
+    market_code: str
+    name: str
+    launch_status: str
+    gates: list[GateSummary]
+
+
+class GateBoard(BaseModel):
+    markets: list[MarketGates]
+    generated_at: datetime
+
+
 class MarketHealthDetail(BaseModel):
     market_code: str
     name: str
@@ -84,5 +119,6 @@ class MarketHealthDetail(BaseModel):
     zoning_district_count: int
     capabilities: list[CapabilityNote]
     verdict_versions: list[VerdictVersionCount]
+    gates: list[GateSummary]
     recent_jobs: list[JobRunRow]
     generated_at: datetime

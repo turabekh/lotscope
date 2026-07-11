@@ -8,7 +8,7 @@ from lotscope.historic.models import HistoricDistrict
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.markets.models import Market
 from lotscope.neighborhoods.models import Neighborhood
-from lotscope.ops.models import MarketStats
+from lotscope.ops.models import MarketGateItem, MarketStats, OpsAlertState
 from lotscope.parcels.models import Parcel
 from lotscope.risk.models import FloodZone, LiEvent, TaxStatus
 from lotscope.streets.models import StreetCenterline
@@ -28,8 +28,10 @@ __all__ = [
     "JobRun",
     "LiEvent",
     "Market",
+    "MarketGateItem",
     "MarketStats",
     "Neighborhood",
+    "OpsAlertState",
     "Parcel",
     "ParcelAssemblage",
     "ParcelVerdict",

@@ -31,6 +31,7 @@ from lotscope.notifications.service import (
     send_push_alerts,
     send_saved_search_alerts,
 )
+from lotscope.ops.gates import seed_market_gates
 from lotscope.ops.stats import snapshot_market_stats
 from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
@@ -141,9 +142,17 @@ async def _seed_zoning_standards(session_factory: async_sessionmaker[AsyncSessio
     return total
 
 
+async def _seed_market_gates(session_factory: async_sessionmaker[AsyncSession]) -> int:
+    async with session_factory() as session:
+        total = await seed_market_gates(session)
+        await session.commit()
+    return total
+
+
 _MAINTENANCE_DISPATCH: dict[str, _RecomputeFn] = {
     "maintenance:seed_zoning": _seed_zoning_standards,
     "maintenance:snapshot_stats": snapshot_market_stats,
+    "maintenance:seed_gates": _seed_market_gates,
 }
 
 
