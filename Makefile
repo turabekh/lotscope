@@ -1,7 +1,7 @@
 COMPOSE := docker compose
 BACKEND := backend
 FRONTEND := frontend
-INFRA := db redis martin
+INFRA := db redis martin mailpit
 
 .PHONY: help up up-app down logs dev dev-api sync migrate revision seed recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
 
