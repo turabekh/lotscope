@@ -79,6 +79,13 @@ _MAINTENANCE_SPECS: tuple[JobSpec, ...] = (
         description="Re-seed Title 14, Harrisburg, and Pittsburgh zoning standards "
         "(permitted uses + dimensional standards) from code.",
     ),
+    JobSpec(
+        id="maintenance:snapshot_stats",
+        label="Snapshot market stats",
+        kind=MAINTENANCE_KIND,
+        description="Recompute the per-market coverage snapshot (spine, geometry, verdict, "
+        "vacant, comp share) that the ops health pages read.",
+    ),
 )
 
 
