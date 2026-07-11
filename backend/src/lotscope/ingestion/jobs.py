@@ -323,6 +323,15 @@ async def ingest_hbg_flood(session_factory: SessionFactory, settings: Settings) 
     )
 
 
+async def ingest_hbg_dimensions(session_factory: SessionFactory, settings: Settings) -> int:
+    return await run_loader(
+        session_factory,
+        hbg.derive_hbg_lot_width,
+        dataset=hbg.HBG_DIMENSIONS_DATASET,
+        market_code="hbg",
+    )
+
+
 async def ingest_hbg_historic(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_arcgis(
         session_factory,
@@ -579,6 +588,7 @@ _HBG_JOBS: dict[str, Job] = {
     "public": ingest_hbg_public,
     "repository": ingest_hbg_repository,
     "flood": ingest_hbg_flood,
+    "dimensions": ingest_hbg_dimensions,
 }
 
 INGEST_JOBS: dict[tuple[str, str], Job] = {

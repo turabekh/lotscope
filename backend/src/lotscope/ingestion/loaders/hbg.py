@@ -1,7 +1,7 @@
 import json
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import func, select, text
+from sqlalchemy import CursorResult, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.arcgis import ArcGisClient, ArcGisFeature
@@ -576,3 +576,36 @@ async def load_hbg_flood(session: AsyncSession, arcgis: ArcGisClient) -> int:
         row_count=total,
     )
     return total
+
+
+HBG_DIMENSIONS_DATASET = "derived_lot_width"
+
+_LOT_WIDTH_UPDATE = text(
+    "UPDATE parcel p SET frontage_ft = sub.width, updated_at = now() "
+    "FROM ("
+    "  SELECT parcel_number, LEAST("
+    "    ST_Distance(ST_PointN(ring, 1), ST_PointN(ring, 2)),"
+    "    ST_Distance(ST_PointN(ring, 2), ST_PointN(ring, 3))"
+    "  ) AS width"
+    "  FROM ("
+    "    SELECT parcel_number, ST_ExteriorRing(ST_OrientedEnvelope(geom_local)) AS ring"
+    "    FROM parcel"
+    "    WHERE market_code = :market AND geom_local IS NOT NULL AND frontage_ft IS NULL"
+    "  ) envelope"
+    ") sub "
+    "WHERE p.parcel_number = sub.parcel_number AND sub.width > 0"
+)
+
+
+async def derive_hbg_lot_width(session: AsyncSession) -> int:
+    executed = await session.execute(_LOT_WIDTH_UPDATE, {"market": _MARKET})
+    count = cast("CursorResult[Any]", executed).rowcount or 0
+    await record_freshness(
+        session,
+        HBG_DIMENSIONS_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=count,
+    )
+    return count
