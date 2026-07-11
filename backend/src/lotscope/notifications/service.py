@@ -89,6 +89,7 @@ async def send_user_digest(
             unsubscribe_url=unsubscribe_url,
             postal_address=settings.company_postal_address,
         ),
+        list_unsubscribe=unsubscribe_url,
     )
     for item in alerted:
         await acknowledge(session, user.id, item.parcel_number)
@@ -258,6 +259,7 @@ async def send_user_match_alert(
             unsubscribe_url=unsubscribe_url,
             postal_address=settings.company_postal_address,
         ),
+        list_unsubscribe=unsubscribe_url,
     )
     await mark_user_notified(session, user.id)
     return True
@@ -342,6 +344,7 @@ async def send_user_feed_digest(
             unsubscribe_url=unsubscribe_url,
             postal_address=settings.company_postal_address,
         ),
+        list_unsubscribe=unsubscribe_url,
     )
     return True
 
@@ -425,6 +428,7 @@ async def send_user_deal_reminder(
             unsubscribe_url=unsubscribe_url,
             postal_address=settings.company_postal_address,
         ),
+        list_unsubscribe=unsubscribe_url,
     )
     return True
 
