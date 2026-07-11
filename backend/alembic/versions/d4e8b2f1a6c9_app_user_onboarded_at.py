@@ -13,6 +13,7 @@ def upgrade() -> None:
     op.add_column(
         "app_user", sa.Column("onboarded_at", sa.DateTime(timezone=True), nullable=True)
     )
+    op.execute("UPDATE app_user SET onboarded_at = now() WHERE onboarded_at IS NULL")
 
 
 def downgrade() -> None:
