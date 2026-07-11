@@ -30,6 +30,7 @@ function makeUser(tier: string): User {
     is_active: true,
     subscription_status: null,
     digest_frequency: 'weekly',
+    onboarded_at: null,
     created_at: '',
   }
 }

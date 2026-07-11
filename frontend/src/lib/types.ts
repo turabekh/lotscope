@@ -732,6 +732,7 @@ export interface User {
   is_active: boolean
   subscription_status: string | null
   digest_frequency: 'off' | 'weekly' | 'daily'
+  onboarded_at: string | null
   created_at: string
 }
 
