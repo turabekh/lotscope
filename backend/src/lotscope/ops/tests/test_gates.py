@@ -40,7 +40,7 @@ async def test_graduation_rollup_matches_doc_headline_count(db_session: AsyncSes
     graduation = next(g for g in hbg.gates if g.gate_type == GRADUATION)
 
     assert graduation.total == 8
-    assert graduation.satisfied == 3
+    assert graduation.satisfied == 4
 
     scoped = next(i for i in graduation.items if i.qualifier == "repository only")
     assert scoped.status == "met"

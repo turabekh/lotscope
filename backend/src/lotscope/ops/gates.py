@@ -32,10 +32,11 @@ _HBG_GRADUATION: tuple[dict[str, Any], ...] = (
         "resets (buildability is unaffected).",
     },
     {
-        "status": "partial",
+        "status": "met",
         "title": "Flood live; historic live; named-area (search) live",
-        "evidence": "Historic (7 districts, 3,657 parcels) and named-area (20 neighborhoods) "
-        "live; flood 0 rows — FEMA NFHL unreachable from build; run from prod.",
+        "evidence": "Historic (7 districts) and named-area (20 neighborhoods) live; flood live — "
+        "3,200 city Flood_Parcels zones loaded 2026-07-10, risk scoring classifies 100/500-Year, "
+        "180 hbg verdicts carry a flood flag. All three sub-conditions live on prod.",
     },
     {
         "status": "met",
@@ -161,7 +162,7 @@ _PGH_PARITY: tuple[dict[str, Any], ...] = (
 )
 
 _GATES: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] = {
-    ("hbg", GRADUATION, "2026-07-06"): _HBG_GRADUATION,
+    ("hbg", GRADUATION, "2026-07-11"): _HBG_GRADUATION,
     ("hbg", PARITY, "2026-07-05"): _HBG_PARITY,
     ("pgh", PARITY, "2026-07-07"): _PGH_PARITY,
 }
