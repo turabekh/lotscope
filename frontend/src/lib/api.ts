@@ -486,6 +486,9 @@ export const api = {
   setDigestPreference(frequency: 'off' | 'weekly' | 'daily'): Promise<User> {
     return request('/auth/digest', { method: 'PATCH', body: JSON.stringify({ frequency }) })
   },
+  markOnboarded(): Promise<User> {
+    return request('/auth/onboarded', { method: 'POST' })
+  },
   getVapidPublicKey(): Promise<{ public_key: string | null }> {
     return request('/push/vapid-public-key')
   },

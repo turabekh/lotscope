@@ -9,7 +9,7 @@ vi.mock('@/lib/api', async () => {
   return {
     ApiError: actual.ApiError,
     setAuthToken: vi.fn(),
-    api: { login: vi.fn(), register: vi.fn(), getMe: vi.fn() },
+    api: { login: vi.fn(), register: vi.fn(), getMe: vi.fn(), markOnboarded: vi.fn() },
   }
 })
 
@@ -22,6 +22,7 @@ const user = {
   is_active: true,
   subscription_status: null,
   digest_frequency: 'weekly' as const,
+  onboarded_at: null,
   created_at: '',
 }
 
@@ -77,5 +78,16 @@ describe('auth store', () => {
 
     expect(store.user).toBeNull()
     expect(localStorage.getItem('lotscope_token')).toBeNull()
+  })
+
+  it('markOnboarded stamps the user from the server copy', async () => {
+    vi.mocked(api.markOnboarded).mockResolvedValue({ ...user, onboarded_at: '2026-07-11T00:00:00Z' })
+
+    const store = useAuthStore()
+    store.user = { ...user }
+    await store.markOnboarded()
+
+    expect(api.markOnboarded).toHaveBeenCalledTimes(1)
+    expect(store.user?.onboarded_at).toBe('2026-07-11T00:00:00Z')
   })
 })

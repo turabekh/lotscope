@@ -28,6 +28,7 @@ class UserRead(BaseModel):
     is_active: bool
     subscription_status: str | None
     digest_frequency: str
+    onboarded_at: datetime | None
     created_at: datetime
 
 

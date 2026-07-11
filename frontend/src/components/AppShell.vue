@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppTopBar from '@/components/AppTopBar.vue'
 import CompareTray from '@/components/CompareTray.vue'
+import OnboardingTour from '@/components/OnboardingTour.vue'
 import MobileTabBar from '@/components/MobileTabBar.vue'
 
 const $q = useQuasar()
@@ -53,6 +54,7 @@ watch(isMobile, (mobile) => {
     </q-footer>
 
     <CompareTray />
+    <OnboardingTour />
   </q-layout>
 </template>
 

@@ -94,6 +94,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = await api.setDigestPreference(frequency)
   }
 
+  async function markOnboarded(): Promise<void> {
+    user.value = await api.markOnboarded()
+  }
+
   async function fetchUsage(): Promise<void> {
     if (token.value === null) return
     try {
@@ -126,6 +130,7 @@ export const useAuthStore = defineStore('auth', () => {
     refresh,
     refreshUser,
     setDigest,
+    markOnboarded,
     fetchUsage,
     logout,
   }
