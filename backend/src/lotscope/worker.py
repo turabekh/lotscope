@@ -6,7 +6,13 @@ from arq import cron
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from lotscope.admin.catalog import CATALOG_BY_ID, INGEST_KIND, RECOMPUTE_KIND, parse_params
+from lotscope.admin.catalog import (
+    CATALOG_BY_ID,
+    INGEST_KIND,
+    MAINTENANCE_KIND,
+    RECOMPUTE_KIND,
+    parse_params,
+)
 from lotscope.admin.service import mark_job_finished, mark_job_running
 from lotscope.appeal.jobs import grant_investor_appeal_packets
 from lotscope.assemblage.jobs import recompute_all_assemblage
@@ -28,6 +34,9 @@ from lotscope.notifications.service import (
 from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
 from lotscope.verdict.jobs import recompute_all_verdicts
+from lotscope.zoning.seed import seed_zoning_standards
+from lotscope.zoning.seed_hbg import seed_hbg_zoning_standards
+from lotscope.zoning.seed_pgh import seed_pgh_zoning_standards
 
 _logger = get_logger("worker")
 
@@ -116,6 +125,20 @@ _RECOMPUTE_DISPATCH: dict[str, _RecomputeFn] = {
 }
 
 
+async def _seed_zoning_standards(session_factory: async_sessionmaker[AsyncSession]) -> int:
+    async with session_factory() as session:
+        total = await seed_zoning_standards(session)
+        total += await seed_hbg_zoning_standards(session)
+        total += await seed_pgh_zoning_standards(session)
+        await session.commit()
+    return total
+
+
+_MAINTENANCE_DISPATCH: dict[str, _RecomputeFn] = {
+    "maintenance:seed_zoning": _seed_zoning_standards,
+}
+
+
 async def _dispatch_admin_job(
     session_factory: async_sessionmaker[AsyncSession],
     settings: Any,
@@ -136,6 +159,8 @@ async def _dispatch_admin_job(
         return await INGEST_JOBS[key](session_factory, settings)
     if spec.kind == RECOMPUTE_KIND:
         return await _RECOMPUTE_DISPATCH[spec.id](session_factory)
+    if spec.kind == MAINTENANCE_KIND:
+        return await _MAINTENANCE_DISPATCH[spec.id](session_factory)
     raise NotFoundError(f"Job {job_id!r} has an unsupported kind {spec.kind!r}.")
 
 

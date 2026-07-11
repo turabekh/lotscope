@@ -63,7 +63,12 @@ async function pullSource(url: string): Promise<void> {
 const jobGroups = computed(() => {
   const grouped = new Map<string, JobCatalogEntry[]>()
   for (const job of jobs.value) {
-    const title = job.kind === 'ingest' ? `${(job.market ?? 'other').toUpperCase()} ingestion` : 'Recompute'
+    const title =
+      job.kind === 'ingest'
+        ? `${(job.market ?? 'other').toUpperCase()} ingestion`
+        : job.kind === 'maintenance'
+          ? 'Maintenance'
+          : 'Recompute'
     const bucket = grouped.get(title) ?? []
     bucket.push(job)
     grouped.set(title, bucket)
