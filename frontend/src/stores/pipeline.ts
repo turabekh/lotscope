@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { api } from '@/lib/api'
-import type { DealItem, DealStage } from '@/lib/types'
+import type { DealActivityItem, DealItem, DealStage, DealUpdatePayload } from '@/lib/types'
 
 export const STAGES: { value: DealStage; label: string; color: string }[] = [
   { value: 'lead', label: 'Lead', color: 'blue-grey-6' },
@@ -15,6 +15,7 @@ export const STAGES: { value: DealStage; label: string; color: string }[] = [
 
 export const usePipelineStore = defineStore('pipeline', () => {
   const deals = ref<DealItem[]>([])
+  const today = ref<DealItem[]>([])
   const limit = ref<number | null>(null)
   const loaded = ref(false)
   const loading = ref(false)
@@ -69,11 +70,16 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   }
 
-  async function updateDeal(
-    parcelNumber: string,
-    payload: { note?: string | null; target_price?: number | null },
-  ): Promise<void> {
+  async function updateDeal(parcelNumber: string, payload: DealUpdatePayload): Promise<void> {
     _replace(await api.updateDeal(parcelNumber, payload))
+  }
+
+  async function loadToday(): Promise<void> {
+    today.value = (await api.getPipelineToday()).deals
+  }
+
+  async function loadActivity(parcelNumber: string): Promise<DealActivityItem[]> {
+    return api.getDealActivity(parcelNumber)
   }
 
   async function remove(parcelNumber: string): Promise<void> {
@@ -83,12 +89,14 @@ export const usePipelineStore = defineStore('pipeline', () => {
 
   function reset(): void {
     deals.value = []
+    today.value = []
     limit.value = null
     loaded.value = false
   }
 
   return {
     deals,
+    today,
     limit,
     loaded,
     loading,
@@ -101,6 +109,8 @@ export const usePipelineStore = defineStore('pipeline', () => {
     add,
     moveStage,
     updateDeal,
+    loadToday,
+    loadActivity,
     remove,
     reset,
   }

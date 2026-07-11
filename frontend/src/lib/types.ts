@@ -127,12 +127,43 @@ export interface DealItem {
   stage: DealStage
   note: string | null
   target_price: number | null
+  next_action: string | null
+  next_action_due: string | null
+  stage_entered_at: string | null
+  contact_name: string | null
+  contact_phone: string | null
+  contact_email: string | null
   address: string | null
   base_zoning_code: string | null
   is_vacant: boolean | null
   market_value: number | null
   opportunity_score: number | null
+  max_allowable_offer: number | null
+  arv: number | null
+  est_profit: number | null
+  est_margin: number | null
+  is_underpriced: boolean | null
   updated_at: string
+}
+
+export interface DealUpdatePayload {
+  stage?: DealStage
+  note?: string | null
+  target_price?: number | null
+  next_action?: string | null
+  next_action_due?: string | null
+  contact_name?: string | null
+  contact_phone?: string | null
+  contact_email?: string | null
+}
+
+export interface DealActivityItem {
+  id: number
+  kind: string
+  from_stage: string | null
+  to_stage: string | null
+  body: string | null
+  created_at: string
 }
 
 export interface PipelineResponse {
