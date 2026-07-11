@@ -6,6 +6,7 @@ from email.utils import formataddr
 from typing import Protocol
 
 from lotscope.core.config import Settings
+from lotscope.core.logging import get_logger
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,7 @@ class EmailSender(Protocol):
         html: str,
         text: str,
         attachment: EmailAttachment | None = None,
+        list_unsubscribe: str | None = None,
     ) -> None: ...
 
 
@@ -37,6 +39,9 @@ class SmtpEmailSender:
         self._password = settings.smtp_password
         self._use_tls = settings.smtp_use_tls
         self._from = formataddr((settings.email_from_name, settings.email_from))
+        self._reply_to = settings.email_reply_to
+        self._allowlist = frozenset(address.strip().lower() for address in settings.email_allowlist)
+        self._logger = get_logger("email")
 
     async def send(
         self,
@@ -46,11 +51,20 @@ class SmtpEmailSender:
         html: str,
         text: str,
         attachment: EmailAttachment | None = None,
+        list_unsubscribe: str | None = None,
     ) -> None:
+        if self._allowlist and to.strip().lower() not in self._allowlist:
+            self._logger.info("email_suppressed_by_allowlist", subject=subject)
+            return
         message = EmailMessage()
         message["Subject"] = subject
         message["From"] = self._from
         message["To"] = to
+        if self._reply_to:
+            message["Reply-To"] = self._reply_to
+        if list_unsubscribe is not None:
+            message["List-Unsubscribe"] = f"<{list_unsubscribe}>"
+            message["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
         message.set_content(text)
         message.add_alternative(html, subtype="html")
         if attachment is not None:

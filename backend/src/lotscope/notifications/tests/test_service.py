@@ -23,8 +23,17 @@ class _FakeSender:
         html: str,
         text: str,
         attachment: object | None = None,
+        list_unsubscribe: str | None = None,
     ) -> None:
-        self.messages.append({"to": to, "subject": subject, "html": html, "text": text})
+        self.messages.append(
+            {
+                "to": to,
+                "subject": subject,
+                "html": html,
+                "text": text,
+                "list_unsubscribe": list_unsubscribe or "",
+            }
+        )
 
 
 def _settings() -> Settings:

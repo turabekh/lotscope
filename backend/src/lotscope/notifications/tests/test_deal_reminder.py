@@ -20,7 +20,14 @@ class _FakeSender:
         self.messages: list[dict[str, str]] = []
 
     async def send(
-        self, *, to: str, subject: str, html: str, text: str, attachment: object = None
+        self,
+        *,
+        to: str,
+        subject: str,
+        html: str,
+        text: str,
+        attachment: object = None,
+        list_unsubscribe: str | None = None,
     ) -> None:
         self.messages.append({"to": to, "subject": subject, "html": html, "text": text})
 

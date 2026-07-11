@@ -51,15 +51,17 @@ class Settings(BaseSettings):
     smtp_user: str | None = None
     smtp_password: str | None = None
     smtp_use_tls: bool = True
-    email_from: str = "alerts@lotscope.app"
+    email_from: str = "alerts@parcelphl.online"
     email_from_name: str = "LotScope PHL"
+    email_reply_to: str | None = None
+    email_allowlist: list[str] = []
     app_base_url: str = "http://localhost:5173"
     api_base_url: str = "http://localhost:8000"
     company_postal_address: str = "LotScope PHL, Philadelphia, PA"
 
     vapid_private_key: str | None = None
     vapid_public_key: str | None = None
-    vapid_subject: str = "mailto:alerts@lotscope.app"
+    vapid_subject: str = "mailto:alerts@parcelphl.online"
 
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
@@ -77,7 +79,7 @@ class Settings(BaseSettings):
     billing_success_url: str = "http://localhost:5173/account?checkout=success"
     billing_cancel_url: str = "http://localhost:5173/account?checkout=cancel"
     billing_portal_return_url: str = "http://localhost:5173/account"
-    enterprise_contact_url: str = "mailto:sales@lotscope.app"
+    enterprise_contact_url: str = "mailto:sales@parcelphl.online"
 
     deal_construction_cost_per_sqft: float = 175.0
     deal_soft_cost_pct: float = 0.15

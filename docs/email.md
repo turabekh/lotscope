@@ -13,11 +13,33 @@ and **every** email path becomes a quiet no-op.
 |---|---|---|---|
 | `SMTP_HOST` | SMTP server; blank = email off | `localhost` | `smtp.mailgun.org` |
 | `SMTP_PORT` | port | `1025` | `587` |
-| `SMTP_USER` | username | *(empty)* | `postmaster@<domain>` |
+| `SMTP_USER` | username | *(empty)* | `postmaster@mg.parcelphl.online` |
 | `SMTP_PASSWORD` | password / API key (**secret**) | *(empty)* | `<key>` |
 | `SMTP_USE_TLS` | STARTTLS | `false` | `true` |
-| `EMAIL_FROM` | From address | `alerts@lotscope.app` | `alerts@lotscope.app` |
+| `EMAIL_FROM` | From address | `alerts@parcelphl.online` | `alerts@parcelphl.online` |
 | `EMAIL_FROM_NAME` | From display name | `LotScope PHL` | `LotScope PHL` |
+| `EMAIL_REPLY_TO` | optional Reply-To (blank = replies to `EMAIL_FROM`) | *(empty)* | `support@parcelphl.online` |
+| `EMAIL_ALLOWLIST` | staged-rollout recipient gate (see below) | `[]` | `[]` once fully live |
+
+**Sending domain is `parcelphl.online`** (the domain users actually visit — best deliverability alignment and brand recognition). It is a pure env value: to move it, change `EMAIL_FROM` (and re-verify DNS for the new domain). Nothing in code hardcodes it.
+
+## Staged rollout — `EMAIL_ALLOWLIST`
+
+Enabling `SMTP_HOST` turns on **every** email path at once (see below). That is not an acceptable first
+flip. `EMAIL_ALLOWLIST` is the smallest honest control: a list of recipient addresses that, **when
+non-empty**, suppresses mail to anyone not on it (logged as `email_suppressed_by_allowlist`, no send).
+Empty = send to everyone. Recommended order:
+
+1. **Ops digest / your inbox only** — set `EMAIL_ALLOWLIST=["you@parcelphl.online"]`. Only your own address
+   receives; every user path is gated. Watch deliverability (SPF/DKIM pass, not spam-foldered).
+2. **Widen** — add a few trusted addresses; confirm List-Unsubscribe + rendering across clients.
+3. **Go live** — set `EMAIL_ALLOWLIST=[]` and restart. All users now receive on the normal crons.
+
+**One-variable rollback at any stage:** blank `SMTP_HOST` (all email → quiet no-op), or narrow
+`EMAIL_ALLOWLIST` back to your address. Restart `api`+`worker` after either.
+
+User-facing mail carries a `List-Unsubscribe` header (RFC 8058 one-click) pointing at the per-user
+unsubscribe token URL; ops/admin mail does not.
 
 ## What turns on when email is enabled
 
@@ -53,27 +75,58 @@ It accepts any SMTP on `localhost:1025` and captures everything — nothing leav
 
 (If you run the backend inside the docker `app` profile instead of on the host, set `SMTP_HOST=mailpit`.)
 
-## Production — enabling real delivery
+## Production — enabling real delivery (Mailgun on `parcelphl.online`)
 
-Prod does **not** use Mailpit (a catcher can't deliver to real inboxes). Steps:
+Prod does **not** use Mailpit (a catcher can't deliver to real inboxes). The app change is done — this is
+now provider config + DNS. Provider is **Mailgun** (any standard-SMTP provider works; the steps are the same
+shape).
 
-1. **Pick a provider** (Mailgun, AWS SES, Postmark, SendGrid — all standard SMTP).
-2. **Verify the sending domain** for `alerts@lotscope.app` in that provider: add the SPF + DKIM DNS records
-   for `lotscope.app` (or a subdomain). Without this, mail bounces or lands in spam. This is a prerequisite,
-   not optional.
-3. **Set the env vars** in `/home/turaboy/lotscope/.env` on the VM (the file docker-compose reads). Keep
-   `SMTP_PASSWORD` out of any shared channel.
-4. **Restart the app** so it re-reads config:
-   ```
-   docker compose --profile app up -d api worker
-   ```
-5. **Verify** the sender is live, then send one test to an admin before the crons fan out:
-   ```
-   docker compose exec -T api python -c "
-   from lotscope.core.config import get_settings
-   print('email enabled:', get_settings().smtp_host is not None and get_settings().smtp_host != '')"
-   ```
-6. Watch the first scheduled runs; the ops digest is quiet-when-green, so absence of an ops email is normal
-   when the fleet is healthy.
+### Step 1 — Mailgun console (owner)
+1. **Add a sending domain**: Mailgun → Sending → Domains → **Add New Domain**. Use a subdomain —
+   **`mg.parcelphl.online`** (Mailgun's recommendation; keeps the root domain's own mail reputation
+   separate). Region: US (or EU — match `SMTP_HOST` accordingly).
+2. Mailgun shows the DNS records to add (Step 2). Add them at the `parcelphl.online` registrar, then click
+   **Verify** in Mailgun until all rows go green (DNS can take up to a few hours).
+3. **Fetch SMTP credentials**: Domain → **SMTP** tab → `postmaster@mg.parcelphl.online` + a generated
+   password. That password is `SMTP_PASSWORD` (secret — never in chat/VCS).
 
-To roll back: blank `SMTP_HOST` in the VM `.env` and restart `api`/`worker` — all email goes quiet again.
+### Step 2 — DNS records to paste at the `parcelphl.online` registrar
+Exact values come from the Mailgun domain page; the set is standard. `@`/host names are relative to
+`parcelphl.online`:
+
+| Type | Host / Name | Value | Purpose |
+|---|---|---|---|
+| `TXT` | `mg` | `v=spf1 include:mailgun.org ~all` | **SPF** — authorizes Mailgun to send |
+| `TXT` | `<selector>._domainkey.mg` | `k=rsa; p=<long key from Mailgun>` | **DKIM** — signs mail (selector shown by Mailgun, e.g. `mx`/`k1`) |
+| `MX` | `mg` | `10 mxa.mailgun.org` and `10 mxb.mailgun.org` | receiving/bounce handling |
+| `CNAME` | `email.mg` | `mailgun.org` | click/open tracking (optional but recommended) |
+| `TXT` | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@parcelphl.online` | **DMARC** — start at `p=none` (monitor), tighten to `quarantine`/`reject` after mail is clean |
+
+DKIM + SPF are prerequisites — without them mail bounces or spam-folders. DMARC at `p=none` is safe to add
+immediately and gives visibility before enforcing.
+
+### Step 3 — set env on the VM (owner appends the secret)
+In `/home/turaboy/lotscope/.env` (the file docker-compose reads) set the non-secret keys:
+```
+SMTP_HOST=smtp.mailgun.org
+SMTP_PORT=587
+SMTP_USER=postmaster@mg.parcelphl.online
+SMTP_USE_TLS=true
+EMAIL_FROM=alerts@parcelphl.online
+EMAIL_ALLOWLIST=["<your-inbox>@parcelphl.online"]   # stage 1: your inbox only
+```
+then append `SMTP_PASSWORD=<key>` off-channel. Restart: `docker compose --profile app up -d api worker`.
+
+### Step 4 — verify + walk the staged rollout
+```
+docker compose exec -T api python -c "
+from lotscope.core.config import get_settings
+s = get_settings()
+print('email enabled:', bool(s.smtp_host), '| allowlist:', s.email_allowlist)"
+```
+Confirm the Mailgun domain reads **verified**, send/trigger one message to your allowlisted inbox, and check
+it lands (not spam) with SPF/DKIM = pass. Then widen and finally clear `EMAIL_ALLOWLIST` per the staged order
+above, checking Mailgun's **bounces/complaints** views after the first real digest run.
+
+**Rollback (any stage):** blank `SMTP_HOST` in the VM `.env` (all email → quiet no-op) or narrow
+`EMAIL_ALLOWLIST` back to your inbox; restart `api`/`worker`.
