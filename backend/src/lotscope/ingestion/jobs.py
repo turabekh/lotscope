@@ -32,7 +32,8 @@ from lotscope.ingestion.loaders import (
     zba,
     zoning,
 )
-from lotscope.ingestion.loaders.sheriff import CsvSheriffSource, load_sheriff
+from lotscope.ingestion.loaders.sheriff import CsvSheriffSource, SheriffSource, load_sheriff
+from lotscope.ingestion.loaders.sheriff_civilview import CivilViewSheriffSource
 from lotscope.ingestion.runner import run_loader
 from lotscope.markets.models import Market
 
@@ -130,10 +131,18 @@ async def ingest_li_demolitions(session_factory: SessionFactory, settings: Setti
     )
 
 
+def _sheriff_source(settings: Settings) -> SheriffSource | None:
+    if settings.sheriff_sale_source == "civilview":
+        return CivilViewSheriffSource(settings)
+    if settings.sheriff_sale_csv_path:
+        return CsvSheriffSource(settings.sheriff_sale_csv_path)
+    return None
+
+
 async def ingest_sheriff(session_factory: SessionFactory, settings: Settings) -> int:
-    if not settings.sheriff_sale_csv_path:
+    source = _sheriff_source(settings)
+    if source is None:
         return 0
-    source = CsvSheriffSource(settings.sheriff_sale_csv_path)
     return await run_loader(
         session_factory,
         lambda session: load_sheriff(session, source),

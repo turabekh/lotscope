@@ -43,6 +43,20 @@ vi.mock('@/lib/api', async (importOriginal) => {
           ],
         }),
       ),
+      runSheriffCoverage: vi.fn(() =>
+        Promise.resolve({
+          market_code: 'phl',
+          total_listings: 1493,
+          with_opa: 1488,
+          without_opa: 5,
+          unique_parcels: 1483,
+          reconciled: 1446,
+          unreconciled: 37,
+          coverage_pct: 97.5,
+          sample_unreconciled: ['phl:888888888'],
+          checked_at: '2026-07-12T10:00:00Z',
+        }),
+      ),
     },
   }
 })
@@ -93,5 +107,18 @@ describe('OpsPage fleet health', () => {
     useAuthStore().user = { id: 2, email: 'b@example.com', role: 'user' } as User
     const wrapper = await mountPage()
     expect(wrapper.text()).toContain('Administrator access required')
+  })
+
+  it('runs the sheriff-sale coverage check and renders the result', async () => {
+    const wrapper = await mountPage()
+    const runButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Run coverage check'))
+    expect(runButton).toBeDefined()
+    await runButton!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('97.5%')
+    expect(wrapper.text()).toContain('1,446 of 1,483 parcels')
+    expect(wrapper.text()).toContain('phl:888888888')
   })
 })

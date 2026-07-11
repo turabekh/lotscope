@@ -52,6 +52,7 @@ import type {
   JobCatalogEntry,
   OpsFleetOverview,
   OpsMarketHealthDetail,
+  OpsSheriffCoverage,
   JobRunSummary,
   NeighborhoodListResponse,
   OwnerPortfolio,
@@ -402,6 +403,9 @@ export const api = {
   },
   getOpsMarketHealth(marketCode: string): Promise<OpsMarketHealthDetail> {
     return request(`/admin/ops/markets/${encodeURIComponent(marketCode)}`)
+  },
+  runSheriffCoverage(): Promise<OpsSheriffCoverage> {
+    return request('/admin/ops/sheriff-coverage', { method: 'POST' })
   },
   pullSource(url: string, filename: string): Promise<void> {
     return downloadFile(`/admin/fetch?url=${encodeURIComponent(url)}`, filename)

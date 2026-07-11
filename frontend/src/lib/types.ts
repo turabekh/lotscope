@@ -799,6 +799,19 @@ export interface OpsFleetOverview {
   generated_at: string
 }
 
+export interface OpsSheriffCoverage {
+  market_code: string
+  total_listings: number
+  with_opa: number
+  without_opa: number
+  unique_parcels: number
+  reconciled: number
+  unreconciled: number
+  coverage_pct: number | null
+  sample_unreconciled: string[]
+  checked_at: string
+}
+
 export interface OpsDatasetHealth {
   dataset: string
   cadence: string

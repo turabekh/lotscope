@@ -19,6 +19,19 @@ class CoverageStats(BaseModel):
     computed_at: datetime | None
 
 
+class SheriffCoverage(BaseModel):
+    market_code: str
+    total_listings: int
+    with_opa: int
+    without_opa: int
+    unique_parcels: int
+    reconciled: int
+    unreconciled: int
+    coverage_pct: float | None
+    sample_unreconciled: list[str]
+    checked_at: datetime
+
+
 class FleetMarketRow(BaseModel):
     market_code: str
     name: str
