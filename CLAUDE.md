@@ -238,7 +238,7 @@ Testing is not optional and not an afterthought. A feature without tests is not 
 - **AI tests:** assert on the deterministic parts (retrieval results, prompt inputs, output schema validity, citation presence). Use a small **eval set** for answer quality; never assert exact model wording.
 - **Coverage:** aim for strong coverage on `zoning`, `valuation`, `risk`, `verdict`, and `ingestion` (target ~85%+ on core logic). Don't chase 100% or test trivial glue.
 - **Run before every commit;** CI enforces lint + type-check + tests on every PR. Red CI never merges.
-- Provide and use `make test`, `make lint`, `make typecheck`, `make up` (compose), `make migrate`. Use these exact entrypoints.
+- Provide and use `make test`, `make lint`, `make typecheck`, `make up` (compose), `make migrate`, `make docker-prune`. Use these exact entrypoints.
 
 ---
 
@@ -260,6 +260,7 @@ Testing is not optional and not an afterthought. A feature without tests is not 
 - Ingestion: retry with backoff, fail loudly, record per-dataset freshness and last-success.
 - Performance: GiST indexes on all geometry; serve map via Martin tiles (not raw GeoJSON); do verdict computation in batch with on-demand refresh; async I/O; paginate; cache hot reads in Redis; avoid N+1 in both SQL and API composition.
 - Map interactions target sub-second; verdict render target ~2s.
+- **Dev-box Docker disk hygiene:** the local box runs tight and an ENOSPC event can wedge the Docker engine. Reclaim with `make docker-prune` (`docker builder prune -f` + `docker image prune -af`). **Never** add `--volumes` — it destroys the local Postgres dev volume.
 
 ---
 

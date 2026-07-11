@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin mailpit
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck docker-prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -16,6 +16,10 @@ up-app: ## Build and start the full stack including the api container
 
 down: ## Stop all services
 	$(COMPOSE) down
+
+docker-prune: ## Reclaim Docker disk safely (build cache + unused images; NEVER touches volumes)
+	docker builder prune -f
+	docker image prune -af
 
 logs: ## Tail service logs
 	$(COMPOSE) logs -f
