@@ -24,3 +24,7 @@ class User(Base, TimestampMixin):
         String(10), nullable=False, default="weekly", server_default="weekly"
     )
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    entity_name: Mapped[str | None] = mapped_column(String(255))
+    signer_name: Mapped[str | None] = mapped_column(String(255))
+    signer_phone: Mapped[str | None] = mapped_column(String(40))
+    signer_email: Mapped[str | None] = mapped_column(String(255))

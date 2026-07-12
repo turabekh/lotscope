@@ -30,10 +30,21 @@ class UserRead(BaseModel):
     digest_frequency: str
     onboarded_at: datetime | None
     created_at: datetime
+    entity_name: str | None
+    signer_name: str | None
+    signer_phone: str | None
+    signer_email: str | None
 
 
 class DigestPreference(BaseModel):
     frequency: Literal["off", "weekly", "daily"]
+
+
+class SignerProfile(BaseModel):
+    entity_name: str | None = Field(default=None, max_length=255)
+    signer_name: str | None = Field(default=None, max_length=255)
+    signer_phone: str | None = Field(default=None, max_length=40)
+    signer_email: str | None = Field(default=None, max_length=255)
 
 
 class TokenResponse(BaseModel):
