@@ -5,6 +5,7 @@ export type UpgradeCap =
   | 'leads'
   | 'export'
   | 'letters'
+  | 'offer'
   | 'buyer_intel'
 
 export interface UpgradeCopy {
@@ -36,6 +37,12 @@ export const UPGRADE_COPY: Record<UpgradeCap, UpgradeCopy> = {
   letters: {
     headline: 'Direct-mail letters are a paid feature.',
     detail: 'Pro and Investor generate print-ready owner letters from your leads and saved searches.',
+  },
+  offer: {
+    headline: 'Offer letters are a Pro feature.',
+    detail:
+      'Pro and Investor generate a print-ready, non-binding letter of intent at your Maximum ' +
+      'Allowable Offer, with a comparable-sales appendix.',
   },
   buyer_intel: {
     headline: 'Cash-buyer intelligence is an Investor feature.',

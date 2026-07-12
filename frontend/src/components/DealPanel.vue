@@ -2,7 +2,10 @@
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
+import GenerateOfferDialog from '@/components/GenerateOfferDialog.vue'
 import { useParcelStore } from '@/stores/parcel'
+
+const offerOpen = ref(false)
 
 const store = useParcelStore()
 const { detail, deal, dealLoading } = storeToRefs(store)
@@ -125,7 +128,24 @@ function reset(): void {
           <q-chip dense square outline color="grey-7" :icon="'verified'">
             {{ deal.confidence }} confidence · {{ deal.comp_count }} comp(s)
           </q-chip>
+          <q-space />
+          <q-btn
+            outline
+            no-caps
+            dense
+            color="primary"
+            icon="picture_as_pdf"
+            label="Generate offer"
+            @click="offerOpen = true"
+          />
         </div>
+
+        <GenerateOfferDialog
+          v-if="detail"
+          v-model="offerOpen"
+          :parcel-number="detail.parcel_number"
+          :max-allowable-offer="deal.max_allowable_offer ?? null"
+        />
 
         <q-expansion-item dense label="Model a scenario" icon="tune" class="q-mt-xs scenario">
           <div class="q-pa-sm q-gutter-sm">

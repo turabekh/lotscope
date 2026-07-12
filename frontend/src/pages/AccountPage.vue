@@ -66,10 +66,40 @@ const digestFrequency = computed({
   },
 })
 
+const signer = ref({ entity_name: '', signer_name: '', signer_phone: '', signer_email: '' })
+const signerSaving = ref(false)
+const signerSaved = ref(false)
+
+function loadSigner(): void {
+  signer.value = {
+    entity_name: user.value?.entity_name ?? '',
+    signer_name: user.value?.signer_name ?? '',
+    signer_phone: user.value?.signer_phone ?? '',
+    signer_email: user.value?.signer_email ?? '',
+  }
+}
+
+async function saveSigner(): Promise<void> {
+  signerSaving.value = true
+  signerSaved.value = false
+  try {
+    await store.setSigner({
+      entity_name: signer.value.entity_name || null,
+      signer_name: signer.value.signer_name || null,
+      signer_phone: signer.value.signer_phone || null,
+      signer_email: signer.value.signer_email || null,
+    })
+    signerSaved.value = true
+  } finally {
+    signerSaving.value = false
+  }
+}
+
 onMounted(async () => {
   const flag = route.query.checkout
   if (flag === 'success' || flag === 'cancel') checkoutNotice.value = flag
   await store.refreshUser()
+  loadSigner()
   await store.fetchUsage()
   await push.refresh()
   await credits.ensureLoaded()
@@ -206,6 +236,36 @@ async function signOut(): Promise<void> {
           text-color="grey-9"
           :options="DIGEST_OPTIONS"
         />
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <div class="row items-center q-mb-xs">
+          <q-icon name="draw" size="18px" color="grey-7" class="q-mr-xs" />
+          <div class="text-subtitle2">Offer signer profile</div>
+          <q-space />
+          <span v-if="signerSaved" class="text-caption text-positive">Saved</span>
+        </div>
+        <div class="text-caption text-grey-7 q-mb-sm">
+          Defaulted onto every letter of intent you generate. Overridable per offer.
+        </div>
+        <div class="q-gutter-sm">
+          <q-input v-model="signer.entity_name" outlined dense label="Entity / company" />
+          <q-input v-model="signer.signer_name" outlined dense label="Signer name" />
+          <div class="row q-col-gutter-sm">
+            <q-input v-model="signer.signer_phone" outlined dense label="Phone" class="col" />
+            <q-input v-model="signer.signer_email" outlined dense label="Email" class="col" />
+          </div>
+          <q-btn
+            unelevated
+            no-caps
+            color="primary"
+            label="Save signer profile"
+            :loading="signerSaving"
+            @click="saveSigner"
+          />
+        </div>
       </q-card-section>
 
       <q-separator />

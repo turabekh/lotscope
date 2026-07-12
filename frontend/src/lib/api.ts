@@ -53,6 +53,8 @@ import type {
   BuyerProfileDetail,
   BuyerRoster,
   BuyersNearby,
+  OfferRequest,
+  SignerProfile,
   OpsFleetOverview,
   OpsMarketHealthDetail,
   OpsSheriffCoverage,
@@ -427,6 +429,17 @@ export const api = {
   downloadBuyersCsv(market: string): Promise<void> {
     const query = new URLSearchParams({ market })
     return downloadFile(`/buyers/export?${query.toString()}`, `lotscope-buyers-${market}.csv`)
+  },
+  generateOffer(parcelNumber: string, payload: OfferRequest): Promise<void> {
+    const slug = parcelNumber.replace(/:/g, '-')
+    return downloadFile(
+      `/pipeline/${encodeURIComponent(parcelNumber)}/offer`,
+      `lotscope-loi-${slug}.pdf`,
+      payload,
+    )
+  },
+  updateSigner(payload: SignerProfile): Promise<User> {
+    return request('/auth/signer', { method: 'PATCH', body: JSON.stringify(payload) })
   },
   getSavedSearches(): Promise<SavedSearchListResponse> {
     return request('/saved-searches')
