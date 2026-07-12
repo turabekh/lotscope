@@ -4,13 +4,22 @@ from typing import Any
 import httpx
 import pytest
 from fastapi import FastAPI
+from redis.exceptions import RedisError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.api.app import create_app
-from lotscope.api.deps import get_current_user, get_session
+from lotscope.api.deps import get_current_user, get_redis, get_session
 
 pytestmark = pytest.mark.integration
+
+
+class _FailingRedis:
+    async def incr(self, *args: Any, **kwargs: Any) -> int:
+        raise RedisError("no redis in tests")
+
+    async def expire(self, *args: Any, **kwargs: Any) -> bool:
+        raise RedisError("no redis in tests")
 
 
 def _app(db_session: AsyncSession, *, tier: str = "investor") -> FastAPI:
@@ -24,6 +33,7 @@ def _app(db_session: AsyncSession, *, tier: str = "investor") -> FastAPI:
 
     app.dependency_overrides[get_session] = _session
     app.dependency_overrides[get_current_user] = _user
+    app.dependency_overrides[get_redis] = lambda: _FailingRedis()
     return app
 
 
@@ -71,3 +81,31 @@ async def test_pgh_market_returns_unavailable_state(db_session: AsyncSession) ->
     assert body["available"] is False
     assert body["buyers"] == []
     assert body["note"]
+
+
+async def test_export_requires_investor(db_session: AsyncSession) -> None:
+    app = _app(db_session, tier="pro")
+    async with _client(app) as client:
+        resp = await client.get("/buyers/export")
+    assert resp.status_code == 429
+
+
+async def test_export_returns_csv_for_investor(db_session: AsyncSession) -> None:
+    await _seed_buyer(db_session)
+    app = _app(db_session, tier="investor")
+    async with _client(app) as client:
+        resp = await client.get("/buyers/export")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    body = resp.text
+    assert "THEDOOR LLC" in body
+    assert "Fair Housing" in body
+
+
+async def test_export_gated_market_is_empty_but_valid(db_session: AsyncSession) -> None:
+    app = _app(db_session, tier="investor")
+    async with _client(app) as client:
+        resp = await client.get("/buyers/export", params={"market": "pgh"})
+    assert resp.status_code == 200
+    assert "Entity" in resp.text
+    assert "Fair Housing" in resp.text

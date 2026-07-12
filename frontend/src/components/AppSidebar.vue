@@ -36,6 +36,7 @@ const sections = computed<NavLink[]>(() => [
     name: 'sheriff-sales',
   },
   { label: 'Top plays', icon: 'dashboard_customize', name: 'top-plays' },
+  { label: 'Cash buyers', icon: 'real_estate_agent', name: 'buyers' },
   { label: 'Market', icon: 'insights', name: 'market' },
   { label: 'Leads', icon: 'sell', name: 'leads' },
   { label: 'Pipeline', icon: 'view_kanban', name: 'pipeline' },

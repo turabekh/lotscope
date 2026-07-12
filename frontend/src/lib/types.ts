@@ -799,6 +799,53 @@ export interface OpsFleetOverview {
   generated_at: string
 }
 
+export interface BuyerStats {
+  buyer_key: string
+  display_name: string
+  purchases_window: number
+  lot_purchases_window: number
+  last_purchase_at: string | null
+  median_price: number | null
+  total_consideration: number | null
+  mailing_address: string | null
+}
+
+export interface NearbyBuyer extends BuyerStats {
+  distance_ft: number
+}
+
+export interface BuyersNearby {
+  market_code: string
+  available: boolean
+  note: string | null
+  radius_ft: number
+  computed_at: string | null
+  buyers: NearbyBuyer[]
+}
+
+export interface BuyerRoster {
+  market_code: string
+  available: boolean
+  note: string | null
+  total: number
+  returned: number
+  buyers: BuyerStats[]
+}
+
+export interface BuyerPurchase {
+  parcel_number: string
+  address: string | null
+  sale_date: string | null
+  sale_price: number | null
+  is_vacant: boolean | null
+}
+
+export interface BuyerProfileDetail extends BuyerStats {
+  market_code: string
+  computed_at: string | null
+  purchases: BuyerPurchase[]
+}
+
 export interface OpsSheriffCoverage {
   market_code: string
   total_listings: number

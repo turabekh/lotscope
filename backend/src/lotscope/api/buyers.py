@@ -22,7 +22,7 @@ router = APIRouter(tags=["buyers"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
-_BUYER_NAMES_SURFACE = "buyer_names"
+_BUYER_NAMES_SURFACE = "buyers"
 _INVESTOR_UPGRADE = (
     "Cash-buyer intelligence is an Investor-tier feature — upgrade to see who is buying lots "
     "near your parcels."

@@ -1,4 +1,11 @@
-export type UpgradeCap = 'parcel_views' | 'ask' | 'saved_search' | 'leads' | 'export' | 'letters'
+export type UpgradeCap =
+  | 'parcel_views'
+  | 'ask'
+  | 'saved_search'
+  | 'leads'
+  | 'export'
+  | 'letters'
+  | 'buyer_intel'
 
 export interface UpgradeCopy {
   headline: string
@@ -29,5 +36,11 @@ export const UPGRADE_COPY: Record<UpgradeCap, UpgradeCopy> = {
   letters: {
     headline: 'Direct-mail letters are a paid feature.',
     detail: 'Pro and Investor generate print-ready owner letters from your leads and saved searches.',
+  },
+  buyer_intel: {
+    headline: 'Cash-buyer intelligence is an Investor feature.',
+    detail:
+      'Investor reveals who is actively buying vacant lots near your parcels — their purchase ' +
+      'history, activity, and mailing address where recorded.',
   },
 }

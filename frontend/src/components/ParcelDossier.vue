@@ -16,6 +16,7 @@ import ReportPanel from '@/components/ReportPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import HistoricPanel from '@/components/HistoricPanel.vue'
 import MarketContextPanel from '@/components/MarketContextPanel.vue'
+import BuyersNearbyPanel from '@/components/BuyersNearbyPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
@@ -443,6 +444,7 @@ async function toggleSave(): Promise<void> {
           <q-tab-panel name="risk" class="tab-pane">
             <DistressPanel />
             <OwnerPortfolioPanel />
+            <BuyersNearbyPanel />
             <div v-if="riskEmpty" class="tab-empty">
               <q-icon name="verified_user" size="26px" />
               <span>No distress signals or owner-portfolio data surfaced for this lot.</span>
