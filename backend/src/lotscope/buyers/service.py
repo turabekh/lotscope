@@ -26,6 +26,17 @@ from lotscope.ingestion.service import record_freshness
 BUYER_DATASET = "buyer_profile"
 BUYER_NEAR_RADIUS_FT = 2640.0
 
+BUYERS_EXPORT_HEADER = (
+    "Entity",
+    "Buyer key",
+    "Lot purchases (24mo)",
+    "Total purchases (24mo)",
+    "Last purchase",
+    "Median lot price",
+    "Total consideration",
+    "Mailing address",
+)
+
 _CANDIDATE_SQL = text(
     "WITH candidate AS ("
     "  SELECT s.grantor AS grantor, s.grantee AS grantee, s.parcel_number AS parcel_number, "
@@ -134,6 +145,15 @@ _PURCHASES_SQL = text(
 )
 
 
+_EXPORT_SQL = text(
+    "SELECT display_name, buyer_key, lot_purchases_window, purchases_window, "
+    "       last_purchase_at, median_price, total_consideration, mailing_address "
+    "FROM buyer_profile "
+    "WHERE market_code = :market AND lot_purchases_window >= :min_purchases "
+    "ORDER BY lot_purchases_window DESC, last_purchase_at DESC NULLS LAST, buyer_key "
+    "LIMIT :limit"
+)
+
 _PARCEL_MARKET_SQL = text("SELECT market_code FROM parcel WHERE parcel_number = :parcel_number")
 
 
@@ -145,6 +165,32 @@ async def parcel_market(session: AsyncSession, parcel_number: str) -> str | None
     return cast(
         "str | None", await session.scalar(_PARCEL_MARKET_SQL, {"parcel_number": parcel_number})
     )
+
+
+async def export_buyers(
+    session: AsyncSession,
+    market_code: str,
+    *,
+    min_purchases: int = BUYER_MIN_LOT_PURCHASES,
+    row_limit: int = 10000,
+) -> list[tuple[Any, ...]]:
+    rows = await session.execute(
+        _EXPORT_SQL,
+        {"market": market_code, "min_purchases": min_purchases, "limit": row_limit},
+    )
+    return [
+        (
+            r.display_name,
+            r.buyer_key,
+            r.lot_purchases_window,
+            r.purchases_window,
+            r.last_purchase_at.isoformat() if r.last_purchase_at else "",
+            _f(r.median_price) or "",
+            _f(r.total_consideration) or "",
+            r.mailing_address or "",
+        )
+        for r in rows
+    ]
 
 
 def _window_start(now: datetime) -> date:

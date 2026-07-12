@@ -94,6 +94,18 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: 'Sheriff sales' },
   },
   {
+    path: '/:market/buyers',
+    name: 'buyers',
+    component: () => import('@/pages/BuyersPage.vue'),
+    meta: { requiresAuth: true, title: 'Cash buyers' },
+  },
+  {
+    path: '/:market/buyers/:buyerKey',
+    name: 'buyer-profile',
+    component: () => import('@/pages/BuyerProfilePage.vue'),
+    meta: { requiresAuth: true, title: 'Buyer profile' },
+  },
+  {
     path: '/:market/top-plays',
     name: 'top-plays',
     component: () => import('@/pages/TopPlaysPage.vue'),

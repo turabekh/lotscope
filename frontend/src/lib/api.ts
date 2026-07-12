@@ -50,6 +50,9 @@ import type {
   DeedRestrictionsResponse,
   FetchSource,
   JobCatalogEntry,
+  BuyerProfileDetail,
+  BuyerRoster,
+  BuyersNearby,
   OpsFleetOverview,
   OpsMarketHealthDetail,
   OpsSheriffCoverage,
@@ -409,6 +412,21 @@ export const api = {
   },
   pullSource(url: string, filename: string): Promise<void> {
     return downloadFile(`/admin/fetch?url=${encodeURIComponent(url)}`, filename)
+  },
+  getParcelBuyers(parcelNumber: string): Promise<BuyersNearby> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/buyers`)
+  },
+  getBuyers(market: string, minPurchases = 3): Promise<BuyerRoster> {
+    const query = new URLSearchParams({ market, min_purchases: String(minPurchases) })
+    return request(`/buyers?${query.toString()}`)
+  },
+  getBuyer(market: string, buyerKey: string): Promise<BuyerProfileDetail> {
+    const query = new URLSearchParams({ market })
+    return request(`/buyers/${encodeURIComponent(buyerKey)}?${query.toString()}`)
+  },
+  downloadBuyersCsv(market: string): Promise<void> {
+    const query = new URLSearchParams({ market })
+    return downloadFile(`/buyers/export?${query.toString()}`, `lotscope-buyers-${market}.csv`)
   },
   getSavedSearches(): Promise<SavedSearchListResponse> {
     return request('/saved-searches')
