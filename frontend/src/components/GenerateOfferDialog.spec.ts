@@ -8,7 +8,9 @@ import type { OfferRequest, User } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
 const { generateOfferMock } = vi.hoisted(() => ({
-  generateOfferMock: vi.fn(() => Promise.resolve()),
+  generateOfferMock: vi.fn<(parcel: string, payload: unknown) => Promise<void>>(() =>
+    Promise.resolve(),
+  ),
 }))
 
 vi.mock('@/lib/api', async (importOriginal) => {
