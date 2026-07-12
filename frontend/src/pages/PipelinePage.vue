@@ -4,6 +4,7 @@ import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import GenerateOfferDialog from '@/components/GenerateOfferDialog.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { DealActivityItem, DealItem, DealStage } from '@/lib/types'
@@ -43,6 +44,8 @@ const detailDeal = ref<DealItem | null>(null)
 const detailOpen = ref(false)
 const activity = ref<DealActivityItem[]>([])
 const contactDraft = ref({ contact_name: '', contact_phone: '', contact_email: '' })
+const offerOpen = ref(false)
+const offerDeal = ref<DealItem | null>(null)
 
 onMounted(() => void pipeline.load())
 
@@ -95,7 +98,21 @@ function activityText(item: DealActivityItem): string {
   if (item.kind === 'stage_change') {
     return `Moved ${stageLabel(item.from_stage as DealStage)} → ${stageLabel(item.to_stage as DealStage)}`
   }
+  if (item.kind === 'offer_generated') {
+    try {
+      const payload = JSON.parse(item.body ?? '{}') as { offer_price?: number }
+      const price = payload.offer_price != null ? formatCurrency(payload.offer_price) : ''
+      return `Offer letter generated${price ? ` at ${price}` : ''}`
+    } catch {
+      return 'Offer letter generated'
+    }
+  }
   return item.body ?? 'Next action set'
+}
+
+function openOffer(deal: DealItem): void {
+  offerDeal.value = deal
+  offerOpen.value = true
 }
 
 function openParcel(deal: DealItem): void {
@@ -318,6 +335,9 @@ async function skipTraceContact(): Promise<void> {
                     <q-item clickable @click="openDetail(deal)">
                       <q-item-section>Contact &amp; history</q-item-section>
                     </q-item>
+                    <q-item clickable @click="openOffer(deal)">
+                      <q-item-section>Generate offer</q-item-section>
+                    </q-item>
                     <q-item clickable @click="openParcel(deal)">
                       <q-item-section>Open on map</q-item-section>
                     </q-item>
@@ -478,6 +498,13 @@ async function skipTraceContact(): Promise<void> {
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <GenerateOfferDialog
+      v-if="offerDeal"
+      v-model="offerOpen"
+      :parcel-number="offerDeal.parcel_number"
+      :max-allowable-offer="offerDeal.max_allowable_offer"
+    />
   </q-page>
 </template>
 

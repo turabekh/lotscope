@@ -734,6 +734,31 @@ export interface User {
   digest_frequency: 'off' | 'weekly' | 'daily'
   onboarded_at: string | null
   created_at: string
+  entity_name?: string | null
+  signer_name?: string | null
+  signer_phone?: string | null
+  signer_email?: string | null
+}
+
+export interface OfferRequest {
+  offer_price?: number | null
+  all_cash?: boolean
+  as_is?: boolean
+  earnest_money?: number
+  close_days?: number
+  inspection_days?: number
+  expiration?: string | null
+  entity_name?: string | null
+  signer_name?: string | null
+  signer_phone?: string | null
+  signer_email?: string | null
+}
+
+export interface SignerProfile {
+  entity_name: string | null
+  signer_name: string | null
+  signer_phone: string | null
+  signer_email: string | null
 }
 
 export interface DatasetStatus {

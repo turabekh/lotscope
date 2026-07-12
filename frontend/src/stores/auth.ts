@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { ApiError, api, setAuthToken } from '@/lib/api'
-import type { RegisterPayload, Usage, User } from '@/lib/types'
+import type { RegisterPayload, SignerProfile, Usage, User } from '@/lib/types'
 import { useAreaSearchStore } from '@/stores/areaSearch'
 import { usePipelineStore } from '@/stores/pipeline'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
@@ -94,6 +94,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = await api.setDigestPreference(frequency)
   }
 
+  async function setSigner(payload: SignerProfile): Promise<void> {
+    user.value = await api.updateSigner(payload)
+  }
+
   async function markOnboarded(): Promise<void> {
     user.value = await api.markOnboarded()
   }
@@ -130,6 +134,7 @@ export const useAuthStore = defineStore('auth', () => {
     refresh,
     refreshUser,
     setDigest,
+    setSigner,
     markOnboarded,
     fetchUsage,
     logout,
