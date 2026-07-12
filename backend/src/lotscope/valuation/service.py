@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.sql import package_deed_exclusion_sql
 from lotscope.valuation.avm import (
     Comp,
     estimate_land_value,
@@ -43,9 +44,7 @@ _COMPS_SQL = text(
     "  AND s.parcel_number <> :parcel_number "
     "  AND s.sale_price >= :min_price "
     "  AND s.sale_date >= :since "
-    "  AND (s.document_id IS NULL OR NOT EXISTS ("
-    "    SELECT 1 FROM sale s2 WHERE s2.document_id = s.document_id "
-    "    AND s2.parcel_number <> s.parcel_number)) "
+    "  AND " + package_deed_exclusion_sql("s") + " "
     "  AND (NOT :vacant_only OR cp.is_vacant IS TRUE) "
     "  AND ((:use_class)::text IS NULL OR CASE left(upper(cp.base_zoning_code), 1) "
     "         WHEN 'R' THEN 'residential' WHEN 'C' THEN 'commercial' "

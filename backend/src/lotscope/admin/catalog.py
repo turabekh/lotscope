@@ -68,6 +68,15 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
         kind=RECOMPUTE_KIND,
         description="Recompute assemblage Top Plays for every vacant parcel.",
     ),
+    JobSpec(
+        id="recompute:buyers",
+        label="Recompute buyer intelligence",
+        kind=RECOMPUTE_KIND,
+        description="Recompute cash-buyer / disposition profiles from recorded arm's-length "
+        "vacant-lot sales.",
+        market="phl",
+        dataset="buyer_profile",
+    ),
 )
 
 

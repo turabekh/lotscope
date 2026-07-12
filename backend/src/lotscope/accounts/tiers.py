@@ -93,10 +93,15 @@ def export_row_limit(tier: str) -> int:
 
 
 FEED_TIERS = frozenset({"pro", "investor", "enterprise"})
+INVESTOR_TIERS = frozenset({"investor", "enterprise"})
 
 
 def feed_access(tier: str) -> bool:
     return tier in FEED_TIERS
+
+
+def buyer_intel_access(tier: str) -> bool:
+    return tier in INVESTOR_TIERS
 
 
 def sheriff_calendar_access(tier: str) -> bool:

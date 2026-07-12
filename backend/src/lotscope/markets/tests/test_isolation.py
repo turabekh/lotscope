@@ -3,6 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.assemblage.service import compute_assemblage
+from lotscope.buyers.service import buyers_near_parcel
 from lotscope.risk.service import _has_street_frontage
 from lotscope.search.schemas import AreaSearchRequest, GeoPoint
 from lotscope.search.spatial import search_area
@@ -74,6 +75,17 @@ async def _street(session: AsyncSession, market: str) -> None:
     )
 
 
+async def _buyer(session: AsyncSession, market: str, key: str) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO buyer_profile (market_code, buyer_key, display_name, purchases_window, "
+            "lot_purchases_window, activity_centroid, computed_at) VALUES "
+            "(:m, :k, :k, 3, 3, ST_SetSRID(ST_MakePoint(5, 5), 2272), now())"
+        ),
+        {"m": market, "k": key},
+    )
+
+
 async def _plant_two_markets(session: AsyncSession) -> None:
     await _market(session, "zzz")
     await seed_zoning_standards(session)
@@ -92,6 +104,9 @@ async def _plant_two_markets(session: AsyncSession) -> None:
     # zzz district RSA-5 and a phl district CMX-3 both cover the subject
     await _district(session, "zzz", "RSA-5")
     await _district(session, "phl", "CMX-3")
+    # a zzz buyer + a phl decoy buyer with activity at the SAME location by the subject
+    await _buyer(session, "zzz", "ZZZ BUYER")
+    await _buyer(session, "phl", "PHL BUYER")
     await session.flush()
 
 
@@ -139,6 +154,14 @@ async def test_area_search_never_crosses_markets(db_session: AsyncSession) -> No
     assert keys
     assert all(key.startswith("zzz:") for key in keys)
     assert not any(key.startswith("phl:") for key in keys)
+
+
+async def test_buyers_never_cross_markets(db_session: AsyncSession) -> None:
+    await _plant_two_markets(db_session)
+    result = await buyers_near_parcel(db_session, "zzz:S", "zzz")
+    keys = {b.buyer_key for b in result.buyers}
+    assert keys == {"ZZZ BUYER"}
+    assert "PHL BUYER" not in keys
 
 
 async def test_zzz_verdict_computes_without_touching_phl(db_session: AsyncSession) -> None:
