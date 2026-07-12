@@ -106,3 +106,42 @@ async def test_load_sheriff_is_idempotent_on_case(db_session: AsyncSession) -> N
         text("SELECT count(*) FROM sheriff_sale WHERE case_number = 'BW-9'")
     )
     assert count == 1
+
+
+@pytest.mark.integration
+async def test_load_sheriff_postponement_updates_same_case(db_session: AsyncSession) -> None:
+    scheduled = _row("BW-7", "1234567", 5000.0)
+    scheduled["sale_date"] = "2026-08-05"
+    await load_sheriff(db_session, _FakeSource([scheduled]))
+    await db_session.flush()
+
+    postponed = _row("BW-7", "1234567", 5000.0)
+    postponed["status"] = "Postponed"
+    postponed["sale_date"] = "2026-09-16"
+    await load_sheriff(db_session, _FakeSource([postponed]))
+    await db_session.flush()
+
+    rows = (
+        await db_session.execute(
+            text("SELECT status, sale_date FROM sheriff_sale WHERE case_number = 'BW-7'")
+        )
+    ).all()
+    assert len(rows) == 1
+    assert rows[0].status == "Postponed"
+    assert rows[0].sale_date == date(2026, 9, 16)
+
+
+@pytest.mark.integration
+async def test_load_sheriff_counts_skipped_rows_in_freshness(db_session: AsyncSession) -> None:
+    rows = [
+        _row("BW-1", "1234567", 10000.0),
+        {**_row("BW-2", "", 20000.0), "opa_number": None},
+    ]
+    total = await load_sheriff(db_session, _FakeSource(rows))
+    await db_session.flush()
+
+    assert total == 1
+    fresh = await db_session.get(DatasetFreshness, ("phl", "sheriff_sale"))
+    assert fresh is not None
+    assert fresh.detail is not None
+    assert "1 of 2 rows skipped" in fresh.detail

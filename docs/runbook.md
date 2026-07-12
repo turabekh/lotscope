@@ -65,13 +65,23 @@ docker compose --profile app exec db \
 Then load `/philadelphia/sheriff-sales` — the per-market state flips from `empty` to `live` once dated rows
 exist (`markets/capabilities.sale_calendar_state`).
 
+**Delete the demo row after the first verified live load** (it was inserted manually to exercise the `live`
+state and must not linger beside real data):
+
+```bash
+docker compose --profile app exec db \
+  psql -U lotscope -d lotscope -c "DELETE FROM sheriff_sale WHERE case_number='BW-DEMO-01';"
+```
+
 ### Expect on first run
 
 - A **burst of `sheriff_sale` Deal Feed events** — one per newly-seen case (~1,400+ parcels). Expected: that
   is the feature. The first-load baseline guard (`EXISTS (SELECT 1 FROM sheriff_sale)`) means the *very first*
   load does not spuriously event every row, but subsequent new cases do event.
 - Listings whose OPA # does not resolve to a loaded parcel are retained in `raw` and skipped from core/events
-  (address-match is a deferred follow-up). ~5 listings carry no OPA # at all and are skipped.
+  (address-match is a deferred follow-up). ~5 listings carry no OPA # at all and are skipped. The **run report
+  logs the skipped-and-counted tally** (`sheriff_load_complete`) and the `dataset_freshness.detail` for
+  `sheriff_sale` records `"N of M rows skipped"`, so parser drift shows up as a rising skip count.
 
 ### Rollback
 

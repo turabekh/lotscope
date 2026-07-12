@@ -57,6 +57,27 @@ def test_parse_sale_detail_reads_real_detail() -> None:
     assert detail.opening_bid == 1600.0
 
 
+_DETAIL_NO_BID_HTML = (
+    "<html><body>"
+    "<table><tr><td>Postponed</td><td>9/16/2026</td></tr></table>"
+    '<div class="sale-detail-item">'
+    '<div class="sale-detail-label">Sales Date:</div>'
+    '<div class="sale-detail-value">9/16/2026</div></div>'
+    '<div class="sale-detail-item">'
+    '<div class="sale-detail-label">Sale Type:</div>'
+    '<div class="sale-detail-value">TAX DELINQUENT</div></div>'
+    "</body></html>"
+)
+
+
+def test_parse_sale_detail_handles_missing_opening_bid() -> None:
+    detail = parse_sale_detail(_DETAIL_NO_BID_HTML)
+    assert detail.opening_bid is None
+    assert detail.sale_date == "2026-09-16"
+    assert detail.sale_type == "TAX DELINQUENT"
+    assert detail.status == "Postponed"
+
+
 def test_civilview_record_merges_into_sheriff_row() -> None:
     row = CivilViewListRow(
         property_id="1",

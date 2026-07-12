@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.logging import get_logger
 from lotscope.ingestion.merge import merge_sheriff
 from lotscope.ingestion.models import IngestRun, StagingSheriffSale
 from lotscope.ingestion.parsing import parse_iso_date
@@ -17,6 +18,8 @@ from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
 
 SHERIFF_DATASET = "sheriff_sale"
+
+_logger = get_logger("ingestion.sheriff")
 
 
 class SheriffSource(Protocol):
@@ -83,9 +86,10 @@ async def load_sheriff(session: AsyncSession, source: SheriffSource) -> int:
     await session.flush()
     await session.execute(text("DELETE FROM staging.sheriff_sale"))
 
+    fetched = await source.fetch()
     mapped: list[dict[str, Any]] = []
     raw_rows: list[dict[str, Any]] = []
-    for raw in await source.fetch():
+    for raw in fetched:
         row = to_sheriff_row(SheriffSaleRecord.model_validate(raw))
         if row is None:
             continue
@@ -100,6 +104,7 @@ async def load_sheriff(session: AsyncSession, source: SheriffSource) -> int:
         )
 
     total = len(mapped)
+    skipped = len(fetched) - total
     if mapped:
         parcel_stubs = [
             {"parcel_number": parcel_number, "source": SHERIFF_DATASET}
@@ -117,7 +122,9 @@ async def load_sheriff(session: AsyncSession, source: SheriffSource) -> int:
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count
     await session.flush()
+    _logger.info("sheriff_load_complete", fetched=len(fetched), kept=total, skipped=skipped)
+    detail = f"{skipped} of {len(fetched)} rows skipped (unresolved OPA/case)" if skipped else None
     await record_freshness(
-        session, SHERIFF_DATASET, status="success", success=True, row_count=total
+        session, SHERIFF_DATASET, status="success", success=True, row_count=total, detail=detail
     )
     return total
