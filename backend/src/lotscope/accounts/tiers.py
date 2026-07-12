@@ -104,6 +104,10 @@ def buyer_intel_access(tier: str) -> bool:
     return tier in INVESTOR_TIERS
 
 
+def offer_generation_access(tier: str) -> bool:
+    return tier in FEED_TIERS
+
+
 def sheriff_calendar_access(tier: str) -> bool:
     return tier in FEED_TIERS
 

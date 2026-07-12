@@ -11,6 +11,7 @@ from lotscope.accounts.models import User
 from lotscope.accounts.schemas import (
     DigestPreference,
     LoginRequest,
+    SignerProfile,
     TokenResponse,
     UsageMetric,
     UsageResponse,
@@ -64,6 +65,20 @@ async def set_digest_preference(
     user: Annotated[User, Depends(get_current_user)],
 ) -> UserRead:
     user.digest_frequency = data.frequency
+    await session.commit()
+    return UserRead.model_validate(user)
+
+
+@router.patch("/signer", response_model=UserRead)
+async def set_signer_profile(
+    data: SignerProfile,
+    session: SessionDep,
+    user: Annotated[User, Depends(get_current_user)],
+) -> UserRead:
+    user.entity_name = data.entity_name
+    user.signer_name = data.signer_name
+    user.signer_phone = data.signer_phone
+    user.signer_email = data.signer_email
     await session.commit()
     return UserRead.model_validate(user)
 

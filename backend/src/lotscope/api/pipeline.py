@@ -1,30 +1,33 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import pipeline_limit
+from lotscope.accounts.tiers import offer_generation_access, pipeline_limit
 from lotscope.api.deps import ParcelKeyDep, canonicalize_parcel_key, get_current_user, get_session
-from lotscope.core.errors import NotFoundError
+from lotscope.core.errors import NotFoundError, QuotaExceededError
 from lotscope.pipeline.schemas import (
     DealActivityItem,
     DealCreate,
     DealItem,
     DealUpdate,
+    OfferRequest,
     PipelineResponse,
     TodayResponse,
 )
 from lotscope.pipeline.service import (
     add_deal,
     deals_due,
+    generate_offer,
     get_deal,
     list_activity,
     list_deals,
     remove_deal,
     update_deal,
 )
+from lotscope.reports.loi import LoiSigner
 
 router = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
@@ -80,6 +83,34 @@ async def update_pipeline_deal(
     deal = await get_deal(session, user.id, parcel_number)
     assert deal is not None
     return deal
+
+
+@router.post("/{parcel_number}/offer")
+async def generate_pipeline_offer(
+    parcel_number: ParcelKeyDep,
+    data: OfferRequest,
+    session: SessionDep,
+    user: CurrentUserDep,
+) -> Response:
+    if not offer_generation_access(user.tier):
+        raise QuotaExceededError(
+            "Offer letters are a Pro feature — upgrade to generate a letter of intent."
+        )
+    default_signer = LoiSigner(
+        entity_name=user.entity_name,
+        signer_name=user.signer_name or user.full_name,
+        signer_phone=user.signer_phone,
+        signer_email=user.signer_email or user.email,
+    )
+    pdf, filename = await generate_offer(
+        session, user.id, parcel_number, data, default_signer=default_signer, now=datetime.now(UTC)
+    )
+    await session.commit()
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.delete("/{parcel_number}", status_code=204)

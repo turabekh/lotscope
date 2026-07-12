@@ -15,6 +15,20 @@ class DealCreate(BaseModel):
     target_price: float | None = Field(default=None, ge=0)
 
 
+class OfferRequest(BaseModel):
+    offer_price: float | None = Field(default=None, ge=0)
+    all_cash: bool = True
+    as_is: bool = True
+    earnest_money: float = Field(default=1000.0, ge=0)
+    close_days: int = Field(default=30, ge=1, le=365)
+    inspection_days: int = Field(default=10, ge=0, le=180)
+    expiration: date | None = None
+    entity_name: str | None = Field(default=None, max_length=255)
+    signer_name: str | None = Field(default=None, max_length=255)
+    signer_phone: str | None = Field(default=None, max_length=40)
+    signer_email: str | None = Field(default=None, max_length=255)
+
+
 class DealUpdate(BaseModel):
     stage: Stage | None = None
     note: str | None = Field(default=None, max_length=2000)

@@ -36,3 +36,7 @@ class QuotaExceededError(LotScopeError):
 
 class ConflictError(LotScopeError):
     default_message = "The request conflicts with the current state."
+
+
+class MissingEconomicsError(ConflictError):
+    default_message = "No verdict economics are available for this parcel."
