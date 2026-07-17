@@ -35,7 +35,8 @@ async def search_within_area(
     request: AreaSearchRequest,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> AreaSearchResponse:
-    results, total = await search_area(session, request)
+    scoped = request.model_copy(update={"market": market_code(request.market)})
+    results, total = await search_area(session, scoped)
     return AreaSearchResponse(
         count=len(results),
         total=total,

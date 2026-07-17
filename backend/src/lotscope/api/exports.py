@@ -13,6 +13,7 @@ from lotscope.accounts.usage import reserve_export
 from lotscope.api.deps import get_current_user, get_redis, get_session
 from lotscope.buyers.service import BUYERS_EXPORT_HEADER, export_buyers
 from lotscope.core.errors import QuotaExceededError
+from lotscope.core.markets import market_code
 from lotscope.distress.service import LEADS_EXPORT_HEADER, export_leads
 from lotscope.markets.capabilities import hidden_surfaces
 from lotscope.pipeline.service import PIPELINE_EXPORT_HEADER, export_deals
@@ -73,7 +74,7 @@ async def export_buyers_csv(
     session: SessionDep,
     current_user: CurrentUserDep,
     redis: RedisDep,
-    market: Annotated[str, Query(max_length=10)] = "phl",
+    market: Annotated[str, Query(max_length=20)] = "phl",
     min_purchases: Annotated[int, Query(ge=1, le=100)] = 3,
 ) -> StreamingResponse:
     if not buyer_intel_access(current_user.tier):
@@ -81,15 +82,16 @@ async def export_buyers_csv(
             "Cash-buyer exports are an Investor-tier feature — upgrade to export the buyer list."
         )
     await _reserve_export(redis, current_user)
+    code = market_code(market)
     rows: list[Any] = []
-    if "buyers" not in hidden_surfaces(market):
+    if "buyers" not in hidden_surfaces(code):
         rows = await export_buyers(
             session,
-            market,
+            code,
             min_purchases=min_purchases,
             row_limit=export_row_limit(current_user.tier),
         )
-    return _csv_response(BUYERS_EXPORT_HEADER, rows, f"lotscope-buyers-{market}.csv")
+    return _csv_response(BUYERS_EXPORT_HEADER, rows, f"lotscope-buyers-{code}.csv")
 
 
 @router.get("/pipeline/export")

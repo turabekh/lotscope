@@ -10,6 +10,7 @@ from lotscope.accounts.models import User
 from lotscope.accounts.tiers import market_stats_access
 from lotscope.api.deps import get_current_user, get_redis, get_session
 from lotscope.core.errors import QuotaExceededError
+from lotscope.core.markets import market_code
 from lotscope.neighborhoods.schemas import (
     NeighborhoodListResponse,
     NeighborhoodMarketResponse,
@@ -27,7 +28,9 @@ async def get_neighborhoods(
     session: Annotated[AsyncSession, Depends(get_session)],
     market: Annotated[str, Query()] = "phl",
 ) -> NeighborhoodListResponse:
-    return NeighborhoodListResponse(neighborhoods=await list_neighborhoods(session, market))
+    return NeighborhoodListResponse(
+        neighborhoods=await list_neighborhoods(session, market_code(market))
+    )
 
 
 @router.get("/neighborhoods/market", response_model=NeighborhoodMarketResponse)
@@ -42,13 +45,14 @@ async def get_neighborhood_market(
             "Market intelligence is a Pro feature — upgrade to see neighborhood opportunity stats."
         )
 
-    cache_key = f"{_MARKET_CACHE_KEY_PREFIX}:{market}"
+    code = market_code(market)
+    cache_key = f"{_MARKET_CACHE_KEY_PREFIX}:{code}"
     with contextlib.suppress(RedisError):
         cached = await redis.get(cache_key)
         if cached is not None:
             return NeighborhoodMarketResponse.model_validate_json(cached)
 
-    result = await neighborhood_market_stats(session, market)
+    result = await neighborhood_market_stats(session, code)
 
     with contextlib.suppress(RedisError):
         await redis.set(cache_key, result.model_dump_json(), ex=_MARKET_CACHE_TTL_SECONDS)

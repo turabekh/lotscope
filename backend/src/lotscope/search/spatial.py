@@ -6,7 +6,6 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import ValidationError
-from lotscope.core.markets import market_code
 from lotscope.core.sql import resolved_zoning_code_sql
 from lotscope.search.schemas import AreaSearchRequest, SpatialParcelResult
 
@@ -87,7 +86,7 @@ def build_filters(
 
 def _filters_for(request: AreaSearchRequest) -> tuple[str, dict[str, Any]]:
     return build_filters(
-        market=market_code(request.market),
+        market=request.market,
         vacant_only=request.vacant_only,
         zoning_codes=request.zoning_codes,
         zoning_use_classes=request.zoning_use_classes,
