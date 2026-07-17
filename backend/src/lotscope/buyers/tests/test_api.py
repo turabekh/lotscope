@@ -94,6 +94,40 @@ async def test_hbg_market_returns_unavailable_state(db_session: AsyncSession) ->
     assert body["note"]
 
 
+@pytest.mark.parametrize(("slug", "code"), [("harrisburg", "hbg"), ("pittsburgh", "pgh")])
+async def test_gated_markets_are_unavailable_when_called_by_url_slug(
+    db_session: AsyncSession, slug: str, code: str
+) -> None:
+    app = _app(db_session, tier="investor")
+    async with _client(app) as client:
+        resp = await client.get("/buyers", params={"market": slug})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["market_code"] == code
+    assert body["available"] is False
+    assert body["note"]
+
+
+async def test_roster_by_url_slug_returns_the_same_buyers_as_the_market_code(
+    db_session: AsyncSession,
+) -> None:
+    await _seed_buyer(db_session)
+    app = _app(db_session, tier="investor")
+    async with _client(app) as client:
+        by_slug = await client.get("/buyers", params={"market": "philadelphia"})
+        by_code = await client.get("/buyers", params={"market": "phl"})
+    assert by_slug.status_code == 200
+    assert by_slug.json() == by_code.json()
+    assert by_slug.json()["total"] == 1
+
+
+async def test_unknown_market_is_rejected(db_session: AsyncSession) -> None:
+    app = _app(db_session, tier="investor")
+    async with _client(app) as client:
+        resp = await client.get("/buyers", params={"market": "atlantis"})
+    assert resp.status_code == 422
+
+
 async def test_export_requires_investor(db_session: AsyncSession) -> None:
     app = _app(db_session, tier="pro")
     async with _client(app) as client:

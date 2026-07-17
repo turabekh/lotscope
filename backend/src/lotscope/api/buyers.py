@@ -15,6 +15,7 @@ from lotscope.buyers.service import (
     parcel_market,
 )
 from lotscope.core.errors import NotFoundError, QuotaExceededError
+from lotscope.core.markets import market_code
 from lotscope.markets.capabilities import hidden_surfaces
 
 router = APIRouter(tags=["buyers"])
@@ -65,19 +66,18 @@ async def parcel_buyers(
 async def buyers_roster(
     session: SessionDep,
     current_user: CurrentUserDep,
-    market: Annotated[str, Query(max_length=10)] = "phl",
+    market: Annotated[str, Query(max_length=20)] = "phl",
     min_purchases: Annotated[int, Query(ge=1, le=100)] = 3,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> BuyerRoster:
     _require_investor(current_user)
-    if _names_gated(market):
+    code = market_code(market)
+    if _names_gated(code):
         return BuyerRoster(
-            market_code=market, available=False, note=_GATED_NOTE, total=0, returned=0, buyers=[]
+            market_code=code, available=False, note=_GATED_NOTE, total=0, returned=0, buyers=[]
         )
-    return await list_buyers(
-        session, market, min_purchases=min_purchases, limit=limit, offset=offset
-    )
+    return await list_buyers(session, code, min_purchases=min_purchases, limit=limit, offset=offset)
 
 
 @router.get("/buyers/{buyer_key}", response_model=BuyerProfileDetail)
@@ -85,12 +85,13 @@ async def buyer_profile(
     buyer_key: str,
     session: SessionDep,
     current_user: CurrentUserDep,
-    market: Annotated[str, Query(max_length=10)] = "phl",
+    market: Annotated[str, Query(max_length=20)] = "phl",
 ) -> BuyerProfileDetail:
     _require_investor(current_user)
-    if _names_gated(market):
+    code = market_code(market)
+    if _names_gated(code):
         raise NotFoundError("Buyer identities are not available for this market.")
-    profile = await get_buyer(session, market, buyer_key)
+    profile = await get_buyer(session, code, buyer_key)
     if profile is None:
-        raise NotFoundError(f"Buyer {buyer_key!r} was not found in {market!r}.")
+        raise NotFoundError(f"Buyer {buyer_key!r} was not found in {code!r}.")
     return profile

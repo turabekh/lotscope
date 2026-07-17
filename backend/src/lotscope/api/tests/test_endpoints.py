@@ -835,6 +835,42 @@ async def test_sheriff_sales_ranked_by_bid_gap_for_paid_tier(db_session: AsyncSe
 
 
 @pytest.mark.integration
+async def test_sheriff_sales_by_url_slug_returns_the_market_rows(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, owner) VALUES ('phl:000000001', 'A')")
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale "
+            "(parcel_number, case_number, sale_date, status, opening_bid) VALUES "
+            "('phl:000000001', 'BW-A', '2026-08-05', 'Open', 10000)"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        by_slug = await client.get("/sheriff-sales", params={"market": "philadelphia"})
+        by_code = await client.get("/sheriff-sales", params={"market": "phl"})
+
+    assert by_slug.status_code == 200
+    assert by_slug.json() == by_code.json()
+    assert by_slug.json()["total"] == 1
+    assert by_slug.json()["market"] == "phl"
+    assert by_slug.json()["state"] == "live"
+
+
+@pytest.mark.integration
+async def test_sheriff_sales_rejects_an_unknown_market(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    app.dependency_overrides[get_current_user] = _fake_pro_user
+    async with _client(app) as client:
+        resp = await client.get("/sheriff-sales", params={"market": "atlantis"})
+    assert resp.status_code == 422
+
+
+@pytest.mark.integration
 async def test_sheriff_calendar_reports_honest_empty_state(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     app.dependency_overrides[get_current_user] = _fake_pro_user
