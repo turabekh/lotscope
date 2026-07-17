@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 import AppShell from '@/components/AppShell.vue'
@@ -16,6 +16,8 @@ theme.init()
 
 const showShell = computed(() => route.meta.requiresAuth === true)
 
+const authResolved = ref(false)
+
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 
@@ -25,6 +27,7 @@ function rollSession(): void {
 
 onMounted(async () => {
   await auth.restore()
+  authResolved.value = true
   void market.load()
   refreshTimer = setInterval(rollSession, REFRESH_INTERVAL_MS)
   document.addEventListener('visibilitychange', rollSession)
@@ -38,7 +41,19 @@ onUnmounted(() => {
 
 <template>
   <AppShell v-if="showShell">
-    <router-view />
+    <router-view v-if="authResolved" />
+    <div v-else class="auth-boot">
+      <q-spinner size="32px" color="primary" />
+    </div>
   </AppShell>
   <router-view v-else />
 </template>
+
+<style scoped>
+.auth-boot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+</style>
