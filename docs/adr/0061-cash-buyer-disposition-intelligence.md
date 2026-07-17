@@ -121,3 +121,38 @@ data (public record).
 - **`VERDICT_VERSION` unaffected** (read-side derived data; no scoring, buildability, or verdict touch).
 - **Deferred:** hbg/pgh grantee loaders; buyer skip-trace; buyer "match scoring"/ML; per-market threshold
   overrides beyond the constants.
+
+## Addendum — 2026-07-17: the hbg/pgh grantee backfill is not feasible; hbg's surface is hidden, not empty
+
+The Context above records the deferred follow-up as *"extending those loaders"*, implying the hbg/pgh sale
+loaders simply do not populate a `grantee` that upstream offers. **That premise is wrong.** Verification against
+the live sources:
+
+- **pgh** — the WPRDC sales resource (`5bbe6c55-bce6-4edb-9d04-68edeb6bf7b1`, 496,914 rows) exposes **26 fields
+  and no party name of any kind**; `loaders/pgh.py`'s `"grantee": None` is an accurate reflection of upstream,
+  not an omission. A WPRDC package search for deed/grantee/transfer datasets returns no usable source; Allegheny
+  County deed records live in a separate portal outside the open-data API.
+- **hbg** — Dauphin County publishes 411 ArcGIS services and **none is a deed-transfer dataset**. Despite the
+  `dc_deed_references` dataset label, `load_hbg_sales` actually reads `DC_ParcelCharacteristic`, whose
+  `last_name`/`first_name` are the **current owner** (already consumed into `parcel.owner`), not a transaction
+  party. hbg's 11,738 sale rows carry **no grantee, no sale_date, and no sale_price** — they are bare deed
+  references. Even a perfect name fill could not drive F1, whose qualification rules
+  (`BUYER_WINDOW_MONTHS`, the nominal-price floor, the ADR-0049 package-deed exclusion) all require dates and
+  prices that do not exist for this market.
+
+So the backfill is a **data-availability wall, not an engineering task**. For pgh it is additionally *unwanted*:
+`owner_portfolio`, `skip_trace`, and `buyers` are hidden for that market under Ordinance 3478-07
+(`docs/pgh-ordinance-3478-07-memo.md`), so populating grantee would build the surface a compliance decision
+says not to build.
+
+**Correction to Consequences.** The claim that *"the name gate + empty grantee produce an honest 'not
+available' state"* held only for pgh, which was in `_HIDDEN_SURFACES`. **hbg was never added**, so
+`list_buyers` returned `available=true, total=0` — indistinguishable from "we have this data and nobody
+qualifies," when the truth is the data cannot exist. `buyers` is therefore added to hbg's hidden set, matching
+this ADR's stated intent that hbg/pgh both ship the honest unavailable state.
+
+**Consequence for scope.** hbg buyer intelligence is not deferred pending work — it is **structurally
+unavailable** and should not be re-planned as a backfill. If Harrisburg needs comparable value, it needs a
+different feature built on `parcel.owner` (99.9% filled, and `owner_portfolio` is not gated for hbg):
+owner-concentration — *who holds land here* — rather than recent-purchase activity. That is a new ADR, not this
+one's follow-up.
