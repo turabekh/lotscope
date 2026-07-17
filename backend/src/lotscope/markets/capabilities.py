@@ -137,7 +137,7 @@ _ZONING_CITATION: dict[str, str] = {
 }
 
 _HIDDEN_SURFACES: dict[str, frozenset[str]] = {
-    "hbg": frozenset({"zba_variance"}),
+    "hbg": frozenset({"zba_variance", "buyers"}),
     "pgh": frozenset({"zba_variance", "sheriff_sales", "owner_portfolio", "skip_trace", "buyers"}),
 }
 

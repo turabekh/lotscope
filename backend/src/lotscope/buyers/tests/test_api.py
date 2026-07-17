@@ -83,6 +83,17 @@ async def test_pgh_market_returns_unavailable_state(db_session: AsyncSession) ->
     assert body["note"]
 
 
+async def test_hbg_market_returns_unavailable_state(db_session: AsyncSession) -> None:
+    app = _app(db_session, tier="investor")
+    async with _client(app) as client:
+        resp = await client.get("/buyers", params={"market": "hbg"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["available"] is False
+    assert body["buyers"] == []
+    assert body["note"]
+
+
 async def test_export_requires_investor(db_session: AsyncSession) -> None:
     app = _app(db_session, tier="pro")
     async with _client(app) as client:
