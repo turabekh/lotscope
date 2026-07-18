@@ -267,9 +267,12 @@ _UPSERT_SHERIFF_SQL = text(
     "plaintiff, source, now() "
     "FROM staging.sheriff_sale WHERE ingest_run_id = :ingest_run_id "
     "ON CONFLICT (case_number) DO UPDATE SET "
-    "parcel_number = excluded.parcel_number, sale_type = excluded.sale_type, "
-    "sale_date = excluded.sale_date, status = excluded.status, "
-    "opening_bid = excluded.opening_bid, plaintiff = excluded.plaintiff, updated_at = now()"
+    "parcel_number = excluded.parcel_number, plaintiff = excluded.plaintiff, "
+    "sale_type = COALESCE(excluded.sale_type, sheriff_sale.sale_type), "
+    "sale_date = COALESCE(excluded.sale_date, sheriff_sale.sale_date), "
+    "status = COALESCE(excluded.status, sheriff_sale.status), "
+    "opening_bid = COALESCE(excluded.opening_bid, sheriff_sale.opening_bid), "
+    "updated_at = now()"
 )
 
 

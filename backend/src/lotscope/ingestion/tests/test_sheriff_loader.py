@@ -132,6 +132,54 @@ async def test_load_sheriff_postponement_updates_same_case(db_session: AsyncSess
 
 
 @pytest.mark.integration
+async def test_load_sheriff_preserves_detail_fields_when_a_rescrape_bounces(
+    db_session: AsyncSession,
+) -> None:
+    await load_sheriff(db_session, _FakeSource([_row("BW-5", "1234567", 8000.0)]))
+    await db_session.flush()
+
+    bounced: dict[str, Any] = {
+        "case_number": "BW-5",
+        "opa_number": "1234567",
+        "sale_type": None,
+        "status": None,
+        "sale_date": None,
+        "opening_bid": None,
+        "plaintiff": "BANK",
+    }
+    await load_sheriff(db_session, _FakeSource([bounced]))
+    await db_session.flush()
+
+    row = (
+        await db_session.execute(
+            text(
+                "SELECT opening_bid, status, sale_date, sale_type "
+                "FROM sheriff_sale WHERE case_number = 'BW-5'"
+            )
+        )
+    ).one()
+    assert float(row.opening_bid) == 8000.0
+    assert row.status == "Open"
+    assert row.sale_date == date(2026, 8, 5)
+    assert row.sale_type == "mortgage"
+
+
+@pytest.mark.integration
+async def test_load_sheriff_overwrites_bid_when_a_new_value_arrives(
+    db_session: AsyncSession,
+) -> None:
+    await load_sheriff(db_session, _FakeSource([_row("BW-6", "1234567", 5000.0)]))
+    await db_session.flush()
+    await load_sheriff(db_session, _FakeSource([_row("BW-6", "1234567", 7500.0)]))
+    await db_session.flush()
+
+    bid = await db_session.scalar(
+        text("SELECT opening_bid FROM sheriff_sale WHERE case_number = 'BW-6'")
+    )
+    assert float(bid) == 7500.0
+
+
+@pytest.mark.integration
 async def test_load_sheriff_counts_skipped_rows_in_freshness(db_session: AsyncSession) -> None:
     rows = [
         _row("BW-1", "1234567", 10000.0),
