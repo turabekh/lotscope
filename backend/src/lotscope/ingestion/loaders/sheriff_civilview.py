@@ -141,10 +141,6 @@ def parse_sale_detail(html: str) -> CivilViewDetail:
     )
 
 
-def _bounced_off_detail(response: httpx.Response) -> bool:
-    return not response.url.path.endswith(_DETAIL_PATH)
-
-
 def civilview_record(row: CivilViewListRow, detail: CivilViewDetail) -> dict[str, Any]:
     return {
         "case_number": row.case_number,
@@ -171,53 +167,40 @@ class CivilViewSheriffSource:
         self._detail_limit = settings.sheriff_sale_civilview_detail_limit
         self._transport = transport
 
-    async def _get(
-        self, client: httpx.AsyncClient, url: str, params: dict[str, str]
-    ) -> httpx.Response:
-        return await request_with_retry(
+    async def _get(self, client: httpx.AsyncClient, url: str, params: dict[str, str]) -> str:
+        response = await request_with_retry(
             lambda: client.get(url, params=params),
             max_retries=self._max_retries,
             backoff=self._backoff,
             error=CivilViewError,
         )
+        return response.text
 
     def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             follow_redirects=True, timeout=self._timeout, transport=self._transport
         )
 
-    async def _prime(self, client: httpx.AsyncClient, list_url: str) -> httpx.Response:
-        return await self._get(client, list_url, {_COUNTY_ID_PARAM: str(self._county_id)})
-
-    async def _fetch_detail(
-        self, client: httpx.AsyncClient, list_url: str, detail_url: str, property_id: str
-    ) -> CivilViewDetail:
-        response = await self._get(client, detail_url, {_PROPERTY_ID_PARAM: property_id})
-        if _bounced_off_detail(response):
-            await self._prime(client, list_url)
-            response = await self._get(client, detail_url, {_PROPERTY_ID_PARAM: property_id})
-        if _bounced_off_detail(response):
-            return CivilViewDetail()
-        return parse_sale_detail(response.text)
-
     async def fetch_list(self) -> list[CivilViewListRow]:
         list_url = f"{self._base_url}{_LIST_PATH}"
         async with self._client() as client:
-            list_response = await self._prime(client, list_url)
-        return parse_sale_list(list_response.text)
+            list_html = await self._get(client, list_url, {_COUNTY_ID_PARAM: str(self._county_id)})
+        return parse_sale_list(list_html)
 
     async def fetch(self) -> list[dict[str, Any]]:
         list_url = f"{self._base_url}{_LIST_PATH}"
         detail_url = f"{self._base_url}{_DETAIL_PATH}"
         records: list[dict[str, Any]] = []
         async with self._client() as client:
-            list_response = await self._prime(client, list_url)
-            rows = parse_sale_list(list_response.text)
+            list_html = await self._get(client, list_url, {_COUNTY_ID_PARAM: str(self._county_id)})
+            rows = parse_sale_list(list_html)
             if self._detail_limit is not None:
                 rows = rows[: self._detail_limit]
             for row in rows:
                 if self._request_delay:
                     await asyncio.sleep(self._request_delay)
-                detail = await self._fetch_detail(client, list_url, detail_url, row.property_id)
-                records.append(civilview_record(row, detail))
+                detail_html = await self._get(
+                    client, detail_url, {_PROPERTY_ID_PARAM: row.property_id}
+                )
+                records.append(civilview_record(row, parse_sale_detail(detail_html)))
         return records
