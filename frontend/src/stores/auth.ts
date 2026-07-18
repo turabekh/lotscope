@@ -68,6 +68,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  let restoreOnce: Promise<void> | null = null
+
+  async function ensureRestored(): Promise<void> {
+    if (restoreOnce === null) restoreOnce = restore()
+    return restoreOnce
+  }
+
   async function refresh(): Promise<void> {
     if (token.value === null) return
     try {
@@ -131,6 +138,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     restore,
+    ensureRestored,
     refresh,
     refreshUser,
     setDigest,
