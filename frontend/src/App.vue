@@ -26,7 +26,7 @@ function rollSession(): void {
 }
 
 onMounted(async () => {
-  await auth.restore()
+  await auth.ensureRestored()
   authResolved.value = true
   void market.load()
   refreshTimer = setInterval(rollSession, REFRESH_INTERVAL_MS)

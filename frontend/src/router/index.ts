@@ -163,7 +163,7 @@ export const routes: RouteRecordRaw[] = [
   },
 ]
 
-export const marketGuard: NavigationGuard = (to) => {
+export const marketGuard: NavigationGuard = async (to) => {
   const auth = useAuthStore()
   const market = useMarketStore()
 
@@ -186,8 +186,11 @@ export const marketGuard: NavigationGuard = (to) => {
   if (to.meta.guestOnly && auth.token !== null) {
     return { name: 'home', params: { market: market.active } }
   }
-  if (to.meta.requiresAdmin && auth.user !== null && auth.user.role !== 'admin') {
-    return { name: 'home', params: { market: market.active } }
+  if (to.meta.requiresAdmin) {
+    await auth.ensureRestored()
+    if (auth.user === null || auth.user.role !== 'admin') {
+      return { name: 'home', params: { market: market.active } }
+    }
   }
   if (to.name === 'landing' && auth.token !== null) {
     return { name: 'home', params: { market: market.active } }

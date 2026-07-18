@@ -1,10 +1,20 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 
 import { marketGuard, routes } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useMarketStore } from '@/stores/market'
+
+const getMe = vi.fn()
+
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>()
+  return {
+    ...actual,
+    api: { ...actual.api, getMe: () => getMe() },
+  }
+})
 
 function makeRouter(): Router {
   const router = createRouter({ history: createMemoryHistory(), routes })
@@ -20,6 +30,7 @@ describe('marketGuard', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    vi.clearAllMocks()
   })
 
   it('normalizes an unknown market segment to the default market', async () => {
@@ -78,5 +89,30 @@ describe('marketGuard', () => {
     expect(router.currentRoute.value.name).toBe('lists')
     expect(router.currentRoute.value.query.tab).toBe('searches')
     expect(router.currentRoute.value.query.vacant).toBe('1')
+  })
+
+  it('keeps a non-admin off an admin deep-link on a cold load, before the user resolves', async () => {
+    authenticate()
+    getMe.mockResolvedValue({ id: 1, email: 'a@b.c', tier: 'pro', role: 'user' })
+    const router = makeRouter()
+    await router.push('/admin')
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(getMe).toHaveBeenCalledTimes(1)
+  })
+
+  it('admits an admin to an admin deep-link on a cold load', async () => {
+    authenticate()
+    getMe.mockResolvedValue({ id: 1, email: 'a@b.c', tier: 'pro', role: 'admin' })
+    const router = makeRouter()
+    await router.push('/admin/ops')
+    expect(router.currentRoute.value.name).toBe('ops')
+  })
+
+  it('sends an admin deep-link away when the stored token is no longer valid', async () => {
+    authenticate()
+    getMe.mockRejectedValue(new Error('unauthorized'))
+    const router = makeRouter()
+    await router.push('/admin')
+    expect(router.currentRoute.value.name).not.toBe('admin')
   })
 })

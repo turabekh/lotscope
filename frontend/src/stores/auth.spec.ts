@@ -80,6 +80,18 @@ describe('auth store', () => {
     expect(localStorage.getItem('lotscope_token')).toBeNull()
   })
 
+  it('ensureRestored fetches the user once across concurrent callers', async () => {
+    localStorage.setItem('lotscope_token', 'tok')
+    vi.mocked(api.getMe).mockResolvedValue(user)
+
+    const store = useAuthStore()
+    await Promise.all([store.ensureRestored(), store.ensureRestored()])
+    await store.ensureRestored()
+
+    expect(api.getMe).toHaveBeenCalledTimes(1)
+    expect(store.user?.email).toBe('a@b.co')
+  })
+
   it('markOnboarded stamps the user from the server copy', async () => {
     vi.mocked(api.markOnboarded).mockResolvedValue({ ...user, onboarded_at: '2026-07-11T00:00:00Z' })
 
