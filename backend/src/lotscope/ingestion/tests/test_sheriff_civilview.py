@@ -173,3 +173,53 @@ async def test_fetch_respects_detail_limit() -> None:
     source = CivilViewSheriffSource(settings, transport=httpx.MockTransport(_handler))
     records = await source.fetch()
     assert len(records) == 2
+
+
+_HOME_HTML = "<html><body><h1>Sheriff Sales</h1></body></html>"
+
+
+async def test_fetch_reprimes_the_session_when_the_cookie_expires() -> None:
+    list_html = _fixture("list_county60.html")
+    detail_html = _fixture("detail_2049301182.html")
+    state = {"details_since_prime": 0, "reprimes": 0, "list_requests": 0}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/SalesSearch"):
+            state["list_requests"] += 1
+            if state["list_requests"] > 1:
+                state["reprimes"] += 1
+            state["details_since_prime"] = 0
+            return httpx.Response(200, text=list_html)
+        if path.endswith("/Home/Index"):
+            return httpx.Response(200, text=_HOME_HTML)
+        if state["details_since_prime"] >= 2:
+            return httpx.Response(302, headers={"Location": "/Home/Index"})
+        state["details_since_prime"] += 1
+        return httpx.Response(200, text=detail_html)
+
+    source = CivilViewSheriffSource(_settings(), transport=httpx.MockTransport(_handler))
+    records = await source.fetch()
+
+    assert len(records) == 6
+    assert all(record["opening_bid"] == 1600.0 for record in records)
+    assert state["reprimes"] >= 1
+
+
+async def test_fetch_falls_back_to_empty_detail_when_the_reprime_does_not_recover() -> None:
+    list_html = _fixture("list_county60.html")
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/SalesSearch"):
+            return httpx.Response(200, text=list_html)
+        if path.endswith("/Home/Index"):
+            return httpx.Response(200, text=_HOME_HTML)
+        return httpx.Response(302, headers={"Location": "/Home/Index"})
+
+    source = CivilViewSheriffSource(_settings(), transport=httpx.MockTransport(_handler))
+    records = await source.fetch()
+
+    assert len(records) == 6
+    assert all(record["opening_bid"] is None for record in records)
+    assert all(record["case_number"] is not None for record in records)
