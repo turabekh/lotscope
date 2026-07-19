@@ -621,10 +621,25 @@ async def ingest_wlm_zoning(session_factory: SessionFactory, settings: Settings)
     )
 
 
+async def ingest_wlm_comps(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _wlm_source_config(session_factory)
+    parcels_layer_url = wlm.wilmington_parcels_layer_url(str(config["wilmington_arcgis_url"]))
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=lambda session, arcgis: wlm.load_wlm_comps(
+            session, arcgis, parcels_layer_url=parcels_layer_url
+        ),
+        dataset=wlm.WLM_COMPS_DATASET,
+        market_code="wlm",
+    )
+
+
 _WLM_JOBS: dict[str, Job] = {
     "parcels": ingest_wlm_parcels,
     "assessment": ingest_wlm_assessment,
     "zoning": ingest_wlm_zoning,
+    "comps": ingest_wlm_comps,
 }
 
 
