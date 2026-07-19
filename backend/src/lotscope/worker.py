@@ -43,6 +43,7 @@ from lotscope.verdict.jobs import recompute_all_verdicts
 from lotscope.zoning.seed import seed_zoning_standards
 from lotscope.zoning.seed_hbg import seed_hbg_zoning_standards
 from lotscope.zoning.seed_pgh import seed_pgh_zoning_standards
+from lotscope.zoning.seed_wlm import seed_wlm_zoning_standards
 
 _logger = get_logger("worker")
 
@@ -149,6 +150,7 @@ async def _seed_zoning_standards(session_factory: async_sessionmaker[AsyncSessio
         total = await seed_zoning_standards(session)
         total += await seed_hbg_zoning_standards(session)
         total += await seed_pgh_zoning_standards(session)
+        total += await seed_wlm_zoning_standards(session)
         await session.commit()
     return total
 
