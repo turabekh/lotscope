@@ -193,3 +193,52 @@ async def test_load_sheriff_counts_skipped_rows_in_freshness(db_session: AsyncSe
     assert fresh is not None
     assert fresh.detail is not None
     assert "1 of 2 rows skipped" in fresh.detail
+
+
+@pytest.mark.integration
+async def test_load_sheriff_wlm_filters_to_known_parcels_and_records_wlm_freshness(
+    db_session: AsyncSession,
+) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('wlm:2601320063', 'wlm')")
+    )
+    await db_session.flush()
+
+    records = [
+        {
+            "case_number": "26-000001",
+            "parcel_number": "wlm:2601320063",
+            "sale_type": "MTG",
+            "status": "Scheduled",
+            "sale_date": "2026-08-11",
+            "plaintiff": "BANK",
+        },
+        {
+            "case_number": "26-000002",
+            "parcel_number": "wlm:0703240035",  # non-city New Castle parcel, not in our set
+            "sale_type": "MTG",
+            "status": "Scheduled",
+            "sale_date": "2026-08-11",
+            "plaintiff": "BANK",
+        },
+    ]
+    known = {"wlm:2601320063"}
+    total = await load_sheriff(
+        db_session, _FakeSource(records), market_code="wlm", known_parcels=known
+    )
+    await db_session.flush()
+
+    assert total == 1  # only the known city parcel is kept
+    kept = await db_session.scalar(
+        text("SELECT case_number FROM sheriff_sale WHERE parcel_number = 'wlm:2601320063'")
+    )
+    assert kept == "26-000001"
+    # the non-city parcel was neither kept nor created as a stub
+    stub = await db_session.scalar(
+        text("SELECT count(*) FROM parcel WHERE parcel_number = 'wlm:0703240035'")
+    )
+    assert stub == 0
+
+    fresh = await db_session.get(DatasetFreshness, ("wlm", "sheriff_sale"))
+    assert fresh is not None
+    assert fresh.status == "success"

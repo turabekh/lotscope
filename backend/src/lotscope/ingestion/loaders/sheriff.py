@@ -41,6 +41,7 @@ class CsvSheriffSource:
 class SheriffSaleRecord(BaseModel):
     case_number: str | None = None
     opa_number: str | int | None = None
+    parcel_number: str | None = None
     address: str | None = None
     sale_type: str | None = None
     status: str | None = None
@@ -50,7 +51,7 @@ class SheriffSaleRecord(BaseModel):
 
 
 def to_sheriff_row(record: SheriffSaleRecord) -> dict[str, Any] | None:
-    parcel_number = to_parcel_key(record.opa_number)
+    parcel_number = record.parcel_number or to_parcel_key(record.opa_number)
     case_number = record.case_number.strip() if record.case_number else None
     if parcel_number is None or not case_number:
         return None
@@ -80,7 +81,13 @@ def _staging_row(row: dict[str, Any], run_id: int) -> dict[str, Any]:
     }
 
 
-async def load_sheriff(session: AsyncSession, source: SheriffSource) -> int:
+async def load_sheriff(
+    session: AsyncSession,
+    source: SheriffSource,
+    *,
+    market_code: str = "phl",
+    known_parcels: set[str] | None = None,
+) -> int:
     run = IngestRun(dataset=SHERIFF_DATASET)
     session.add(run)
     await session.flush()
@@ -92,6 +99,8 @@ async def load_sheriff(session: AsyncSession, source: SheriffSource) -> int:
     for raw in fetched:
         row = to_sheriff_row(SheriffSaleRecord.model_validate(raw))
         if row is None:
+            continue
+        if known_parcels is not None and row["parcel_number"] not in known_parcels:
             continue
         mapped.append(row)
         raw_rows.append(
@@ -106,11 +115,12 @@ async def load_sheriff(session: AsyncSession, source: SheriffSource) -> int:
     total = len(mapped)
     skipped = len(fetched) - total
     if mapped:
-        parcel_stubs = [
-            {"parcel_number": parcel_number, "source": SHERIFF_DATASET}
-            for parcel_number in {row["parcel_number"] for row in mapped}
-        ]
-        await insert_ignore(session, Parcel, parcel_stubs, index_elements=["parcel_number"])
+        if known_parcels is None:
+            parcel_stubs = [
+                {"parcel_number": parcel_number, "source": SHERIFF_DATASET}
+                for parcel_number in {row["parcel_number"] for row in mapped}
+            ]
+            await insert_ignore(session, Parcel, parcel_stubs, index_elements=["parcel_number"])
         staging_rows = [_staging_row(row, run.id) for row in mapped]
         await upsert(session, StagingSheriffSale, staging_rows, index_elements=["case_number"])
         await write_raw(session, raw_rows)
@@ -125,6 +135,12 @@ async def load_sheriff(session: AsyncSession, source: SheriffSource) -> int:
     _logger.info("sheriff_load_complete", fetched=len(fetched), kept=total, skipped=skipped)
     detail = f"{skipped} of {len(fetched)} rows skipped (unresolved OPA/case)" if skipped else None
     await record_freshness(
-        session, SHERIFF_DATASET, status="success", success=True, row_count=total, detail=detail
+        session,
+        SHERIFF_DATASET,
+        status="success",
+        success=True,
+        market_code=market_code,
+        row_count=total,
+        detail=detail,
     )
     return total
