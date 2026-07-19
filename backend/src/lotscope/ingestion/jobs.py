@@ -30,6 +30,7 @@ from lotscope.ingestion.loaders import (
     tax,
     vacancy,
     wlm,
+    wlm_layers,
     zba,
     zoning,
 )
@@ -644,12 +645,31 @@ async def ingest_wlm_dimensions(session_factory: SessionFactory, settings: Setti
     )
 
 
+def _wlm_layer_job(loader: Any, dataset: str) -> Job:
+    async def job(session_factory: SessionFactory, settings: Settings) -> int:
+        config = await _wlm_source_config(session_factory)
+        base = str(config["wilmington_arcgis_url"])
+        return await _run_arcgis(
+            session_factory,
+            settings,
+            loader=lambda session, arcgis: loader(session, arcgis, arcgis_base_url=base),
+            dataset=dataset,
+            market_code="wlm",
+        )
+
+    return job
+
+
 _WLM_JOBS: dict[str, Job] = {
     "parcels": ingest_wlm_parcels,
     "assessment": ingest_wlm_assessment,
     "zoning": ingest_wlm_zoning,
     "comps": ingest_wlm_comps,
     "dimensions": ingest_wlm_dimensions,
+    "flood": _wlm_layer_job(wlm_layers.load_wlm_flood, wlm_layers.WLM_FLOOD_DATASET),
+    "historic": _wlm_layer_job(wlm_layers.load_wlm_historic, wlm_layers.WLM_HISTORIC_DATASET),
+    "overlays": _wlm_layer_job(wlm_layers.load_wlm_overlays, wlm_layers.WLM_OVERLAYS_DATASET),
+    "public": _wlm_layer_job(wlm_layers.load_wlm_public, wlm_layers.WLM_PUBLIC_DATASET),
 }
 
 
