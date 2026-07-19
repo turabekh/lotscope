@@ -35,7 +35,10 @@ from lotscope.ingestion.loaders import (
     zoning,
 )
 from lotscope.ingestion.loaders.sheriff import CsvSheriffSource, SheriffSource, load_sheriff
-from lotscope.ingestion.loaders.sheriff_civilview import CivilViewSheriffSource
+from lotscope.ingestion.loaders.sheriff_civilview import (
+    NEW_CASTLE_PROFILE,
+    CivilViewSheriffSource,
+)
 from lotscope.ingestion.runner import run_loader
 from lotscope.markets.models import Market
 
@@ -654,6 +657,20 @@ async def ingest_wlm_vacancy(session_factory: SessionFactory, settings: Settings
     )
 
 
+async def ingest_wlm_sheriff(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _wlm_source_config(session_factory)
+    county_id = int(config["sheriff_civilview_county_id"])
+    source = CivilViewSheriffSource(settings, county_id=county_id, profile=NEW_CASTLE_PROFILE)
+
+    async def loader(session: AsyncSession) -> int:
+        known = await wlm._wlm_parcel_numbers(session)
+        return await load_sheriff(session, source, market_code="wlm", known_parcels=known)
+
+    return await run_loader(
+        session_factory, loader, dataset=sheriff.SHERIFF_DATASET, market_code="wlm"
+    )
+
+
 def _wlm_layer_job(loader: Any, dataset: str) -> Job:
     async def job(session_factory: SessionFactory, settings: Settings) -> int:
         config = await _wlm_source_config(session_factory)
@@ -680,6 +697,7 @@ _WLM_JOBS: dict[str, Job] = {
     "overlays": _wlm_layer_job(wlm_layers.load_wlm_overlays, wlm_layers.WLM_OVERLAYS_DATASET),
     "public": _wlm_layer_job(wlm_layers.load_wlm_public, wlm_layers.WLM_PUBLIC_DATASET),
     "vacancy": ingest_wlm_vacancy,
+    "sheriff": ingest_wlm_sheriff,
 }
 
 

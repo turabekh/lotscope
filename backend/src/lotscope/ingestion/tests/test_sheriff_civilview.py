@@ -173,3 +173,60 @@ async def test_fetch_respects_detail_limit() -> None:
     source = CivilViewSheriffSource(settings, transport=httpx.MockTransport(_handler))
     records = await source.fetch()
     assert len(records) == 2
+
+
+_NEW_CASTLE_LIST_HTML = (
+    "<table><thead><tr>"
+    "<th></th><th>Status</th><th>Sale Date</th><th>Sheriff #</th><th>Attorney</th>"
+    "<th>Plaintiff</th><th>Parcel #</th><th>Defendant</th><th>Address</th>"
+    "</tr></thead><tbody><tr>"
+    "<td><a href='/Sales/SaleDetails?PropertyId=2059950554'>View Details</a></td>"
+    "<td>Scheduled</td><td>08/11/2026 09:00 AM</td><td>26-006440</td>"
+    "<td>MCCABE WEISBERG</td><td>HSBC BANK USA</td><td>0703240035</td>"
+    "<td>JOYCE I. DYER</td><td>200 B MARY ELLA DRIVE WILMINGTON DE 19805</td>"
+    "</tr></tbody></table>"
+)
+
+
+def test_parse_sale_list_new_castle_reads_header_mapped_columns() -> None:
+    from lotscope.ingestion.loaders.sheriff_civilview import parse_sale_list_new_castle
+
+    rows = parse_sale_list_new_castle(_NEW_CASTLE_LIST_HTML)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.property_id == "2059950554"
+    assert row.case_number == "26-006440"
+    assert row.parcel_id == "0703240035"
+    assert row.plaintiff == "HSBC BANK USA"
+    assert row.status == "Scheduled"
+    assert row.sale_date == "08/11/2026"
+    assert "MARY ELLA" in (row.address or "")
+
+
+def test_new_castle_record_reconciles_to_a_wlm_parcel_number() -> None:
+    from lotscope.ingestion.loaders.sheriff_civilview import (
+        CivilViewDetail,
+        CivilViewListRow,
+        new_castle_record,
+    )
+
+    row = CivilViewListRow(
+        property_id="1",
+        case_number="26-006440",
+        parcel_id="0703240035",
+        status="Scheduled",
+        sale_date="08/11/2026",
+        plaintiff="HSBC BANK USA",
+    )
+    record = new_castle_record(row, CivilViewDetail(sale_type="MTG"))
+    assert record["parcel_number"] == "wlm:0703240035"
+    assert record["case_number"] == "26-006440"
+    assert record["sale_date"] == "2026-08-11"
+    assert record["sale_type"] == "MTG"
+    assert record["status"] == "Scheduled"
+
+
+def test_phl_profile_still_uses_the_positional_parser() -> None:
+    from lotscope.ingestion.loaders.sheriff_civilview import PHL_PROFILE, parse_sale_list
+
+    assert PHL_PROFILE.parse_list is parse_sale_list
