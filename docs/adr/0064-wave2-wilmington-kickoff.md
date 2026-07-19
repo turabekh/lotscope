@@ -97,6 +97,24 @@ is **no bulk recorded-sales feed** analogous to `rtt_summary`.
 7. **Parity gate + packet** — four-market regression, 25-parcel Wilmington packet, `launch_status='pilot'`,
    v8 unchanged.
 
+## Addendum (2026-07-19) — Slice 3 source found; GDB/WAF path dropped, comps STOP-gate resolved
+
+The Slice-3 STOP-gate investigation found that the **City of Wilmington ArcGIS org's own
+parcels layer** (`LUP_Map…/FeatureServer/0`, "Wilmington Parcels", the same no-WAF org as zoning)
+carries the full assessment + owner + sale payload, verified live across all 26,106 parcels:
+`OWNER` 100%, `OWNRADD1` (mailing), `ASMTLAND` 99.7% + `ASMTSTRT` 92% (assessed land/structure),
+`SALEPRC` 90.4% + `SALEYR`/`SALEMON` 94% (last-sale price + date), `PRCLID` 100% (10-digit key =
+FirstMap PIN, joins to Slice-2 geometry), `PROP_CLASS` 99.1%, `ZONECODE` 100%.
+
+Consequences that supersede the Decision above:
+- **The NCC ArcGIS Hub GDB download-and-parse transport is dropped.** Slice 3 is a normal ArcGIS
+  loader against the Wilmington City org — the NCC WAF is never touched. No new transport.
+- **The comps STOP-gate is resolved in-source.** `SALEPRC` + `SALEYR`/`SALEMON` give per-parcel
+  last-sale price + date; no licensed vendor or Recorder scrape. (Month/year granularity, one sale
+  per parcel — full transaction history remains out of scope.)
+- **Open decision #2 (comps sourcing) is closed** — answered by the source, not a purchase.
+- Owner surfaces are confirmed viable (owner 100% populated, public).
+
 ## Open decisions to confirm at review
 1. **Pilot without a Philly-grade distress layer?** (proposed: yes — reduced stack, graduation-gated).
 2. **Comps sourcing** if the NCC GDB lacks prices — licensed vendor vs Recorder scrape (proposed: STOP-gate

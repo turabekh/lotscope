@@ -72,6 +72,7 @@ class ArcGisClient:
         out_fields: str = "*",
         page_size: int = 2000,
         out_sr: int = 4326,
+        return_geometry: bool = True,
     ) -> AsyncIterator[list[ArcGisFeature]]:
         offset = 0
         while True:
@@ -79,7 +80,7 @@ class ArcGisClient:
                 "where": where,
                 "outFields": out_fields,
                 "f": "geojson",
-                "returnGeometry": "true",
+                "returnGeometry": "true" if return_geometry else "false",
                 "outSR": out_sr,
                 "resultOffset": offset,
                 "resultRecordCount": page_size,
