@@ -357,3 +357,38 @@ async def derive_wlm_lot_width(session: AsyncSession) -> int:
         row_count=count,
     )
     return count
+
+
+WLM_VACANCY_DATASET = "wilmington_vacancy"
+_VACANCY_IMPROVEMENT_THRESHOLD = 1000.0
+_WLM_VACANCY_CONFIDENCE = 0.35
+
+_WLM_VACANCY_UPDATE = text(
+    "UPDATE parcel SET "
+    "is_vacant = (COALESCE(improvement_value, 0) < :threshold), "
+    "vacancy_confidence = CASE WHEN COALESCE(improvement_value, 0) < :threshold "
+    "THEN CAST(:conf AS numeric) ELSE NULL END "
+    "WHERE market_code = :market"
+)
+_WLM_VACANT_COUNT = text("SELECT count(*) FROM parcel WHERE market_code = :market AND is_vacant")
+
+
+async def derive_wlm_vacancy(session: AsyncSession) -> int:
+    await session.execute(
+        _WLM_VACANCY_UPDATE,
+        {
+            "market": _MARKET,
+            "threshold": _VACANCY_IMPROVEMENT_THRESHOLD,
+            "conf": _WLM_VACANCY_CONFIDENCE,
+        },
+    )
+    count = await session.scalar(_WLM_VACANT_COUNT, {"market": _MARKET}) or 0
+    await record_freshness(
+        session,
+        WLM_VACANCY_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=count,
+    )
+    return count
