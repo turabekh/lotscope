@@ -161,10 +161,70 @@ _PGH_PARITY: tuple[dict[str, Any], ...] = (
     },
 )
 
+_WLM_PARITY: tuple[dict[str, Any], ...] = (
+    {
+        "status": "blocked",
+        "title": "Parcels with spine + geometry",
+        "threshold": "≥ 98%",
+        "measured": "Loader built + source-verified (FirstMap DE_StateParcels, 25,929 city "
+        "parcels via PIN LIKE '26%', EPSG:2235). Blocker: run the prod ingest to measure.",
+        "owner": "operator",
+    },
+    {
+        "status": "blocked",
+        "title": "Verdict coverage",
+        "threshold": "≥ 95%",
+        "measured": "Verdict engine is market-agnostic; the wlm spine composes end to end "
+        "(test-proven, v8). Blocker: prod ingest + recompute.",
+        "owner": "operator",
+    },
+    {
+        "status": "blocked",
+        "title": "Owner + assessment coverage",
+        "threshold": "≥ 95%",
+        "measured": "Owner 100% / assessed value 99.7% at source (DE public record, no Daniel's "
+        "Law) — a parity win vs hbg/pgh; owner_key auto-computed. Blocker: prod ingest.",
+        "owner": "operator",
+    },
+    {
+        "status": "blocked",
+        "title": "Zoning district + by-right buildability",
+        "threshold": "resolved + standards live",
+        "measured": "ZONECODE 100% at source → base_zoning_code; 24 Ch.48 districts authored "
+        "(wlm-provisional-2026); buildability resolves R-3 end to end (test-proven). Blocker: "
+        "prod load + manual Municode reconfirm of the provisional standards.",
+        "owner": "operator",
+    },
+    {
+        "status": "blocked",
+        "title": "Usable comp / AVM",
+        "threshold": "≥ 60% or honest degradation",
+        "measured": "Last-sale comps built (SALEPRC 90.4% at source, 2-digit-year pivot). "
+        "Blocker: prod load to measure AVM density.",
+        "owner": "operator",
+    },
+    {
+        "status": "honest_degradation",
+        "title": "Distress signals (reduced-stack pilot)",
+        "threshold": "computed for flagged parcels or honest degradation",
+        "measured": "Structural: DE publishes no open code-violation or vacancy feed. Sheriff "
+        "(CivilView countyId=24, cleanly reconcilable via Parcel #) deferred pending the "
+        "phl-shared-scraper refactor. Reduced stack per ADR-0064.",
+    },
+    {
+        "status": "blocked",
+        "title": "25-parcel golden packet + reviewer sign-off",
+        "threshold": "delivered",
+        "measured": "Blocker: prod data + packet authoring + sign-off.",
+        "owner": "operator",
+    },
+)
+
 _GATES: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] = {
     ("hbg", GRADUATION, "2026-07-11"): _HBG_GRADUATION,
     ("hbg", PARITY, "2026-07-05"): _HBG_PARITY,
     ("pgh", PARITY, "2026-07-07"): _PGH_PARITY,
+    ("wlm", PARITY, "2026-07-19"): _WLM_PARITY,
 }
 
 
