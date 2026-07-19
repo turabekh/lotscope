@@ -78,10 +78,32 @@ class PghKeyNormalizer:
         return f"{self.market}{_MARKET_KEY_SEP}{local}"
 
 
+class WlmKeyNormalizer:
+    market = "wlm"
+    _strip = re.compile(r"[\s\-.]+")
+    _non_digit = re.compile(r"\D")
+    _pin_length = 10
+
+    def normalize_local_key(self, raw: str | int | None) -> str | None:
+        if raw is None:
+            return None
+        cleaned = self._strip.sub("", str(raw).strip())
+        if not cleaned or self._non_digit.search(cleaned) or len(cleaned) > self._pin_length:
+            return None
+        return cleaned.zfill(self._pin_length)
+
+    def to_canonical(self, raw: str | int | None) -> str | None:
+        local = self.normalize_local_key(raw)
+        if local is None:
+            return None
+        return f"{self.market}{_MARKET_KEY_SEP}{local}"
+
+
 KEY_NORMALIZERS: dict[str, KeyNormalizer] = {
     "phl": PhlKeyNormalizer(),
     "hbg": HbgKeyNormalizer(),
     "pgh": PghKeyNormalizer(),
+    "wlm": WlmKeyNormalizer(),
 }
 
 
