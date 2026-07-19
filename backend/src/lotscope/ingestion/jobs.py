@@ -635,11 +635,21 @@ async def ingest_wlm_comps(session_factory: SessionFactory, settings: Settings) 
     )
 
 
+async def ingest_wlm_dimensions(session_factory: SessionFactory, settings: Settings) -> int:
+    return await run_loader(
+        session_factory,
+        wlm.derive_wlm_lot_width,
+        dataset=wlm.WLM_DIMENSIONS_DATASET,
+        market_code="wlm",
+    )
+
+
 _WLM_JOBS: dict[str, Job] = {
     "parcels": ingest_wlm_parcels,
     "assessment": ingest_wlm_assessment,
     "zoning": ingest_wlm_zoning,
     "comps": ingest_wlm_comps,
+    "dimensions": ingest_wlm_dimensions,
 }
 
 
