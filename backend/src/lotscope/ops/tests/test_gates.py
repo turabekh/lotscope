@@ -68,3 +68,19 @@ async def test_live_market_has_no_gate_board_entry(db_session: AsyncSession) -> 
 
     board = await gate_board(db_session, _NOW)
     assert all(m.market_code != "phl" for m in board.markets)
+
+
+async def test_wlm_parity_gate_is_an_honest_pre_deploy_roadmap(db_session: AsyncSession) -> None:
+    await seed_market_gates(db_session)
+    await db_session.flush()
+
+    board = await gate_board(db_session, _NOW)
+    wlm = next(m for m in board.markets if m.market_code == "wlm")
+    parity = next(g for g in wlm.gates if g.gate_type == PARITY)
+
+    assert parity.total == 7
+    # Not yet graduated: coverage rows are blocked pending the prod ingest.
+    assert parity.satisfied < parity.total
+    distress = next(i for i in parity.items if i.status == "honest_degradation")
+    assert "reduced" in distress.title.lower()
+    assert distress.satisfied is True
