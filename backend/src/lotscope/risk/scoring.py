@@ -234,30 +234,42 @@ def _access_flag(access: AccessSignal) -> RiskFlag | None:
     )
 
 
-def _historic_flag(historic: HistoricSignal) -> RiskFlag | None:
+_HISTORIC_REVIEW_BODY: dict[str, str] = {
+    "phl": "Philadelphia Historical Commission",
+    "wlm": "Wilmington Historic Preservation Commission",
+}
+_OVERLAY_CITATION: dict[str, str] = {
+    "phl": "Title 14 §14-500 series",
+    "wlm": "Wilmington Zoning Code (Ch. 48)",
+}
+
+
+def _historic_flag(historic: HistoricSignal, market_code: str = "phl") -> RiskFlag | None:
     if not historic.in_district:
         return None
     where = f"the {historic.district_name} historic district" if historic.district_name else "a"
     article = "" if historic.district_name else " local historic district"
+    body = _HISTORIC_REVIEW_BODY.get(market_code, "the local historic commission")
     return RiskFlag(
         "historic_district",
         "low",
         "Historic district overlay",
         f"Parcel sits in {where}{article}; exterior alterations, demolition, and new "
-        "construction require Philadelphia Historical Commission review, adding time and cost.",
+        f"construction require {body} review, adding time and cost.",
         "historicdistricts_local",
     )
 
 
-def _overlay_flag(overlays: OverlaySignal) -> RiskFlag | None:
+def _overlay_flag(overlays: OverlaySignal, market_code: str = "phl") -> RiskFlag | None:
     if not overlays.overlay_names:
         return None
     names = ", ".join(overlays.overlay_names)
+    citation = _OVERLAY_CITATION.get(market_code, "the applicable zoning-overlay standards")
     return RiskFlag(
         "overlay_district",
         "low",
         "Zoning overlay district",
-        f"Parcel is in overlay {names} — check Title 14 §14-500 series for modified "
+        f"Parcel is in overlay {names} — check {citation} for modified "
         "standards that can change what is buildable by-right.",
         "zoning_overlays",
     )
@@ -325,7 +337,7 @@ def _summarize(flags: list[RiskFlag]) -> str:
     return f"{len(flags)} risk flag(s)."
 
 
-def assess_risk(signals: RiskSignals) -> RiskAssessment:
+def assess_risk(signals: RiskSignals, market_code: str = "phl") -> RiskAssessment:
     flags: list[RiskFlag] = []
     if signals.tax is not None:
         flags.extend(_tax_flags(signals.tax))
@@ -351,11 +363,11 @@ def assess_risk(signals: RiskSignals) -> RiskAssessment:
         if access_flag is not None:
             flags.append(access_flag)
     if signals.historic is not None:
-        historic_flag = _historic_flag(signals.historic)
+        historic_flag = _historic_flag(signals.historic, market_code)
         if historic_flag is not None:
             flags.append(historic_flag)
     if signals.overlays is not None:
-        overlay_flag = _overlay_flag(signals.overlays)
+        overlay_flag = _overlay_flag(signals.overlays, market_code)
         if overlay_flag is not None:
             flags.append(overlay_flag)
     if signals.rco is not None:

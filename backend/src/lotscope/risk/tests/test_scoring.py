@@ -274,3 +274,22 @@ def test_no_overlay_or_rco_when_empty() -> None:
     codes = _codes(RiskSignals(li=LiSignal(), overlays=OverlaySignal(), rco=RcoSignal()))
     assert "overlay_district" not in codes
     assert "rco" not in codes
+
+
+def test_historic_and_overlay_wording_is_market_specific_not_philadelphia() -> None:
+    from lotscope.risk.scoring import HistoricSignal, OverlaySignal
+
+    signals = RiskSignals(
+        li=LiSignal(),
+        historic=HistoricSignal(in_district=True, district_name="East Side CHD"),
+        overlays=OverlaySignal(overlay_names=("Downtown Development District",)),
+    )
+    phl = {f.code: f.detail for f in assess_risk(signals, "phl").flags}
+    wlm = {f.code: f.detail for f in assess_risk(signals, "wlm").flags}
+
+    assert "Philadelphia Historical Commission" in phl["historic_district"]
+    assert "Title 14" in phl["overlay_district"]
+    assert "Philadelphia" not in wlm["historic_district"]
+    assert "Wilmington Historic Preservation Commission" in wlm["historic_district"]
+    assert "Title 14" not in wlm["overlay_district"]
+    assert "Wilmington Zoning Code (Ch. 48)" in wlm["overlay_district"]
