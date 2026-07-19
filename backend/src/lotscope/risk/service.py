@@ -201,6 +201,7 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
         await _overlay_signal(session, parcel_number) if parcel.has_geometry else OverlaySignal()
     )
     rco = await _rco_signal(session, parcel_number) if parcel.has_geometry else RcoSignal()
+    market = parcel_number.split(":", 1)[0]
     assessment = assess_risk(
         RiskSignals(
             li=li,
@@ -216,9 +217,9 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
             historic=historic,
             overlays=overlays,
             rco=rco,
-        )
+        ),
+        market,
     )
-    market = parcel_number.split(":", 1)[0]
     return RiskResult(
         parcel_number=parcel_number,
         risk_score=assessment.risk_score,
