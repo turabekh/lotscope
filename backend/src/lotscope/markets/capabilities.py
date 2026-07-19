@@ -8,10 +8,22 @@ _CHECKLIST_CATEGORY_STATE: dict[str, dict[str, str]] = {
         "access": "pending_load",
         "overlays": "pending_load",
     },
+    "wlm": {
+        "li": "no_data_source",
+        "liens_taxes": "no_data_source",
+        "access": "no_data_source",
+    },
 }
 
 _NO_SOURCE_DETAIL: dict[tuple[str, str], str] = {
     ("hbg", "li"): "Harrisburg does not publish a code-enforcement / violations dataset.",
+    ("wlm", "li"): "Wilmington publishes code-enforcement and permit records only through "
+    "interactive portals (BuildingBlocks, MUNIS), not as an open dataset; violations are "
+    "unconfirmed for this parcel.",
+    ("wlm", "liens_taxes"): "Delaware publishes tax delinquency only as a state list, not as "
+    "open parcel-level data; this is not a clean-title confirmation for Wilmington.",
+    ("wlm", "access"): "Street-centerline data is not loaded for Wilmington; street frontage "
+    "and landlocked status are unconfirmed for this parcel.",
 }
 
 # Flip an entry on once the PA Right-to-Know Law request is filed for that market/category.
@@ -35,6 +47,7 @@ _PENDING_DETAIL: dict[tuple[str, str], str] = {
 # the display carries this honest qualifier.
 _RISK_COVERAGE_NOTE: dict[str, str] = {
     "hbg": "based on available Harrisburg sources",
+    "wlm": "based on available Wilmington sources",
 }
 
 

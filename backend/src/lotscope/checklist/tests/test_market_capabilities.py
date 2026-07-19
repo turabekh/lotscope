@@ -123,3 +123,15 @@ def test_risk_coverage_note_only_for_partial_markets() -> None:
 
     assert risk_coverage_note("hbg") == "based on available Harrisburg sources"
     assert risk_coverage_note("phl") is None
+
+
+def test_wlm_structural_gaps_are_honest_but_loaded_sections_are_available() -> None:
+    # Structural gaps in Delaware — no open feed exists.
+    assert checklist_category_state("wlm", "li") == "no_data_source"
+    assert checklist_category_state("wlm", "liens_taxes") == "no_data_source"
+    assert checklist_category_state("wlm", "access") == "no_data_source"
+    # Sections we actually loaded for Wilmington are available, not degraded.
+    assert checklist_category_state("wlm", "flood") == "available"
+    assert checklist_category_state("wlm", "overlays") == "available"
+    detail = checklist_state_detail("wlm", "li", "no_data_source")
+    assert "Wilmington" in detail
