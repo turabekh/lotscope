@@ -1,8 +1,9 @@
 import json
 import re
+from datetime import date
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.arcgis import ArcGisClient, ArcGisFeature
@@ -11,16 +12,39 @@ from lotscope.ingestion.normalizers import get_normalizer
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
 from lotscope.parcels.models import Parcel
+from lotscope.valuation.models import Sale
 
 WLM_PARCELS_DATASET = "firstmap_parcels"
 WLM_ASSESSMENT_DATASET = "wilmington_assessment"
 WLM_ZONING_DATASET = "wilmington_zoning"
+WLM_COMPS_DATASET = "wilmington_comps"
 _MARKET = "wlm"
 _LOCAL_SRID = 2235
 
 _WILMINGTON_PARCELS_LAYER = "LUP_Map_w_RISE_STAR_Bldg_Code_Enf_and_DDD_WFL1/FeatureServer/0"
 _ASSESSMENT_FIELDS = "PRCLID,OWNER,OWNRADD1,OWNRADD2,ASMTLAND,ASMTSTRT,PROP_CLASS"
 _ZONING_FIELDS = "PRCLID,ZONECODE"
+_COMPS_FIELDS = "PRCLID,SALEPRC,SALEYR,SALEMON"
+
+_LAST_SALE_DOCUMENT_ID = "wlm_assessment_last_sale"
+_LAST_SALE_DOCUMENT_TYPE = "assessment_last_sale"
+_SALE_YEAR_PIVOT = 40
+
+
+def _wlm_sale_date(raw_year: Any, raw_month: Any) -> date | None:
+    try:
+        year = int(raw_year)
+    except (TypeError, ValueError):
+        return None
+    if year < 1 or year > 99:
+        return None
+    full_year = 2000 + year if year <= _SALE_YEAR_PIVOT else 1900 + year
+    try:
+        month = int(raw_month)
+    except (TypeError, ValueError):
+        month = 0
+    return date(full_year, month if 1 <= month <= 12 else 1, 1)
+
 
 _HUNDRED_PREFIX = "26"
 _ZONE_RE = re.compile(r"^([RCMW])(\d+)([A-Z0-9]*)$")
@@ -229,6 +253,71 @@ async def load_wlm_zoning(
     await record_freshness(
         session,
         WLM_ZONING_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
+    )
+    return total
+
+
+def to_wlm_sale_row(feature: ArcGisFeature) -> dict[str, Any] | None:
+    props = feature.properties
+    key = get_normalizer(_MARKET).to_canonical(props.get("PRCLID"))
+    if key is None:
+        return None
+    price = _num(props.get("SALEPRC"))
+    sale_date = _wlm_sale_date(props.get("SALEYR"), props.get("SALEMON"))
+    if price is None or sale_date is None:
+        return None
+    return {
+        "parcel_number": key,
+        "document_id": _LAST_SALE_DOCUMENT_ID,
+        "document_type": _LAST_SALE_DOCUMENT_TYPE,
+        "sale_date": sale_date,
+        "sale_price": price,
+        "grantor": None,
+        "grantee": None,
+    }
+
+
+async def _wlm_parcel_numbers(session: AsyncSession) -> set[str]:
+    result = await session.execute(
+        select(Parcel.parcel_number).where(Parcel.market_code == _MARKET)
+    )
+    return {row[0] for row in result}
+
+
+async def load_wlm_comps(
+    session: AsyncSession,
+    arcgis: ArcGisClient,
+    *,
+    parcels_layer_url: str,
+    page_size: int = 2000,
+) -> int:
+    known = await _wlm_parcel_numbers(session)
+    layer = f"{parcels_layer_url}/query"
+    total = 0
+    async for features in arcgis.paginate(
+        layer, out_fields=_COMPS_FIELDS, return_geometry=False, page_size=page_size
+    ):
+        rows = [
+            row
+            for row in (to_wlm_sale_row(f) for f in features)
+            if row is not None and row["parcel_number"] in known
+        ]
+        if rows:
+            await upsert(
+                session,
+                Sale,
+                rows,
+                index_elements=["parcel_number", "document_id"],
+                update_columns=["document_type", "sale_date", "sale_price"],
+            )
+            total += len(rows)
+    await record_freshness(
+        session,
+        WLM_COMPS_DATASET,
         status="success",
         success=True,
         market_code=_MARKET,
