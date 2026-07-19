@@ -93,7 +93,8 @@ async def test_load_wlm_flood_writes_flood_zone_in_2235(db_session: AsyncSession
     row = (
         await db_session.execute(
             text(
-                "SELECT zone, market_code, ST_SRID(geom_local) FROM flood_zone WHERE external_id = 'wlm-flood-2603710013'"
+                "SELECT zone, market_code, ST_SRID(geom_local) FROM flood_zone "
+                "WHERE external_id = 'wlm-flood-2603710013'"
             )
         )
     ).one()
