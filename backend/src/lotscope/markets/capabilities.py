@@ -134,6 +134,7 @@ _ZONING_CITATION: dict[str, str] = {
     "phl": "Title 14",
     "hbg": "Harrisburg Zoning Code",
     "pgh": "Pittsburgh Zoning Code",
+    "wlm": "Wilmington Zoning Code (Ch. 48)",
 }
 
 _HIDDEN_SURFACES: dict[str, frozenset[str]] = {
