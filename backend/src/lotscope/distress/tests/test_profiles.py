@@ -6,6 +6,7 @@ from lotscope.distress.profiles import (
     HARRISBURG_DISTRESS_V1,
     PHILLY_DISTRESS_V1,
     PITTSBURGH_DISTRESS_V1,
+    WILMINGTON_DISTRESS_V1,
     DistressScoringProfile,
     UnknownMarketProfileError,
     profile_for_market,
@@ -133,7 +134,7 @@ def test_cap_engages_at_100() -> None:
 
 def test_clones_are_identical_to_philly_except_id_and_market() -> None:
     base = dataclasses.replace(PHILLY_DISTRESS_V1, profile_id="x", market="x")
-    for clone in (HARRISBURG_DISTRESS_V1, PITTSBURGH_DISTRESS_V1):
+    for clone in (HARRISBURG_DISTRESS_V1, PITTSBURGH_DISTRESS_V1, WILMINGTON_DISTRESS_V1):
         assert dataclasses.replace(clone, profile_id="x", market="x") == base
 
 
@@ -141,6 +142,7 @@ def test_registry_resolves_each_market() -> None:
     assert profile_for_market("phl") is PHILLY_DISTRESS_V1
     assert profile_for_market("hbg") is HARRISBURG_DISTRESS_V1
     assert profile_for_market("pgh") is PITTSBURGH_DISTRESS_V1
+    assert profile_for_market("wlm") is WILMINGTON_DISTRESS_V1
 
 
 def test_unknown_market_raises() -> None:

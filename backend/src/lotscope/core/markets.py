@@ -7,6 +7,7 @@ class Market(StrEnum):
     philadelphia = "philadelphia"
     harrisburg = "harrisburg"
     pittsburgh = "pittsburgh"
+    wilmington = "wilmington"
 
 
 DEFAULT_MARKET = Market.philadelphia
@@ -15,6 +16,7 @@ _SLUG_TO_CODE: dict[str, str] = {
     "philadelphia": "phl",
     "harrisburg": "hbg",
     "pittsburgh": "pgh",
+    "wilmington": "wlm",
 }
 
 MARKET_SLUGS: frozenset[str] = frozenset(_SLUG_TO_CODE)

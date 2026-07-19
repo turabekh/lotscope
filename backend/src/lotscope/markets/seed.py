@@ -96,6 +96,40 @@ PITTSBURGH: dict[str, Any] = {
 }
 
 
+WILMINGTON: dict[str, Any] = {
+    "code": "wlm",
+    "name": "Wilmington",
+    "state": "DE",
+    "url_slug": "wilmington",
+    "local_srid": 2235,
+    "map_center": [-75.5466, 39.7459],
+    "map_bounds": [[-75.5900, 39.7100], [-75.4950, 39.7850]],
+    "default_zoom": 13.0,
+    "timezone": "America/New_York",
+    "recorder_url_template": "https://www3.newcastlede.gov/parcel/search/",
+    "deal_assumption_overrides": {},
+    "source_config": {
+        "firstmap_parcels_url": (
+            "https://enterprise.firstmap.delaware.gov/arcgis/rest/services/"
+            "PlanningCadastre/DE_StateParcels/FeatureServer/0"
+        ),
+        "wilmington_arcgis_url": (
+            "https://services.arcgis.com/hQ3wdpbjO3fPf612/arcgis/rest/services"
+        ),
+        "sheriff_civilview_county_id": "24",
+        "hundred_filter": "26",
+    },
+    "coverage_note": (
+        "Wilmington city pilot — New Castle County (DE) assessment + FirstMap geometry; "
+        "FMV-2024 reassessment (ratio ~1.0); reduced distress stack (sheriff, tax, flood, "
+        "land bank; no open code-violation or vacancy feed); comps sourcing provisional; "
+        "zoning from City GIS."
+    ),
+    "launch_status": "pilot",
+    "assessment_ratio": 1.0,
+}
+
+
 def market_source_url(source_config: dict[str, Any], key: str, settings: Any) -> str | None:
     value = source_config.get(key)
     if value:
@@ -103,7 +137,7 @@ def market_source_url(source_config: dict[str, Any], key: str, settings: Any) ->
     return getattr(settings, key, None)
 
 
-_SEED_MARKETS: tuple[dict[str, Any], ...] = (PHILADELPHIA, HARRISBURG, PITTSBURGH)
+_SEED_MARKETS: tuple[dict[str, Any], ...] = (PHILADELPHIA, HARRISBURG, PITTSBURGH, WILMINGTON)
 
 
 async def seed_markets(session: AsyncSession) -> int:
