@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Any
 
 from sqlalchemy import func
@@ -13,11 +14,35 @@ from lotscope.parcels.models import Parcel
 
 WLM_PARCELS_DATASET = "firstmap_parcels"
 WLM_ASSESSMENT_DATASET = "wilmington_assessment"
+WLM_ZONING_DATASET = "wilmington_zoning"
 _MARKET = "wlm"
 _LOCAL_SRID = 2235
 
 _WILMINGTON_PARCELS_LAYER = "LUP_Map_w_RISE_STAR_Bldg_Code_Enf_and_DDD_WFL1/FeatureServer/0"
 _ASSESSMENT_FIELDS = "PRCLID,OWNER,OWNRADD1,OWNRADD2,ASMTLAND,ASMTSTRT,PROP_CLASS"
+_ZONING_FIELDS = "PRCLID,ZONECODE"
+
+_HUNDRED_PREFIX = "26"
+_ZONE_RE = re.compile(r"^([RCMW])(\d+)([A-Z0-9]*)$")
+
+
+def normalize_wilmington_zone(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    cleaned = "".join(str(raw).split()).upper()
+    if cleaned.startswith(_HUNDRED_PREFIX):
+        cleaned = cleaned[len(_HUNDRED_PREFIX) :]
+    cleaned = cleaned.replace("-", "")
+    if not cleaned:
+        return None
+    if cleaned == "O":
+        return "O"
+    match = _ZONE_RE.match(cleaned)
+    if match is None:
+        return None
+    zone_class, number, suffix = match.groups()
+    return f"{zone_class}-{number}{suffix}"
+
 
 _PARCEL_UPDATE_COLUMNS = [
     "coverage",
@@ -34,6 +59,7 @@ _ASSESSMENT_UPDATE_COLUMNS = [
     "improvement_value",
     "market_value",
 ]
+_ZONING_UPDATE_COLUMNS = ["base_zoning_code"]
 
 
 def _txt(value: Any) -> str | None:
@@ -159,6 +185,50 @@ async def load_wlm_assessment(
     await record_freshness(
         session,
         WLM_ASSESSMENT_DATASET,
+        status="success",
+        success=True,
+        market_code=_MARKET,
+        row_count=total,
+    )
+    return total
+
+
+def to_wlm_zoning_row(feature: ArcGisFeature) -> dict[str, Any] | None:
+    key = get_normalizer(_MARKET).to_canonical(feature.properties.get("PRCLID"))
+    if key is None:
+        return None
+    return {
+        "parcel_number": key,
+        "market_code": _MARKET,
+        "base_zoning_code": normalize_wilmington_zone(feature.properties.get("ZONECODE")),
+    }
+
+
+async def load_wlm_zoning(
+    session: AsyncSession,
+    arcgis: ArcGisClient,
+    *,
+    parcels_layer_url: str,
+    page_size: int = 2000,
+) -> int:
+    layer = f"{parcels_layer_url}/query"
+    total = 0
+    async for features in arcgis.paginate(
+        layer, out_fields=_ZONING_FIELDS, return_geometry=False, page_size=page_size
+    ):
+        rows = [row for row in (to_wlm_zoning_row(f) for f in features) if row is not None]
+        if rows:
+            await upsert(
+                session,
+                Parcel,
+                rows,
+                index_elements=["parcel_number"],
+                update_columns=_ZONING_UPDATE_COLUMNS,
+            )
+            total += len(rows)
+    await record_freshness(
+        session,
+        WLM_ZONING_DATASET,
         status="success",
         success=True,
         market_code=_MARKET,
