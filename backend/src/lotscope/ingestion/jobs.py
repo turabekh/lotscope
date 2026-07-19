@@ -29,6 +29,7 @@ from lotscope.ingestion.loaders import (
     streets,
     tax,
     vacancy,
+    wlm,
     zba,
     zoning,
 )
@@ -571,6 +572,32 @@ async def ingest_pgh_vacancy(session_factory: SessionFactory, settings: Settings
     )
 
 
+async def _wlm_source_config(session_factory: SessionFactory) -> dict[str, Any]:
+    async with session_factory() as session:
+        market = await session.get(Market, "wlm")
+        return dict(market.source_config) if market is not None else {}
+
+
+async def ingest_wlm_parcels(session_factory: SessionFactory, settings: Settings) -> int:
+    config = await _wlm_source_config(session_factory)
+    parcels_url = str(config["firstmap_parcels_url"])
+    hundred = str(config["hundred_filter"])
+    return await _run_arcgis(
+        session_factory,
+        settings,
+        loader=lambda session, arcgis: wlm.load_wlm_parcels(
+            session, arcgis, parcels_url=parcels_url, hundred=hundred
+        ),
+        dataset=wlm.WLM_PARCELS_DATASET,
+        market_code="wlm",
+    )
+
+
+_WLM_JOBS: dict[str, Job] = {
+    "parcels": ingest_wlm_parcels,
+}
+
+
 _PGH_JOBS: dict[str, Job] = {
     "parcels": ingest_pgh_parcels,
     "geometry": ingest_pgh_geometry,
@@ -604,6 +631,7 @@ INGEST_JOBS: dict[tuple[str, str], Job] = {
     **{("phl", dataset): job for dataset, job in _PHL_JOBS.items()},
     **{("hbg", dataset): job for dataset, job in _HBG_JOBS.items()},
     **{("pgh", dataset): job for dataset, job in _PGH_JOBS.items()},
+    **{("wlm", dataset): job for dataset, job in _WLM_JOBS.items()},
 }
 
 ParamJob = Callable[..., Awaitable[int]]
