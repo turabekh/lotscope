@@ -645,6 +645,15 @@ async def ingest_wlm_dimensions(session_factory: SessionFactory, settings: Setti
     )
 
 
+async def ingest_wlm_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
+    return await run_loader(
+        session_factory,
+        wlm.derive_wlm_vacancy,
+        dataset=wlm.WLM_VACANCY_DATASET,
+        market_code="wlm",
+    )
+
+
 def _wlm_layer_job(loader: Any, dataset: str) -> Job:
     async def job(session_factory: SessionFactory, settings: Settings) -> int:
         config = await _wlm_source_config(session_factory)
@@ -670,6 +679,7 @@ _WLM_JOBS: dict[str, Job] = {
     "historic": _wlm_layer_job(wlm_layers.load_wlm_historic, wlm_layers.WLM_HISTORIC_DATASET),
     "overlays": _wlm_layer_job(wlm_layers.load_wlm_overlays, wlm_layers.WLM_OVERLAYS_DATASET),
     "public": _wlm_layer_job(wlm_layers.load_wlm_public, wlm_layers.WLM_PUBLIC_DATASET),
+    "vacancy": ingest_wlm_vacancy,
 }
 
 
