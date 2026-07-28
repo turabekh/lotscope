@@ -193,6 +193,58 @@ async def test_load_sheriff_counts_skipped_rows_in_freshness(db_session: AsyncSe
     assert fresh is not None
     assert fresh.detail is not None
     assert "1 of 2 rows skipped" in fresh.detail
+    assert "1 without a parcel id" in fresh.detail
+    assert "outside this market" not in fresh.detail
+
+
+@pytest.mark.integration
+async def test_skip_detail_separates_out_of_market_rows_from_unidentified_ones(
+    db_session: AsyncSession,
+) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('wlm:2600000001', 'wlm')")
+    )
+    await db_session.flush()
+    rows = [
+        {**_row("NCC-1", "2600000001", 10000.0), "parcel_number": "wlm:2600000001"},
+        {**_row("NCC-2", "1002330153", 20000.0), "parcel_number": "wlm:1002330153"},
+        {**_row("NCC-3", "1102510048", 30000.0), "parcel_number": "wlm:1102510048"},
+        {**_row("NCC-4", "", 40000.0), "opa_number": None, "parcel_number": None},
+    ]
+    total = await load_sheriff(
+        db_session,
+        _FakeSource(rows),
+        market_code="wlm",
+        known_parcels={"wlm:2600000001"},
+    )
+    await db_session.flush()
+
+    assert total == 1
+    fresh = await db_session.get(DatasetFreshness, ("wlm", "sheriff_sale"))
+    assert fresh is not None
+    assert fresh.detail is not None
+    assert "3 of 4 rows skipped" in fresh.detail
+    assert "2 outside this market" in fresh.detail
+    assert "1 without a parcel id" in fresh.detail
+
+
+@pytest.mark.integration
+async def test_a_fully_reconciled_load_records_no_skip_detail(db_session: AsyncSession) -> None:
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('wlm:2600000002', 'wlm')")
+    )
+    await db_session.flush()
+    rows = [{**_row("NCC-9", "2600000002", 1000.0), "parcel_number": "wlm:2600000002"}]
+
+    total = await load_sheriff(
+        db_session, _FakeSource(rows), market_code="wlm", known_parcels={"wlm:2600000002"}
+    )
+    await db_session.flush()
+
+    assert total == 1
+    fresh = await db_session.get(DatasetFreshness, ("wlm", "sheriff_sale"))
+    assert fresh is not None
+    assert fresh.detail is None
 
 
 @pytest.mark.integration

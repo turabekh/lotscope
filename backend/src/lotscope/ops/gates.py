@@ -212,9 +212,13 @@ _WLM_PARITY: tuple[dict[str, Any], ...] = (
         "title": "Distress signals (reduced-stack pilot)",
         "threshold": "computed for flagged parcels or honest degradation",
         "measured": "Structural: DE publishes no open code-violation or vacancy feed. Sheriff "
-        "sales are live via CivilView (countyId=24) — 12 rows loaded, 44 of 56 skipped as "
-        "unresolved OPA/case. Vacancy derived from improvement value (2,403 parcels). Reduced "
-        "stack per ADR-0064.",
+        "sales are live via CivilView (countyId=24) — every one of the 12 Wilmington rows "
+        "reconciled. Vacancy derived from improvement value (2,403 parcels). Reduced stack per "
+        "ADR-0064.",
+        "evidence": "CivilView serves all of New Castle County: of 56 rows, 12 are Wilmington "
+        "(hundred 26) and all 12 matched a loaded parcel; 35 are other NCC towns and are filtered "
+        "by market scope; 9 carry no parcel id, of which only 3 are Wilmington and all 3 are condo "
+        "units, not land.",
     },
     {
         "status": "blocked",
