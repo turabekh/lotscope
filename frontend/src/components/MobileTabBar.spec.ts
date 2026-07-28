@@ -37,7 +37,7 @@ describe('MobileTabBar', () => {
     const router = makeRouter()
     await router.push({ name: 'explore', params: { market: 'philadelphia' } })
     const wrapper = await mountBar(router)
-    expect(wrapper.find('.tab.active').text()).toContain('Explore')
+    expect(wrapper.find('.tab.active').text()).toContain('Find lots')
   })
 
   it('emits "more" when the More tab is tapped', async () => {
