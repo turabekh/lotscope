@@ -129,6 +129,9 @@ def _to_result(
         risk_flags=composed.risk_flags,
         sources=composed.sources,
         field_trust=composed.field_trust,
+        recommendation=composed.recommendation,
+        recommendation_reason=composed.recommendation_reason,
+        decision_version=composed.decision_version,
         computed_at=computed_at,
     )
 

@@ -1,6 +1,6 @@
 # ADR-0067 — Screening recommendation contract
 
-Status: proposed (2026-07-28)
+Status: accepted (2026-07-28)
 
 Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-V001–V005 and §10 (Slice LR-4). Backlog tickets LR-B-009 through LR-B-014. Depends on ADR-0065.
 

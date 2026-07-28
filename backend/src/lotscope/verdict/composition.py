@@ -6,6 +6,7 @@ from lotscope.core.provenance import FieldProvenance
 from lotscope.deal.schemas import DealResult
 from lotscope.risk.schemas import RiskResult
 from lotscope.valuation.schemas import ValuationResult
+from lotscope.verdict.decision import DECISION_VERSION, decide
 from lotscope.verdict.trust import compose_field_trust
 from lotscope.zoning.schemas import BuildabilityResult
 
@@ -41,6 +42,9 @@ class ComposedVerdict:
     risk_flags: list[dict[str, Any]]
     sources: list[dict[str, Any]]
     field_trust: dict[str, FieldProvenance] = field(default_factory=dict)
+    recommendation: str | None = None
+    recommendation_reason: str | None = None
+    decision_version: str = DECISION_VERSION
 
 
 def _opportunity_score(buildability_score: float, risk_score: float) -> float:
@@ -136,14 +140,30 @@ def compose_verdict(
     opportunity_score = _opportunity_score(buildability_score or 0.0, risk_score or 0.0)
     assessment_market_gap = _assessment_market_gap(valuation, assessed_market_value)
 
-    return ComposedVerdict(
-        field_trust=compose_field_trust(
-            buildability,
-            valuation,
-            deal,
-            assessment_market_gap=assessment_market_gap,
-            source_ages=source_ages or {},
+    field_trust = compose_field_trust(
+        buildability,
+        valuation,
+        deal,
+        assessment_market_gap=assessment_market_gap,
+        source_ages=source_ages or {},
+    )
+    screening = decide(
+        field_trust=field_trust,
+        can_build_by_right=buildability.can_build_by_right if buildability is not None else None,
+        needs_variance=buildability.needs_variance if buildability is not None else None,
+        requires_master_plan=(
+            buildability.requires_master_plan if buildability is not None else False
         ),
+        est_margin=deal.margin if deal is not None else None,
+        deal_infeasible=deal.infeasible if deal is not None else False,
+        risk_score=risk_score,
+    )
+
+    return ComposedVerdict(
+        field_trust=field_trust,
+        recommendation=screening.recommendation,
+        recommendation_reason=screening.reason,
+        decision_version=screening.decision_version,
         verdict_version=verdict_version,
         buildability_score=buildability_score,
         opportunity_score=opportunity_score,

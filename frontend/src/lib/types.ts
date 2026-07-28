@@ -110,6 +110,14 @@ export interface CorrectionCreate {
   description: string
 }
 
+export type Recommendation =
+  | 'strong_candidate'
+  | 'worth_investigating'
+  | 'high_entitlement_risk'
+  | 'economics_unattractive'
+  | 'insufficient_data'
+  | 'likely_pass'
+
 export interface VerdictResult {
   parcel_number: string
   verdict_version: string
@@ -135,6 +143,9 @@ export interface VerdictResult {
   risk_flags: RiskFlag[]
   sources: unknown[]
   field_trust: Record<string, FieldProvenance>
+  recommendation: Recommendation | null
+  recommendation_reason: string | null
+  decision_version: string | null
   computed_at: string
 }
 
