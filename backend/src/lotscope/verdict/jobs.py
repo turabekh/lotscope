@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.core.markets import market_argument
 from lotscope.verdict.service import recompute_verdicts
 
 _PARCEL_NUMBERS_SQL = text(
@@ -75,10 +76,7 @@ async def _run(*, vacant_only: bool, market: str | None) -> None:
 
 def main() -> None:
     args = sys.argv[1:]
-    market: str | None = None
-    if "--market" in args:
-        market = args[args.index("--market") + 1]
-    asyncio.run(_run(vacant_only="vacant" in args, market=market))
+    asyncio.run(_run(vacant_only="vacant" in args, market=market_argument(args)))
 
 
 if __name__ == "__main__":

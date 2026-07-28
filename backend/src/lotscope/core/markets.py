@@ -1,6 +1,9 @@
+from collections.abc import Sequence
 from enum import StrEnum
 
 from lotscope.core.errors import ValidationError
+
+_MARKET_FLAG = "--market"
 
 
 class Market(StrEnum):
@@ -31,3 +34,13 @@ def market_code(value: str) -> str:
         return value
     known = ", ".join(sorted(MARKET_SLUGS | MARKET_CODES))
     raise ValidationError(f"Unknown market {value!r}. Known markets: {known}.")
+
+
+def market_argument(argv: Sequence[str]) -> str | None:
+    args = list(argv)
+    if _MARKET_FLAG not in args:
+        return None
+    position = args.index(_MARKET_FLAG) + 1
+    if position >= len(args):
+        raise ValidationError(f"{_MARKET_FLAG} requires a market slug or code.")
+    return market_code(args[position])

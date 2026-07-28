@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from collections.abc import Iterator, Sequence
 
 from sqlalchemy import text
@@ -7,16 +8,25 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.core.markets import market_argument
 from lotscope.distress.profiles import UnknownMarketProfileError, registered_markets
 from lotscope.distress.service import recompute_distress, tired_landlord_owner_keys
 
-_PARCEL_NUMBERS_SQL = text("SELECT parcel_number FROM parcel ORDER BY parcel_number")
-_DISTINCT_MARKETS_SQL = text("SELECT DISTINCT market_code FROM parcel")
+_PARCEL_NUMBERS_SQL = text(
+    "SELECT parcel_number FROM parcel "
+    "WHERE (CAST(:market AS text) IS NULL OR market_code = CAST(:market AS text)) "
+    "ORDER BY parcel_number"
+)
+_DISTINCT_MARKETS_SQL = text(
+    "SELECT DISTINCT market_code FROM parcel "
+    "WHERE (CAST(:market AS text) IS NULL OR market_code = CAST(:market AS text))"
+)
 _DEFAULT_BATCH_SIZE = 1000
 
 
-async def _assert_market_coverage(session: AsyncSession) -> None:
-    present = {row[0] for row in await session.execute(_DISTINCT_MARKETS_SQL)}
+async def _assert_market_coverage(session: AsyncSession, market: str | None) -> None:
+    result = await session.execute(_DISTINCT_MARKETS_SQL, {"market": market})
+    present = {row[0] for row in result}
     uncovered = sorted(present - registered_markets())
     if uncovered:
         raise UnknownMarketProfileError(
@@ -33,10 +43,11 @@ async def recompute_all_distress(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     batch_size: int = _DEFAULT_BATCH_SIZE,
+    market: str | None = None,
 ) -> int:
     async with session_factory() as session:
-        await _assert_market_coverage(session)
-        result = await session.execute(_PARCEL_NUMBERS_SQL)
+        await _assert_market_coverage(session, market)
+        result = await session.execute(_PARCEL_NUMBERS_SQL, {"market": market})
         parcel_numbers = [row[0] for row in result]
         tired_owners = await tired_landlord_owner_keys(session)
 
@@ -46,24 +57,24 @@ async def recompute_all_distress(
         async with session_factory() as session:
             total += await recompute_distress(session, chunk, tired_owners)
             await session.commit()
-        logger.info("distress_progress", done=total, of=len(parcel_numbers))
+        logger.info("distress_progress", done=total, of=len(parcel_numbers), market=market)
     return total
 
 
-async def _run() -> None:
+async def _run(*, market: str | None) -> None:
     settings = get_settings()
     configure_logging(settings)
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
     try:
-        count = await recompute_all_distress(session_factory)
-        get_logger("distress.jobs").info("recomputed_distress", count=count)
+        count = await recompute_all_distress(session_factory, market=market)
+        get_logger("distress.jobs").info("recomputed_distress", count=count, market=market)
     finally:
         await engine.dispose()
 
 
 def main() -> None:
-    asyncio.run(_run())
+    asyncio.run(_run(market=market_argument(sys.argv[1:])))
 
 
 if __name__ == "__main__":
