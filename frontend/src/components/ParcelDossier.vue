@@ -27,6 +27,7 @@ import VerdictPanel from '@/components/VerdictPanel.vue'
 import WhyScoreDrawer from '@/components/WhyScoreDrawer.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
+import type { DistressTier } from '@/lib/types'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
 import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
@@ -98,9 +99,24 @@ const developedNote = computed(() => {
 })
 
 const dealEmpty = computed(
-  () => !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.marketContext,
+  () =>
+    !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.marketContext,
 )
-const riskEmpty = computed(() => !store.distress && !store.ownerPortfolio)
+const riskEmpty = computed(() => !store.ownerPortfolio)
+
+const MOTIVATION_CHIP: Partial<
+  Record<DistressTier, { label: string; color: string; icon: string }>
+> = {
+  high: { label: 'High seller motivation', color: 'negative', icon: 'local_fire_department' },
+  medium: { label: 'Some seller motivation', color: 'warning', icon: 'trending_up' },
+}
+
+const motivation = computed(() => {
+  const result = store.distress
+  if (!result) return null
+  const style = MOTIVATION_CHIP[result.tier]
+  return style ? { ...style, score: result.score } : null
+})
 
 async function downloadDossier(): Promise<void> {
   if (detail.value === null || downloadingDossier.value) return
@@ -143,9 +159,7 @@ const isSaved = computed(() =>
   detail.value ? watchlist.isSaved(detail.value.parcel_number) : false,
 )
 
-const inCompare = computed(() =>
-  detail.value ? compare.has(detail.value.parcel_number) : false,
-)
+const inCompare = computed(() => (detail.value ? compare.has(detail.value.parcel_number) : false))
 
 function toggleCompare(): void {
   if (detail.value === null) return
@@ -248,7 +262,9 @@ async function toggleSave(): Promise<void> {
               :aria-label="inCompare ? 'In compare' : 'Add to compare'"
               @click="toggleCompare"
             >
-              <q-tooltip>{{ inCompare ? 'In compare — click to remove' : 'Add to compare' }}</q-tooltip>
+              <q-tooltip>{{
+                inCompare ? 'In compare — click to remove' : 'Add to compare'
+              }}</q-tooltip>
             </q-btn>
             <q-btn
               flat
@@ -284,7 +300,8 @@ async function toggleSave(): Promise<void> {
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
               Zoning district. It sets what you can build by-right — uses, units, height, and
               setbacks.<template v-if="detail.zoning_resolution === 'spatial'">
-                Resolved from the zoning map (no per-parcel attribute on file).</template>
+                Resolved from the zoning map (no per-parcel attribute on file).</template
+              >
             </q-tooltip>
           </q-chip>
           <q-chip
@@ -300,7 +317,8 @@ async function toggleSave(): Promise<void> {
               Flagged by the city's Vacant Property Indicators model as a likely-vacant lot —
               LotScope's core inventory.<template v-if="lowVacancyConfidence">
                 Corroborating signals are weak (e.g. a recent permit or an assessed structure), so
-                treat this as low confidence.</template>
+                treat this as low confidence.</template
+              >
             </q-tooltip>
           </q-chip>
           <q-chip
@@ -362,6 +380,24 @@ async function toggleSave(): Promise<void> {
               strongest motivated-seller signal.
             </q-tooltip>
           </q-chip>
+          <q-chip
+            v-if="motivation"
+            dense
+            square
+            clickable
+            :color="motivation.color"
+            text-color="white"
+            :icon="motivation.icon"
+            data-test="motivation-chip"
+            @click="tab = 'verdict'"
+          >
+            {{ motivation.label }} · {{ motivation.score }}/100
+            <q-tooltip max-width="260px" anchor="top middle" self="bottom middle">
+              A distress index from tax delinquency, sheriff sale, liens, L&amp;I, vacancy, and
+              absentee ownership, scored against the signals this market publishes. Higher means the
+              owner is more likely to sell. Open the Verdict tab for the contributing factors.
+            </q-tooltip>
+          </q-chip>
         </div>
         <RepositoryBadge :parcel-number="detail.parcel_number" />
       </header>
@@ -407,6 +443,7 @@ async function toggleSave(): Promise<void> {
             </q-banner>
             <SnapshotPanel :parcel-number="detail.parcel_number" />
             <VerdictPanel v-if="verdict" :verdict="verdict" :developed="isDeveloped" />
+            <DistressPanel />
             <ChecklistPanel />
             <div class="tab-foot">
               <q-btn
@@ -426,6 +463,7 @@ async function toggleSave(): Promise<void> {
             <DealPanel />
             <ScenariosPanel />
             <CompsPanel />
+            <BuyersNearbyPanel />
             <AssessmentPanel />
             <MarketContextPanel />
             <div v-if="dealEmpty" class="tab-empty">
@@ -442,12 +480,10 @@ async function toggleSave(): Promise<void> {
           </q-tab-panel>
 
           <q-tab-panel name="risk" class="tab-pane">
-            <DistressPanel />
             <OwnerPortfolioPanel />
-            <BuyersNearbyPanel />
             <div v-if="riskEmpty" class="tab-empty">
               <q-icon name="verified_user" size="26px" />
-              <span>No distress signals or owner-portfolio data surfaced for this lot.</span>
+              <span>No owner-portfolio data surfaced for this lot.</span>
             </div>
           </q-tab-panel>
 

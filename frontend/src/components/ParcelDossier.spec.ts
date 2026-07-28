@@ -4,7 +4,7 @@ import { Quasar } from 'quasar'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ParcelDossier from '@/components/ParcelDossier.vue'
-import type { ParcelDetail, VerdictResult } from '@/lib/types'
+import type { DistressResult, DistressTier, ParcelDetail, VerdictResult } from '@/lib/types'
 import { useParcelStore } from '@/stores/parcel'
 import { usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -73,10 +73,22 @@ const VERDICT: VerdictResult = {
   computed_at: '2026-07-04T00:00:00Z',
 } as VerdictResult
 
-function mountDossier(detail: ParcelDetail) {
+function makeDistress(tier: DistressTier, score: number): DistressResult {
+  return {
+    parcel_number: 'phl:141281340',
+    score,
+    tier,
+    factors: [{ code: 'tax_delinquent', label: 'Tax delinquent', weight: 30 }],
+    sources: [],
+    computed_at: '2026-07-28T00:00:00Z',
+  }
+}
+
+function mountDossier(detail: ParcelDetail, distress: DistressResult | null = null) {
   const store = useParcelStore()
   store.detail = detail
   store.verdict = VERDICT
+  store.distress = distress
   vi.spyOn(useWatchlistStore(), 'ensureLoaded').mockResolvedValue()
   vi.spyOn(usePipelineStore(), 'ensureLoaded').mockResolvedValue()
   return mount(ParcelDossier, {
@@ -123,5 +135,45 @@ describe('ParcelDossier developed-vs-vacant separation', () => {
     expect(wrapper.find('.developed-banner').exists()).toBe(false)
     expect(wrapper.text()).toContain('vs. assessment')
     expect(wrapper.text()).toContain('Estimated land value')
+  })
+})
+
+describe('ParcelDossier seller-motivation surfacing', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+  })
+
+  const vacant = () => makeDetail({ land_use: 'VACANT LAND', is_vacant: true })
+
+  it('shows the motivation chip without a tab click when the owner is motivated', () => {
+    const wrapper = mountDossier(vacant(), makeDistress('high', 72))
+    const chip = wrapper.find('[data-test="motivation-chip"]')
+    expect(chip.exists()).toBe(true)
+    expect(chip.text()).toContain('High seller motivation')
+    expect(chip.text()).toContain('72/100')
+  })
+
+  it('labels a medium tier as some motivation', () => {
+    const wrapper = mountDossier(vacant(), makeDistress('medium', 41))
+    expect(wrapper.find('[data-test="motivation-chip"]').text()).toContain('Some seller motivation')
+  })
+
+  it('stays silent rather than asserting a lot is unmotivated', () => {
+    for (const tier of ['low', 'none'] as DistressTier[]) {
+      const wrapper = mountDossier(vacant(), makeDistress(tier, 5))
+      expect(wrapper.find('[data-test="motivation-chip"]').exists()).toBe(false)
+    }
+  })
+
+  it('shows no chip where the market publishes no distress signal at all', () => {
+    const wrapper = mountDossier(vacant(), null)
+    expect(wrapper.find('[data-test="motivation-chip"]').exists()).toBe(false)
+  })
+
+  it('renders the distress panel on the default verdict tab, not behind Risk', () => {
+    const wrapper = mountDossier(vacant(), makeDistress('high', 72))
+    expect(wrapper.findComponent({ name: 'DistressPanel' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'OwnerPortfolioPanel' }).exists()).toBe(false)
   })
 })
