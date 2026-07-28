@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from collections.abc import Iterator, Sequence
 
 from sqlalchemy import text
@@ -8,10 +9,13 @@ from lotscope.assemblage.service import recompute_assemblage
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.core.markets import market_argument
 
 _VACANT_PARCEL_NUMBERS_SQL = text(
     "SELECT parcel_number FROM parcel "
-    "WHERE is_vacant IS TRUE AND geom_local IS NOT NULL ORDER BY parcel_number"
+    "WHERE is_vacant IS TRUE AND geom_local IS NOT NULL "
+    "AND (CAST(:market AS text) IS NULL OR market_code = CAST(:market AS text)) "
+    "ORDER BY parcel_number"
 )
 _DEFAULT_BATCH_SIZE = 500
 
@@ -25,9 +29,10 @@ async def recompute_all_assemblage(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     batch_size: int = _DEFAULT_BATCH_SIZE,
+    market: str | None = None,
 ) -> int:
     async with session_factory() as session:
-        result = await session.execute(_VACANT_PARCEL_NUMBERS_SQL)
+        result = await session.execute(_VACANT_PARCEL_NUMBERS_SQL, {"market": market})
         parcel_numbers = [row[0] for row in result]
 
     logger = get_logger("assemblage.jobs")
@@ -36,24 +41,24 @@ async def recompute_all_assemblage(
         async with session_factory() as session:
             total += await recompute_assemblage(session, chunk)
             await session.commit()
-        logger.info("assemblage_progress", plays=total, of=len(parcel_numbers))
+        logger.info("assemblage_progress", plays=total, of=len(parcel_numbers), market=market)
     return total
 
 
-async def _run() -> None:
+async def _run(*, market: str | None) -> None:
     settings = get_settings()
     configure_logging(settings)
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
     try:
-        count = await recompute_all_assemblage(session_factory)
-        get_logger("assemblage.jobs").info("recomputed_assemblage", plays=count)
+        count = await recompute_all_assemblage(session_factory, market=market)
+        get_logger("assemblage.jobs").info("recomputed_assemblage", plays=count, market=market)
     finally:
         await engine.dispose()
 
 
 def main() -> None:
-    asyncio.run(_run())
+    asyncio.run(_run(market=market_argument(sys.argv[1:])))
 
 
 if __name__ == "__main__":

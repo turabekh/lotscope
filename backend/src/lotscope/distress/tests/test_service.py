@@ -281,8 +281,26 @@ async def test_coverage_check_fails_loudly_on_unregistered_market(
     await db_session.flush()
 
     with pytest.raises(UnknownMarketProfileError) as excinfo:
-        await _assert_market_coverage(db_session)
+        await _assert_market_coverage(db_session, None)
     assert "bal" in str(excinfo.value)
+
+
+async def test_market_scoped_coverage_check_ignores_other_unprofiled_markets(
+    db_session: AsyncSession,
+) -> None:
+    await _market(db_session, "bal")
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, owner, address, mailing_address) "
+            "VALUES ('bal:3', 'bal', 'OWNER', '1 A ST', '1 A ST')"
+        )
+    )
+    await db_session.flush()
+
+    await _assert_market_coverage(db_session, "phl")
+
+    with pytest.raises(UnknownMarketProfileError):
+        await _assert_market_coverage(db_session, "bal")
 
 
 async def test_unprofiled_market_parcel_raises_on_live_scoring(

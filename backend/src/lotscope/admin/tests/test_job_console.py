@@ -15,6 +15,7 @@ from lotscope.admin.catalog import (
     MAINTENANCE_KIND,
     RECOMPUTE_KIND,
     ingest_job_id,
+    parse_params,
 )
 from lotscope.admin.models import JobRun
 from lotscope.admin.service import enqueue_job, job_catalog
@@ -224,6 +225,47 @@ def test_tax_claim_job_declares_params() -> None:
     spec = CATALOG_BY_ID["ingest:hbg:tax_claim"]
     assert {param.name for param in spec.params} == {"list_url", "list_date"}
     assert ("hbg", "tax_claim") in PARAM_INGEST_JOBS
+
+
+def test_every_recompute_job_offers_an_optional_market_param() -> None:
+    recomputes = [spec for spec in CATALOG if spec.kind == RECOMPUTE_KIND]
+    assert recomputes
+    for spec in recomputes:
+        market = next(param for param in spec.params if param.name == "market")
+        assert market.required is False
+        assert market.type == "market"
+
+
+def test_market_param_resolves_slugs_and_rejects_unknown_markets() -> None:
+    spec = CATALOG_BY_ID["recompute:verdicts"]
+    assert parse_params(spec, {"market": "wilmington"}) == {"market": "wlm"}
+    assert parse_params(spec, {"market": "wlm"}) == {"market": "wlm"}
+    assert parse_params(spec, {}) == {}
+    assert parse_params(spec, {"market": ""}) == {}
+    with pytest.raises(ValidationError):
+        parse_params(spec, {"market": "atlantis"})
+
+
+@pytest.mark.integration
+async def test_recompute_dispatch_threads_the_market_through(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    received: dict[str, Any] = {}
+
+    async def _recompute(session_factory: Any, market: str | None) -> int:
+        received["market"] = market
+        return 3
+
+    monkeypatch.setitem(worker._RECOMPUTE_DISPATCH, "recompute:verdicts", _recompute)
+
+    scoped = await worker._dispatch_admin_job(
+        _reusing_factory(db_session), None, "recompute:verdicts", {"market": "wilmington"}
+    )
+    assert scoped == 3
+    assert received["market"] == "wlm"
+
+    await worker._dispatch_admin_job(_reusing_factory(db_session), None, "recompute:verdicts", {})
+    assert received["market"] is None
 
 
 @pytest.mark.integration

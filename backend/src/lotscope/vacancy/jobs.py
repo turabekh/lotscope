@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from collections.abc import Iterator, Sequence
 
 from sqlalchemy import text
@@ -7,10 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.core.markets import market_argument
 from lotscope.vacancy.service import recompute_vacancy_confidence
 
 _PARCEL_NUMBERS_SQL = text(
-    "SELECT parcel_number FROM parcel WHERE is_vacant IS TRUE ORDER BY parcel_number"
+    "SELECT parcel_number FROM parcel WHERE is_vacant IS TRUE "
+    "AND (CAST(:market AS text) IS NULL OR market_code = CAST(:market AS text)) "
+    "ORDER BY parcel_number"
 )
 _DEFAULT_BATCH_SIZE = 1000
 
@@ -24,9 +28,10 @@ async def recompute_all_vacancy_confidence(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     batch_size: int = _DEFAULT_BATCH_SIZE,
+    market: str | None = None,
 ) -> int:
     async with session_factory() as session:
-        result = await session.execute(_PARCEL_NUMBERS_SQL)
+        result = await session.execute(_PARCEL_NUMBERS_SQL, {"market": market})
         parcel_numbers = [row[0] for row in result]
 
     logger = get_logger("vacancy.jobs")
@@ -35,24 +40,26 @@ async def recompute_all_vacancy_confidence(
         async with session_factory() as session:
             total += await recompute_vacancy_confidence(session, chunk)
             await session.commit()
-        logger.info("vacancy_confidence_progress", done=total, of=len(parcel_numbers))
+        logger.info(
+            "vacancy_confidence_progress", done=total, of=len(parcel_numbers), market=market
+        )
     return total
 
 
-async def _run() -> None:
+async def _run(*, market: str | None) -> None:
     settings = get_settings()
     configure_logging(settings)
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
     try:
-        count = await recompute_all_vacancy_confidence(session_factory)
-        get_logger("vacancy.jobs").info("recomputed_vacancy_confidence", count=count)
+        count = await recompute_all_vacancy_confidence(session_factory, market=market)
+        get_logger("vacancy.jobs").info("recomputed_vacancy_confidence", count=count, market=market)
     finally:
         await engine.dispose()
 
 
 def main() -> None:
-    asyncio.run(_run())
+    asyncio.run(_run(market=market_argument(sys.argv[1:])))
 
 
 if __name__ == "__main__":

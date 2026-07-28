@@ -5,9 +5,15 @@ from sqlalchemy import text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.assemblage.jobs import _VACANT_PARCEL_NUMBERS_SQL
 from lotscope.assemblage.service import recompute_assemblage
 
 pytestmark = pytest.mark.integration
+
+
+async def _selected(session: AsyncSession, market: str | None) -> list[str]:
+    result = await session.execute(_VACANT_PARCEL_NUMBERS_SQL, {"market": market})
+    return [row[0] for row in result]
 
 
 async def _insert(
@@ -82,6 +88,28 @@ async def test_recompute_persists_plays_and_skips_lone_lots(db_session: AsyncSes
     assert play.base_zoning_code == "RSA-5"
 
     assert await _row(db_session, "000000009") is None  # isolated vacant lot, no candidate
+
+
+async def test_market_scope_selects_only_the_named_market(db_session: AsyncSession) -> None:
+    await _insert(
+        db_session,
+        "000000001",
+        owner="OWNER A",
+        zoning="RSA-5",
+        is_vacant=True,
+        polygon="POLYGON((0 0,0 90,18 90,18 0,0 0))",
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, is_vacant, geom_local) VALUES "
+            "('wlm:1', 'wlm', TRUE, ST_GeomFromText('POLYGON((0 0,0 9,9 9,9 0,0 0))', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    assert await _selected(db_session, "wlm") == ["wlm:1"]
+    assert await _selected(db_session, "phl") == ["000000001"]
+    assert sorted(await _selected(db_session, None)) == ["000000001", "wlm:1"]
 
 
 async def test_recompute_removes_a_parcel_that_no_longer_qualifies(

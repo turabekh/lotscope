@@ -133,15 +133,22 @@ async def snapshot_stats(ctx: dict[str, Any]) -> int:
     return count
 
 
-_RecomputeFn = Callable[[async_sessionmaker[AsyncSession]], Awaitable[int]]
+_RecomputeFn = Callable[[async_sessionmaker[AsyncSession], str | None], Awaitable[int]]
+_MaintenanceFn = Callable[[async_sessionmaker[AsyncSession]], Awaitable[int]]
 
 _RECOMPUTE_DISPATCH: dict[str, _RecomputeFn] = {
-    "recompute:verdicts": recompute_all_verdicts,
-    "recompute:vacant_verdicts": lambda factory: recompute_all_verdicts(factory, vacant_only=True),
-    "recompute:distress": recompute_all_distress,
-    "recompute:vacancy": recompute_all_vacancy_confidence,
-    "recompute:assemblage": recompute_all_assemblage,
-    "recompute:buyers": recompute_all_buyers,
+    "recompute:verdicts": lambda factory, market: recompute_all_verdicts(factory, market=market),
+    "recompute:vacant_verdicts": lambda factory, market: recompute_all_verdicts(
+        factory, vacant_only=True, market=market
+    ),
+    "recompute:distress": lambda factory, market: recompute_all_distress(factory, market=market),
+    "recompute:vacancy": lambda factory, market: recompute_all_vacancy_confidence(
+        factory, market=market
+    ),
+    "recompute:assemblage": lambda factory, market: recompute_all_assemblage(
+        factory, market=market
+    ),
+    "recompute:buyers": lambda factory, market: recompute_all_buyers(factory, market=market),
 }
 
 
@@ -162,7 +169,7 @@ async def _seed_market_gates(session_factory: async_sessionmaker[AsyncSession]) 
     return total
 
 
-_MAINTENANCE_DISPATCH: dict[str, _RecomputeFn] = {
+_MAINTENANCE_DISPATCH: dict[str, _MaintenanceFn] = {
     "maintenance:seed_zoning": _seed_zoning_standards,
     "maintenance:snapshot_stats": snapshot_market_stats,
     "maintenance:seed_gates": _seed_market_gates,
@@ -188,7 +195,8 @@ async def _dispatch_admin_job(
             )
         return await INGEST_JOBS[key](session_factory, settings)
     if spec.kind == RECOMPUTE_KIND:
-        return await _RECOMPUTE_DISPATCH[spec.id](session_factory)
+        market = parse_params(spec, params).get("market")
+        return await _RECOMPUTE_DISPATCH[spec.id](session_factory, market)
     if spec.kind == MAINTENANCE_KIND:
         return await _MAINTENANCE_DISPATCH[spec.id](session_factory)
     raise NotFoundError(f"Job {job_id!r} has an unsupported kind {spec.kind!r}.")
