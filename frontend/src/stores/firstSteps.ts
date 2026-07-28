@@ -13,6 +13,7 @@ export interface FirstStep {
   detail: string
   done: boolean
   routeName: string
+  marketScoped: boolean
 }
 
 export const useFirstStepsStore = defineStore('firstSteps', () => {
@@ -54,6 +55,7 @@ export const useFirstStepsStore = defineStore('firstSteps', () => {
       detail: 'See what can be built on a lot, what it is worth, and what is wrong with it.',
       done: verdictSeen.value,
       routeName: 'explore',
+      marketScoped: true,
     },
     {
       code: 'assumptions',
@@ -61,6 +63,7 @@ export const useFirstStepsStore = defineStore('firstSteps', () => {
       detail: 'Your construction costs and target margin drive every offer figure we show you.',
       done: assumptionsSet.value,
       routeName: 'account',
+      marketScoped: false,
     },
     {
       code: 'save',
@@ -68,6 +71,7 @@ export const useFirstStepsStore = defineStore('firstSteps', () => {
       detail: 'Keep the lots you are working on in one place.',
       done: hasSavedLot.value,
       routeName: 'lists',
+      marketScoped: true,
     },
     {
       code: 'alert',
@@ -75,6 +79,7 @@ export const useFirstStepsStore = defineStore('firstSteps', () => {
       detail: 'Get told when a lot matching your search appears or changes.',
       done: hasAlert.value,
       routeName: 'lists',
+      marketScoped: true,
     },
   ])
 

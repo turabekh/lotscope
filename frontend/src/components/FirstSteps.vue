@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 
+import type { FirstStep } from '@/stores/firstSteps'
 import { useFirstStepsStore } from '@/stores/firstSteps'
 import { useMarketStore } from '@/stores/market'
 
 const firstSteps = useFirstStepsStore()
 const market = useMarketStore()
+
+function stepTarget(step: FirstStep): RouteLocationRaw {
+  if (!step.marketScoped) return { name: step.routeName }
+  return { name: step.routeName, params: { market: market.active } }
+}
 
 onMounted(() => {
   void firstSteps.refresh()
@@ -40,7 +47,7 @@ onMounted(() => {
       <router-link
         v-for="step in firstSteps.steps"
         :key="step.code"
-        :to="{ name: step.routeName, params: { market: market.active } }"
+        :to="stepTarget(step)"
         class="step"
         :class="{ done: step.done }"
         :data-test="`first-step-${step.code}`"
