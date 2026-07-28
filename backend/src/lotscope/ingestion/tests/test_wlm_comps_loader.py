@@ -35,6 +35,45 @@ def test_sale_row_maps_old_century_and_unknown_month_to_january() -> None:
     assert row["sale_date"] == date(1985, 1, 1)
 
 
+def test_sale_row_never_resolves_a_two_digit_year_into_the_future() -> None:
+    row = to_wlm_sale_row(
+        ArcGisFeature(
+            properties={"PRCLID": "2601320063", "SALEPRC": 2500, "SALEYR": 31, "SALEMON": 6}
+        ),
+        reference_year=2026,
+    )
+    assert row is not None
+    assert row["sale_date"] == date(1931, 6, 1)
+
+
+def test_sale_row_keeps_the_reference_year_itself_in_the_current_century() -> None:
+    row = to_wlm_sale_row(
+        ArcGisFeature(
+            properties={"PRCLID": "2601320063", "SALEPRC": 2500, "SALEYR": 26, "SALEMON": 6}
+        ),
+        reference_year=2026,
+    )
+    assert row is not None
+    assert row["sale_date"] == date(2026, 6, 1)
+
+
+def test_sale_row_pivot_follows_the_reference_year_forward() -> None:
+    properties = {"PRCLID": "2601320063", "SALEPRC": 2500, "SALEYR": 31, "SALEMON": 6}
+    later = to_wlm_sale_row(ArcGisFeature(properties=properties), reference_year=2031)
+    assert later is not None
+    assert later["sale_date"] == date(2031, 6, 1)
+
+
+def test_sale_row_defaults_to_today_and_emits_no_future_sale() -> None:
+    row = to_wlm_sale_row(
+        ArcGisFeature(
+            properties={"PRCLID": "2601320063", "SALEPRC": 2500, "SALEYR": 31, "SALEMON": 6}
+        )
+    )
+    assert row is not None
+    assert row["sale_date"] <= date.today()
+
+
 def test_sale_row_skips_ambiguous_year_zero_and_missing_price() -> None:
     assert (
         to_wlm_sale_row(
