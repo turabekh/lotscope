@@ -153,3 +153,9 @@ backend/corpus/**/*.json
 backend/corpus/**/*.geojson
 backend/corpus/**/*.csv
 sync-db.sh
+# Gold-set evidence may be licensed, private, or owner-confidential; only the
+# synthetic sample belongs in the repository. The directory must be re-included
+# before the file can be, because /backend/data/* above excludes its parent.
+!/backend/data/goldset/
+/backend/data/goldset/*
+!/backend/data/goldset/phl-sample.jsonl
