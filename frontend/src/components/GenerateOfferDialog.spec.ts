@@ -47,7 +47,10 @@ describe('GenerateOfferDialog', () => {
     const priceInput = wrapper.find('input[type="number"]')
     expect((priceInput.element as HTMLInputElement).value).toBe('100000')
 
-    await wrapper.findAll('button').find((b) => b.text().includes('Download LOI'))!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Download LOI'))!
+      .trigger('click')
     await flushPromises()
     expect(generateOfferMock).toHaveBeenCalled()
     const payload = generateOfferMock.mock.calls[0][1] as OfferRequest
@@ -59,7 +62,10 @@ describe('GenerateOfferDialog', () => {
     const wrapper = mountDialog('investor', 100000)
     await flushPromises()
     await wrapper.find('input[type="number"]').setValue(85000)
-    await wrapper.findAll('button').find((b) => b.text().includes('Download LOI'))!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Download LOI'))!
+      .trigger('click')
     await flushPromises()
     const payload = generateOfferMock.mock.calls[0][1] as OfferRequest
     expect(payload.offer_price).toBe(85000)

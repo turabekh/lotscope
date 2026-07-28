@@ -112,8 +112,8 @@ async function draft(): Promise<void> {
       <template v-else>
         <div v-if="!report && !loading" class="column items-start">
           <div class="text-body2 text-grey-7 q-mb-sm">
-            Draft a multi-section memo — buildability, valuation, deal math, and risks —
-            synthesized from this parcel's computed analysis.
+            Draft a multi-section memo — buildability, valuation, deal math, and risks — synthesized
+            from this parcel's computed analysis.
           </div>
           <q-btn
             unelevated

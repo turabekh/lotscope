@@ -32,13 +32,12 @@ watch(() => props.parcelNumber, load)
       </q-badge>
     </div>
     <div class="repo-detail">
-      A county-held tax-repository parcel, purchasable over the counter: written bid, $2,000
-      minimum plus fees, subject to approval by the county commissioners and taxing bodies, and
-      conveyed with no post-sale redemption period.
+      A county-held tax-repository parcel, purchasable over the counter: written bid, $2,000 minimum
+      plus fees, subject to approval by the county commissioners and taxing bodies, and conveyed
+      with no post-sale redemption period.
       <template v-if="status.city_status">
-        City status "{{ status.city_status }}" per the City Codes Administrator (as of
-        2025-10-08); known only for repository-listed parcels — not citywide code-enforcement
-        coverage.
+        City status "{{ status.city_status }}" per the City Codes Administrator (as of 2025-10-08);
+        known only for repository-listed parcels — not citywide code-enforcement coverage.
       </template>
       <template v-if="status.list_as_of"> Repository list as of {{ status.list_as_of }}.</template>
     </div>

@@ -91,7 +91,10 @@ function reset(): void {
           </div>
           <div class="metric">
             <div class="metric-label">Profit</div>
-            <div class="metric-value" :class="(deal.profit ?? 0) < 0 ? 'text-negative' : 'text-positive'">
+            <div
+              class="metric-value"
+              :class="(deal.profit ?? 0) < 0 ? 'text-negative' : 'text-positive'"
+            >
               {{ money(deal.profit) }}
             </div>
           </div>
@@ -179,7 +182,11 @@ function reset(): void {
             </div>
             <div class="text-caption text-grey-6 q-mt-sm">
               Assumptions:
-              {{ deal.assumptions_source === 'calibrated' ? 'calibrated for this market' : 'market default' }}
+              {{
+                deal.assumptions_source === 'calibrated'
+                  ? 'calibrated for this market'
+                  : 'market default'
+              }}
             </div>
           </div>
         </q-expansion-item>
@@ -192,7 +199,9 @@ function reset(): void {
       </template>
 
       <div v-else-if="!dealLoading" class="text-body2 text-grey-6 q-mt-xs">
-        {{ deal?.reasons?.[0] ?? 'Not enough zoning or comparable-sales data to model a deal here.' }}
+        {{
+          deal?.reasons?.[0] ?? 'Not enough zoning or comparable-sales data to model a deal here.'
+        }}
       </div>
     </q-card-section>
   </q-card>

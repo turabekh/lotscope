@@ -107,7 +107,9 @@ function selectNeighbor(parcelNumber: string): void {
           </div>
           <div class="col-6 stat">
             <div class="stat-label">Combined land</div>
-            <div class="stat-value">{{ formatSqft(assemblage.summary.combined_lot_area_sqft) }}</div>
+            <div class="stat-value">
+              {{ formatSqft(assemblage.summary.combined_lot_area_sqft) }}
+            </div>
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
               This lot plus all buyable same-zoning neighbors. Approximate; confirm by-right
               outcomes for the combined parcel.
@@ -123,7 +125,11 @@ function selectNeighbor(parcelNumber: string): void {
             :class="{ candidate: lot.is_candidate }"
             @click="selectNeighbor(lot.parcel_number)"
           >
-            <q-icon :name="badge(lot.acquirability).icon" :color="badge(lot.acquirability).color" size="18px" />
+            <q-icon
+              :name="badge(lot.acquirability).icon"
+              :color="badge(lot.acquirability).color"
+              size="18px"
+            />
             <div class="neighbor-body">
               <div class="neighbor-title ellipsis">
                 {{ lot.address ?? lot.parcel_number }}
@@ -152,7 +158,9 @@ function selectNeighbor(parcelNumber: string): void {
         </ul>
       </template>
 
-      <div v-else-if="assemblageLoading" class="text-body2 text-grey-6">Scanning adjacent lots…</div>
+      <div v-else-if="assemblageLoading" class="text-body2 text-grey-6">
+        Scanning adjacent lots…
+      </div>
       <div v-else class="text-body2 text-grey-6">Adjacent-lot data is unavailable.</div>
     </q-card-section>
   </q-card>

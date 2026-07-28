@@ -249,7 +249,11 @@ export const api = {
     link.remove()
     URL.revokeObjectURL(url)
   },
-  exportLeads(params: { minScore?: number; vacantOnly?: boolean; zipCode?: string }): Promise<void> {
+  exportLeads(params: {
+    minScore?: number
+    vacantOnly?: boolean
+    zipCode?: string
+  }): Promise<void> {
     const query = new URLSearchParams()
     if (params.minScore != null) query.set('min_score', String(params.minScore))
     if (params.vacantOnly) query.set('vacant_only', 'true')
@@ -325,7 +329,11 @@ export const api = {
   getWatchlist(): Promise<WatchlistResponse> {
     return request('/watchlist')
   },
-  addToWatchlist(parcelNumber: string, tags: string[] = [], note: string | null = null): Promise<void> {
+  addToWatchlist(
+    parcelNumber: string,
+    tags: string[] = [],
+    note: string | null = null,
+  ): Promise<void> {
     return request('/watchlist', {
       method: 'POST',
       body: JSON.stringify({ parcel_number: parcelNumber, tags, note }),
@@ -587,7 +595,9 @@ export const api = {
       `lotscope-assessment-review-${parcelNumber}.pdf`,
     )
   },
-  getFeed(params: { days?: number; savedSearchId?: number; limit?: number } = {}): Promise<FeedResponse> {
+  getFeed(
+    params: { days?: number; savedSearchId?: number; limit?: number } = {},
+  ): Promise<FeedResponse> {
     const query = new URLSearchParams()
     if (params.days != null) query.set('days', String(params.days))
     if (params.savedSearchId != null) query.set('saved_search_id', String(params.savedSearchId))

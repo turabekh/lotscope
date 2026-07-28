@@ -108,7 +108,10 @@ async function activate(plan: PlanInfo): Promise<void> {
   }
 
   if (!isAuthenticated.value) {
-    await router.push({ name: plan.tier === 'free' ? 'register' : 'login', query: { redirect: '/account' } })
+    await router.push({
+      name: plan.tier === 'free' ? 'register' : 'login',
+      query: { redirect: '/account' },
+    })
     return
   }
 

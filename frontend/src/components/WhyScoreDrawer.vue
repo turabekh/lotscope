@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { formatCurrency, formatFeet, formatPercent, formatRange, severityColor, severityIcon } from '@/lib/format'
+import {
+  formatCurrency,
+  formatFeet,
+  formatPercent,
+  formatRange,
+  severityColor,
+  severityIcon,
+} from '@/lib/format'
 import type { VerdictResult } from '@/lib/types'
 import { flagWeight, scoreBreakdown, severityHint, sourceLabel } from '@/lib/verdict-explain'
 
@@ -85,10 +92,20 @@ const computedAtLabel = computed(() =>
             <ul class="facts">
               <li>
                 By-right:
-                <b>{{ verdict.can_build_by_right === null ? 'unresolved' : verdict.can_build_by_right ? 'yes' : 'no' }}</b>
+                <b>{{
+                  verdict.can_build_by_right === null
+                    ? 'unresolved'
+                    : verdict.can_build_by_right
+                      ? 'yes'
+                      : 'no'
+                }}</b>
               </li>
-              <li v-if="verdict.by_right_units !== null">By-right units: <b>{{ verdict.by_right_units }}</b></li>
-              <li v-if="verdict.max_height_ft !== null">Max height: <b>{{ formatFeet(verdict.max_height_ft) }}</b></li>
+              <li v-if="verdict.by_right_units !== null">
+                By-right units: <b>{{ verdict.by_right_units }}</b>
+              </li>
+              <li v-if="verdict.max_height_ft !== null">
+                Max height: <b>{{ formatFeet(verdict.max_height_ft) }}</b>
+              </li>
               <li v-if="verdict.needs_variance !== null">
                 Variance likely: <b>{{ verdict.needs_variance ? 'yes' : 'no' }}</b>
               </li>
@@ -103,7 +120,11 @@ const computedAtLabel = computed(() =>
             </div>
             <div v-if="flags.length === 0" class="section-note">No risk flags on record.</div>
             <div v-for="flag in flags" :key="flag.code" class="flag">
-              <q-icon :name="severityIcon(flag.severity)" :color="severityColor(flag.severity)" size="18px" />
+              <q-icon
+                :name="severityIcon(flag.severity)"
+                :color="severityColor(flag.severity)"
+                size="18px"
+              />
               <div class="flag-body">
                 <div class="flag-title">
                   {{ flag.label }}
@@ -116,7 +137,10 @@ const computedAtLabel = computed(() =>
             </div>
           </section>
 
-          <section v-if="verdict.value_estimate_low !== null || verdict.value_estimate_high !== null" class="why-section">
+          <section
+            v-if="verdict.value_estimate_low !== null || verdict.value_estimate_high !== null"
+            class="why-section"
+          >
             <div class="section-label">Estimated value</div>
             <ul class="facts">
               <li>
@@ -134,12 +158,18 @@ const computedAtLabel = computed(() =>
 
           <section class="why-section provenance">
             <div class="section-label">Provenance</div>
-            <div class="prov-line">Version: <b>{{ verdict.verdict_version }}</b></div>
-            <div class="prov-line">Computed: <b>{{ computedAtLabel }}</b></div>
+            <div class="prov-line">
+              Version: <b>{{ verdict.verdict_version }}</b>
+            </div>
+            <div class="prov-line">
+              Computed: <b>{{ computedAtLabel }}</b>
+            </div>
             <div v-if="sourceNames.length" class="prov-line">
               Sources: {{ sourceNames.join(' · ') }}
             </div>
-            <div class="prov-note">Informational only — not legal, financial, or real-estate advice.</div>
+            <div class="prov-note">
+              Informational only — not legal, financial, or real-estate advice.
+            </div>
           </section>
         </div>
       </q-scroll-area>

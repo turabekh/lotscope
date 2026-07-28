@@ -7,7 +7,9 @@ import { useParcelStore } from '@/stores/parcel'
 const { subdivision } = storeToRefs(useParcelStore())
 
 const show = computed(
-  () => subdivision.value !== null && (subdivision.value.can_subdivide || subdivision.value.needs_consolidation),
+  () =>
+    subdivision.value !== null &&
+    (subdivision.value.can_subdivide || subdivision.value.needs_consolidation),
 )
 
 const style = computed(() => {
@@ -42,9 +44,8 @@ const reason = computed(() => subdivision.value?.reasons[0] ?? '')
       <div v-if="reason" class="text-body2 text-grey-7 q-mt-xs">{{ reason }}</div>
 
       <div v-if="subdivision.district_code" class="text-caption text-grey-5 q-mt-sm">
-        {{ subdivision.district_code }} minimums:
-        {{ subdivision.min_lot_area_sqft ?? '—' }} sq ft area,
-        {{ subdivision.min_lot_width_ft ?? '—' }} ft width
+        {{ subdivision.district_code }} minimums: {{ subdivision.min_lot_area_sqft ?? '—' }} sq ft
+        area, {{ subdivision.min_lot_width_ft ?? '—' }} ft width
       </div>
     </q-card-section>
   </q-card>

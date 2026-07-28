@@ -93,7 +93,10 @@ describe('auth store', () => {
   })
 
   it('markOnboarded stamps the user from the server copy', async () => {
-    vi.mocked(api.markOnboarded).mockResolvedValue({ ...user, onboarded_at: '2026-07-11T00:00:00Z' })
+    vi.mocked(api.markOnboarded).mockResolvedValue({
+      ...user,
+      onboarded_at: '2026-07-11T00:00:00Z',
+    })
 
     const store = useAuthStore()
     store.user = { ...user }

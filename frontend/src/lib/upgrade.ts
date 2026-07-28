@@ -32,11 +32,13 @@ export const UPGRADE_COPY: Record<UpgradeCap, UpgradeCopy> = {
   },
   export: {
     headline: 'CSV export is a paid feature.',
-    detail: 'Pro exports up to 2,000 rows per file (10 files/month); Investor is unlimited at 10,000 rows.',
+    detail:
+      'Pro exports up to 2,000 rows per file (10 files/month); Investor is unlimited at 10,000 rows.',
   },
   letters: {
     headline: 'Direct-mail letters are a paid feature.',
-    detail: 'Pro and Investor generate print-ready owner letters from your leads and saved searches.',
+    detail:
+      'Pro and Investor generate print-ready owner letters from your leads and saved searches.',
   },
   offer: {
     headline: 'Offer letters are a Pro feature.',

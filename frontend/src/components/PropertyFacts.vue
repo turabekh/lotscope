@@ -45,7 +45,9 @@ const hasExemption = computed(() => exemptTotal.value > 0)
               estimate in the verdict above.
             </q-tooltip>
           </q-item-section>
-          <q-item-section side class="value">{{ formatCurrency(detail.market_value) }}</q-item-section>
+          <q-item-section side class="value">{{
+            formatCurrency(detail.market_value)
+          }}</q-item-section>
         </q-item>
         <q-item v-if="detail.land_value != null" class="q-px-none">
           <q-item-section>

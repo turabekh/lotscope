@@ -63,7 +63,8 @@ async function downloadIcs(): Promise<void> {
   try {
     await api.downloadSheriffIcs(market.active)
   } catch (cause) {
-    error.value = cause instanceof ApiError ? cause.message : 'Could not download the calendar feed.'
+    error.value =
+      cause instanceof ApiError ? cause.message : 'Could not download the calendar feed.'
   }
 }
 
@@ -167,8 +168,17 @@ onMounted(() => {
                 :disable="!result || result.items.length === 0"
                 @click="downloadIcs"
               />
-              <q-btn outline no-caps color="primary" icon="event_repeat" label="Subscribe" @click="copySubscribeUrl">
-                <q-tooltip>Copy a personal subscription link to add in your calendar app.</q-tooltip>
+              <q-btn
+                outline
+                no-caps
+                color="primary"
+                icon="event_repeat"
+                label="Subscribe"
+                @click="copySubscribeUrl"
+              >
+                <q-tooltip
+                  >Copy a personal subscription link to add in your calendar app.</q-tooltip
+                >
               </q-btn>
             </q-btn-group>
           </div>
@@ -231,7 +241,10 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-if="result && result.returned < result.total" class="text-caption text-grey-6 q-mt-sm">
+        <div
+          v-if="result && result.returned < result.total"
+          class="text-caption text-grey-6 q-mt-sm"
+        >
           Showing {{ result.returned }} of {{ result.total }} scheduled sales.
         </div>
 

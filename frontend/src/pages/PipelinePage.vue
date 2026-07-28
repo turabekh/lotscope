@@ -211,7 +211,13 @@ async function skipTraceContact(): Promise<void> {
 <template>
   <q-page class="pipeline-page">
     <div class="pipeline-header">
-      <q-tabs v-model="tab" dense align="left" class="pipeline-tabs" @update:model-value="switchTab">
+      <q-tabs
+        v-model="tab"
+        dense
+        align="left"
+        class="pipeline-tabs"
+        @update:model-value="switchTab"
+      >
         <q-tab name="board" label="Board" no-caps />
         <q-tab name="today" label="Today" no-caps />
       </q-tabs>
@@ -266,7 +272,9 @@ async function skipTraceContact(): Promise<void> {
       <div v-if="today.length === 0" class="empty">
         <q-icon name="event_available" size="42px" color="grey-4" />
         <div class="text-subtitle1 text-grey-7 q-mt-sm">Nothing due</div>
-        <div class="text-body2 text-grey-6">Deals with a due date show up here when they’re due.</div>
+        <div class="text-body2 text-grey-6">
+          Deals with a due date show up here when they’re due.
+        </div>
       </div>
       <q-list v-else bordered separator class="today-list">
         <q-item v-for="deal in today" :key="deal.id" clickable @click="openParcel(deal)">
@@ -364,7 +372,10 @@ async function skipTraceContact(): Promise<void> {
               }}</span>
             </div>
 
-            <div v-if="deal.max_allowable_offer !== null || deal.est_profit !== null" class="deal-econ">
+            <div
+              v-if="deal.max_allowable_offer !== null || deal.est_profit !== null"
+              class="deal-econ"
+            >
               <q-chip v-if="deal.max_allowable_offer !== null" dense square color="blue-grey-1">
                 MAO {{ formatCurrency(deal.max_allowable_offer) }}
               </q-chip>
@@ -475,8 +486,8 @@ async function skipTraceContact(): Promise<void> {
           <q-input v-model="contactDraft.contact_phone" label="Phone" dense />
           <q-input v-model="contactDraft.contact_email" label="Email" dense />
           <div class="text-caption text-grey-6">
-            Contact data is for real-estate outreach only — not for credit, employment, insurance, or
-            tenant-screening decisions. Outreach is subject to TCPA / Do-Not-Call rules.
+            Contact data is for real-estate outreach only — not for credit, employment, insurance,
+            or tenant-screening decisions. Outreach is subject to TCPA / Do-Not-Call rules.
           </div>
         </q-card-section>
         <q-separator />

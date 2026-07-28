@@ -28,7 +28,13 @@ function money(value: number | null): string {
 }
 
 function when(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+  return value
+    ? new Date(value).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : '—'
 }
 
 async function load(): Promise<void> {
@@ -45,7 +51,10 @@ async function load(): Promise<void> {
 }
 
 function openParcel(purchase: BuyerPurchase): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: purchase.parcel_number } })
+  void router.push({
+    name: 'parcel',
+    params: { market: market.active, id: purchase.parcel_number },
+  })
 }
 
 onMounted(load)
@@ -55,7 +64,15 @@ watch(buyerKey, load)
 <template>
   <q-page class="q-pa-md">
     <div class="profile-wrap">
-      <q-btn flat dense no-caps icon="arrow_back" label="Buyers" :to="{ name: 'buyers', params: { market: market.active } }" class="q-mb-sm" />
+      <q-btn
+        flat
+        dense
+        no-caps
+        icon="arrow_back"
+        label="Buyers"
+        :to="{ name: 'buyers', params: { market: market.active } }"
+        class="q-mb-sm"
+      />
 
       <div v-if="!hasAccess" class="empty">
         <q-icon name="lock" size="40px" color="grey-5" />

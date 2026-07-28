@@ -89,7 +89,14 @@ function askSuggestion(text: string): void {
         <div class="text-body2 text-grey-7 text-center q-my-sm">
           Sign in to ask the AI about zoning, height, units, and allowed uses for this parcel.
         </div>
-        <q-btn unelevated no-caps color="primary" icon="login" label="Sign in to ask" @click="goLogin" />
+        <q-btn
+          unelevated
+          no-caps
+          color="primary"
+          icon="login"
+          label="Sign in to ask"
+          @click="goLogin"
+        />
       </div>
 
       <template v-else>

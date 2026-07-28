@@ -35,7 +35,9 @@ const buildPillar = computed<Pillar>(() => {
     return {
       key: 'build',
       label: 'Buildability',
-      value: v.by_right_units ? `By-right · ${v.by_right_units} unit${v.by_right_units > 1 ? 's' : ''}` : 'By-right',
+      value: v.by_right_units
+        ? `By-right · ${v.by_right_units} unit${v.by_right_units > 1 ? 's' : ''}`
+        : 'By-right',
       icon: 'check_circle',
       tone: 'positive',
       hint: 'Developable under Title 14 with no zoning variance.',
@@ -145,7 +147,9 @@ const accent = computed(() => scoreVar(props.verdict.opportunity_score))
           <div class="pillar-value lot-numeric">{{ pillar.value }}</div>
           <div class="pillar-hint">{{ pillar.hint }}</div>
         </div>
-        <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">{{ pillar.hint }}</q-tooltip>
+        <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">{{
+          pillar.hint
+        }}</q-tooltip>
       </div>
     </div>
   </div>

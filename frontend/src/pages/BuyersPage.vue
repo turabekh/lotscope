@@ -44,7 +44,9 @@ function money(value: number | null): string {
 }
 
 function when(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'
+  return value
+    ? new Date(value).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : '—'
 }
 
 async function load(): Promise<void> {

@@ -46,7 +46,11 @@ function makeRouter(): Router {
     history: createMemoryHistory(),
     routes: [
       { path: '/:market/buyers', name: 'buyers', component: { template: '<div />' } },
-      { path: '/:market/buyers/:buyerKey', name: 'buyer-profile', component: { template: '<div />' } },
+      {
+        path: '/:market/buyers/:buyerKey',
+        name: 'buyer-profile',
+        component: { template: '<div />' },
+      },
       { path: '/account', name: 'account', component: { template: '<div />' } },
     ],
   })
@@ -91,7 +95,12 @@ describe('BuyersPage', () => {
   it('shows the unavailable state when the market is gated', async () => {
     const wrapper = await mountPage(
       'investor',
-      roster({ available: false, note: 'Buyer identities are not available for this market.', total: 0, buyers: [] }),
+      roster({
+        available: false,
+        note: 'Buyer identities are not available for this market.',
+        total: 0,
+        buyers: [],
+      }),
     )
     expect(wrapper.text()).toContain('not available for this market')
   })
