@@ -28,28 +28,38 @@ interface NavLink {
 
 const sections = computed<NavLink[]>(() => [
   { label: 'Home', icon: 'home', name: 'home' },
-  { label: 'Explore', icon: 'travel_explore', name: 'explore' },
-  { label: 'Feed', icon: 'bolt', name: 'feed' },
-  {
-    label: market.activeInfo?.forced_sale_surface_label ?? 'Sheriff sales',
-    icon: 'gavel',
-    name: 'sheriff-sales',
-  },
-  { label: 'Top plays', icon: 'dashboard_customize', name: 'top-plays' },
-  { label: 'Cash buyers', icon: 'real_estate_agent', name: 'buyers' },
-  { label: 'Market', icon: 'insights', name: 'market' },
+  { label: 'Find lots', icon: 'travel_explore', name: 'explore' },
   { label: 'Leads', icon: 'sell', name: 'leads' },
   { label: 'Pipeline', icon: 'view_kanban', name: 'pipeline' },
   { label: 'Lists', icon: 'bookmark', name: 'lists', badge: () => alerts.value + newTotal.value },
 ])
 
-const visibleSections = computed<NavLink[]>(() =>
-  sections.value.filter((item) => !market.isHidden(item.name.replace(/-/g, '_'))),
-)
+const researchSections = computed<NavLink[]>(() => [
+  {
+    label: market.activeInfo?.forced_sale_surface_label ?? 'Sheriff sales',
+    icon: 'gavel',
+    name: 'sheriff-sales',
+  },
+  { label: 'Feed', icon: 'bolt', name: 'feed' },
+  { label: 'Top plays', icon: 'dashboard_customize', name: 'top-plays' },
+  { label: 'Cash buyers', icon: 'real_estate_agent', name: 'buyers' },
+  { label: 'Market', icon: 'insights', name: 'market' },
+])
+
+function visible(links: NavLink[]): NavLink[] {
+  return links.filter((item) => !market.isHidden(item.name.replace(/-/g, '_')))
+}
+
+const visibleSections = computed<NavLink[]>(() => visible(sections.value))
+const visibleResearch = computed<NavLink[]>(() => visible(researchSections.value))
 
 function isActive(name: string): boolean {
   return route.name === name
 }
+
+const researchOpen = computed<boolean>(() =>
+  visibleResearch.value.some((item) => isActive(item.name)),
+)
 </script>
 
 <template>
@@ -67,7 +77,7 @@ function isActive(name: string): boolean {
       <MarketSwitcher :collapsed="collapsed" />
     </div>
 
-    <q-list class="nav">
+    <q-list class="nav" data-test="nav-primary">
       <q-item
         v-for="item in visibleSections"
         :key="item.name"
@@ -96,6 +106,35 @@ function isActive(name: string): boolean {
           {{ item.label }}
         </q-tooltip>
       </q-item>
+      <q-expansion-item
+        v-if="visibleResearch.length"
+        :model-value="researchOpen"
+        :label="collapsed ? '' : 'Research'"
+        icon="query_stats"
+        dense
+        class="research"
+        data-test="nav-research"
+      >
+        <q-item
+          v-for="item in visibleResearch"
+          :key="item.name"
+          v-ripple
+          clickable
+          :active="isActive(item.name)"
+          active-class="nav-active"
+          class="nav-item nav-nested"
+          :to="{ name: item.name, params: { market: market.active } }"
+          @click="emit('navigate')"
+        >
+          <q-item-section avatar class="nav-avatar">
+            <q-icon :name="item.icon" size="19px" />
+          </q-item-section>
+          <q-item-section v-if="!collapsed">{{ item.label }}</q-item-section>
+          <q-tooltip v-if="collapsed" anchor="center right" self="center left">
+            {{ item.label }}
+          </q-tooltip>
+        </q-item>
+      </q-expansion-item>
     </q-list>
 
     <q-space />
@@ -202,5 +241,13 @@ function isActive(name: string): boolean {
 }
 .footer {
   color: var(--lot-muted);
+}
+.research {
+  color: var(--lot-muted);
+  border-radius: var(--lot-radius-sm);
+}
+.nav-nested {
+  padding-left: 10px;
+  min-height: 38px;
 }
 </style>

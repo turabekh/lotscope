@@ -25,7 +25,7 @@ interface Tab {
 
 const tabs: Tab[] = [
   { label: 'Home', icon: 'home', name: 'home' },
-  { label: 'Explore', icon: 'travel_explore', name: 'explore' },
+  { label: 'Find lots', icon: 'travel_explore', name: 'explore' },
   { label: 'Leads', icon: 'sell', name: 'leads' },
 ]
 

@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import BuyBoxPanel from '@/components/BuyBoxPanel.vue'
+import DiscoverySources from '@/components/DiscoverySources.vue'
 import MapControlsOverlay from '@/components/MapControlsOverlay.vue'
 import MapView from '@/components/MapView.vue'
 import ParcelDossier from '@/components/ParcelDossier.vue'
@@ -214,6 +215,7 @@ function onSelect(parcelNumber: string): void {
           <div class="q-pa-md">
             <BuyBoxPanel />
             <MapControlsOverlay embedded />
+            <DiscoverySources />
           </div>
         </q-scroll-area>
       </div>
