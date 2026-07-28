@@ -48,7 +48,7 @@ It also fed the severity threshold, so an unknown balance scored as low-severity
 
 **Fixed:** reports "Amount owed not reported"; severity no longer treats unknown as small.
 
-### 3. Checklist reports "clear" when tax status is unknown — **found, not fixed**
+### 3. Checklist reports "clear" when tax status is unknown — **fixed**
 
 `checklist/logic.py:30`
 
@@ -60,7 +60,9 @@ The real case is a parcel that **is** in the table with `is_delinquent IS NULL` 
 
 Finding 1 stops new rows from hiding in `false`, but the checklist still cannot distinguish *verified clear* from *unknown*, because `build_checklist` receives only the verdict and has no view of the underlying tax row.
 
-**Not fixed here.** The fix requires threading the tax row's known/unknown state into the checklist, which is a contract change to `build_checklist` and belongs with the ADR-0068 status work rather than being tacked onto an audit. **This is the most user-visible remaining §8.4 issue and should be the next thing addressed.**
+**Fixed.** `build_checklist` now takes `tax_status_unknown`, resolved per parcel by the checklist service. When the feed covered the parcel but reported no balance, `liens_taxes` reports `not_evaluated` with *"The tax feed covers this parcel but reported no balance, so delinquency is unconfirmed. This is not a clean-title or paid-in-full confirmation."*
+
+An actual delinquency still outranks the unknown state, and a genuinely clear parcel — absent from the feed — still reports `pass`. The unknown case now counts toward the checklist's `not_evaluated` tally rather than its `passed` one.
 
 ### 4. Unknown unit count coerced to zero in scenarios — **low severity, not fixed**
 
@@ -92,6 +94,8 @@ Absent exemption values read as "no abatement". The abatement checklist item is 
 
 ## Status
 
-**LR-B-003 moves from `Needs verification` to `Partial`**, not Complete.
+**LR-B-003 moves from `Needs verification` to `Partial`.**
 
-Two violations are fixed and four are recorded. Finding 3 is the one that still reaches a user as a false clearance, and it is not honest to call §8.4 satisfied while it stands.
+Findings 1, 2, and 3 are fixed — no known false clearance now reaches a user. Findings 4, 5, and 6 remain, each contained and recorded above.
+
+It is still `Partial` rather than `Complete` because three coercions are knowingly left in place. Marking it Complete while `or 0.0` sits in the scenario, abatement, and vacancy paths would be a claim this audit exists to disallow, however low the severity.

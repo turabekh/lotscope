@@ -76,7 +76,15 @@ def _risk_item(
     *,
     availability: str = "available",
     state_detail: str = "",
+    unknown_detail: str | None = None,
 ) -> ChecklistItem:
+    if unknown_detail is not None and not any(flag.get("code") in flag_codes for flag in flags):
+        return ChecklistItem(
+            code=code,
+            category=category,
+            status="not_evaluated",
+            detail=unknown_detail,
+        )
     if availability != "available":
         return ChecklistItem(
             code=code,
@@ -215,11 +223,18 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
     )
 
 
+_UNKNOWN_TAX_DETAIL = (
+    "The tax feed covers this parcel but reported no balance, so delinquency is unconfirmed. "
+    "This is not a clean-title or paid-in-full confirmation."
+)
+
+
 def build_checklist(
     verdict: VerdictResult,
     *,
     has_abatement: bool = False,
     market_code: str = "phl",
+    tax_status_unknown: bool = False,
 ) -> tuple[list[ChecklistItem], ChecklistSummary]:
     flags = verdict.risk_flags
     items = [_zoning_item(verdict)]
@@ -235,6 +250,9 @@ def build_checklist(
                 flags,
                 availability=state,
                 state_detail=checklist_state_detail(market_code, code, state),
+                unknown_detail=(
+                    _UNKNOWN_TAX_DETAIL if code == "liens_taxes" and tax_status_unknown else None
+                ),
             )
         )
     if has_abatement:
