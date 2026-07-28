@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import CorrectionStatus from '@/components/CorrectionStatus.vue'
 import PricingPlans from '@/components/PricingPlans.vue'
 import { ApiError, api } from '@/lib/api'
 import type { CreditPackKey } from '@/lib/types'
@@ -366,6 +367,8 @@ async function signOut(): Promise<void> {
         <PricingPlans />
       </q-card-section>
     </q-card>
+
+    <CorrectionStatus class="q-mt-md" />
   </q-page>
 </template>
 

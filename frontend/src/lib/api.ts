@@ -1,4 +1,5 @@
 import type {
+  CorrectionRecord,
   BuyBox,
   BuyBoxMatches,
   UnderwritingProfile,
@@ -407,6 +408,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     })
+  },
+  getOwnCorrections(): Promise<CorrectionRecord[]> {
+    return request('/corrections')
   },
   getBuyBoxMatches(market: string, limit = 5): Promise<BuyBoxMatches> {
     return request(`/underwriting/matches?market=${encodeURIComponent(market)}&limit=${limit}`)

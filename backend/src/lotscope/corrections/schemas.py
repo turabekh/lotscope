@@ -34,6 +34,7 @@ class CorrectionRead(BaseModel):
     id: int
     parcel_number: str
     market_code: str
+    reported_by: int
     section: str
     field_name: str | None
     verdict_version: str | None

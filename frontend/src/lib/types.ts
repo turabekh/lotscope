@@ -1291,3 +1291,16 @@ export interface UnderwritingProfile {
   assumptions: Record<string, number>
   buy_box: BuyBox
 }
+
+export interface CorrectionRecord {
+  id: number
+  parcel_number: string
+  market_code: string
+  section: string
+  field_name: string | null
+  description: string
+  status: string
+  resolution: string | null
+  resolved_at: string | null
+  created_at: string
+}
