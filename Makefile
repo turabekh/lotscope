@@ -39,7 +39,7 @@ migrate: ## Apply database migrations
 revision: ## Create a migration (use: make revision m="message")
 	cd $(BACKEND) && uv run alembic revision --autogenerate -m "$(m)"
 
-seed: ## Seed reference data (Title 14 zoning standards)
+seed: ## Seed reference data (zoning standards for every market)
 	cd $(BACKEND) && uv run python -m lotscope.zoning.seed
 
 recompute-verdicts: ## Recompute the Parcel Verdict for every parcel
