@@ -37,3 +37,10 @@ class ParcelDetail(BaseModel):
     last_synced_at: datetime | None
     longitude: float | None = None
     latitude: float | None = None
+
+
+class SourceFreshness(BaseModel):
+    source_label: str
+    title: str
+    as_of: datetime | None
+    datasets: list[str]

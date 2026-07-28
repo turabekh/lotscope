@@ -88,6 +88,13 @@ export interface FieldProvenance {
   default_origin: string | null
 }
 
+export interface SourceFreshness {
+  source_label: string
+  title: string
+  as_of: string | null
+  datasets: string[]
+}
+
 export interface VerdictResult {
   parcel_number: string
   verdict_version: string

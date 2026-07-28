@@ -50,12 +50,13 @@ from lotscope.documents.service import analyze_uploaded_deed, get_deed_restricti
 from lotscope.documents.storage import LocalBlobStore
 from lotscope.historic.schemas import HistoricResult
 from lotscope.historic.service import get_parcel_historic
+from lotscope.ingestion.service import source_freshness
 from lotscope.market.schemas import MarketContext
 from lotscope.market.service import get_parcel_market
 from lotscope.owners.schemas import OwnerPortfolio
 from lotscope.owners.service import get_owner_portfolio
-from lotscope.parcels.schemas import ParcelDetail
-from lotscope.parcels.service import get_parcel_detail
+from lotscope.parcels.schemas import ParcelDetail, SourceFreshness
+from lotscope.parcels.service import get_parcel_detail, parcel_market_code
 from lotscope.reports.appeal_packet import appeal_packet_filename
 from lotscope.reports.dossier import dossier_filename
 from lotscope.reports.service import build_appeal_packet, build_parcel_dossier
@@ -377,6 +378,17 @@ async def parcel_market(
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result
+
+
+@router.get("/{parcel_number}/freshness", response_model=list[SourceFreshness])
+async def parcel_source_freshness(
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
+) -> list[SourceFreshness]:
+    market_code = await parcel_market_code(session, parcel_number)
+    if market_code is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    rows = await source_freshness(session, market_code)
+    return [SourceFreshness.model_validate(row) for row in rows]
 
 
 @router.get("/{parcel_number}/checklist", response_model=ParcelChecklist)

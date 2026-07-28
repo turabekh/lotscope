@@ -49,3 +49,28 @@ async def record_freshness(
     if detail is not None:
         row["detail"] = detail
     await upsert(session, DatasetFreshness, [row], index_elements=["market_code", "dataset"])
+
+
+_FRESHNESS_SURFACES: tuple[tuple[str, str], ...] = (
+    ("parcel", "Parcel geometry & ownership"),
+    ("opa_properties_public", "Assessment"),
+    ("zoning_district", "Zoning districts"),
+    ("rtt_summary", "Recorded sales"),
+    ("li_event", "Code & permit events"),
+    ("tax_status", "Tax status"),
+    ("flood_zone", "Flood zones"),
+    ("street_centerline", "Street access"),
+)
+
+
+async def source_freshness(session: AsyncSession, market_code: str) -> list[dict[str, Any]]:
+    last_success = await dataset_last_success(session, market_code)
+    return [
+        {
+            "source_label": label,
+            "title": title,
+            "as_of": source_as_of(label, last_success),
+            "datasets": list(datasets_for_source(label)),
+        }
+        for label, title in _FRESHNESS_SURFACES
+    ]
