@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from sqlalchemy import func
@@ -10,6 +11,8 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.zoning.models import ZoningStandard
 from lotscope.zoning.seed_hbg import seed_hbg_zoning_standards
+from lotscope.zoning.seed_pgh import seed_pgh_zoning_standards
+from lotscope.zoning.seed_wlm import seed_wlm_zoning_standards
 
 TITLE_14_VERSION = "title14-quickguide-2026-02"
 TITLE_14_SOURCE = (
@@ -412,6 +415,18 @@ async def seed_zoning_standards(session: AsyncSession) -> int:
     return len(rows)
 
 
+_MARKET_SEEDERS: dict[str, Callable[[AsyncSession], Awaitable[int]]] = {
+    "phl": seed_zoning_standards,
+    "hbg": seed_hbg_zoning_standards,
+    "pgh": seed_pgh_zoning_standards,
+    "wlm": seed_wlm_zoning_standards,
+}
+
+
+async def seed_all_zoning_standards(session: AsyncSession) -> dict[str, int]:
+    return {market: await seeder(session) for market, seeder in _MARKET_SEEDERS.items()}
+
+
 async def _run() -> None:
     settings = get_settings()
     configure_logging(settings)
@@ -419,10 +434,9 @@ async def _run() -> None:
     session_factory = create_session_factory(engine)
     try:
         async with session_factory() as session:
-            count = await seed_zoning_standards(session)
-            hbg_count = await seed_hbg_zoning_standards(session)
+            seeded = await seed_all_zoning_standards(session)
             await session.commit()
-            get_logger("zoning.seed").info("seeded_zoning_standards", phl=count, hbg=hbg_count)
+            get_logger("zoning.seed").info("seeded_zoning_standards", **seeded)
     finally:
         await engine.dispose()
 

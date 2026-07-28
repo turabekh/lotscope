@@ -40,10 +40,7 @@ from lotscope.ops.stats import snapshot_market_stats
 from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
 from lotscope.verdict.jobs import recompute_all_verdicts
-from lotscope.zoning.seed import seed_zoning_standards
-from lotscope.zoning.seed_hbg import seed_hbg_zoning_standards
-from lotscope.zoning.seed_pgh import seed_pgh_zoning_standards
-from lotscope.zoning.seed_wlm import seed_wlm_zoning_standards
+from lotscope.zoning.seed import seed_all_zoning_standards
 
 _logger = get_logger("worker")
 
@@ -154,12 +151,9 @@ _RECOMPUTE_DISPATCH: dict[str, _RecomputeFn] = {
 
 async def _seed_zoning_standards(session_factory: async_sessionmaker[AsyncSession]) -> int:
     async with session_factory() as session:
-        total = await seed_zoning_standards(session)
-        total += await seed_hbg_zoning_standards(session)
-        total += await seed_pgh_zoning_standards(session)
-        total += await seed_wlm_zoning_standards(session)
+        seeded = await seed_all_zoning_standards(session)
         await session.commit()
-    return total
+    return sum(seeded.values())
 
 
 async def _seed_market_gates(session_factory: async_sessionmaker[AsyncSession]) -> int:
