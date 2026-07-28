@@ -112,7 +112,13 @@ The escape hatch is `SKIP_PRE_MIGRATION_BACKUP=1`, which prints a warning. It ex
 
 ## Configuration
 
-Set on the VM, in `~/lotscope/.env`:
+`BACKUP_BUCKET` is supplied by the deploy workflow from the repository variable of the same name and forwarded over SSH, so a deploy carries it without anything being set on the VM. Running `scripts/backup-db.sh` by hand on the VM requires it in the environment or in `~/lotscope/.env`.
+
+**Production bucket:** `gs://lotscope-501014-db-backups` — US-EAST1 (same region as the VM), uniform access, 30-day delete lifecycle. The VM service account holds `roles/storage.objectAdmin`, which the script needs for both upload and pruning.
+
+The lifecycle rule and the script's `BACKUP_RETAIN_DAYS` both sit at 30 days deliberately. The script prunes by the timestamp in each filename; the lifecycle prunes by object age. If the script's pruning ever breaks, the bucket rule still caps storage growth.
+
+Other settings, on the VM in `~/lotscope/.env`:
 
 | Variable | Default | Meaning |
 |---|---|---|
