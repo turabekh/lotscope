@@ -10,7 +10,7 @@
 
 LotScope turns Philadelphia's open property data — parcels, assessments, recorded sales, zoning, L&I, demolitions, tax delinquency, the Land Bank, and the city's vacancy model — into a single, decision-ready answer per parcel: the **Parcel Verdict**. The product is Philadelphia-only by design; depth in one market is the moat.
 
-The full product specification is in [`docs/LotScope-PHL-Full-PRD.md.pdf`](docs/LotScope-PHL-Full-PRD.md.pdf).
+The full product specification is in [`docs/PRD.md`](docs/PRD.md).
 
 ### What it does
 
@@ -167,7 +167,7 @@ make e2e           # critical user flows
 
 ## Documentation
 
-- [`docs/LotScope-PHL-Full-PRD.md.pdf`](docs/LotScope-PHL-Full-PRD.md.pdf) — full product specification and feature catalog
+- [`docs/PRD.md`](docs/PRD.md) — full product specification and feature catalog
 - [`docs/architecture.md`](docs/architecture.md) — system architecture
 - [`docs/data-sources.md`](docs/data-sources.md) — Philadelphia dataset catalog, endpoints, schemas, and gotchas
 - [`docs/adr/`](docs/adr/) — architecture decision records

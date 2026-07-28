@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft for review |
 | **Date** | 2026-07-04 |
-| **Amends** | `LotScope-PHL-Full-PRD.md`; follows `PRD-amendment-01-monetization.md` |
+| **Amends** | `docs/PRD.md`; follows `PRD-amendment-01-monetization.md` |
 | **Sequencing** | Executes **after** Amendment 01 Phases 0–1 (revenue attach). Platform prerequisites here (B1–B4) may be batched with Amendment 01's raw-landing/ELT work and its planned `VERDICT_VERSION` v6 bump to avoid recompute thrash (per the ADR-0028 batching principle). |
 | **ADRs to author** | ADR-0029 market entity & canonical parcel key · ADR-0030 multi-CRS geometry · ADR-0031 ingestion transports & market-keyed loader registry · ADR-0032 per-market zoning authoring · ADR-0033 vacancy derivation · ADR-0034 per-market distress/forced-sale semantics |
 | **Workstreams** | B1–B12 (continues Amendment 01's A1–A11 numbering) |
