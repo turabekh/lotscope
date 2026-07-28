@@ -44,3 +44,4 @@ class ParcelVerdict(Base, TimestampMixin, ProvenanceMixin):
     risk_flags: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, server_default="[]"
     )
+    field_trust: Mapped[dict[str, Any] | None] = mapped_column(JSONB)

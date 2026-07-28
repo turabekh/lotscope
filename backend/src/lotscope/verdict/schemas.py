@@ -1,7 +1,16 @@
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, BeforeValidator, ConfigDict
+
+from lotscope.core.provenance import FieldProvenance
+
+
+def _no_trust_when_absent(value: object) -> object:
+    return {} if value is None else value
+
+
+FieldTrust = Annotated[dict[str, FieldProvenance], BeforeValidator(_no_trust_when_absent)]
 
 
 class VerdictResult(BaseModel):
@@ -30,4 +39,5 @@ class VerdictResult(BaseModel):
     risk_score: float | None
     risk_flags: list[dict[str, Any]]
     sources: list[dict[str, Any]]
+    field_trust: FieldTrust = {}
     computed_at: datetime

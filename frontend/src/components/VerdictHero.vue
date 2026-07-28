@@ -36,11 +36,11 @@ const buildPillar = computed<Pillar>(() => {
       key: 'build',
       label: 'Buildability',
       value: v.by_right_units
-        ? `By-right · ${v.by_right_units} unit${v.by_right_units > 1 ? 's' : ''}`
-        : 'By-right',
+        ? `Base district · ${v.by_right_units} unit${v.by_right_units > 1 ? 's' : ''}`
+        : 'Base district eligible',
       icon: 'check_circle',
       tone: 'positive',
-      hint: 'Developable under Title 14 with no zoning variance.',
+      hint: 'Appears dimensionally eligible under the listed base-district standards, subject to the limitations and checks below. Not a construction approval.',
     }
   }
   if (v.needs_variance) {

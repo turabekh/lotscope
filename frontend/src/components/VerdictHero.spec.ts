@@ -76,12 +76,16 @@ describe('VerdictHero', () => {
     expect(wrapper.text()).not.toContain('By-right')
   })
 
-  it('shows the by-right unit count when the parcel is buildable by-right', () => {
+  it('reports base-district eligibility without promising construction approval', () => {
     const wrapper = mountHero(
       makeVerdict({ can_build_by_right: true, needs_variance: false, by_right_units: 1 }),
     )
-    expect(wrapper.text()).toContain('By-right')
-    expect(wrapper.text()).not.toContain('Variance likely')
+    const text = wrapper.text()
+    expect(text).toContain('Base district · 1 unit')
+    expect(text).toContain('dimensionally eligible')
+    expect(text).toContain('Not a construction approval')
+    expect(text).not.toContain('Developable under Title 14')
+    expect(text).not.toContain('Variance likely')
   })
 
   it('qualifies the clean risk pillar with the coverage note of the parcel market', () => {

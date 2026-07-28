@@ -70,6 +70,7 @@ const VERDICT: VerdictResult = {
   risk_score: 40,
   risk_flags: [],
   sources: [],
+  field_trust: {},
   computed_at: '2026-07-04T00:00:00Z',
 } as VerdictResult
 
@@ -107,6 +108,8 @@ function mountDossier(detail: ParcelDetail, distress: DistressResult | null = nu
         HistoricPanel: true,
         PropertyFacts: true,
         DistressPanel: true,
+        FreshnessPanel: true,
+        ReportCorrectionDialog: true,
         OwnerPortfolioPanel: true,
         ReportPanel: true,
         DeedRestrictionsPanel: true,

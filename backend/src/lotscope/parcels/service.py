@@ -1,4 +1,4 @@
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.markets.models import Market
@@ -41,3 +41,10 @@ async def get_parcel_detail(session: AsyncSession, parcel_number: str) -> Parcel
             detail.resolved_zoning_code = resolution.code
             detail.zoning_resolution = resolution.method
     return detail
+
+
+async def parcel_market_code(session: AsyncSession, parcel_number: str) -> str | None:
+    market_code: str | None = await session.scalar(
+        select(Parcel.market_code).where(Parcel.parcel_number == parcel_number)
+    )
+    return market_code

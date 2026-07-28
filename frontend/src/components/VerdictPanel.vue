@@ -71,7 +71,7 @@ const buildStatus = computed<Status>(() => {
     return { label: 'Master plan required', color: 'blue-grey-6', icon: 'account_balance' }
   }
   if (v.can_build_by_right) {
-    return { label: 'Buildable by-right', color: 'positive', icon: 'check_circle' }
+    return { label: 'Dimensionally eligible', color: 'positive', icon: 'check_circle' }
   }
   if (v.needs_variance) {
     return { label: 'Variance likely', color: 'warning', icon: 'gavel' }
@@ -101,7 +101,8 @@ const buildStatus = computed<Status>(() => {
           <div class="stat-label">By-right units</div>
           <div class="stat-value lot-numeric">{{ verdict.by_right_units ?? '—' }}</div>
           <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-            Dwelling units allowed by-right (no variance) under the lot's zoning district.
+            Dwelling units the base-district standards appear to allow without a variance. Subject
+            to overlays, access, parking, utilities, title, and the checks below.
           </q-tooltip>
         </div>
         <div class="col-4 stat">

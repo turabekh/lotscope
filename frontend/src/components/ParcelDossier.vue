@@ -14,6 +14,8 @@ import DealPanel from '@/components/DealPanel.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
 import ReportPanel from '@/components/ReportPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
+import FreshnessPanel from '@/components/FreshnessPanel.vue'
+import ReportCorrectionDialog from '@/components/ReportCorrectionDialog.vue'
 import HistoricPanel from '@/components/HistoricPanel.vue'
 import MarketContextPanel from '@/components/MarketContextPanel.vue'
 import BuyersNearbyPanel from '@/components/BuyersNearbyPanel.vue'
@@ -43,6 +45,7 @@ const market = useMarketStore()
 const $q = useQuasar()
 const saving = ref(false)
 const whyOpen = ref(false)
+const correctionOpen = ref(false)
 const addingDeal = ref(false)
 const downloadingDossier = ref(false)
 const tab = ref('verdict')
@@ -488,6 +491,23 @@ async function toggleSave(): Promise<void> {
           </q-tab-panel>
 
           <q-tab-panel name="docs" class="tab-pane">
+            <FreshnessPanel :parcel-number="detail.parcel_number" />
+            <div class="correction-cta">
+              <q-btn
+                flat
+                dense
+                no-caps
+                color="grey-7"
+                icon="flag"
+                label="Report incorrect data"
+                data-test="report-correction"
+                @click="correctionOpen = true"
+              />
+            </div>
+            <ReportCorrectionDialog
+              v-model="correctionOpen"
+              :parcel-number="detail.parcel_number"
+            />
             <ReportPanel :parcel-number="detail.parcel_number" />
             <DeedRestrictionsPanel />
             <AskBox :parcel-number="detail.parcel_number" />
@@ -604,6 +624,11 @@ async function toggleSave(): Promise<void> {
 .tab-foot {
   display: flex;
   justify-content: center;
+}
+.correction-cta {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
 }
 .tab-empty {
   display: flex;
