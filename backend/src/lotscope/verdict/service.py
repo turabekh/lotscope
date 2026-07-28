@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.logging import get_logger
 from lotscope.deal.service import build_deal
+from lotscope.ingestion.service import dataset_last_success, source_as_of
 from lotscope.risk.service import assess_parcel_risk
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict.composition import VERDICT_VERSION, ComposedVerdict, compose_verdict
@@ -19,7 +20,8 @@ from lotscope.zoning.service import assess_parcel as assess_zoning
 _logger = get_logger("verdict.service")
 
 _PARCEL_SQL = text(
-    "SELECT market_value, base_zoning_code FROM parcel WHERE parcel_number = :parcel_number"
+    "SELECT market_value, base_zoning_code, market_code FROM parcel "
+    "WHERE parcel_number = :parcel_number"
 )
 
 _DEAL_SIGNALS_SQL = text(
@@ -57,14 +59,35 @@ async def get_deal_signals(
     }
 
 
+_DERIVED_ONLY = frozenset({"field_trust"})
+
+_TRUSTED_SOURCE_LABELS = (
+    "parcel",
+    "pwd_parcel",
+    "opa_properties_public",
+    "zoning_district",
+    "rtt_summary",
+    "tax_status",
+    "li_event",
+    "flood_zone",
+    "street_centerline",
+)
+
+
+async def _source_ages(session: AsyncSession, market_code: str) -> dict[str, datetime | None]:
+    last_success = await dataset_last_success(session, market_code)
+    return {label: source_as_of(label, last_success) for label in _TRUSTED_SOURCE_LABELS}
+
+
 async def _persist(
     session: AsyncSession,
     parcel_number: str,
     composed: ComposedVerdict,
     computed_at: datetime,
 ) -> None:
+    persisted = {key: value for key, value in asdict(composed).items() if key not in _DERIVED_ONLY}
     values: dict[str, Any] = {
-        **asdict(composed),
+        **persisted,
         "parcel_number": parcel_number,
         "computed_at": computed_at,
     }
@@ -104,6 +127,7 @@ def _to_result(
         risk_score=composed.risk_score,
         risk_flags=composed.risk_flags,
         sources=composed.sources,
+        field_trust=composed.field_trust,
         computed_at=computed_at,
     )
 
@@ -146,6 +170,7 @@ async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictR
         risk,
         deal,
         assessed_market_value=_as_float(parcel.market_value),
+        source_ages=await _source_ages(session, parcel.market_code),
     )
     computed_at = datetime.now(UTC)
     await _persist(session, parcel_number, composed, computed_at)

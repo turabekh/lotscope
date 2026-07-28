@@ -3,6 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from lotscope.core.provenance import FieldProvenance
+
 
 class VerdictResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -30,4 +32,5 @@ class VerdictResult(BaseModel):
     risk_score: float | None
     risk_flags: list[dict[str, Any]]
     sources: list[dict[str, Any]]
+    field_trust: dict[str, FieldProvenance] = {}
     computed_at: datetime

@@ -1,9 +1,12 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
+from lotscope.core.provenance import FieldProvenance
 from lotscope.deal.schemas import DealResult
 from lotscope.risk.schemas import RiskResult
 from lotscope.valuation.schemas import ValuationResult
+from lotscope.verdict.trust import compose_field_trust
 from lotscope.zoning.schemas import BuildabilityResult
 
 VERDICT_VERSION = "v8"
@@ -37,6 +40,7 @@ class ComposedVerdict:
     risk_score: float | None
     risk_flags: list[dict[str, Any]]
     sources: list[dict[str, Any]]
+    field_trust: dict[str, FieldProvenance] = field(default_factory=dict)
 
 
 def _opportunity_score(buildability_score: float, risk_score: float) -> float:
@@ -125,12 +129,21 @@ def compose_verdict(
     *,
     assessed_market_value: float | None,
     verdict_version: str = VERDICT_VERSION,
+    source_ages: dict[str, datetime | None] | None = None,
 ) -> ComposedVerdict:
     buildability_score = buildability.buildability_score if buildability is not None else None
     risk_score = risk.risk_score if risk is not None else None
     opportunity_score = _opportunity_score(buildability_score or 0.0, risk_score or 0.0)
+    assessment_market_gap = _assessment_market_gap(valuation, assessed_market_value)
 
     return ComposedVerdict(
+        field_trust=compose_field_trust(
+            buildability,
+            valuation,
+            deal,
+            assessment_market_gap=assessment_market_gap,
+            source_ages=source_ages or {},
+        ),
         verdict_version=verdict_version,
         buildability_score=buildability_score,
         opportunity_score=opportunity_score,
@@ -143,7 +156,7 @@ def compose_verdict(
         value_estimate_low=valuation.low if valuation is not None else None,
         value_estimate_high=valuation.high if valuation is not None else None,
         value_confidence=_value_confidence(valuation),
-        assessment_market_gap=_assessment_market_gap(valuation, assessed_market_value),
+        assessment_market_gap=assessment_market_gap,
         arv=deal.arv if deal is not None else None,
         est_profit=deal.profit if deal is not None else None,
         est_margin=deal.margin if deal is not None else None,

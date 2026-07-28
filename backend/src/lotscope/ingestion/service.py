@@ -1,10 +1,29 @@
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.provenance import datasets_for_source, oldest_as_of
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.ingestion.upsert import upsert
+
+
+async def dataset_last_success(session: AsyncSession, market_code: str) -> dict[str, datetime]:
+    result = await session.execute(
+        select(DatasetFreshness.dataset, DatasetFreshness.last_success_at).where(
+            DatasetFreshness.market_code == market_code,
+            DatasetFreshness.last_success_at.is_not(None),
+        )
+    )
+    return {row[0]: row[1] for row in result}
+
+
+def source_as_of(source_label: str, last_success: dict[str, datetime]) -> datetime | None:
+    datasets = datasets_for_source(source_label)
+    if not datasets:
+        return None
+    return oldest_as_of([last_success.get(dataset) for dataset in datasets])
 
 
 async def record_freshness(

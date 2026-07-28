@@ -210,3 +210,33 @@ def test_deal_fields_default_to_none_without_deal() -> None:
     assert verdict.max_allowable_offer is None
     assert verdict.deal_score is None
     assert verdict.is_underpriced is None
+
+
+def test_field_trust_marks_absent_dimensions_unavailable_not_clean() -> None:
+    composed = compose_verdict(None, None, None, None, assessed_market_value=None)
+    assert composed.field_trust
+    for name, provenance in composed.field_trust.items():
+        assert provenance.status == "unavailable", name
+        assert provenance.limitations, name
+
+
+def test_field_trust_never_reports_verified_for_a_derived_conclusion() -> None:
+    composed = compose_verdict(None, None, None, None, assessed_market_value=None)
+    assert all(p.status != "verified" for p in composed.field_trust.values())
+
+
+def test_field_trust_covers_every_material_field() -> None:
+    composed = compose_verdict(None, None, None, None, assessed_market_value=None)
+    assert set(composed.field_trust) == {
+        "can_build_by_right",
+        "by_right_units",
+        "max_height_ft",
+        "buildable_area_sqft",
+        "value_estimate_low",
+        "value_estimate_high",
+        "assessment_market_gap",
+        "arv",
+        "est_profit",
+        "est_margin",
+        "max_allowable_offer",
+    }

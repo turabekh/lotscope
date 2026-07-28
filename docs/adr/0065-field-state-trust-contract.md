@@ -1,6 +1,6 @@
 # ADR-0065 — Field-state trust contract and source provenance
 
-Status: proposed (2026-07-28)
+Status: accepted (2026-07-28)
 
 Amends the verdict contract established by ADR-0003 and ADR-0007. Required by `docs/PRD-amendment-03-launch-readiness.md` §8.1–8.3 (Slice LR-2). Backlog tickets LR-B-001, LR-B-003, LR-B-005.
 
@@ -102,5 +102,10 @@ The correction workflow (§8.5, LR-B-004) **does** require new tables; it is del
 
 ## Open questions for the owner
 
-1. **Staleness policy per dataset** — at what age does each source become Unavailable rather than merely old? Until set, age is shown without a stale verdict.
-2. **Source policy for Verified** — which sources count as authoritative? Philadelphia OPA and PWD are the obvious candidates; whether a derived-but-authoritative field such as `resolved_zoning_code` qualifies is a judgement call with real customer consequences.
+1. **Staleness policy per dataset** — at what age does each source become Unavailable rather than merely old? Until set, age is shown without a stale verdict. **Still open.**
+
+## Owner resolutions (2026-07-28)
+
+**Resolved zoning is `calculated`, not `verified`.** ADR-0056 district resolution is our deterministic inference from an authoritative polygon layer, not the city's assertion about a specific parcel. Labelling it Verified would be the over-generous application §8.1 exists to prevent. The polygon layer itself is a verified source; the per-parcel conclusion drawn from it is calculated.
+
+By extension: a value **reported** by an authoritative source for that parcel is Verified; a value **derived** by us from authoritative inputs is Calculated, however reliable the inputs.
