@@ -1257,3 +1257,37 @@ export interface RepositoryList {
   list_as_of: string | null
   total: number
 }
+
+export interface BuyBox {
+  max_acquisition_price?: number | null
+  min_margin?: number | null
+  min_units?: number | null
+  max_units?: number | null
+  risk_tolerance?: string | null
+}
+
+export interface BuyBoxMatch {
+  parcel_number: string
+  address: string | null
+  opportunity_score: number | null
+  max_allowable_offer: number | null
+  est_margin: number | null
+  by_right_units: number | null
+  risk_score: number | null
+}
+
+export interface BuyBoxMatches {
+  market: string
+  total: number
+  matches: BuyBoxMatch[]
+  criteria_applied: string[]
+  has_profile: boolean
+}
+
+export interface UnderwritingProfile {
+  id: number
+  name: string
+  is_default: boolean
+  assumptions: Record<string, number>
+  buy_box: BuyBox
+}

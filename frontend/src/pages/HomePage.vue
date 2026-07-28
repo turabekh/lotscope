@@ -3,6 +3,8 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import BuyBoxOnboarding from '@/components/BuyBoxOnboarding.vue'
+import FirstSteps from '@/components/FirstSteps.vue'
 import { api } from '@/lib/api'
 import { formatCurrency, formatNumber, scoreColor } from '@/lib/format'
 import type { LeadItem } from '@/lib/types'
@@ -96,7 +98,19 @@ function severityColor(severity: 'high' | 'medium' | 'info'): string {
   return 'primary'
 }
 
+const needsBuyBox = ref(false)
+
+async function refreshBuyBoxState(): Promise<void> {
+  try {
+    const matches = await api.getBuyBoxMatches(market.active, 1)
+    needsBuyBox.value = !matches.has_profile || matches.criteria_applied.length === 0
+  } catch {
+    needsBuyBox.value = false
+  }
+}
+
 onMounted(async () => {
+  void refreshBuyBoxState()
   void watchlist.ensureLoaded()
   void savedSearches.ensureLoaded()
   void pipeline.ensureLoaded()
@@ -118,6 +132,9 @@ onMounted(async () => {
         </div>
         <div class="text-body2 text-grey-7">Your {{ marketLabel }} snapshot</div>
       </header>
+
+      <BuyBoxOnboarding v-if="needsBuyBox" class="q-mb-md" />
+      <FirstSteps class="q-mb-md" />
 
       <div class="row q-col-gutter-md">
         <div class="col-12 col-md-7">

@@ -16,6 +16,16 @@ vi.mock('@/lib/api', async (importOriginal) => {
       getSavedSearches: vi.fn(() => Promise.resolve({ limit: null, used: 0, searches: [] })),
       getPipeline: vi.fn(() => Promise.resolve({ limit: null, used: 0, deals: [] })),
       getLeads: vi.fn(() => Promise.resolve({ tier: 'free', limit: 8, returned: 0, leads: [] })),
+      listUnderwritingProfiles: vi.fn(() => Promise.resolve([])),
+      getBuyBoxMatches: vi.fn(() =>
+        Promise.resolve({
+          market: 'phl',
+          total: 0,
+          matches: [],
+          criteria_applied: ['max_acquisition_price'],
+          has_profile: true,
+        }),
+      ),
     },
   }
 })
@@ -29,6 +39,7 @@ function makeRouter(): Router {
       { path: '/:market/leads', name: 'leads', component: { template: '<div />' } },
       { path: '/:market/pipeline', name: 'pipeline', component: { template: '<div />' } },
       { path: '/:market/lists', name: 'lists', component: { template: '<div />' } },
+      { path: '/account', name: 'account', component: { template: '<div />' } },
     ],
   })
 }
