@@ -14,6 +14,7 @@ from lotscope.ops.models import MarketGateItem, MarketStats, OpsAlertState
 from lotscope.parcels.models import Parcel
 from lotscope.risk.models import FloodZone, LiEvent, TaxStatus
 from lotscope.streets.models import StreetCenterline
+from lotscope.underwriting.models import UnderwritingProfile
 from lotscope.valuation.models import Sale
 from lotscope.verdict.models import ParcelVerdict
 from lotscope.zba.models import ZbaAppeal
@@ -43,6 +44,7 @@ __all__ = [
     "Sale",
     "StreetCenterline",
     "TaxStatus",
+    "UnderwritingProfile",
     "User",
     "ZbaAppeal",
     "ZoningDistrict",

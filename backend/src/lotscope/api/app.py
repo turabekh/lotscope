@@ -31,6 +31,7 @@ from lotscope.api.saved_searches import router as saved_searches_router
 from lotscope.api.search import router as search_router
 from lotscope.api.sheriff_sales import router as sheriff_sales_router
 from lotscope.api.skiptrace import router as skiptrace_router
+from lotscope.api.underwriting import router as underwriting_router
 from lotscope.api.watchlist import router as watchlist_router
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(neighborhoods_router)
     app.include_router(admin_router)
     app.include_router(ops_router)
+    app.include_router(underwriting_router)
     return app
 
 
