@@ -145,6 +145,8 @@ ehthumbs.db
 desktop.ini
 
 mynotes.txt
+# Flattened whole-repo text dumps (repo-to-text tooling); regenerate, never commit
+lotscope.txt
 # Corpus source binaries + raw GIS pulls (parsed into JSONL/DB; never commit the raw data)
 backend/corpus/**/*.pdf
 backend/corpus/**/*.json
