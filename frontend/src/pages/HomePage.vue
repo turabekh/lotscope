@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import BuyBoxOnboarding from '@/components/BuyBoxOnboarding.vue'
+import FirstSteps from '@/components/FirstSteps.vue'
 import { api } from '@/lib/api'
 import { formatCurrency, formatNumber, scoreColor } from '@/lib/format'
 import type { LeadItem } from '@/lib/types'
@@ -133,6 +134,7 @@ onMounted(async () => {
       </header>
 
       <BuyBoxOnboarding v-if="needsBuyBox" class="q-mb-md" />
+      <FirstSteps class="q-mb-md" />
 
       <div class="row q-col-gutter-md">
         <div class="col-12 col-md-7">
