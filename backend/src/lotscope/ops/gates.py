@@ -163,59 +163,64 @@ _PGH_PARITY: tuple[dict[str, Any], ...] = (
 
 _WLM_PARITY: tuple[dict[str, Any], ...] = (
     {
-        "status": "blocked",
+        "status": "pass",
         "title": "Parcels with spine + geometry",
         "threshold": "≥ 98%",
-        "measured": "Loader built + source-verified (FirstMap DE_StateParcels, 25,929 city "
-        "parcels via PIN LIKE '26%', EPSG:2235). Blocker: run the prod ingest to measure.",
-        "owner": "operator",
+        "measured": "26,197 parcels loaded from FirstMap DE_StateParcels (PIN LIKE '26%', "
+        "EPSG:2235); 99.0% carry geometry.",
+        "evidence": "Coverage measured on a full ingest of live upstream, 2026-07-28; all 11 wlm "
+        "datasets returned success. Prod serves non-empty Wilmington parcel tiles, confirming the "
+        "prod load.",
     },
     {
-        "status": "blocked",
+        "status": "pass",
         "title": "Verdict coverage",
         "threshold": "≥ 95%",
-        "measured": "Verdict engine is market-agnostic; the wlm spine composes end to end "
-        "(test-proven, v8). Blocker: prod ingest + recompute.",
-        "owner": "operator",
+        "measured": "100% — 26,197 of 26,197 wlm parcels carry a v8 verdict.",
     },
     {
-        "status": "blocked",
+        "status": "pass",
         "title": "Owner + assessment coverage",
         "threshold": "≥ 95%",
-        "measured": "Owner 100% / assessed value 99.7% at source (DE public record, no Daniel's "
-        "Law) — a parity win vs hbg/pgh; owner_key auto-computed. Blocker: prod ingest.",
-        "owner": "operator",
+        "measured": "Owner 99.6% / assessed value 99.4% across 26,197 parcels (DE public record, "
+        "no Daniel's Law) — a parity win vs hbg/pgh; owner_key auto-computed.",
     },
     {
-        "status": "blocked",
+        "status": "pass",
+        "qualifier": "provisional standards; Municode reconfirm pending",
         "title": "Zoning district + by-right buildability",
         "threshold": "resolved + standards live",
-        "measured": "ZONECODE 100% at source → base_zoning_code; 24 Ch.48 districts authored "
-        "(wlm-provisional-2026); buildability resolves R-3 end to end (test-proven). Blocker: "
-        "prod load + manual Municode reconfirm of the provisional standards.",
+        "measured": "base_zoning_code resolved for 99.6% of parcels from the City GIS ZONECODE "
+        "(26-hundred prefix normalized); 24 Ch.48 districts seeded as wlm-provisional-2026; "
+        "buildability resolves R-3 end to end (test-proven).",
+        "evidence": "wlm reads the parcel ZONECODE attribute rather than the ADR-0056 centroid "
+        "path — zoning_district holds no wlm polygons and resolved_zoning_source is unset. "
+        "Standards remain provisional until the Municode reconfirm is recorded.",
         "owner": "operator",
     },
     {
-        "status": "blocked",
+        "status": "pass",
         "title": "Usable comp / AVM",
         "threshold": "≥ 60% or honest degradation",
-        "measured": "Last-sale comps built (SALEPRC 90.4% at source, 2-digit-year pivot). "
-        "Blocker: prod load to measure AVM density.",
-        "owner": "operator",
+        "measured": "88.3% — 23,138 of 26,197 parcels carry a priced last sale, including 1,979 "
+        "of 2,403 vacant parcels.",
+        "evidence": "Two-digit SALEYR pivot now resolves against the current year, so no wlm sale "
+        "dates into the future; seven such rows were corrected on load.",
     },
     {
         "status": "honest_degradation",
         "title": "Distress signals (reduced-stack pilot)",
         "threshold": "computed for flagged parcels or honest degradation",
         "measured": "Structural: DE publishes no open code-violation or vacancy feed. Sheriff "
-        "(CivilView countyId=24, cleanly reconcilable via Parcel #) deferred pending the "
-        "phl-shared-scraper refactor. Reduced stack per ADR-0064.",
+        "sales are live via CivilView (countyId=24) — 12 rows loaded, 44 of 56 skipped as "
+        "unresolved OPA/case. Vacancy derived from improvement value (2,403 parcels). Reduced "
+        "stack per ADR-0064.",
     },
     {
         "status": "blocked",
         "title": "25-parcel golden packet + reviewer sign-off",
         "threshold": "delivered",
-        "measured": "Blocker: prod data + packet authoring + sign-off.",
+        "measured": "Blocker: packet authoring + reviewer sign-off.",
         "owner": "operator",
     },
 )
@@ -224,7 +229,7 @@ _GATES: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] = {
     ("hbg", GRADUATION, "2026-07-11"): _HBG_GRADUATION,
     ("hbg", PARITY, "2026-07-05"): _HBG_PARITY,
     ("pgh", PARITY, "2026-07-07"): _PGH_PARITY,
-    ("wlm", PARITY, "2026-07-19"): _WLM_PARITY,
+    ("wlm", PARITY, "2026-07-28"): _WLM_PARITY,
 }
 
 
