@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { launchStatusDisplay } from '@/lib/market-status'
 import { MARKETS, MARKET_LABELS, type Market, useMarketStore } from '@/stores/market'
 
 withDefaults(defineProps<{ collapsed?: boolean; variant?: 'sidebar' | 'pill' }>(), {
@@ -15,12 +16,12 @@ const market = useMarketStore()
 
 const sheet = ref(false)
 const activeLabel = computed(() => MARKET_LABELS[market.active])
-const activePilot = computed(() => market.statusOf(market.active) === 'pilot')
+const activeStatus = computed(() => launchStatusDisplay(market.statusOf(market.active)))
 const options = computed(() =>
   MARKETS.map((value) => ({
     value,
     label: MARKET_LABELS[value],
-    pilot: market.statusOf(value) === 'pilot',
+    status: launchStatusDisplay(market.statusOf(value)),
   })),
 )
 
@@ -51,7 +52,14 @@ function switchTo(next: Market): void {
   >
     <q-icon name="location_on" size="16px" class="switcher-pin" />
     <span class="pill-label">{{ activeLabel }}</span>
-    <q-badge v-if="activePilot" color="amber-8" text-color="white" label="pilot" class="q-ml-xs" />
+    <q-badge
+      v-if="activeStatus.badge"
+      :color="activeStatus.tone"
+      text-color="white"
+      :label="activeStatus.badge"
+      class="q-ml-xs"
+      data-test="active-market-status"
+    />
     <q-icon name="expand_more" size="15px" class="switcher-caret" />
     <q-dialog v-model="sheet" position="bottom">
       <q-card class="sheet-card">
@@ -71,10 +79,10 @@ function switchTo(next: Market): void {
             <q-item-section
               >{{ opt.label
               }}<q-badge
-                v-if="opt.pilot"
-                color="amber-8"
+                v-if="opt.status.badge"
+                :color="opt.status.tone"
                 text-color="white"
-                label="pilot"
+                :label="opt.status.badge"
                 class="q-ml-sm"
             /></q-item-section>
             <q-item-section v-if="opt.value === market.active" side>
@@ -97,11 +105,12 @@ function switchTo(next: Market): void {
     <q-icon name="location_on" size="18px" class="switcher-pin" />
     <span v-if="!collapsed" class="switcher-label">{{ activeLabel }}</span>
     <q-badge
-      v-if="activePilot && !collapsed"
-      color="amber-8"
+      v-if="activeStatus.badge && !collapsed"
+      :color="activeStatus.tone"
       text-color="white"
-      label="pilot"
+      :label="activeStatus.badge"
       class="q-mr-xs"
+      data-test="active-market-status"
     />
     <q-icon v-if="!collapsed" name="expand_more" size="16px" class="switcher-caret" />
     <q-tooltip v-if="collapsed" anchor="center right" self="center left">{{
@@ -122,10 +131,10 @@ function switchTo(next: Market): void {
           <q-item-section
             >{{ opt.label
             }}<q-badge
-              v-if="opt.pilot"
-              color="amber-8"
+              v-if="opt.status.badge"
+              :color="opt.status.tone"
               text-color="white"
-              label="pilot"
+              :label="opt.status.badge"
               class="q-ml-sm"
           /></q-item-section>
           <q-item-section v-if="opt.value === market.active" side>
