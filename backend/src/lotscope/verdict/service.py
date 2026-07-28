@@ -59,8 +59,6 @@ async def get_deal_signals(
     }
 
 
-_DERIVED_ONLY = frozenset({"field_trust"})
-
 _TRUSTED_SOURCE_LABELS = (
     "parcel",
     "pwd_parcel",
@@ -85,9 +83,12 @@ async def _persist(
     composed: ComposedVerdict,
     computed_at: datetime,
 ) -> None:
-    persisted = {key: value for key, value in asdict(composed).items() if key not in _DERIVED_ONLY}
     values: dict[str, Any] = {
-        **persisted,
+        **asdict(composed),
+        "field_trust": {
+            name: provenance.model_dump(mode="json")
+            for name, provenance in composed.field_trust.items()
+        },
         "parcel_number": parcel_number,
         "computed_at": computed_at,
     }

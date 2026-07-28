@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.verdict.composition import VERDICT_VERSION
 from lotscope.verdict.models import ParcelVerdict
-from lotscope.verdict.service import compute_verdict, recompute_verdicts
+from lotscope.verdict.service import (
+    compute_verdict,
+    get_or_compute_current_verdict,
+    get_verdict,
+    recompute_verdicts,
+)
 from lotscope.zoning.seed import seed_zoning_standards
 
 pytestmark = pytest.mark.integration
@@ -109,3 +114,36 @@ async def test_recompute_verdicts_skips_a_failing_parcel(
 
 async def test_compute_verdict_returns_none_when_missing(db_session: AsyncSession) -> None:
     assert await compute_verdict(db_session, "999999999") is None
+
+
+@pytest.mark.integration
+async def test_field_trust_survives_the_cached_read_path(db_session: AsyncSession) -> None:
+    await _setup_parcel(db_session)
+
+    computed = await compute_verdict(db_session, "000000001")
+    await db_session.flush()
+    assert computed is not None
+    assert computed.field_trust
+
+    cached = await get_or_compute_current_verdict(db_session, "000000001")
+    assert cached is not None
+    assert cached.field_trust == computed.field_trust
+    assert cached.field_trust["can_build_by_right"].status == "calculated"
+
+
+@pytest.mark.integration
+async def test_a_verdict_stored_before_the_contract_reads_as_no_states(
+    db_session: AsyncSession,
+) -> None:
+    await _setup_parcel(db_session)
+    await compute_verdict(db_session, "000000001")
+    await db_session.flush()
+    await db_session.execute(
+        text("UPDATE parcel_verdict SET field_trust = NULL WHERE parcel_number = '000000001'")
+    )
+    await db_session.flush()
+    db_session.expire_all()
+
+    legacy = await get_verdict(db_session, "000000001")
+    assert legacy is not None
+    assert legacy.field_trust == {}

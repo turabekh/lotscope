@@ -80,7 +80,7 @@ A declared `source_label → contributing dataset(s)` mapping lives beside the p
 
 Staleness policy per dataset is owner-set (backlog LR-B-005); until it is set, age is reported without a stale verdict rather than guessed at.
 
-### 6. No persistence in this ADR
+### 6. No persistence in this ADR — **amended, see Amendment 1**
 
 Provenance is computed at composition time from data already stored. No new column on `parcel_verdict` and **no migration** for the taxonomy. If a later slice needs historical replay of states as they stood, that is a separate decision with its own ADR.
 
@@ -109,3 +109,35 @@ The correction workflow (§8.5, LR-B-004) **does** require new tables; it is del
 **Resolved zoning is `calculated`, not `verified`.** ADR-0056 district resolution is our deterministic inference from an authoritative polygon layer, not the city's assertion about a specific parcel. Labelling it Verified would be the over-generous application §8.1 exists to prevent. The polygon layer itself is a verified source; the per-parcel conclusion drawn from it is calculated.
 
 By extension: a value **reported** by an authoritative source for that parcel is Verified; a value **derived** by us from authoritative inputs is Calculated, however reliable the inputs.
+
+---
+
+## Amendment 1 — field states are persisted (2026-07-28)
+
+Status: accepted. Supersedes §6 of the original decision.
+
+### What §6 got wrong
+
+§6 decided that provenance would be computed at composition time with no new column and no migration. That is coherent in isolation and wrong in context: it was written without tracing the read path.
+
+`get_or_compute_current_verdict` returns the **cached** `parcel_verdict` row whenever its `verdict_version` matches the current one, and only computes when it does not. `get_verdict` builds the response with `VerdictResult.model_validate(row)`; `parcel_verdict` has no `field_trust` column, so Pydantic fills the field's default of `{}`.
+
+The consequence is that field states populate only on fresh computation — the uncommon path — and are empty for effectively every dossier view. The contract existed and was invisible.
+
+### Decision
+
+Persist `field_trust` as an additive nullable `JSONB` column on `parcel_verdict`, written by the existing upsert alongside every other composed field.
+
+- **Nullable, no backfill.** Existing rows carry `NULL` until their next recompute, exactly as ADR-0057 handled `profile_id`. A `NULL` column is honest: it says these states were computed before the contract existed, rather than fabricating states for a verdict that never had them.
+- **`VERDICT_VERSION` stays `v8`.** No computed value changes, and the goldens remain byte-unchanged. The column is additive; a reader that ignores it is unaffected.
+- **Reads do not recompute.** A cached verdict returns its stored states. Recomputing trust on read would put the derivation in two places and drift, which is the failure mode this ADR exists to prevent.
+
+### Alternative rejected
+
+Deriving field states on read from the stored verdict values — inferring `unavailable` from a `NULL` column, re-reading `dataset_freshness` for `as_of`. It avoids a migration but duplicates the derivation across `verdict/trust.py` and the read path, and cannot reconstruct `limitations`, `method_version`, or the distinction between "not evaluated" and "evaluated and found absent". Cheaper migration, worse contract.
+
+### Consequences
+
+- One additive migration. Backup before applying, per LR-P006; rollback is dropping the column, which loses only derived data that a recompute regenerates.
+- Existing verdicts show no field states until recomputed. The recompute is market-scopable (PR #37), so Philadelphia can be refreshed without touching pilots.
+- The original §6 claim that this ADR requires no migration is withdrawn. The correction workflow remains excluded and still needs its own ADR.
