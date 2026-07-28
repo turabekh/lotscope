@@ -1,4 +1,6 @@
 import type {
+  PolicyDocument,
+  PolicySummary,
   CorrectionRecord,
   BuyBox,
   BuyBoxMatches,
@@ -408,6 +410,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     })
+  },
+  getPolicyIndex(): Promise<PolicySummary[]> {
+    return request('/policies')
+  },
+  getPolicy(slug: string): Promise<PolicyDocument> {
+    return request(`/policies/${encodeURIComponent(slug)}`)
   },
   getOwnCorrections(): Promise<CorrectionRecord[]> {
     return request('/corrections')

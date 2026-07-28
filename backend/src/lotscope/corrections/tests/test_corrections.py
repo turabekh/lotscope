@@ -4,9 +4,9 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.config import get_settings
 from lotscope.core.errors import ValidationError
 from lotscope.core.provenance import calculated
-from lotscope.core.config import get_settings
 from lotscope.corrections.schemas import CorrectionCreate, CorrectionRead, CorrectionResolve
 from lotscope.corrections.service import (
     list_corrections,

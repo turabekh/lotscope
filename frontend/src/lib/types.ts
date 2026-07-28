@@ -1304,3 +1304,20 @@ export interface CorrectionRecord {
   resolved_at: string | null
   created_at: string
 }
+
+export interface PolicySummary {
+  slug: string
+  title: string
+  published: boolean
+  version: string | null
+  effective_date: string | null
+}
+
+export interface PolicyDocument {
+  slug: string
+  title: string
+  body_markdown: string
+  version: string
+  effective_date: string
+  published_at: string
+}
