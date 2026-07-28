@@ -95,3 +95,94 @@ CivilView is third-party HTML and can re-skin. Freshness tracking marks the `she
 the Ops dashboard) rather than going silently stale. The safe fallback is to set `SHERIFF_SALE_SOURCE=csv` +
 `SHERIFF_SALE_CSV_PATH=<a CivilView CSV export>` and let the same loader/merge path run off the file while the
 parser is fixed.
+
+---
+
+# Backup, retention, and recovery
+
+Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006. Backlog ticket LR-B-033.
+
+## What runs, and when
+
+`scripts/backup-db.sh` runs **on the VM** and dumps the production database to object storage.
+
+`scripts/deploy.sh` calls it automatically **before migrations**, labelled `pre-migration`. A deploy that cannot back up does not migrate — the script exits non-zero and the deploy stops. This is deliberate: LR-P006 requires a production backup before risky migrations, and a requirement that can be forgotten is not a control.
+
+The escape hatch is `SKIP_PRE_MIGRATION_BACKUP=1`, which prints a warning. It exists for a genuine emergency and leaves a trace in the deploy log.
+
+## Configuration
+
+Set on the VM, in `~/lotscope/.env`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `BACKUP_BUCKET` | **none — required** | Object-storage prefix, e.g. `gs://your-bucket/lotscope-backups` |
+| `BACKUP_RETAIN_DAYS` | `30` | Age after which backups are pruned |
+| `BACKUP_DB_CONTAINER` | `db` | Compose service holding Postgres |
+| `BACKUP_DB_USER` | `lotscope` | |
+| `BACKUP_DB_NAME` | `lotscope` | |
+
+`BACKUP_BUCKET` has **no default on purpose**. A backup written only to the VM does not survive the failure it exists to protect against, so the script refuses to pretend it has succeeded.
+
+## What the script guarantees
+
+- Dumps with `pg_dump -Fc --no-owner --no-privileges`, restorable with `pg_restore`.
+- **Rejects a dump under 1 KB.** A successful `pg_dump` of a broken connection can produce a near-empty file; uploading it would leave a backup that only fails at restore time.
+- Verifies the uploaded object exists before deleting the local copy.
+- Prunes objects older than the retention window by their embedded timestamp.
+
+## Restore
+
+```bash
+gcloud storage ls gs://your-bucket/lotscope-backups/
+gcloud storage cp gs://your-bucket/lotscope-backups/<dump> /tmp/restore.dump
+
+cd ~/lotscope
+docker compose stop api worker web
+docker compose exec -T db dropdb -U lotscope --if-exists lotscope_restore
+docker compose exec -T db createdb -U lotscope lotscope_restore
+docker compose exec -T db pg_restore -U lotscope -d lotscope_restore --no-owner < /tmp/restore.dump
+```
+
+**Restore into `lotscope_restore` first, never over the live database.** Verify row counts against `docs/launch-readiness/status.md` before promoting. Promoting is a rename, and it is the point at which a mistake becomes unrecoverable.
+
+## Objectives
+
+| Objective | Target | Basis |
+|---|---|---|
+| **RPO** | 24 hours, and zero for migration-caused loss | Backups are pre-migration plus whatever schedule is configured; a migration failure loses nothing because the backup precedes it |
+| **RTO** | 1 hour | Download, restore into a scratch database, verify, promote |
+
+Both are targets, not guarantees, and neither is credible until a restore has actually been performed.
+
+## Monthly restore test
+
+A backup that has never been restored is a hypothesis. Once a month:
+
+1. Restore the most recent backup into `lotscope_restore`.
+2. Compare parcel and verdict counts per market against `status.md`.
+3. Drop the scratch database.
+4. Record the date and the counts in `docs/launch-readiness/gates.md` under **G6**.
+
+Until step 4 has happened at least once, **G6 is not met** regardless of what this document says.
+
+## Migration rollback
+
+Every migration in this repository has a `downgrade()`. To roll one back:
+
+```bash
+cd ~/lotscope
+docker compose run --rm migrate alembic downgrade -1
+```
+
+Downgrades that drop a column lose the data in it. Where the column is derived — `parcel_verdict.field_trust`, the screening recommendation — a recompute regenerates it. Where it is user data — `underwriting_profile`, `parcel_correction` — **restore from backup instead of downgrading**.
+
+## Bad-verdict recompute
+
+If a deployed change produces wrong verdicts rather than a broken schema, the response is a recompute rather than a restore:
+
+```bash
+docker compose exec -T worker python -m lotscope.verdict.jobs --market philadelphia
+```
+
+Market-scoped, so a bad Philadelphia recompute does not disturb pilots.
