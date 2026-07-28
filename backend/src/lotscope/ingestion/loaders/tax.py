@@ -41,7 +41,7 @@ def to_tax_row(record: TaxRecord) -> dict[str, Any] | None:
         "total_due": record.total_due,
         "principal_due": record.principal_due,
         "years_owed": record.num_years_owed,
-        "is_delinquent": (record.total_due or 0) > 0,
+        "is_delinquent": None if record.total_due is None else record.total_due > 0,
         "source": TAX_DATASET,
     }
 
