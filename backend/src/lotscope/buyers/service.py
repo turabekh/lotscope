@@ -20,7 +20,11 @@ from lotscope.buyers.schemas import (
     BuyerStats,
     NearbyBuyer,
 )
-from lotscope.core.sql import normalized_name_sql, package_deed_exclusion_sql
+from lotscope.core.sql import (
+    future_sale_exclusion_sql,
+    normalized_name_sql,
+    package_deed_exclusion_sql,
+)
 from lotscope.ingestion.service import record_freshness
 
 BUYER_DATASET = "buyer_profile"
@@ -48,6 +52,7 @@ _CANDIDATE_SQL = text(
     "  WHERE p.market_code = :market "
     "    AND s.sale_price >= :min_price "
     "    AND s.sale_date >= :since "
+    f"   AND {future_sale_exclusion_sql('s')} "
     "    AND s.grantee IS NOT NULL AND btrim(s.grantee) <> '' "
     f"   AND {package_deed_exclusion_sql('s')} "
     "), qualified AS ("
@@ -139,6 +144,7 @@ _PURCHASES_SQL = text(
     f"  AND {normalized_name_sql('s.grantee')} = :buyer_key "
     "  AND s.sale_price >= :min_price "
     "  AND s.sale_date >= :since "
+    f"  AND {future_sale_exclusion_sql('s')} "
     f"  AND {package_deed_exclusion_sql('s')} "
     "ORDER BY s.sale_date DESC NULLS LAST "
     "LIMIT :limit"

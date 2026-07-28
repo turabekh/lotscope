@@ -17,3 +17,7 @@ def package_deed_exclusion_sql(alias: str) -> str:
         f"SELECT 1 FROM sale pkg WHERE pkg.document_id = {alias}.document_id "
         f"AND pkg.parcel_number <> {alias}.parcel_number))"
     )
+
+
+def future_sale_exclusion_sql(alias: str) -> str:
+    return f"{alias}.sale_date <= CURRENT_DATE"
