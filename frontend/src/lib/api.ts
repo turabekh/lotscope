@@ -67,6 +67,7 @@ import type {
   SourceFreshness,
   SubdivisionResult,
   TokenResponse,
+  UnderwritingAnalysis,
   Usage,
   User,
   ValuationResult,
@@ -403,6 +404,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     })
+  },
+  getUnderwriting(parcelNumber: string): Promise<UnderwritingAnalysis> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/underwriting`)
   },
   getParcelFreshness(parcelNumber: string): Promise<SourceFreshness[]> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/freshness`)

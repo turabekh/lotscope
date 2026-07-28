@@ -124,6 +124,41 @@ export type Recommendation =
   | 'insufficient_data'
   | 'likely_pass'
 
+export interface UnderwritingAssumption {
+  name: string
+  group: string
+  value: number | null
+  origin: string
+  unit: string
+  limitations: string | null
+}
+
+export interface UnderwritingCase {
+  case: string
+  label: string
+  rationale: string
+  arv: number | null
+  total_cost: number | null
+  profit: number | null
+  margin: number | null
+  max_allowable_offer: number | null
+  infeasible: boolean
+}
+
+export interface UnderwritingAnalysis {
+  parcel_number: string
+  assumptions: UnderwritingAssumption[]
+  mao: {
+    formula: string
+    target_margin: number | null
+    exclusions: string[]
+    unavailable_inputs: string[]
+  }
+  cases: UnderwritingCase[]
+  case_version: string
+  computed_at: string
+}
+
 export interface VerdictResult {
   parcel_number: string
   verdict_version: string
