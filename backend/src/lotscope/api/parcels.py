@@ -1,6 +1,6 @@
 import contextlib
 import hashlib
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field
@@ -45,6 +45,7 @@ from lotscope.corrections.schemas import CorrectionCreate, CorrectionRead
 from lotscope.corrections.service import report_correction
 from lotscope.deal.schemas import DealResult, ScenariosResult
 from lotscope.deal.service import analyze_parcel_deal, analyze_parcel_scenarios
+from lotscope.deal.underwriting import build_underwriting
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
 from lotscope.documents.schemas import DeedRestrictionsResponse
@@ -77,6 +78,7 @@ from lotscope.verdict.service import (
 from lotscope.zba.schemas import VarianceOutlook
 from lotscope.zba.service import variance_outlook
 from lotscope.zoning.schemas import EnvelopeResult
+from lotscope.zoning.service import assess_parcel as assess_zoning
 from lotscope.zoning.service import compute_envelope
 
 router = APIRouter(prefix="/parcels", tags=["parcels"])
@@ -407,6 +409,69 @@ async def report_parcel_correction(
     )
     await session.commit()
     return result
+
+
+@router.get("/{parcel_number}/underwriting")
+async def parcel_underwriting(
+    parcel_number: ParcelKeyDep,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    acquisition_price: Annotated[float | None, Query(ge=0)] = None,
+) -> dict[str, Any]:
+    detail = await get_parcel_detail(session, parcel_number)
+    if detail is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    buildability = await assess_zoning(session, parcel_number)
+    valuation = await value_parcel(session, parcel_number)
+    analysis = await build_underwriting(
+        session,
+        parcel_number,
+        owner_id=current_user.id,
+        market_code=detail.market_code,
+        base_zoning_code=detail.base_zoning_code,
+        market_value=detail.market_value,
+        buildability=buildability,
+        land_value=valuation.estimate if valuation is not None else None,
+        acquisition_price=acquisition_price,
+    )
+    return {
+        "parcel_number": parcel_number,
+        "assumptions": analysis.assumptions,
+        "mao": analysis.mao,
+        "cases": [
+            {
+                "case": result.case,
+                "label": result.label,
+                "rationale": result.rationale,
+                "arv": result.arv,
+                "total_cost": result.total_cost,
+                "profit": result.profit,
+                "margin": result.margin,
+                "max_allowable_offer": result.max_allowable_offer,
+                "infeasible": result.infeasible,
+            }
+            for result in analysis.cases.results
+        ],
+        "case_version": analysis.cases.case_version,
+        "sensitivity": {
+            "available": analysis.sensitivity.available,
+            "unavailable_reason": analysis.sensitivity.unavailable_reason,
+            "row_label": analysis.sensitivity.row_label,
+            "column_label": analysis.sensitivity.column_label,
+            "exit_multipliers": list(analysis.sensitivity.exit_multipliers),
+            "cost_multipliers": list(analysis.sensitivity.cost_multipliers),
+            "cells": [
+                {
+                    "exit_multiplier": cell.exit_multiplier,
+                    "cost_multiplier": cell.cost_multiplier,
+                    "margin": cell.margin,
+                    "profit": cell.profit,
+                }
+                for cell in analysis.sensitivity.cells
+            ],
+        },
+        "computed_at": analysis.computed_at,
+    }
 
 
 @router.get("/{parcel_number}/freshness", response_model=list[SourceFreshness])

@@ -22,6 +22,7 @@ import BuyersNearbyPanel from '@/components/BuyersNearbyPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
+import UnderwritingPanel from '@/components/UnderwritingPanel.vue'
 import SnapshotPanel from '@/components/SnapshotPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import VerdictHero from '@/components/VerdictHero.vue'
@@ -464,6 +465,7 @@ async function toggleSave(): Promise<void> {
 
           <q-tab-panel name="deal" class="tab-pane">
             <DealPanel />
+            <UnderwritingPanel :parcel-number="detail.parcel_number" />
             <ScenariosPanel />
             <CompsPanel />
             <BuyersNearbyPanel />
