@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import { launchStatusDisplay } from '@/lib/market-status'
 import { MARKET_LABELS, useMarketStore } from '@/stores/market'
 
 const market = useMarketStore()
 
 const label = computed(() => MARKET_LABELS[market.active])
-const isPilot = computed(() => market.activeInfo?.launch_status === 'pilot')
-const suffix = computed(() => (isPilot.value ? 'pilot' : 'city data'))
+const status = computed(() => launchStatusDisplay(market.activeInfo?.launch_status))
+const known = computed(() => market.activeInfo !== null)
+const isPilot = computed(() => status.value.presentation === 'pilot')
+const suffix = computed(() => status.value.badge ?? 'coverage')
 </script>
 
 <template>
-  <div class="coverage" role="note">
+  <div v-if="known" class="coverage" role="note">
     <q-icon name="dataset" size="15px" class="coverage-icon" />
     <span class="coverage-label">{{ label }} · {{ suffix }}</span>
     <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
@@ -20,7 +23,7 @@ const suffix = computed(() => (isPilot.value ? 'pilot' : 'city data'))
         comps or code-enforcement feed; zoning provisional.
       </template>
       <template v-else>
-        Zoning, sales, and L&amp;I from {{ label }} open data, provided as-is.
+        {{ status.summary }} Zoning, sales, and L&amp;I from {{ label }} open data, provided as-is.
       </template>
     </q-tooltip>
   </div>
