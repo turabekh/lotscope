@@ -287,3 +287,38 @@ def test_silence_in_a_covered_market_is_a_pass_not_an_unevaluated_check() -> Non
     items, _ = build_checklist(_verdict(risk_flags=[]), market_code="phl")
     liens = _item(items, "liens_taxes")
     assert liens.status == "pass"
+
+
+def test_an_unknown_tax_balance_is_not_reported_as_clear() -> None:
+    items, _ = build_checklist(_verdict(risk_flags=[]), tax_status_unknown=True)
+    liens = _item(items, "liens_taxes")
+    assert liens.status == "not_evaluated"
+    assert "not a clean-title" in liens.detail
+    assert "No tax delinquency" not in liens.detail
+
+
+def test_a_known_clear_tax_status_still_reports_a_pass() -> None:
+    items, _ = build_checklist(_verdict(risk_flags=[]), tax_status_unknown=False)
+    assert _item(items, "liens_taxes").status == "pass"
+
+
+def test_an_actual_delinquency_outranks_the_unknown_state() -> None:
+    flags = [
+        {
+            "code": "tax_delinquency",
+            "severity": "high",
+            "detail": "$40,000 owed.",
+            "source": "tax_status",
+        }
+    ]
+    items, _ = build_checklist(_verdict(risk_flags=flags), tax_status_unknown=True)
+    liens = _item(items, "liens_taxes")
+    assert liens.status == "fail"
+    assert "40,000" in liens.detail
+
+
+def test_an_unknown_tax_balance_counts_as_unevaluated_not_as_clear() -> None:
+    _, summary = build_checklist(_verdict(risk_flags=[]), tax_status_unknown=True)
+    _, known = build_checklist(_verdict(risk_flags=[]), tax_status_unknown=False)
+    assert summary.not_evaluated > known.not_evaluated
+    assert summary.passed < known.passed
