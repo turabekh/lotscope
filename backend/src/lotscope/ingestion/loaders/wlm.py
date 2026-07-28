@@ -28,17 +28,21 @@ _COMPS_FIELDS = "PRCLID,SALEPRC,SALEYR,SALEMON"
 
 _LAST_SALE_DOCUMENT_ID = "wlm_assessment_last_sale"
 _LAST_SALE_DOCUMENT_TYPE = "assessment_last_sale"
-_SALE_YEAR_PIVOT = 40
 
 
-def _wlm_sale_date(raw_year: Any, raw_month: Any) -> date | None:
+def _resolve_sale_century(two_digit_year: int, reference_year: int) -> int:
+    current_century_year = 2000 + two_digit_year
+    return current_century_year if current_century_year <= reference_year else 1900 + two_digit_year
+
+
+def _wlm_sale_date(raw_year: Any, raw_month: Any, *, reference_year: int) -> date | None:
     try:
         year = int(raw_year)
     except (TypeError, ValueError):
         return None
     if year < 1 or year > 99:
         return None
-    full_year = 2000 + year if year <= _SALE_YEAR_PIVOT else 1900 + year
+    full_year = _resolve_sale_century(year, reference_year)
     try:
         month = int(raw_month)
     except (TypeError, ValueError):
@@ -261,13 +265,19 @@ async def load_wlm_zoning(
     return total
 
 
-def to_wlm_sale_row(feature: ArcGisFeature) -> dict[str, Any] | None:
+def to_wlm_sale_row(
+    feature: ArcGisFeature, *, reference_year: int | None = None
+) -> dict[str, Any] | None:
     props = feature.properties
     key = get_normalizer(_MARKET).to_canonical(props.get("PRCLID"))
     if key is None:
         return None
     price = _num(props.get("SALEPRC"))
-    sale_date = _wlm_sale_date(props.get("SALEYR"), props.get("SALEMON"))
+    sale_date = _wlm_sale_date(
+        props.get("SALEYR"),
+        props.get("SALEMON"),
+        reference_year=reference_year if reference_year is not None else date.today().year,
+    )
     if price is None or sale_date is None:
         return None
     return {
