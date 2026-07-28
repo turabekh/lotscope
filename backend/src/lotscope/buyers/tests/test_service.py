@@ -99,6 +99,29 @@ async def test_recompute_derives_and_reads_qualifying_buyer(db_session: AsyncSes
     assert len(profile.purchases) == 3
 
 
+async def test_future_dated_sale_never_counts_as_a_purchase(db_session: AsyncSession) -> None:
+    await _buyer_purchases(db_session, "TIMELORD LLC", 3)
+    await _parcel(db_session, "phl:future", 1100.0, 1100.0)
+    await db_session.execute(
+        text(
+            "INSERT INTO sale "
+            "(parcel_number, document_id, sale_price, sale_date, grantor, grantee) "
+            "VALUES ('phl:future', 'DOC-FUTURE', 5000, CURRENT_DATE + 1, 'SELLER LLC', "
+            "'TIMELORD LLC')"
+        )
+    )
+    await db_session.flush()
+
+    await recompute_buyer_profiles(db_session, now=_NOW)
+
+    roster = await list_buyers(db_session, "phl")
+    assert roster.buyers[0].lot_purchases_window == 3
+
+    profile = await get_buyer(db_session, "phl", "TIMELORD LLC")
+    assert profile is not None
+    assert "phl:future" not in {p.parcel_number for p in profile.purchases}
+
+
 async def test_exclusions_end_to_end(db_session: AsyncSession) -> None:
     await _buyer_purchases(db_session, "PHILADELPHIA LAND BANK", 4)
     await _buyer_purchases(db_session, "RELATED LLC", 2)

@@ -107,6 +107,40 @@ async def test_value_parcel_excludes_package_deed_comps(db_session: AsyncSession
     assert result.sources[0]["package_deeds_excluded"] is True
 
 
+async def test_value_parcel_ignores_a_sale_dated_in_the_future(db_session: AsyncSession) -> None:
+    await _add_subject(db_session, "000000001", 2000)
+    await _add_vacant_parcel(db_session, "000000020", offset_ft=50, area=1000)
+    await _add_sale(db_session, "000000020", document_id="DOC-020", price=100000)
+    await _add_vacant_parcel(db_session, "000000021", offset_ft=60, area=1000)
+    await db_session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, document_id, sale_price, sale_date) "
+            "VALUES ('000000021', 'DOC-021', 5000, CURRENT_DATE + 1)"
+        )
+    )
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+    assert result is not None
+    assert {comp.parcel_number for comp in result.comps} == {"000000020"}
+
+
+async def test_value_parcel_keeps_a_sale_recorded_today(db_session: AsyncSession) -> None:
+    await _add_subject(db_session, "000000001", 2000)
+    await _add_vacant_parcel(db_session, "000000020", offset_ft=50, area=1000)
+    await db_session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, document_id, sale_price, sale_date) "
+            "VALUES ('000000020', 'DOC-020', 100000, CURRENT_DATE)"
+        )
+    )
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+    assert result is not None
+    assert {comp.parcel_number for comp in result.comps} == {"000000020"}
+
+
 async def test_value_parcel_estimates_from_nearby_comps(db_session: AsyncSession) -> None:
     await _add_subject(db_session, "000000001", 2000)
     for index in range(5):
