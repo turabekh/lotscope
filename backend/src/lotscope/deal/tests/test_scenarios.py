@@ -59,3 +59,21 @@ def test_without_acquisition_recommends_by_mao() -> None:
     result = build_scenarios(_inputs(acquisition_price=None, land_value=None), _ASSUMPTIONS)
     assert all(s.profit is None for s in result.scenarios)
     assert result.recommended_units is not None
+
+
+def test_unknown_by_right_units_is_reported_as_undetermined() -> None:
+    result = build_scenarios(_inputs(by_right_units=None), _ASSUMPTIONS)
+    assert result.scenarios == []
+    assert result.by_right_units is None
+    assert result.reasons == [
+        "No by-right unit count could be determined; cannot model build scenarios."
+    ]
+
+
+def test_zero_by_right_units_is_not_reported_as_undetermined() -> None:
+    result = build_scenarios(_inputs(by_right_units=0), _ASSUMPTIONS)
+    assert result.scenarios == []
+    assert result.by_right_units == 0
+    assert result.reasons == [
+        "Zoning permits no units by right on this parcel; cannot model build scenarios."
+    ]

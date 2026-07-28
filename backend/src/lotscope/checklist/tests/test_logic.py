@@ -322,3 +322,15 @@ def test_an_unknown_tax_balance_counts_as_unevaluated_not_as_clear() -> None:
     _, known = build_checklist(_verdict(risk_flags=[]), tax_status_unknown=False)
     assert summary.not_evaluated > known.not_evaluated
     assert summary.passed < known.passed
+
+
+def test_unknown_abatement_shows_an_unevaluated_item_not_silence() -> None:
+    items, _ = build_checklist(_verdict(), has_abatement=None)
+    abatement = next(item for item in items if item.code == "abatement")
+    assert abatement.status == "not_evaluated"
+    assert "neither confirmed nor ruled out" in abatement.detail
+
+
+def test_reported_absent_abatement_shows_no_item() -> None:
+    items, _ = build_checklist(_verdict(), has_abatement=False)
+    assert all(item.code != "abatement" for item in items)
