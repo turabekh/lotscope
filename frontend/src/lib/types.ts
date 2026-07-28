@@ -76,6 +76,18 @@ export interface RiskFlag {
   source: string
 }
 
+export type FieldState = 'verified' | 'calculated' | 'estimated' | 'unavailable'
+
+export interface FieldProvenance {
+  status: FieldState
+  source_label: string | null
+  as_of: string | null
+  method_version: string | null
+  confidence: string | null
+  limitations: string | null
+  default_origin: string | null
+}
+
 export interface VerdictResult {
   parcel_number: string
   verdict_version: string
@@ -100,6 +112,7 @@ export interface VerdictResult {
   risk_score: number | null
   risk_flags: RiskFlag[]
   sources: unknown[]
+  field_trust: Record<string, FieldProvenance>
   computed_at: string
 }
 

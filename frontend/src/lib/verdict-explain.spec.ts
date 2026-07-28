@@ -28,6 +28,7 @@ function verdict(partial: Partial<VerdictResult>): VerdictResult {
     risk_score: null,
     risk_flags: [],
     sources: [],
+    field_trust: {},
     computed_at: '2026-07-11T00:00:00Z',
     ...partial,
   }
