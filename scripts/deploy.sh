@@ -10,6 +10,13 @@ echo "==> Deploying ${GIT_SHA}"
 echo "==> Building images"
 docker compose --profile app build
 
+if [[ "${SKIP_PRE_MIGRATION_BACKUP:-0}" == "1" ]]; then
+  echo "==> WARNING: pre-migration backup skipped by SKIP_PRE_MIGRATION_BACKUP=1"
+else
+  echo "==> Pre-migration backup"
+  BACKUP_LABEL=pre-migration "$(dirname "${BASH_SOURCE[0]}")/backup-db.sh"
+fi
+
 echo "==> Stopping app services (frees DB locks for migration)"
 docker compose stop api worker web || true
 
