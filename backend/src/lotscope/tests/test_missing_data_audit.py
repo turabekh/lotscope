@@ -22,8 +22,9 @@ def test_a_positive_balance_is_recorded_as_delinquent() -> None:
 
 
 def test_a_delinquent_parcel_with_an_unreported_amount_does_not_display_zero_owed() -> None:
-    flags = _tax_flags(TaxSignal(is_delinquent=True, total_due=None, years_owed=None,
-                                 in_sheriff_sale=False))
+    flags = _tax_flags(
+        TaxSignal(is_delinquent=True, total_due=None, years_owed=None, in_sheriff_sale=False)
+    )
     delinquency = [flag for flag in flags if flag.code == "tax_delinquency"]
     assert delinquency
     assert "$0" not in delinquency[0].detail
@@ -31,8 +32,9 @@ def test_a_delinquent_parcel_with_an_unreported_amount_does_not_display_zero_owe
 
 
 def test_an_unknown_tax_status_raises_no_delinquency_flag_and_invents_no_clearance() -> None:
-    flags = _tax_flags(TaxSignal(is_delinquent=None, total_due=None, years_owed=None,
-                                 in_sheriff_sale=False))
+    flags = _tax_flags(
+        TaxSignal(is_delinquent=None, total_due=None, years_owed=None, in_sheriff_sale=False)
+    )
     assert [flag.code for flag in flags if flag.code == "tax_delinquency"] == []
 
 
