@@ -113,12 +113,15 @@ def _tax_flags(tax: TaxSignal) -> list[RiskFlag]:
             )
         )
     if tax.is_delinquent:
-        due = tax.total_due or 0.0
-        detail = f"${due:,.0f} owed"
+        due = tax.total_due
+        detail = f"${due:,.0f} owed" if due is not None else "Amount owed not reported"
         if tax.years_owed:
             detail += f" over {tax.years_owed} year(s)"
         severity: Severity = (
-            "high" if due >= _TAX_HIGH_DUE or (tax.years_owed or 0) >= _TAX_HIGH_YEARS else "medium"
+            "high"
+            if (due is not None and due >= _TAX_HIGH_DUE)
+            or (tax.years_owed or 0) >= _TAX_HIGH_YEARS
+            else "medium"
         )
         flags.append(
             RiskFlag("tax_delinquency", severity, "Tax delinquency", detail + ".", "tax_status")
