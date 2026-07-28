@@ -53,8 +53,9 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-003 — Missing-data audit against §8.4
 
 - **PRD requirement:** §8.4
-- **Priority:** P0 · **Status:** Not started
+- **Priority:** P0 · **Status:** Complete (2026-07-28) — results in `docs/launch-readiness/missing-data-audit.md`
 - **Problem:** Missing-data handling appears strong (66 `None`-guards in `verdict/composition.py`; capabilities distinguish no-source from pending), but this has never been audited field-by-field against the §8.4 prohibition list. It is currently **Needs verification**, not Complete.
+- **Outcome:** Six findings, all fixed. Three were false clearances reaching users (unknown tax balance stored as not-delinquent; a delinquent parcel rendering "$0 owed"; the checklist passing `liens_taxes` when the feed reported no balance). Two were conflations of unknown with a determined value, and one ran in the conservative direction and was never a §8.4 violation. `VERDICT_VERSION` unaffected.
 - **User impact:** A single place where absent evidence renders as "no risk", "clear", or zero would be a material trust failure, and the most likely one to go unnoticed.
 - **Current implementation:** `verdict/composition.py`, `markets/capabilities.py`, `risk/`, `checklist/logic.py`.
 - **Proposed solution:** Enumerate every material output; assert for each that absent input produces Unavailable rather than a falsy default. Record results as a checked inventory. Fix any violations found.

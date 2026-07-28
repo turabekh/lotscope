@@ -25,8 +25,10 @@ async def build_parcel_checklist(
         return None
     await session.commit()
     detail = await get_parcel_detail(session, parcel_number)
-    has_abatement = detail is not None and has_active_exemption(
-        detail.exempt_land, detail.exempt_building
+    has_abatement = (
+        has_active_exemption(detail.exempt_land, detail.exempt_building)
+        if detail is not None
+        else None
     )
     market = parcel_number.split(":", 1)[0]
     items, summary = build_checklist(

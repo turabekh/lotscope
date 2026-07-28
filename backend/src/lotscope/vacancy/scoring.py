@@ -21,10 +21,14 @@ class VacancySignals:
     land_value: float | None
 
 
-def has_substantial_structure(improvement_value: float | None, land_value: float | None) -> bool:
+def has_substantial_structure(
+    improvement_value: float | None, land_value: float | None
+) -> bool | None:
     if improvement_value is None or improvement_value < _STRUCTURE_MIN_IMPROVEMENT:
         return False
-    return improvement_value >= _STRUCTURE_VALUE_RATIO * (land_value or 0.0)
+    if land_value is None:
+        return None
+    return improvement_value >= _STRUCTURE_VALUE_RATIO * land_value
 
 
 def vacancy_confidence(signals: VacancySignals) -> float | None:
@@ -37,6 +41,6 @@ def vacancy_confidence(signals: VacancySignals) -> float | None:
         score += _DEMOLITION_BOOST
     if signals.recent_permits > 0:
         score -= _RECENT_PERMIT_PENALTY
-    if has_substantial_structure(signals.improvement_value, signals.land_value):
+    if has_substantial_structure(signals.improvement_value, signals.land_value) is not False:
         score -= _STRUCTURE_PENALTY
     return round(min(1.0, max(0.0, score)), 4)

@@ -60,3 +60,13 @@ def test_substantial_structure_requires_ratio_and_floor() -> None:
     assert has_substantial_structure(10_000, 0) is False
     assert has_substantial_structure(60_000, 40_000) is False
     assert has_substantial_structure(None, 10_000) is False
+
+
+def test_unknown_land_value_cannot_rule_a_structure_in_or_out() -> None:
+    assert has_substantial_structure(80_000.0, None) is None
+
+
+def test_unknown_land_value_does_not_inflate_vacancy_confidence() -> None:
+    unknown_land = vacancy_confidence(_signals(improvement_value=80_000.0, land_value=None))
+    known_structure = vacancy_confidence(_signals(improvement_value=80_000.0, land_value=10_000.0))
+    assert unknown_land == known_structure

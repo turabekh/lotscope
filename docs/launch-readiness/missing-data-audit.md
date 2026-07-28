@@ -64,21 +64,35 @@ Finding 1 stops new rows from hiding in `false`, but the checklist still cannot 
 
 An actual delinquency still outranks the unknown state, and a genuinely clear parcel — absent from the feed — still reports `pass`. The unknown case now counts toward the checklist's `not_evaluated` tally rather than its `passed` one.
 
-### 4. Unknown unit count coerced to zero in scenarios — **low severity, not fixed**
+### 4. Unknown unit count conflated with zero in scenarios — **fixed**
 
 `deal/scenarios.py:58` — `by_right = inputs.by_right_units or 0`.
 
-Unknown by-right units becomes `0`. Contained: LR-4's `insufficient_data` precondition already prevents a parcel with unknown buildability from presenting a confident result, so this does not reach a headline. Recorded so it is not mistaken for correct.
+The original entry described this as unknown units becoming `0`. Re-reading the control flow, the `or 0` is caught immediately by the `by_right <= 0` guard, so **no false figure ever escaped** — the severity was lower than recorded.
 
-### 5. Unknown exemption treated as no abatement — **low severity, not fixed**
+The real defect was the inverse: the two cases were **conflated**. A parcel whose zoning genuinely permits zero units by right was told *"No by-right unit count could be determined"* — reporting a determined answer as missing data. §8.4 forbids turning missing into zero; reporting zero as missing is the same failure pointed the other way, and it invites a user to go looking for an answer that already exists.
+
+**Fixed.** `None` and `0` are now separate branches. Unknown keeps the undetermined message and `by_right_units=None`; a determined zero reports `by_right_units=0` with *"Zoning permits no units by right on this parcel."*
+
+### 5. Unknown exemption treated as no abatement — **fixed**
 
 `parcels/abatement.py:2` — `(exempt_building or 0.0) > 0.0`.
 
-Absent exemption values read as "no abatement". The abatement checklist item is additive — it appears only when an abatement is detected — so the failure is a missed benefit rather than a false clearance. Worth correcting when that module is next touched.
+Absent exemption values read as "no abatement", and the checklist item is additive, so an unknown simply showed nothing.
 
-### 6. Unknown land value in the vacancy ratio — **low severity, not fixed**
+**Fixed.** `has_active_exemption` returns `bool | None`: `True` when any reported value is positive, `False` only when **both** are reported and zero, and `None` when either is unreported. The checklist now renders a `not_evaluated` abatement item for the unknown case — *"an active abatement can be neither confirmed nor ruled out. This is not confirmation that none applies."* A parcel with no OPA detail at all is unknown rather than clear.
 
-`vacancy/scoring.py:27` — `land_value or 0.0`. An unknown land value makes the structure-value ratio trivially satisfied. Vacancy already carries a separate confidence cross-check (ADR-0033), which limits the impact.
+Note: `test_abatement.py` asserted `has_active_exemption(None, None) is False` — the bug was encoded as expected behaviour, which is why it survived review.
+
+### 6. Unknown land value in the vacancy ratio — **fixed, and re-characterised**
+
+`vacancy/scoring.py:27` — `land_value or 0.0`.
+
+**This was mis-filed as a §8.4 violation.** §8.4 forbids missing data becoming *no risk, clear, or buildable*. Here the coercion runs the other way: an unknown land value makes `improvement >= 2 × 0` trivially true, so the parcel is treated as **having** a substantial structure, which *subtracts* 0.4 from vacancy confidence. Missing data produced more doubt, not false clearance. It could never manufacture a buildable or clear claim.
+
+It was still wrong — the function asserted a definite structural finding from a comparison it could not perform.
+
+**Fixed, with scores deliberately unchanged.** `has_substantial_structure` returns `bool | None`, with `None` when the ratio cannot be evaluated. `vacancy_confidence` applies the penalty unless a structure is positively ruled out, which reproduces the previous arithmetic exactly. The semantics are now honest and **no `recompute:vacancy` run is required**; a test pins the two paths to equal scores so a future change cannot silently make the unknown case optimistic.
 
 ---
 
@@ -94,8 +108,10 @@ Absent exemption values read as "no abatement". The abatement checklist item is 
 
 ## Status
 
-**LR-B-003 moves from `Needs verification` to `Partial`.**
+**LR-B-003 moves from `Partial` to `Complete`** (2026-07-28).
 
-Findings 1, 2, and 3 are fixed — no known false clearance now reaches a user. Findings 4, 5, and 6 remain, each contained and recorded above.
+All six findings are fixed. No known false clearance reaches a user, and no coercion of a missing value into a definite one remains in the audited paths.
 
-It is still `Partial` rather than `Complete` because three coercions are knowingly left in place. Marking it Complete while `or 0.0` sits in the scenario, abatement, and vacancy paths would be a claim this audit exists to disallow, however low the severity.
+Two of the six changed character once traced properly rather than pattern-matched: finding 4 was a conflation rather than a leak, and finding 6 ran in the conservative direction and was never a §8.4 violation at all. Both are recorded as re-characterised above rather than quietly restated, because a missing-data audit that edits away its own wrong readings is worth less than one that keeps them visible.
+
+Finding 6's fix is behaviour-preserving by construction, so no recompute is required. Findings 1–5 affect on-demand surfaces (checklist, scenarios) or newly-ingested rows, not stored verdicts — `VERDICT_VERSION` is unaffected and stays `v8`.

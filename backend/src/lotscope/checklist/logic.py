@@ -129,6 +129,19 @@ def _abatement_item() -> ChecklistItem:
     )
 
 
+def _abatement_unknown_item() -> ChecklistItem:
+    return ChecklistItem(
+        code="abatement",
+        category="Liens & taxes",
+        status="not_evaluated",
+        detail=(
+            "OPA reports no exemption values for this parcel, so an active abatement can be "
+            "neither confirmed nor ruled out. This is not confirmation that none applies."
+        ),
+        source="opa_properties_public",
+    )
+
+
 def _zoning_item(verdict: VerdictResult) -> ChecklistItem:
     if verdict.can_build_by_right:
         units = verdict.by_right_units
@@ -232,7 +245,7 @@ _UNKNOWN_TAX_DETAIL = (
 def build_checklist(
     verdict: VerdictResult,
     *,
-    has_abatement: bool = False,
+    has_abatement: bool | None = False,
     market_code: str = "phl",
     tax_status_unknown: bool = False,
 ) -> tuple[list[ChecklistItem], ChecklistSummary]:
@@ -257,6 +270,8 @@ def build_checklist(
         )
     if has_abatement:
         items.append(_abatement_item())
+    elif has_abatement is None:
+        items.append(_abatement_unknown_item())
     items.append(_valuation_item(verdict))
     items.append(_deal_item(verdict))
 

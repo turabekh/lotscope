@@ -55,14 +55,24 @@ def build_scenarios(
     *,
     max_variance_units: int = MAX_VARIANCE_UNITS,
 ) -> ScenariosAnalysis:
-    by_right = inputs.by_right_units or 0
-    if by_right <= 0:
+    by_right = inputs.by_right_units
+    if by_right is None:
         return ScenariosAnalysis(
             scenarios=[],
             by_right_units=None,
             recommended_units=None,
             confidence="low",
             reasons=["No by-right unit count could be determined; cannot model build scenarios."],
+        )
+    if by_right <= 0:
+        return ScenariosAnalysis(
+            scenarios=[],
+            by_right_units=by_right,
+            recommended_units=None,
+            confidence="low",
+            reasons=[
+                "Zoning permits no units by right on this parcel; cannot model build scenarios."
+            ],
         )
 
     scenarios: list[Scenario] = []
