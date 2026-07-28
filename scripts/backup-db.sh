@@ -26,6 +26,8 @@ stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 dump="lotscope-${LABEL}-${stamp}.dump"
 target="${BACKUP_BUCKET%/}/${dump}"
 
+trap 'rm -f "/tmp/${dump}"' EXIT
+
 echo "==> Dumping ${DB_NAME} to ${dump}"
 docker compose exec -T "${DB_CONTAINER}" \
   pg_dump -U "${DB_USER}" -d "${DB_NAME}" -Fc --no-owner --no-privileges > "/tmp/${dump}"
@@ -33,7 +35,6 @@ docker compose exec -T "${DB_CONTAINER}" \
 size="$(wc -c < "/tmp/${dump}")"
 if [[ "${size}" -lt 1024 ]]; then
   echo "Dump is ${size} bytes, which is too small to be a real database." >&2
-  rm -f "/tmp/${dump}"
   exit 1
 fi
 echo "==> Dump is ${size} bytes"
@@ -43,8 +44,6 @@ gcloud storage cp "/tmp/${dump}" "${target}"
 
 echo "==> Verifying the uploaded object exists"
 gcloud storage ls "${target}" > /dev/null
-
-rm -f "/tmp/${dump}"
 
 echo "==> Pruning backups older than ${RETAIN_DAYS} days"
 cutoff="$(date -u -d "${RETAIN_DAYS} days ago" +%Y%m%dT%H%M%SZ 2>/dev/null \

@@ -116,6 +116,21 @@ The escape hatch is `SKIP_PRE_MIGRATION_BACKUP=1`, which prints a warning. It ex
 
 **Production bucket:** `gs://lotscope-501014-db-backups` — US-EAST1 (same region as the VM), uniform access, 30-day delete lifecycle. The VM service account holds `roles/storage.objectAdmin`, which the script needs for both upload and pruning.
 
+### Blocker: the VM cannot write to Cloud Storage
+
+The instance was created with the OAuth scope `devstorage.read_only`. **Access scopes are a ceiling above IAM** — the `objectAdmin` binding above is correct but unreachable, and an upload fails with *"Provided scope(s) are not authorized"*. This is also why `sync-db.sh` uploads from a workstation and only downloads on the VM.
+
+The dump itself works: a production `pg_dump` produced 426 MB on 2026-07-28. Only the upload is blocked.
+
+Two ways out, and the choice is the owner's because both have a cost:
+
+| Option | Cost |
+|---|---|
+| Widen the instance scope to `devstorage.read_write` or `cloud-platform` | Requires **stopping the instance** — real production downtime |
+| Place a service-account key on the VM and `gcloud auth activate-service-account` | No downtime, but a long-lived credential on the box, against §13's preference |
+
+Until one is chosen, **`scripts/deploy.sh` will halt before migrating.** That is the gate behaving correctly, not a regression.
+
 The lifecycle rule and the script's `BACKUP_RETAIN_DAYS` both sit at 30 days deliberately. The script prunes by the timestamp in each filename; the lifecycle prunes by object age. If the script's pruning ever breaks, the bucket rule still caps storage growth.
 
 Other settings, on the VM in `~/lotscope/.env`:
