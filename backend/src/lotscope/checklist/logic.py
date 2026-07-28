@@ -10,11 +10,17 @@ from lotscope.verdict.schemas import VerdictResult
 
 _SEVERITY_STATUS: dict[str, ChecklistStatus] = {
     "high": "fail",
-    "medium": "warn",
-    "low": "info",
-    "info": "info",
+    "medium": "potential_issue",
+    "low": "potential_issue",
+    "info": "potential_issue",
 }
-_STATUS_RANK: dict[ChecklistStatus, int] = {"pass": 0, "info": 1, "warn": 2, "fail": 3}
+_STATUS_RANK: dict[ChecklistStatus, int] = {
+    "not_applicable": 0,
+    "pass": 1,
+    "not_evaluated": 2,
+    "potential_issue": 3,
+    "fail": 4,
+}
 
 _RISK_CATEGORIES: list[tuple[str, str, frozenset[str], str]] = [
     (
@@ -75,18 +81,19 @@ def _risk_item(
         return ChecklistItem(
             code=code,
             category=category,
-            status="info",
-            detail=state_detail,
+            status="not_evaluated",
+            detail=state_detail or "This check was not evaluated for this market.",
             availability=availability,
         )
     matched = [flag for flag in flags if flag.get("code") in flag_codes]
     if not matched:
         return ChecklistItem(code=code, category=category, status="pass", detail=clear_detail)
-    status: ChecklistStatus = "info"
+    status: ChecklistStatus = "potential_issue"
     details: list[str] = []
     sources: set[str] = set()
     for flag in matched:
-        status = _worse(status, _SEVERITY_STATUS.get(str(flag.get("severity", "info")), "info"))
+        severity = str(flag.get("severity", "info"))
+        status = _worse(status, _SEVERITY_STATUS.get(severity, "potential_issue"))
         detail = str(flag.get("detail") or flag.get("label") or "")
         if detail:
             details.append(detail)
@@ -105,7 +112,7 @@ def _abatement_item() -> ChecklistItem:
     return ChecklistItem(
         code="abatement",
         category="Liens & taxes",
-        status="info",
+        status="not_evaluated",
         detail=(
             "An OPA tax exemption is recorded (possible active abatement) — confirm the "
             "remaining abatement term with OPA before underwriting carrying costs."
@@ -129,14 +136,14 @@ def _zoning_item(verdict: VerdictResult) -> ChecklistItem:
         return ChecklistItem(
             code="zoning",
             category="Zoning & buildability",
-            status="warn",
+            status="potential_issue",
             detail="A variance or special exception is likely required to build.",
             source="zoning",
         )
     return ChecklistItem(
         code="zoning",
         category="Zoning & buildability",
-        status="info",
+        status="not_evaluated",
         detail="Zoning conformance could not be determined for this parcel.",
         source="zoning",
     )
@@ -147,7 +154,7 @@ def _valuation_item(verdict: VerdictResult) -> ChecklistItem:
         return ChecklistItem(
             code="valuation",
             category="Valuation confidence",
-            status="warn",
+            status="potential_issue",
             detail="Not enough comparable sales for a confident value estimate.",
             source="valuation",
         )
@@ -165,7 +172,7 @@ def _valuation_item(verdict: VerdictResult) -> ChecklistItem:
     return ChecklistItem(
         code="valuation",
         category="Valuation confidence",
-        status="warn",
+        status="potential_issue",
         detail="Value estimate rests on thin or dispersed comps; treat it as low-confidence.",
         source="valuation",
     )
@@ -176,7 +183,7 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
         return ChecklistItem(
             code="deal",
             category="Deal feasibility",
-            status="info",
+            status="not_evaluated",
             detail="Not enough zoning or comp data to model the deal.",
             source="deal",
         )
@@ -195,14 +202,14 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
         return ChecklistItem(
             code="deal",
             category="Deal feasibility",
-            status="warn",
+            status="potential_issue",
             detail="Project does not pencil at the modeled costs and ARV.",
             source="deal",
         )
     return ChecklistItem(
         code="deal",
         category="Deal feasibility",
-        status="info",
+        status="not_evaluated",
         detail=f"Max allowable offer ${verdict.max_allowable_offer:,.0f} at the target margin.",
         source="deal",
     )
@@ -237,9 +244,10 @@ def build_checklist(
 
     summary = ChecklistSummary(
         passed=sum(1 for item in items if item.status == "pass"),
-        warnings=sum(1 for item in items if item.status == "warn"),
+        warnings=sum(1 for item in items if item.status == "potential_issue"),
         failures=sum(1 for item in items if item.status == "fail"),
-        info=sum(1 for item in items if item.status == "info"),
+        info=sum(1 for item in items if item.status == "not_applicable"),
+        not_evaluated=sum(1 for item in items if item.status == "not_evaluated"),
         ready=not any(item.status == "fail" for item in items),
     )
     return items, summary
