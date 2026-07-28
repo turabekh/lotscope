@@ -95,6 +95,21 @@ export interface SourceFreshness {
   datasets: string[]
 }
 
+export type CorrectionSection =
+  | 'verdict'
+  | 'buildability'
+  | 'valuation'
+  | 'deal'
+  | 'risk'
+  | 'ownership'
+  | 'other'
+
+export interface CorrectionCreate {
+  section: CorrectionSection
+  field_name?: string | null
+  description: string
+}
+
 export interface VerdictResult {
   parcel_number: string
   verdict_version: string

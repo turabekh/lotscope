@@ -15,6 +15,7 @@ import type {
   BuyersNearby,
   CheckoutResponse,
   CheckoutTier,
+  CorrectionCreate,
   CreditBalance,
   CreditPackKey,
   DatasetStatus,
@@ -396,6 +397,12 @@ export const api = {
   },
   updateAdminUser(userId: number, payload: AdminUserUpdate): Promise<User> {
     return request(`/admin/users/${userId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+  },
+  reportCorrection(parcelNumber: string, payload: CorrectionCreate): Promise<unknown> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/corrections`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
   },
   getParcelFreshness(parcelNumber: string): Promise<SourceFreshness[]> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/freshness`)

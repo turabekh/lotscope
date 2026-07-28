@@ -109,6 +109,7 @@ function mountDossier(detail: ParcelDetail, distress: DistressResult | null = nu
         PropertyFacts: true,
         DistressPanel: true,
         FreshnessPanel: true,
+        ReportCorrectionDialog: true,
         OwnerPortfolioPanel: true,
         ReportPanel: true,
         DeedRestrictionsPanel: true,

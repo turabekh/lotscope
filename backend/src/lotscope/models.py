@@ -5,6 +5,7 @@ from lotscope.appeal.models import AppealPacketEntitlement
 from lotscope.assemblage.models import ParcelAssemblage
 from lotscope.buyers.models import BuyerProfile
 from lotscope.core.db import Base
+from lotscope.corrections.models import ParcelCorrection
 from lotscope.historic.models import HistoricDistrict
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.markets.models import Market
@@ -36,6 +37,7 @@ __all__ = [
     "OpsAlertState",
     "Parcel",
     "ParcelAssemblage",
+    "ParcelCorrection",
     "ParcelVerdict",
     "Rco",
     "Sale",

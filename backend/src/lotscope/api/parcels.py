@@ -2,7 +2,7 @@ import contextlib
 import hashlib
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -41,6 +41,8 @@ from lotscope.compare.schemas import ParcelCompareResponse
 from lotscope.compare.service import MAX_COMPARE_PARCELS, compare_parcels
 from lotscope.core.config import Settings
 from lotscope.core.errors import ForbiddenError, NotFoundError, QuotaExceededError
+from lotscope.corrections.schemas import CorrectionCreate, CorrectionRead
+from lotscope.corrections.service import report_correction
 from lotscope.deal.schemas import DealResult, ScenariosResult
 from lotscope.deal.service import analyze_parcel_deal, analyze_parcel_scenarios
 from lotscope.distress.schemas import DistressResult
@@ -377,6 +379,33 @@ async def parcel_market(
     result = await get_parcel_market(session, parcel_number, radius_ft=radius_ft, years=years)
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    return result
+
+
+@router.post(
+    "/{parcel_number}/corrections",
+    response_model=CorrectionRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def report_parcel_correction(
+    parcel_number: ParcelKeyDep,
+    data: CorrectionCreate,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> CorrectionRead:
+    market_code = await parcel_market_code(session, parcel_number)
+    if market_code is None:
+        raise NotFoundError(f"Parcel {parcel_number} was not found.")
+    verdict = await get_verdict(session, parcel_number)
+    result = await report_correction(
+        session,
+        parcel_number=parcel_number,
+        market_code=market_code,
+        reported_by=current_user.id,
+        request=data,
+        verdict=verdict,
+    )
+    await session.commit()
     return result
 
 
