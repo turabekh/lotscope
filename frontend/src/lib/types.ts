@@ -32,7 +32,12 @@ export interface ParcelDetail {
   latitude: number | null
 }
 
-export type ChecklistStatus = 'pass' | 'warn' | 'fail' | 'info'
+export type ChecklistStatus =
+  | 'pass'
+  | 'fail'
+  | 'potential_issue'
+  | 'not_evaluated'
+  | 'not_applicable'
 export type ChecklistAvailability = 'available' | 'no_data_source' | 'pending_load'
 
 export interface ChecklistItem {
@@ -45,6 +50,7 @@ export interface ChecklistItem {
 }
 
 export interface ChecklistSummary {
+  not_evaluated: number
   passed: number
   warnings: number
   failures: number

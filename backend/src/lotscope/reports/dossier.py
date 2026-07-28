@@ -22,11 +22,18 @@ _SEVERITY = {
 }
 _STATUS_COLOR = {
     "pass": (46, 125, 50),
-    "warn": (239, 108, 0),
+    "potential_issue": (239, 108, 0),
     "fail": (198, 40, 40),
-    "info": (120, 144, 156),
+    "not_evaluated": (120, 144, 156),
+    "not_applicable": (144, 164, 174),
 }
-_STATUS_LABEL = {"pass": "OK", "warn": "CHECK", "fail": "ISSUE", "info": "INFO"}
+_STATUS_LABEL = {
+    "pass": "OK",
+    "potential_issue": "CHECK",
+    "fail": "ISSUE",
+    "not_evaluated": "NOT CHECKED",
+    "not_applicable": "N/A",
+}
 _CONFIDENCE_COLOR = {
     "high": (46, 125, 50),
     "medium": (239, 108, 0),

@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-ChecklistStatus = Literal["pass", "warn", "fail", "info"]
+ChecklistStatus = Literal["pass", "fail", "potential_issue", "not_evaluated", "not_applicable"]
 ChecklistAvailability = Literal["available", "no_data_source", "pending_load"]
 
 
@@ -21,6 +21,7 @@ class ChecklistSummary(BaseModel):
     warnings: int
     failures: int
     info: int
+    not_evaluated: int = 0
     ready: bool
 
 

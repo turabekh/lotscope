@@ -67,7 +67,7 @@ def test_abatement_item_present_when_flagged() -> None:
     items, summary = build_checklist(_verdict(), has_abatement=True)
     abatement = _item(items, "abatement")
     assert abatement.category == "Liens & taxes"
-    assert abatement.status == "info"
+    assert abatement.status == "not_evaluated"
     assert summary.ready is True
 
 
@@ -117,7 +117,7 @@ def test_medium_flag_warns() -> None:
         }
     ]
     items, _ = build_checklist(_verdict(risk_flags=flags))
-    assert _item(items, "flood").status == "warn"
+    assert _item(items, "flood").status == "potential_issue"
 
 
 def test_worst_severity_wins_within_a_category() -> None:
@@ -146,7 +146,7 @@ def test_estate_owner_warns_ownership_category() -> None:
     ]
     items, _ = build_checklist(_verdict(risk_flags=flags))
     ownership = _item(items, "ownership")
-    assert ownership.status == "warn"
+    assert ownership.status == "potential_issue"
     assert "estate" in ownership.detail.lower()
     assert ownership.source == "parcel"
 
@@ -162,7 +162,7 @@ def test_multiple_owners_is_info_in_ownership_category() -> None:
         }
     ]
     items, _ = build_checklist(_verdict(risk_flags=flags))
-    assert _item(items, "ownership").status == "info"
+    assert _item(items, "ownership").status == "potential_issue"
 
 
 def test_public_and_estate_flags_combine_in_ownership() -> None:
@@ -172,7 +172,7 @@ def test_public_and_estate_flags_combine_in_ownership() -> None:
     ]
     items, _ = build_checklist(_verdict(risk_flags=flags))
     ownership = _item(items, "ownership")
-    assert ownership.status == "warn"
+    assert ownership.status == "potential_issue"
     assert "City owned." in ownership.detail
     assert "Estate owner." in ownership.detail
 
@@ -189,7 +189,7 @@ def test_no_street_access_flag_surfaces_in_access_category() -> None:
     ]
     items, _ = build_checklist(_verdict(risk_flags=flags))
     access = _item(items, "access")
-    assert access.status == "info"
+    assert access.status == "potential_issue"
     assert access.source == "street_centerline"
 
 
@@ -205,7 +205,7 @@ def test_historic_district_flag_surfaces_in_overlays_category() -> None:
     ]
     items, _ = build_checklist(_verdict(risk_flags=flags))
     overlays = _item(items, "overlays")
-    assert overlays.status == "info"
+    assert overlays.status == "potential_issue"
     assert "Society Hill" in overlays.detail
     assert overlays.source == "historicdistricts_local"
 
@@ -214,29 +214,29 @@ def test_variance_zoning_warns() -> None:
     items, _ = build_checklist(
         _verdict(can_build_by_right=False, needs_variance=True, by_right_units=None)
     )
-    assert _item(items, "zoning").status == "warn"
+    assert _item(items, "zoning").status == "potential_issue"
 
 
 def test_thin_comps_valuation_warns() -> None:
     items, _ = build_checklist(_verdict(value_confidence=0.3))
-    assert _item(items, "valuation").status == "warn"
+    assert _item(items, "valuation").status == "potential_issue"
 
 
 def test_missing_value_warns() -> None:
     items, _ = build_checklist(_verdict(value_estimate_low=None, value_estimate_high=None))
-    assert _item(items, "valuation").status == "warn"
+    assert _item(items, "valuation").status == "potential_issue"
 
 
 def test_unprofitable_deal_warns() -> None:
     items, _ = build_checklist(
         _verdict(is_underpriced=False, est_margin=-0.5, max_allowable_offer=10000.0)
     )
-    assert _item(items, "deal").status == "warn"
+    assert _item(items, "deal").status == "potential_issue"
 
 
 def test_unmodelable_deal_is_info() -> None:
     items, _ = build_checklist(_verdict(max_allowable_offer=None))
-    assert _item(items, "deal").status == "info"
+    assert _item(items, "deal").status == "not_evaluated"
 
 
 def test_overlay_and_rco_flags_surface_in_overlays_category() -> None:
@@ -258,6 +258,32 @@ def test_overlay_and_rco_flags_surface_in_overlays_category() -> None:
     ]
     items, _ = build_checklist(_verdict(risk_flags=flags))
     overlays = _item(items, "overlays")
-    assert overlays.status == "info"
+    assert overlays.status == "potential_issue"
     assert "/NCA" in overlays.detail
     assert "Test RCO" in overlays.detail
+
+
+def test_an_unevaluated_check_can_never_report_as_a_pass() -> None:
+    items, _ = build_checklist(_verdict(risk_flags=[]), market_code="wlm")
+    unevaluated = [item for item in items if item.status == "not_evaluated"]
+    assert unevaluated, "a market with structural data gaps must show unevaluated checks"
+    for item in unevaluated:
+        assert item.status != "pass"
+        assert item.detail.strip(), f"{item.code} must say why it was not evaluated"
+
+
+def test_a_market_with_no_source_names_the_check_rather_than_omitting_it() -> None:
+    wlm_codes = {item.code for item in build_checklist(_verdict(), market_code="wlm")[0]}
+    phl_codes = {item.code for item in build_checklist(_verdict(), market_code="phl")[0]}
+    assert wlm_codes == phl_codes
+
+
+def test_the_summary_counts_unevaluated_checks_separately() -> None:
+    _, summary = build_checklist(_verdict(risk_flags=[]), market_code="wlm")
+    assert summary.not_evaluated > 0
+
+
+def test_silence_in_a_covered_market_is_a_pass_not_an_unevaluated_check() -> None:
+    items, _ = build_checklist(_verdict(risk_flags=[]), market_code="phl")
+    liens = _item(items, "liens_taxes")
+    assert liens.status == "pass"

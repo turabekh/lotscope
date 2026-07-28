@@ -122,7 +122,7 @@ def test_full_dossier_renders_all_sections() -> None:
             ChecklistItem(
                 code="zoning",
                 category="Zoning & buildability",
-                status="warn",
+                status="potential_issue",
                 detail="A variance is likely required.",
                 source="zoning",
             ),

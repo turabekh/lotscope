@@ -14,9 +14,10 @@ interface StatusStyle {
 
 const STATUS: Record<ChecklistStatus, StatusStyle> = {
   pass: { icon: 'check_circle', color: 'positive' },
-  warn: { icon: 'warning', color: 'warning' },
   fail: { icon: 'cancel', color: 'negative' },
-  info: { icon: 'info', color: 'blue-grey-6' },
+  potential_issue: { icon: 'warning', color: 'warning' },
+  not_evaluated: { icon: 'radio_button_unchecked', color: 'grey-6' },
+  not_applicable: { icon: 'remove', color: 'grey-5' },
 }
 
 const AVAILABILITY: Record<string, StatusStyle> = {
@@ -58,7 +59,9 @@ const headlineColor = computed(() => {
         </q-tooltip>
         <q-space />
         <q-chip dense square :color="headlineColor" text-color="white" icon="rule">
-          {{ checklist.summary.passed }}/{{ checklist.items.length }} clear
+          {{ checklist.summary.passed }} clear<template v-if="checklist.summary.not_evaluated">
+            · {{ checklist.summary.not_evaluated }} not checked</template
+          >
         </q-chip>
       </div>
 

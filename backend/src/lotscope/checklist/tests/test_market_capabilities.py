@@ -23,7 +23,7 @@ def test_no_data_source_names_the_market_reason_not_a_pass() -> None:
     item = _risk_item(
         code, category, flag_codes, clear, [], availability="no_data_source", state_detail=detail
     )
-    assert item.status == "info"
+    assert item.status == "not_evaluated"
     assert item.availability == "no_data_source"
     assert "code-enforcement" in item.detail
 
@@ -53,7 +53,7 @@ def test_pgh_flood_is_pending_not_false_clean() -> None:
     item = _risk_item(
         code, category, flag_codes, clear, [], availability="pending_load", state_detail=detail
     )
-    assert item.status == "info"
+    assert item.status == "not_evaluated"
     assert "not in a mapped fema flood zone" not in item.detail.lower()
 
 
@@ -66,7 +66,7 @@ def test_pgh_overlays_and_access_are_pending_not_false_clean() -> None:
         item = _risk_item(
             code, category, flag_codes, clear, [], availability="pending_load", state_detail=detail
         )
-        assert item.status == "info"
+        assert item.status == "not_evaluated"
         assert item.detail == detail
         assert item.detail != clear
     overlays_detail = checklist_state_detail("pgh", "overlays", "pending_load")
