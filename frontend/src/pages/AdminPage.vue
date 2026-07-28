@@ -236,7 +236,9 @@ onBeforeUnmount(() => {
                   {{ job.latest_run.status }}
                 </q-badge>
                 <span class="job-time">{{
-                  job.latest_run ? formatTime(job.latest_run.finished_at ?? job.latest_run.created_at) : 'never run'
+                  job.latest_run
+                    ? formatTime(job.latest_run.finished_at ?? job.latest_run.created_at)
+                    : 'never run'
                 }}</span>
               </div>
             </div>
@@ -268,7 +270,9 @@ onBeforeUnmount(() => {
           <tr v-for="run in jobRuns" :key="run.id">
             <td class="text-left">{{ run.label }}</td>
             <td class="text-left">
-              <q-badge :color="statusColor(run.status)" text-color="white">{{ run.status }}</q-badge>
+              <q-badge :color="statusColor(run.status)" text-color="white">{{
+                run.status
+              }}</q-badge>
               <q-tooltip v-if="run.error">{{ run.error }}</q-tooltip>
             </td>
             <td class="text-right">{{ run.result_count?.toLocaleString() ?? '—' }}</td>

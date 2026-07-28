@@ -116,10 +116,7 @@ const reason = computed(() => assessment.value?.reasons[0] ?? '')
         </div>
       </div>
 
-      <div
-        v-if="assessment.estimated_annual_tax_savings"
-        class="savings q-mt-sm"
-      >
+      <div v-if="assessment.estimated_annual_tax_savings" class="savings q-mt-sm">
         <q-icon name="savings" size="16px" class="q-mr-xs" />
         Est. appeal savings ~{{ formatCurrency(assessment.estimated_annual_tax_savings) }}/yr
       </div>

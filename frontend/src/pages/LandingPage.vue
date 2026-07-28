@@ -53,7 +53,14 @@ const features = [
         </template>
         <template v-else>
           <q-btn flat no-caps label="Sign in" :to="{ name: 'login' }" />
-          <q-btn unelevated color="white" text-color="primary" no-caps label="Get started" :to="{ name: 'register' }" />
+          <q-btn
+            unelevated
+            color="white"
+            text-color="primary"
+            no-caps
+            label="Get started"
+            :to="{ name: 'register' }"
+          />
         </template>
       </q-toolbar>
     </q-header>

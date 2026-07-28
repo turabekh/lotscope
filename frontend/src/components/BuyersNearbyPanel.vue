@@ -85,10 +85,7 @@ watch(() => detail.value?.parcel_number, load, { immediate: true })
         </q-item-section>
       </q-item>
     </q-list>
-    <router-link
-      class="all-link"
-      :to="{ name: 'buyers', params: { market: market.active } }"
-    >
+    <router-link class="all-link" :to="{ name: 'buyers', params: { market: market.active } }">
       See all active buyers →
     </router-link>
   </div>

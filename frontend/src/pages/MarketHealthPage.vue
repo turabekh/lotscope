@@ -111,11 +111,7 @@ watch(marketCode, () => {
             <q-badge :color="launchColor(detail.launch_status)" text-color="white">
               {{ detail.launch_status }}
             </q-badge>
-            <q-badge
-              :color="healthColor(detail.health.status)"
-              text-color="white"
-              class="q-ml-sm"
-            >
+            <q-badge :color="healthColor(detail.health.status)" text-color="white" class="q-ml-sm">
               data {{ detail.health.status }}
             </q-badge>
           </div>
@@ -142,7 +138,9 @@ watch(marketCode, () => {
           </q-card>
           <q-card flat bordered class="stat-card">
             <div class="stat-value">{{ detail.zoning_standard_count.toLocaleString() }}</div>
-            <div class="stat-label">Zoning codes ({{ detail.zoning_district_count }} districts)</div>
+            <div class="stat-label">
+              Zoning codes ({{ detail.zoning_district_count }} districts)
+            </div>
           </q-card>
         </div>
 
@@ -256,7 +254,10 @@ watch(marketCode, () => {
             <tr v-for="job in detail.recent_jobs" :key="job.id">
               <td class="text-left">{{ job.label }}</td>
               <td class="text-left">
-                <q-badge :color="job.status === 'failed' ? 'negative' : 'positive'" text-color="white">
+                <q-badge
+                  :color="job.status === 'failed' ? 'negative' : 'positive'"
+                  text-color="white"
+                >
                   {{ job.status }}
                 </q-badge>
               </td>

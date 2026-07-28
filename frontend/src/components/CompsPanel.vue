@@ -21,7 +21,9 @@ function rows(): CompResult[] {
 }
 
 function pricePerSqft(comp: CompResult): string {
-  return comp.price_per_sqft !== null ? `$${formatNumber(Math.round(comp.price_per_sqft))}/sqft` : ''
+  return comp.price_per_sqft !== null
+    ? `$${formatNumber(Math.round(comp.price_per_sqft))}/sqft`
+    : ''
 }
 </script>
 

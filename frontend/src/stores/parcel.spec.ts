@@ -3,12 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError, api } from '@/lib/api'
 import { useParcelStore } from '@/stores/parcel'
-import type {
-  AssemblageResult,
-  EnvelopeResult,
-  ParcelDetail,
-  VerdictResult,
-} from '@/lib/types'
+import type { AssemblageResult, EnvelopeResult, ParcelDetail, VerdictResult } from '@/lib/types'
 
 vi.mock('@/lib/api', async () => {
   const actual = await vi.importActual<typeof import('@/lib/api')>('@/lib/api')

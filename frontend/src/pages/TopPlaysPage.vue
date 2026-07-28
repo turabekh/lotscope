@@ -130,7 +130,10 @@ onMounted(() => {
           <div class="text-caption text-grey-6">Clear the zoning filter to see the full feed.</div>
         </div>
 
-        <div v-if="result && result.returned < result.total" class="text-caption text-grey-6 q-mt-sm">
+        <div
+          v-if="result && result.returned < result.total"
+          class="text-caption text-grey-6 q-mt-sm"
+        >
           Showing the top {{ result.returned }} of {{ result.total }} plays.
         </div>
       </template>

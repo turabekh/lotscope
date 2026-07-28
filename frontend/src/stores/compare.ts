@@ -10,7 +10,9 @@ function loadInitial(): string[] {
     if (raw === null) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((value): value is string => typeof value === 'string').slice(0, MAX_COMPARE)
+    return parsed
+      .filter((value): value is string => typeof value === 'string')
+      .slice(0, MAX_COMPARE)
   } catch {
     return []
   }

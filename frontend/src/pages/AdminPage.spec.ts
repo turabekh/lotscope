@@ -62,7 +62,12 @@ vi.mock('@/lib/api', async (importOriginal) => {
       market: 'hbg',
       dataset: 'tax_claim',
       params: [
-        { name: 'list_url', label: 'Upset / judicial list CSV URL', type: 'string', required: true },
+        {
+          name: 'list_url',
+          label: 'Upset / judicial list CSV URL',
+          type: 'string',
+          required: true,
+        },
         { name: 'list_date', label: 'List date', type: 'date', required: true },
       ],
       latest_run: null,

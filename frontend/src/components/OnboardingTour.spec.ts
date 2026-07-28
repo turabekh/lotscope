@@ -7,7 +7,9 @@ import OnboardingTour from '@/components/OnboardingTour.vue'
 import type { User } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
-const { markOnboardedMock } = vi.hoisted(() => ({ markOnboardedMock: vi.fn(() => Promise.resolve()) }))
+const { markOnboardedMock } = vi.hoisted(() => ({
+  markOnboardedMock: vi.fn(() => Promise.resolve()),
+}))
 
 vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>()

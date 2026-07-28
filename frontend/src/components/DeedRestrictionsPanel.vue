@@ -42,8 +42,7 @@ async function onFileChange(event: Event): Promise<void> {
     const result = await api.analyzeDeed(parcelNumber, documentId, file)
     if (deedRestrictions.value?.parcel_number === parcelNumber) store.deedRestrictions = result
   } catch (cause) {
-    analyzeError.value =
-      cause instanceof ApiError ? cause.message : 'Could not analyze the deed.'
+    analyzeError.value = cause instanceof ApiError ? cause.message : 'Could not analyze the deed.'
   } finally {
     analyzingId.value = null
     pendingDocId.value = null

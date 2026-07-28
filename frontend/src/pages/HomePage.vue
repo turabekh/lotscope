@@ -61,7 +61,12 @@ const changeRows = computed<ChangeRow[]>(() => {
       title: search.name,
       detail: `${search.new_count} new ${search.new_count === 1 ? 'match' : 'matches'}`,
       severity: 'info',
-      to: () => void router.push({ name: 'lists', params: { market: market.active }, query: { tab: 'searches' } }),
+      to: () =>
+        void router.push({
+          name: 'lists',
+          params: { market: market.active },
+          query: { tab: 'searches' },
+        }),
     })
   }
   return rows.slice(0, 8)
@@ -128,13 +133,7 @@ onMounted(async () => {
             </div>
             <q-separator />
             <q-list v-if="changeRows.length" separator>
-              <q-item
-                v-for="row in changeRows"
-                :key="row.key"
-                v-ripple
-                clickable
-                @click="row.to()"
-              >
+              <q-item v-for="row in changeRows" :key="row.key" v-ripple clickable @click="row.to()">
                 <q-item-section avatar>
                   <q-icon
                     :name="row.kind === 'search' ? 'saved_search' : 'bookmark'"
@@ -231,13 +230,17 @@ onMounted(async () => {
                 @click="openParcel(lead.parcel_number)"
               >
                 <q-item-section>
-                  <q-item-label class="ellipsis">{{ lead.address ?? lead.parcel_number }}</q-item-label>
+                  <q-item-label class="ellipsis">{{
+                    lead.address ?? lead.parcel_number
+                  }}</q-item-label>
                   <q-item-label caption class="ellipsis">
                     {{ lead.top_factors[0] ?? lead.base_zoning_code ?? '—' }}
                   </q-item-label>
                 </q-item-section>
                 <q-item-section side>
-                  <q-badge :color="scoreColor(lead.score)" rounded>{{ formatNumber(lead.score) }}</q-badge>
+                  <q-badge :color="scoreColor(lead.score)" rounded>{{
+                    formatNumber(lead.score)
+                  }}</q-badge>
                 </q-item-section>
               </q-item>
             </q-list>
@@ -272,12 +275,19 @@ onMounted(async () => {
               </router-link>
               <router-link
                 class="stat"
-                :to="{ name: 'lists', params: { market: market.active }, query: { tab: 'searches' } }"
+                :to="{
+                  name: 'lists',
+                  params: { market: market.active },
+                  query: { tab: 'searches' },
+                }"
               >
                 <div class="stat-num">{{ searchUsed }}</div>
                 <div class="stat-label">Saved searches</div>
               </router-link>
-              <router-link class="stat" :to="{ name: 'pipeline', params: { market: market.active } }">
+              <router-link
+                class="stat"
+                :to="{ name: 'pipeline', params: { market: market.active } }"
+              >
                 <div class="stat-num">{{ dealsUsed }}</div>
                 <div class="stat-label">Deals</div>
               </router-link>

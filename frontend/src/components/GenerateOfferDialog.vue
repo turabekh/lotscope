@@ -129,18 +129,51 @@ async function submit(): Promise<void> {
             type="number"
             label="Offer price"
             prefix="$"
-            :hint="maxAllowableOffer !== null ? 'Defaults to the Maximum Allowable Offer' : 'Manual price'"
+            :hint="
+              maxAllowableOffer !== null
+                ? 'Defaults to the Maximum Allowable Offer'
+                : 'Manual price'
+            "
           />
           <div class="row q-col-gutter-sm">
             <q-toggle v-model="allCash" label="All cash" class="col" />
             <q-toggle v-model="asIs" label="As-is" class="col" />
           </div>
           <div class="row q-col-gutter-sm">
-            <q-input v-model.number="earnestMoney" outlined dense type="number" label="EMD" prefix="$" class="col" />
-            <q-input v-model.number="closeDays" outlined dense type="number" label="Close (days)" class="col" />
-            <q-input v-model.number="inspectionDays" outlined dense type="number" label="Inspect (days)" class="col" />
+            <q-input
+              v-model.number="earnestMoney"
+              outlined
+              dense
+              type="number"
+              label="EMD"
+              prefix="$"
+              class="col"
+            />
+            <q-input
+              v-model.number="closeDays"
+              outlined
+              dense
+              type="number"
+              label="Close (days)"
+              class="col"
+            />
+            <q-input
+              v-model.number="inspectionDays"
+              outlined
+              dense
+              type="number"
+              label="Inspect (days)"
+              class="col"
+            />
           </div>
-          <q-input v-model="expiration" outlined dense type="date" label="Offer valid through" stack-label />
+          <q-input
+            v-model="expiration"
+            outlined
+            dense
+            type="date"
+            label="Offer valid through"
+            stack-label
+          />
 
           <div class="text-subtitle2 q-mt-sm">Signer</div>
           <q-input v-model="entityName" outlined dense label="Entity" />

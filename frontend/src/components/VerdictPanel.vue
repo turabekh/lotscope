@@ -152,8 +152,8 @@ const buildStatus = computed<Status>(() => {
               {{ formatCurrency(verdict.assessment_market_gap) }}
             </div>
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-              Estimated market value minus the OPA assessed value. A large gap can signal an
-              over- or under-assessment (tax-appeal angle).
+              Estimated market value minus the OPA assessed value. A large gap can signal an over-
+              or under-assessment (tax-appeal angle).
             </q-tooltip>
           </div>
         </div>
@@ -173,8 +173,8 @@ const buildStatus = computed<Status>(() => {
         <q-chip dense square :color="riskTone" text-color="white">
           {{ verdict.risk_score == null ? '—' : Math.round(verdict.risk_score) }}/100
           <q-tooltip max-width="260px" anchor="top middle" self="bottom middle">
-            0–100 from the flags below (tax liens, L&I, flood, ownership). Higher is riskier;
-            0 means no major flags found.
+            0–100 from the flags below (tax liens, L&I, flood, ownership). Higher is riskier; 0
+            means no major flags found.
           </q-tooltip>
         </q-chip>
       </div>

@@ -45,9 +45,7 @@ const rows = computed(() => {
 })
 
 const topByVacant = computed(() =>
-  [...(data.value?.neighborhoods ?? [])]
-    .sort((a, b) => b.vacant_lots - a.vacant_lots)
-    .slice(0, 12),
+  [...(data.value?.neighborhoods ?? [])].sort((a, b) => b.vacant_lots - a.vacant_lots).slice(0, 12),
 )
 const maxVacant = computed(() => topByVacant.value[0]?.vacant_lots ?? 0)
 function barPct(value: number): string {
@@ -195,7 +193,9 @@ onMounted(() => {
               <td class="num-col">{{ row.avg_distress ?? '—' }}</td>
               <td class="num-col">{{ row.avg_opportunity ?? '—' }}</td>
               <td class="num-col">
-                {{ row.median_market_value == null ? '—' : formatCurrency(row.median_market_value) }}
+                {{
+                  row.median_market_value == null ? '—' : formatCurrency(row.median_market_value)
+                }}
               </td>
               <td class="num-col">{{ num(row.tax_delinquent) }}</td>
               <td class="num-col">{{ num(row.sheriff_sale) }}</td>

@@ -196,7 +196,9 @@ function onSelect(parcelNumber: string): void {
         <div class="filters-head">
           <q-icon name="tune" size="18px" class="q-mr-sm" />
           <span class="filters-title">Filters</span>
-          <q-badge v-if="buyBoxCount > 0" color="primary" class="q-ml-sm">{{ buyBoxCount }}</q-badge>
+          <q-badge v-if="buyBoxCount > 0" color="primary" class="q-ml-sm">{{
+            buyBoxCount
+          }}</q-badge>
           <q-space />
           <q-btn
             flat

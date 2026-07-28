@@ -18,7 +18,10 @@ const stats = computed<Stat[]>(() => {
   const m = marketContext.value
   if (m === null) return []
   return [
-    { label: 'Sales / yr', value: m.sales_per_year !== null ? formatNumber(m.sales_per_year) : '—' },
+    {
+      label: 'Sales / yr',
+      value: m.sales_per_year !== null ? formatNumber(m.sales_per_year) : '—',
+    },
     { label: 'Median sale', value: formatCurrency(m.median_sale_price) },
     { label: 'Permits', value: formatNumber(m.permits) },
     { label: 'Vacancy', value: formatPercent(m.vacancy_rate) },
@@ -36,8 +39,8 @@ const stats = computed<Stat[]>(() => {
         <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
           Recent activity within {{ formatNumber(marketContext.radius_ft) }} ft over the last
-          {{ marketContext.years }} years: sales velocity, development permits, and vacancy around this
-          lot. Informational.
+          {{ marketContext.years }} years: sales velocity, development permits, and vacancy around
+          this lot. Informational.
         </q-tooltip>
         <q-space />
         <span v-if="marketContext.neighborhood" class="nbhd">{{ marketContext.neighborhood }}</span>
