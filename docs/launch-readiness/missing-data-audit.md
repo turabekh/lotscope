@@ -52,11 +52,15 @@ It also fed the severity threshold, so an unknown balance scored as low-severity
 
 `checklist/logic.py:30`
 
-The `liens_taxes` item renders `pass` with *"No tax delinquency, liens, or sheriff-sale exposure on record"* whenever no flag is present — including when the tax feed never reported on the parcel at all.
+The `liens_taxes` item renders `pass` with *"No tax delinquency, liens, or sheriff-sale exposure on record"* whenever no flag is present.
 
-Finding 1 makes the stored data honest, but the checklist still cannot distinguish *verified clear* from *never checked*, because `build_checklist` receives only the verdict and has no view of source availability.
+**Corrected after measuring the data.** The mechanism is narrower than first described here. `real_estate_tax_delinquencies` lists *only delinquent parcels*, so a parcel's **absence** from `tax_status` is genuine evidence of non-delinquency, not missing data — the original wording ("the feed never reported on the parcel") was wrong.
 
-**Not fixed here.** The fix requires threading tax availability into the checklist, which is a contract change to `build_checklist` and belongs with the ADR-0068 status work rather than being tacked onto an audit. **This is the most user-visible remaining §8.4 issue and should be the next thing addressed.**
+The real case is a parcel that **is** in the table with `is_delinquent IS NULL` — covered by the feed, but with no balance reported. Measured locally: **792 of 78,933 rows**. Those render as a clean pass today.
+
+Finding 1 stops new rows from hiding in `false`, but the checklist still cannot distinguish *verified clear* from *unknown*, because `build_checklist` receives only the verdict and has no view of the underlying tax row.
+
+**Not fixed here.** The fix requires threading the tax row's known/unknown state into the checklist, which is a contract change to `build_checklist` and belongs with the ADR-0068 status work rather than being tacked onto an audit. **This is the most user-visible remaining §8.4 issue and should be the next thing addressed.**
 
 ### 4. Unknown unit count coerced to zero in scenarios — **low severity, not fixed**
 
