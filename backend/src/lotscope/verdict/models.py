@@ -45,3 +45,6 @@ class ParcelVerdict(Base, TimestampMixin, ProvenanceMixin):
         JSONB, nullable=False, server_default="[]"
     )
     field_trust: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    recommendation: Mapped[str | None] = mapped_column(String(40))
+    recommendation_reason: Mapped[str | None] = mapped_column(Text)
+    decision_version: Mapped[str | None] = mapped_column(String(10))

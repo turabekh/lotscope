@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { formatRange, marketCodeFromParcelNumber, scoreLabel, scoreVar } from '@/lib/format'
+import { formatRange, marketCodeFromParcelNumber, scoreVar } from '@/lib/format'
+import { screeningDisplay } from '@/lib/screening'
+import { rankedDealKillers } from '@/lib/deal-killers'
 import type { VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 
@@ -106,6 +108,8 @@ const riskPillar = computed<Pillar>(() => {
 
 const pillars = computed(() => [buildPillar.value, valuePillar.value, riskPillar.value])
 const accent = computed(() => scoreVar(props.verdict.opportunity_score))
+const screening = computed(() => screeningDisplay(props.verdict.recommendation))
+const dealKillers = computed(() => rankedDealKillers(props.verdict.risk_flags))
 </script>
 
 <template>
@@ -126,16 +130,38 @@ const accent = computed(() => scoreVar(props.verdict.opportunity_score))
 
       <div class="hero-headline">
         <div class="hero-overline">
-          Opportunity score
+          Screening result
           <q-icon name="info" size="13px" class="hero-info" />
-          <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
-            A 0–100 blend of buildability (60%) and low risk (40%). Higher means more upside with
-            fewer obstacles. Informational, not advice.
+          <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
+            A preliminary screening result from deterministic rules over the parcel's own data.
+            Informational only — it is not investment advice or a professional determination.
           </q-tooltip>
         </div>
-        <div class="hero-label">{{ scoreLabel(verdict.opportunity_score) }}</div>
-        <div class="hero-summary">{{ verdict.summary }}</div>
-        <button type="button" class="why-link" @click="emit('explain')">Why this score?</button>
+        <div v-if="screening" class="hero-label" :class="`text-${screening.tone}`">
+          <q-icon :name="screening.icon" size="20px" class="q-mr-xs" />{{ screening.label }}
+        </div>
+        <div v-else class="hero-label text-grey-6" data-test="no-recommendation">
+          Not yet screened
+        </div>
+        <div class="hero-summary">
+          {{ verdict.recommendation_reason ?? verdict.summary }}
+        </div>
+        <div v-if="dealKillers.length" class="killers" data-test="deal-killers">
+          <q-chip
+            v-for="flag in dealKillers"
+            :key="flag.code"
+            dense
+            square
+            outline
+            :color="flag.severity === 'high' ? 'negative' : 'warning'"
+            icon="report_problem"
+          >
+            {{ flag.label }}
+          </q-chip>
+        </div>
+        <button type="button" class="why-link" @click="emit('explain')">
+          Why this result? · Opportunity score {{ Math.round(verdict.opportunity_score) }}
+        </button>
       </div>
     </div>
 
@@ -218,6 +244,12 @@ const accent = computed(() => scoreVar(props.verdict.opportunity_score))
 }
 .why-link:hover {
   text-decoration: underline;
+}
+.killers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
 }
 .pillars {
   display: grid;

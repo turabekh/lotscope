@@ -40,4 +40,7 @@ class VerdictResult(BaseModel):
     risk_flags: list[dict[str, Any]]
     sources: list[dict[str, Any]]
     field_trust: FieldTrust = {}
+    recommendation: str | None = None
+    recommendation_reason: str | None = None
+    decision_version: str | None = None
     computed_at: datetime

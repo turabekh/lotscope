@@ -133,3 +133,87 @@ describe('VerdictHero', () => {
     expect(wrapper.text()).not.toContain('based on available Harrisburg sources')
   })
 })
+
+describe('VerdictHero screening result', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+  })
+
+  it('leads with the screening result and its reason, not the composite score', () => {
+    const wrapper = mountHero(
+      makeVerdict({
+        recommendation: 'strong_candidate',
+        recommendation_reason: 'Appears dimensionally eligible with a projected margin of 24%.',
+      }),
+    )
+    const text = wrapper.text()
+    expect(text).toContain('Screening result')
+    expect(text).toContain('Strong candidate')
+    expect(text).toContain('projected margin of 24%')
+  })
+
+  it('says a parcel is not yet screened rather than inventing a result', () => {
+    const wrapper = mountHero(makeVerdict({ recommendation: null, recommendation_reason: null }))
+    expect(wrapper.find('[data-test="no-recommendation"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Strong candidate')
+  })
+
+  it('never presents insufficient data as a positive result', () => {
+    const wrapper = mountHero(
+      makeVerdict({
+        recommendation: 'insufficient_data',
+        recommendation_reason: 'Core buildability could not be established.',
+      }),
+    )
+    const text = wrapper.text()
+    expect(text).toContain('Insufficient data')
+    expect(text).not.toContain('Strong candidate')
+  })
+
+  it('surfaces at most three deal killers in the hero', () => {
+    const wrapper = mountHero(
+      makeVerdict({
+        recommendation: 'worth_investigating',
+        risk_flags: [
+          {
+            code: 'no_street_access',
+            label: 'No street access',
+            severity: 'high',
+            detail: '',
+            source: '',
+          },
+          {
+            code: 'tax_delinquent',
+            label: 'Tax delinquent',
+            severity: 'high',
+            detail: '',
+            source: '',
+          },
+          {
+            code: 'flood_zone',
+            label: 'Flood zone',
+            severity: 'medium',
+            detail: '',
+            source: '',
+          },
+          {
+            code: 'historic_district',
+            label: 'Historic',
+            severity: 'medium',
+            detail: '',
+            source: '',
+          },
+        ],
+      }),
+    )
+    const chips = wrapper.find('[data-test="deal-killers"]').findAllComponents({ name: 'QChip' })
+    expect(chips.length).toBe(3)
+    expect(wrapper.text()).toContain('No street access')
+  })
+
+  it('keeps the opportunity score reachable but demoted', () => {
+    const wrapper = mountHero(makeVerdict({ recommendation: 'worth_investigating' }))
+    expect(wrapper.text()).toContain('Opportunity score')
+  })
+})
