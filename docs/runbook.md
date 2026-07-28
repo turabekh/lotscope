@@ -106,7 +106,11 @@ Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006.
 
 `scripts/backup-db.sh` runs **on the VM** and dumps the production database to object storage.
 
-`scripts/deploy.sh` calls it automatically **before migrations**, labelled `pre-migration`. A deploy that cannot back up does not migrate — the script exits non-zero and the deploy stops. This is deliberate: LR-P006 requires a production backup before risky migrations, and a requirement that can be forgotten is not a control.
+`scripts/deploy.sh` calls it automatically **before migrations**, labelled `pre-migration`, but **only when migrations are actually pending** — it compares the database's current Alembic revision against head and skips the backup when they match. Most deploys carry no schema change and do not need a 400 MB dump.
+
+If the revision comparison cannot be made, the backup is taken anyway. Failing towards a backup costs a minute; failing away from one costs the database.
+
+A deploy that cannot back up does not migrate — the script exits non-zero and the deploy stops. This is deliberate: LR-P006 requires a production backup before risky migrations, and a requirement that can be forgotten is not a control.
 
 The escape hatch is `SKIP_PRE_MIGRATION_BACKUP=1`, which prints a warning. It exists for a genuine emergency and leaves a trace in the deploy log.
 

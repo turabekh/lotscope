@@ -10,11 +10,31 @@ echo "==> Deploying ${GIT_SHA}"
 echo "==> Building images"
 docker compose --profile app build
 
+alembic_revisions() {
+  docker compose run --rm --entrypoint sh migrate -c \
+    'alembic current 2>/dev/null; echo "--"; alembic heads 2>/dev/null' 2>/dev/null || true
+}
+
+migrations_pending() {
+  local output current head
+  output="$(alembic_revisions)"
+  current="$(echo "${output}" | sed -n '1,/^--$/p' | grep -oE '^[0-9a-f]{12}' | head -1)"
+  head="$(echo "${output}" | sed -n '/^--$/,$p' | grep -oE '^[0-9a-f]{12}' | head -1)"
+  if [[ -z "${current}" || -z "${head}" ]]; then
+    echo "    could not determine migration state; assuming migrations are pending" >&2
+    return 0
+  fi
+  echo "    current ${current}, head ${head}" >&2
+  [[ "${current}" != "${head}" ]]
+}
+
 if [[ "${SKIP_PRE_MIGRATION_BACKUP:-0}" == "1" ]]; then
   echo "==> WARNING: pre-migration backup skipped by SKIP_PRE_MIGRATION_BACKUP=1"
-else
-  echo "==> Pre-migration backup"
+elif migrations_pending; then
+  echo "==> Migrations pending — taking a pre-migration backup"
   BACKUP_LABEL=pre-migration "$(dirname "${BASH_SOURCE[0]}")/backup-db.sh"
+else
+  echo "==> No migrations pending — skipping the pre-migration backup"
 fi
 
 echo "==> Stopping app services (frees DB locks for migration)"
