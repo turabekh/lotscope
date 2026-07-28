@@ -12,6 +12,7 @@ from lotscope.markets.models import Market
 from lotscope.neighborhoods.models import Neighborhood
 from lotscope.ops.models import MarketGateItem, MarketStats, OpsAlertState
 from lotscope.parcels.models import Parcel
+from lotscope.policies.models import PolicyDocument
 from lotscope.risk.models import FloodZone, LiEvent, TaxStatus
 from lotscope.streets.models import StreetCenterline
 from lotscope.underwriting.models import UnderwritingProfile
@@ -40,6 +41,7 @@ __all__ = [
     "ParcelAssemblage",
     "ParcelCorrection",
     "ParcelVerdict",
+    "PolicyDocument",
     "Rco",
     "Sale",
     "StreetCenterline",

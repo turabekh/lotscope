@@ -1291,3 +1291,33 @@ export interface UnderwritingProfile {
   assumptions: Record<string, number>
   buy_box: BuyBox
 }
+
+export interface CorrectionRecord {
+  id: number
+  parcel_number: string
+  market_code: string
+  section: string
+  field_name: string | null
+  description: string
+  status: string
+  resolution: string | null
+  resolved_at: string | null
+  created_at: string
+}
+
+export interface PolicySummary {
+  slug: string
+  title: string
+  published: boolean
+  version: string | null
+  effective_date: string | null
+}
+
+export interface PolicyDocument {
+  slug: string
+  title: string
+  body_markdown: string
+  version: string
+  effective_date: string
+  published_at: string
+}

@@ -156,6 +156,11 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/legal/:slug?',
+    name: 'legal',
+    component: () => import('@/pages/LegalPage.vue'),
+  },
+  {
     path: '/parcel/:market/:id',
     name: 'parcel',
     component: () => import('@/pages/ParcelDossierPage.vue'),

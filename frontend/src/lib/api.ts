@@ -1,4 +1,7 @@
 import type {
+  PolicyDocument,
+  PolicySummary,
+  CorrectionRecord,
   BuyBox,
   BuyBoxMatches,
   UnderwritingProfile,
@@ -407,6 +410,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     })
+  },
+  getPolicyIndex(): Promise<PolicySummary[]> {
+    return request('/policies')
+  },
+  getPolicy(slug: string): Promise<PolicyDocument> {
+    return request(`/policies/${encodeURIComponent(slug)}`)
+  },
+  getOwnCorrections(): Promise<CorrectionRecord[]> {
+    return request('/corrections')
   },
   getBuyBoxMatches(market: string, limit = 5): Promise<BuyBoxMatches> {
     return request(`/underwriting/matches?market=${encodeURIComponent(market)}&limit=${limit}`)

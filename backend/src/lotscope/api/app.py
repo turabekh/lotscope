@@ -12,6 +12,7 @@ from lotscope.api.assemblage import router as assemblage_router
 from lotscope.api.auth import router as auth_router
 from lotscope.api.billing import router as billing_router
 from lotscope.api.buyers import router as buyers_router
+from lotscope.api.corrections import router as corrections_router
 from lotscope.api.digests import router as digests_router
 from lotscope.api.errors import register_exception_handlers
 from lotscope.api.exports import router as exports_router
@@ -26,6 +27,7 @@ from lotscope.api.ops import router as ops_router
 from lotscope.api.outreach import router as outreach_router
 from lotscope.api.parcels import router as parcels_router
 from lotscope.api.pipeline import router as pipeline_router
+from lotscope.api.policies import router as policies_router
 from lotscope.api.push import router as push_router
 from lotscope.api.saved_searches import router as saved_searches_router
 from lotscope.api.search import router as search_router
@@ -74,7 +76,9 @@ def create_app() -> FastAPI:
     app.include_router(buyers_router)
     app.include_router(parcels_router)
     app.include_router(layers_router)
+    app.include_router(corrections_router)
     app.include_router(leads_router)
+    app.include_router(policies_router)
     app.include_router(markets_router)
     app.include_router(outreach_router)
     app.include_router(skiptrace_router)
