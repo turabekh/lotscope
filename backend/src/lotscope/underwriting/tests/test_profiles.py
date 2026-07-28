@@ -8,6 +8,7 @@ from lotscope.underwriting.service import (
     create_profile,
     default_assumptions,
     delete_profile,
+    find_buy_box_matches,
     get_profile,
     list_profiles,
     update_profile,
@@ -141,3 +142,89 @@ def test_a_negative_assumption_is_rejected() -> None:
 def test_a_blank_profile_name_is_rejected() -> None:
     with pytest.raises(ValueError, match="needs a name"):
         ProfileWrite(name="   ")
+
+
+async def _vacant_parcel_with_verdict(
+    db_session: AsyncSession,
+    parcel_number: str,
+    *,
+    mao: float | None,
+    margin: float | None,
+    units: int | None,
+    risk: float | None,
+) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, address, is_vacant) "
+            "VALUES (:pn, 'phl', '1 Test St', true)"
+        ),
+        {"pn": parcel_number},
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel_verdict (parcel_number, verdict_version, opportunity_score, "
+            "max_allowable_offer, est_margin, by_right_units, risk_score) "
+            "VALUES (:pn, 'v8', 70, :mao, :margin, :units, :risk)"
+        ),
+        {"pn": parcel_number, "mao": mao, "margin": margin, "units": units, "risk": risk},
+    )
+    await db_session.flush()
+
+
+async def test_matches_without_a_default_profile_report_no_profile(
+    db_session: AsyncSession,
+) -> None:
+    owner = await _user(db_session, "nobox@x.co")
+    result = await find_buy_box_matches(db_session, owner, market="phl", limit=10)
+    assert result.has_profile is False
+    assert result.total == 0
+    assert result.matches == []
+
+
+async def test_matches_apply_the_default_buy_box(db_session: AsyncSession) -> None:
+    owner = await _user(db_session, "box@x.co")
+    await create_profile(
+        db_session,
+        owner,
+        ProfileWrite(
+            name="Box",
+            is_default=True,
+            assumptions={},
+            buy_box=BuyBox(max_acquisition_price=150_000.0, min_margin=0.20),
+        ),
+    )
+    await _vacant_parcel_with_verdict(
+        db_session, "phl:match", mao=120_000.0, margin=0.30, units=3, risk=10.0
+    )
+    await _vacant_parcel_with_verdict(
+        db_session, "phl:tooexpensive", mao=400_000.0, margin=0.30, units=3, risk=10.0
+    )
+
+    result = await find_buy_box_matches(db_session, owner, market="phl", limit=10)
+    assert result.has_profile is True
+    assert [m.parcel_number for m in result.matches] == ["phl:match"]
+    assert result.criteria_applied == ["max_acquisition_price", "min_margin"]
+
+
+async def test_unknown_values_never_match_a_stated_criterion(db_session: AsyncSession) -> None:
+    owner = await _user(db_session, "unknown@x.co")
+    await create_profile(
+        db_session,
+        owner,
+        ProfileWrite(
+            name="Box",
+            is_default=True,
+            assumptions={},
+            buy_box=BuyBox(max_acquisition_price=150_000.0, min_margin=0.20),
+        ),
+    )
+    await _vacant_parcel_with_verdict(
+        db_session, "phl:nomao", mao=None, margin=0.30, units=3, risk=10.0
+    )
+    await _vacant_parcel_with_verdict(
+        db_session, "phl:nomargin", mao=100_000.0, margin=None, units=3, risk=10.0
+    )
+
+    result = await find_buy_box_matches(db_session, owner, market="phl", limit=10)
+    assert result.total == 0
+    assert result.matches == []

@@ -1,4 +1,7 @@
 import type {
+  BuyBox,
+  BuyBoxMatches,
+  UnderwritingProfile,
   AdminOverview,
   AdminUserUpdate,
   AdminUsersResponse,
@@ -402,6 +405,37 @@ export const api = {
   reportCorrection(parcelNumber: string, payload: CorrectionCreate): Promise<unknown> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/corrections`, {
       method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+  getBuyBoxMatches(market: string, limit = 5): Promise<BuyBoxMatches> {
+    return request(`/underwriting/matches?market=${encodeURIComponent(market)}&limit=${limit}`)
+  },
+  listUnderwritingProfiles(): Promise<UnderwritingProfile[]> {
+    return request('/underwriting/profiles')
+  },
+  createUnderwritingProfile(payload: {
+    name: string
+    is_default: boolean
+    assumptions: Record<string, number>
+    buy_box: BuyBox
+  }): Promise<UnderwritingProfile> {
+    return request('/underwriting/profiles', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+  updateUnderwritingProfile(
+    id: number,
+    payload: {
+      name: string
+      is_default: boolean
+      assumptions: Record<string, number>
+      buy_box: BuyBox
+    },
+  ): Promise<UnderwritingProfile> {
+    return request(`/underwriting/profiles/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(payload),
     })
   },
