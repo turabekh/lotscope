@@ -1,6 +1,6 @@
 # ADR-0069 — Underwriting assumption contract
 
-Status: proposed (2026-07-28)
+Status: accepted (2026-07-28)
 
 Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-U001–U006 (Slice LR-6, sub-slice **LR-6A** only). Backlog ticket LR-B-021. Amends the deal methodology in ADR-0022 and ADR-0045. Depends on ADR-0065.
 
