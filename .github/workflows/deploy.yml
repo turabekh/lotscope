@@ -2,6 +2,14 @@ name: Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      skip_pre_migration_backup:
+        description: >-
+          Deploy without a pre-migration backup. Applies only to this run and is
+          recorded in the run parameters. Use when the backup path is blocked and
+          the migration cannot wait.
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-production
@@ -18,7 +26,8 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           command_timeout: 30m
-          envs: BACKUP_BUCKET
+          envs: BACKUP_BUCKET,SKIP_PRE_MIGRATION_BACKUP
           script: ~/lotscope/deploy.sh
         env:
           BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+          SKIP_PRE_MIGRATION_BACKUP: ${{ inputs.skip_pre_migration_backup && '1' || '0' }}

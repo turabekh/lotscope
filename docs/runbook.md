@@ -112,7 +112,11 @@ If the revision comparison cannot be made, the backup is taken anyway. Failing t
 
 A deploy that cannot back up does not migrate — the script exits non-zero and the deploy stops. This is deliberate: LR-P006 requires a production backup before risky migrations, and a requirement that can be forgotten is not a control.
 
-The escape hatch is `SKIP_PRE_MIGRATION_BACKUP=1`, which prints a warning. It exists for a genuine emergency and leaves a trace in the deploy log.
+The escape hatch is the **`skip_pre_migration_backup`** input on the Deploy workflow, which sets `SKIP_PRE_MIGRATION_BACKUP=1` for that run only and prints a warning into the log.
+
+It is a per-run input rather than a repository variable on purpose. A variable would persist silently and disable the gate on every later deploy, which is how a safety control stops existing without anyone deciding to remove it. As an input, each skip is an explicit choice recorded in that run's parameters.
+
+**Used once on 2026-07-28** to apply the four migrations blocked by the `devstorage.read_only` scope. That deploy carried no backup. If those migrations need reverting, `downgrade` is the only route and `underwriting_profile` and `parcel_correction` would lose any rows written since.
 
 ## Configuration
 
