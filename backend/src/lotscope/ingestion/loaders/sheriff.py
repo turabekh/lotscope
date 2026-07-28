@@ -81,6 +81,17 @@ def _staging_row(row: dict[str, Any], run_id: int) -> dict[str, Any]:
     }
 
 
+def _skip_detail(fetched: int, unidentified: int, out_of_market: int) -> str | None:
+    parts = []
+    if out_of_market:
+        parts.append(f"{out_of_market} outside this market")
+    if unidentified:
+        parts.append(f"{unidentified} without a parcel id")
+    if not parts:
+        return None
+    return f"{unidentified + out_of_market} of {fetched} rows skipped: " + ", ".join(parts)
+
+
 async def load_sheriff(
     session: AsyncSession,
     source: SheriffSource,
@@ -96,11 +107,15 @@ async def load_sheriff(
     fetched = await source.fetch()
     mapped: list[dict[str, Any]] = []
     raw_rows: list[dict[str, Any]] = []
+    unidentified = 0
+    out_of_market = 0
     for raw in fetched:
         row = to_sheriff_row(SheriffSaleRecord.model_validate(raw))
         if row is None:
+            unidentified += 1
             continue
         if known_parcels is not None and row["parcel_number"] not in known_parcels:
+            out_of_market += 1
             continue
         mapped.append(row)
         raw_rows.append(
@@ -113,7 +128,7 @@ async def load_sheriff(
         )
 
     total = len(mapped)
-    skipped = len(fetched) - total
+    skipped = unidentified + out_of_market
     if mapped:
         if known_parcels is None:
             parcel_stubs = [
@@ -132,8 +147,15 @@ async def load_sheriff(
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count
     await session.flush()
-    _logger.info("sheriff_load_complete", fetched=len(fetched), kept=total, skipped=skipped)
-    detail = f"{skipped} of {len(fetched)} rows skipped (unresolved OPA/case)" if skipped else None
+    _logger.info(
+        "sheriff_load_complete",
+        fetched=len(fetched),
+        kept=total,
+        skipped=skipped,
+        unidentified=unidentified,
+        out_of_market=out_of_market,
+    )
+    detail = _skip_detail(len(fetched), unidentified, out_of_market)
     await record_freshness(
         session,
         SHERIFF_DATASET,
