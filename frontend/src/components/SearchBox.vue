@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import type { ParcelSearchResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 
+const props = withDefaults(defineProps<{ autofocus?: boolean }>(), { autofocus: false })
 const emit = defineEmits<{ select: [parcelNumber: string] }>()
 
 const market = useMarketStore()
@@ -49,6 +50,7 @@ function choose(parcelNumber: string): void {
     <q-input
       :model-value="query"
       :loading="loading"
+      :autofocus="props.autofocus"
       dense
       outlined
       placeholder="Search address, owner, or parcel #"

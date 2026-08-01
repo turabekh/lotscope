@@ -5,10 +5,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { launchStatusDisplay } from '@/lib/market-status'
 import { MARKETS, MARKET_LABELS, type Market, useMarketStore } from '@/stores/market'
 
-withDefaults(defineProps<{ collapsed?: boolean; variant?: 'sidebar' | 'pill' }>(), {
-  collapsed: false,
-  variant: 'sidebar',
-})
+const props = withDefaults(
+  defineProps<{ collapsed?: boolean; variant?: 'sidebar' | 'pill'; compact?: boolean }>(),
+  {
+    collapsed: false,
+    variant: 'sidebar',
+    compact: false,
+  },
+)
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +20,9 @@ const market = useMarketStore()
 
 const sheet = ref(false)
 const activeLabel = computed(() => MARKET_LABELS[market.active])
+const pillLabel = computed(() =>
+  props.compact ? (market.activeInfo?.code ?? market.active).toUpperCase() : activeLabel.value,
+)
 const activeStatus = computed(() => launchStatusDisplay(market.statusOf(market.active)))
 const options = computed(() =>
   MARKETS.map((value) => ({
@@ -51,9 +58,9 @@ function switchTo(next: Market): void {
     @click="sheet = true"
   >
     <q-icon name="location_on" size="16px" class="switcher-pin" />
-    <span class="pill-label">{{ activeLabel }}</span>
+    <span class="pill-label">{{ pillLabel }}</span>
     <q-badge
-      v-if="activeStatus.badge"
+      v-if="activeStatus.badge && activeStatus.presentation !== 'flagship'"
       :color="activeStatus.tone"
       text-color="white"
       :label="activeStatus.badge"
@@ -178,6 +185,10 @@ function switchTo(next: Market): void {
 }
 .pill-label {
   font-size: 12px;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .switcher-pin {
   color: var(--lot-accent);
