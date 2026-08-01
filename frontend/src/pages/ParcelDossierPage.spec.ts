@@ -28,10 +28,30 @@ describe('ParcelDossierPage', () => {
     await router.isReady()
 
     const wrapper = mount(ParcelDossierPage, {
-      global: { plugins: [router, [Quasar, {}]], stubs: { ParcelDossier: true } },
+      global: {
+        plugins: [router, [Quasar, {}]],
+        stubs: { ParcelDossier: true, MapView: true },
+      },
     })
 
     expect(selectSpy).toHaveBeenCalledWith('000012345')
     expect(wrapper.find('.dossier-frame').exists()).toBe(true)
+  })
+
+  it('puts the map beside the dossier when there is room for it', async () => {
+    const store = useParcelStore()
+    vi.spyOn(store, 'select').mockResolvedValue()
+    const router = makeRouter()
+    await router.push('/parcel/philadelphia/000012345')
+    await router.isReady()
+
+    const wrapper = mount(ParcelDossierPage, {
+      global: {
+        plugins: [router, [Quasar, {}]],
+        stubs: { ParcelDossier: true, MapView: true },
+      },
+    })
+
+    expect(wrapper.find('[data-test="dossier-map"]').exists()).toBe(true)
   })
 })

@@ -42,6 +42,9 @@ const { detail, verdict, checklist, nextSheriffSale, loading, error, errorStatus
   storeToRefs(store)
 const watchlist = useWatchlistStore()
 const pipeline = usePipelineStore()
+
+const props = withDefaults(defineProps<{ showBack?: boolean }>(), { showBack: false })
+const emit = defineEmits<{ back: [] }>()
 const compare = useCompareStore()
 const market = useMarketStore()
 const $q = useQuasar()
@@ -173,7 +176,7 @@ function toggleCompare(): void {
     $q.notify({ message: 'Removed from compare', color: 'grey-8', icon: 'compare_arrows' })
     return
   }
-  if (compare.add(detail.value.parcel_number)) {
+  if (compare.add(detail.value.parcel_number, detail.value.address)) {
     $q.notify({ message: 'Added to compare', color: 'positive', icon: 'compare_arrows' })
   } else {
     $q.notify({
@@ -219,86 +222,102 @@ async function toggleSave(): Promise<void> {
 
     <template v-if="detail">
       <header class="panel-header">
-        <div class="header-row">
-          <div class="header-id">
-            <div
-              class="addr ellipsis-2"
-              role="button"
-              tabindex="0"
-              @click="store.focusOnMap()"
-              @keyup.enter="store.focusOnMap()"
-            >
-              {{ detail.address ?? detail.parcel_number }}
-              <q-tooltip anchor="bottom left" self="top left">Show on map</q-tooltip>
-            </div>
-            <div class="pid lot-numeric">Parcel {{ detail.local_key ?? detail.parcel_number }}</div>
-          </div>
+        <div class="action-row">
+          <q-btn
+            v-if="props.showBack"
+            flat
+            dense
+            round
+            icon="chevron_left"
+            aria-label="Back"
+            class="back-btn"
+            data-test="dossier-back"
+            @click="emit('back')"
+          />
+          <q-space />
           <div class="header-actions">
             <q-btn
-              v-if="!currentDeal"
-              outline
+              class="act"
+              :class="{ 'act-on': isSaved }"
+              flat
               dense
               no-caps
               size="sm"
-              color="primary"
+              :icon="isSaved ? 'bookmark' : 'bookmark_border'"
+              :label="isSaved ? 'Saved' : 'Save'"
+              :loading="saving"
+              :aria-label="isSaved ? 'Remove from watchlist' : 'Save to watchlist'"
+              data-test="parcel-action-save"
+              @click="toggleSave"
+            />
+            <q-btn
+              class="act"
+              :class="{ 'act-on': inCompare }"
+              flat
+              dense
+              no-caps
+              size="sm"
+              icon="compare_arrows"
+              :label="inCompare ? 'Comparing' : 'Compare'"
+              :aria-label="inCompare ? 'In compare' : 'Add to compare'"
+              data-test="parcel-action-compare"
+              @click="toggleCompare"
+            />
+            <q-btn
+              v-if="!currentDeal"
+              class="act"
+              flat
+              dense
+              no-caps
+              size="sm"
               icon="add_task"
               label="Pipeline"
               :loading="addingDeal"
+              data-test="parcel-action-pipeline"
               @click="addToPipeline"
             />
             <q-btn
               v-else
+              class="act act-on"
               flat
               dense
               no-caps
               size="sm"
-              color="primary"
               icon="view_kanban"
               :label="dealStageLabel"
+              data-test="parcel-action-pipeline"
               :to="{ name: 'pipeline', params: { market: market.active } }"
             />
             <q-btn
+              class="act"
               flat
               dense
-              round
+              no-caps
               size="sm"
-              :color="inCompare ? 'primary' : 'grey-8'"
-              icon="compare_arrows"
-              :aria-label="inCompare ? 'In compare' : 'Add to compare'"
-              @click="toggleCompare"
-            >
-              <q-tooltip>{{
-                inCompare ? 'In compare — click to remove' : 'Add to compare'
-              }}</q-tooltip>
-            </q-btn>
-            <q-btn
-              flat
-              dense
-              round
-              size="sm"
-              color="grey-8"
               icon="picture_as_pdf"
+              label="Report"
               :loading="downloadingDossier"
               aria-label="Download PDF dossier"
+              data-test="parcel-action-report"
               @click="downloadDossier"
-            >
-              <q-tooltip>Download PDF dossier</q-tooltip>
-            </q-btn>
-            <q-btn
-              round
-              unelevated
-              :color="isSaved ? 'amber-7' : 'grey-3'"
-              :text-color="isSaved ? 'white' : 'grey-8'"
-              :icon="isSaved ? 'bookmark' : 'bookmark_border'"
-              size="sm"
-              :loading="saving"
-              :aria-label="isSaved ? 'Remove from watchlist' : 'Save to watchlist'"
-              @click="toggleSave"
-            >
-              <q-tooltip>{{ isSaved ? 'Saved — click to remove' : 'Save to watchlist' }}</q-tooltip>
-            </q-btn>
+            />
           </div>
         </div>
+
+        <div class="header-id">
+          <div
+            class="addr ellipsis-2"
+            role="button"
+            tabindex="0"
+            @click="store.focusOnMap()"
+            @keyup.enter="store.focusOnMap()"
+          >
+            {{ detail.address ?? detail.parcel_number }}
+            <q-tooltip anchor="bottom left" self="top left">Show on map</q-tooltip>
+          </div>
+          <div class="pid lot-numeric">Parcel {{ detail.local_key ?? detail.parcel_number }}</div>
+        </div>
+
         <div class="chips">
           <q-chip dense square color="primary" text-color="white" class="text-weight-medium">
             {{ detail.resolved_zoning_code ?? detail.base_zoning_code ?? 'No zoning' }}
@@ -563,13 +582,17 @@ async function toggleSave(): Promise<void> {
   flex: 0 0 auto;
   background: var(--lot-surface);
   border-bottom: 1px solid var(--lot-border);
-  padding: 12px 14px 10px;
+  padding: 6px 14px 10px;
   z-index: 2;
 }
-.header-row {
+.action-row {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 2px;
+}
+.back-btn {
+  color: var(--lot-muted);
+  flex: none;
 }
 .header-id {
   min-width: 0;
@@ -578,8 +601,33 @@ async function toggleSave(): Promise<void> {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   flex: 0 0 auto;
+}
+.act {
+  color: var(--lot-muted);
+  border-radius: var(--lot-radius-sm);
+  padding: 4px 8px;
+  min-height: 44px;
+}
+.act.act-on {
+  color: var(--lot-accent-ink, var(--lot-accent));
+  background: var(--lot-accent-soft);
+}
+@media (max-width: 720px) {
+  .header-actions {
+    flex: 1 1 auto;
+    gap: 0;
+  }
+  .act {
+    flex: 1 1 0;
+    padding: 4px 2px;
+  }
+  .act :deep(.q-btn__content) {
+    flex-direction: column;
+    gap: 1px;
+    font-size: 10.5px;
+  }
 }
 .addr {
   font-size: 17px;

@@ -27,8 +27,42 @@ describe('CompareTray', () => {
     const wrapper = mountTray()
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.compare-tray').exists()).toBe(true)
-    expect(wrapper.find('.tray-count').text()).toBe('1 / 4')
+    expect(wrapper.find('.tray-count').text()).toBe('1 of 4 selected')
     expect(wrapper.findAllComponents({ name: 'QChip' })).toHaveLength(1)
+  })
+
+  it('says what is needed while comparing is not yet possible', async () => {
+    const compare = useCompareStore()
+    compare.add('phl:001')
+    const wrapper = mountTray()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.tray-hint').text()).toContain('Add one more lot')
+  })
+
+  it('says it is ready once two lots are selected', async () => {
+    const compare = useCompareStore()
+    compare.add('phl:001')
+    compare.add('phl:002')
+    const wrapper = mountTray()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.tray-hint').text()).toContain('Ready')
+  })
+
+  it('names a lot by its address when one was recorded', async () => {
+    const compare = useCompareStore()
+    compare.add('phl:001', '616 E INDIANA AVE')
+    const wrapper = mountTray()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('616 E INDIANA AVE')
+  })
+
+  it('falls back to the local key rather than showing a prefixed id', async () => {
+    const compare = useCompareStore()
+    compare.add('phl:331001000')
+    const wrapper = mountTray()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('331001000')
+    expect(wrapper.text()).not.toContain('phl:331001000')
   })
 
   it('disables Compare below two selections and enables it at two', async () => {
