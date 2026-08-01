@@ -73,6 +73,7 @@ const filters = useFiltersStore()
 const { vacantOnly, useClasses, colorMode, show3d, basemap } = storeToRefs(filters)
 const FEET_TO_METERS = 0.3048
 const OSM_TILES = ['https://tile.openstreetmap.org/{z}/{x}/{y}.png']
+const OSM_MAX_ZOOM = 19
 const OSM_ATTRIBUTION = '© OpenStreetMap contributors'
 const attributionText = ref(OSM_ATTRIBUTION)
 let attributionTimer: ReturnType<typeof setTimeout> | undefined
@@ -133,6 +134,7 @@ const baseStyle: StyleSpecification = {
       type: 'raster',
       tiles: OSM_TILES,
       tileSize: 256,
+      maxzoom: OSM_MAX_ZOOM,
       attribution: OSM_ATTRIBUTION,
     },
   },
@@ -143,11 +145,13 @@ async function applyBasemap(id: 'satellite' | 'roadmap' | 'osm'): Promise<void> 
   if (!map) return
   let tiles = OSM_TILES
   let tileSize = 256
+  let maxzoom: number | undefined = OSM_MAX_ZOOM
   if (id === 'satellite' || id === 'roadmap') {
     try {
       const session = await api.getBasemapSession(id)
       tiles = [session.tile_url]
       tileSize = session.tile_size
+      maxzoom = undefined
     } catch {
       if (basemap.value !== 'osm') basemap.value = 'osm'
       return
@@ -156,7 +160,12 @@ async function applyBasemap(id: 'satellite' | 'roadmap' | 'osm'): Promise<void> 
   if (!map) return
   if (map.getLayer('basemap-layer')) map.removeLayer('basemap-layer')
   if (map.getSource('basemap')) map.removeSource('basemap')
-  map.addSource('basemap', { type: 'raster', tiles, tileSize })
+  map.addSource('basemap', {
+    type: 'raster',
+    tiles,
+    tileSize,
+    ...(maxzoom === undefined ? {} : { maxzoom }),
+  })
   const below = map.getLayer('parcels-fill') ? 'parcels-fill' : undefined
   map.addLayer({ id: 'basemap-layer', type: 'raster', source: 'basemap' }, below)
   void updateAttribution()

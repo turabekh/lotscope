@@ -20,6 +20,7 @@ import HistoricPanel from '@/components/HistoricPanel.vue'
 import MarketContextPanel from '@/components/MarketContextPanel.vue'
 import BuyersNearbyPanel from '@/components/BuyersNearbyPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
+import RiskPanel from '@/components/RiskPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
 import UnderwritingPanel from '@/components/UnderwritingPanel.vue'
@@ -110,7 +111,6 @@ const dealEmpty = computed(
   () =>
     !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.marketContext,
 )
-const riskEmpty = computed(() => !store.ownerPortfolio)
 
 const MOTIVATION_CHIP: Partial<
   Record<DistressTier, { label: string; color: string; icon: string }>
@@ -516,11 +516,8 @@ async function toggleSave(): Promise<void> {
           </q-tab-panel>
 
           <q-tab-panel name="risk" class="tab-pane">
+            <RiskPanel />
             <OwnerPortfolioPanel />
-            <div v-if="riskEmpty" class="tab-empty">
-              <q-icon name="verified_user" size="26px" />
-              <span>No owner-portfolio data surfaced for this lot.</span>
-            </div>
           </q-tab-panel>
 
           <q-tab-panel name="docs" class="tab-pane">

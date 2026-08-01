@@ -39,6 +39,9 @@ async function skipTrace(): Promise<void> {
 }
 
 const show = computed(() => ownerPortfolio.value !== null && ownerPortfolio.value.total_count > 1)
+const soleHolding = computed(
+  () => ownerPortfolio.value !== null && ownerPortfolio.value.total_count <= 1,
+)
 const moreCount = computed(() => {
   const p = ownerPortfolio.value
   if (p === null) return 0
@@ -51,7 +54,33 @@ function selectParcel(parcelNumber: string): void {
 </script>
 
 <template>
-  <q-card v-if="show && ownerPortfolio" flat bordered class="rounded-borders">
+  <q-card
+    v-if="soleHolding && ownerPortfolio"
+    flat
+    bordered
+    class="rounded-borders"
+    data-test="owner-sole-holding"
+  >
+    <q-card-section class="q-py-sm">
+      <div class="section-title">
+        <q-icon name="account_balance_wallet" size="18px" class="q-mr-xs" />Owner portfolio
+      </div>
+      <div class="owner-name ellipsis">{{ ownerPortfolio.owner }}</div>
+      <div class="sole-note">
+        This is the only Philadelphia parcel recorded to this owner, so there is no assemblage or
+        portfolio signal here. Owner names are matched as recorded, so spelling variants may split a
+        portfolio.
+      </div>
+    </q-card-section>
+  </q-card>
+
+  <q-card
+    v-else-if="show && ownerPortfolio"
+    flat
+    bordered
+    class="rounded-borders"
+    data-test="owner-portfolio-list"
+  >
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="account_balance_wallet" size="18px" class="q-mr-xs" />Owner portfolio
@@ -160,6 +189,12 @@ function selectParcel(parcelNumber: string): void {
   font-weight: 600;
   font-size: 14px;
   color: var(--lot-ink);
+}
+.sole-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--lot-muted);
+  margin-top: 4px;
 }
 .trace-card {
   padding: 8px 10px;
