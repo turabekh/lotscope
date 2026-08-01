@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin mailpit
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set gold-set-select recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -41,6 +41,9 @@ revision: ## Create a migration (use: make revision m="message")
 
 seed: ## Seed reference data (zoning standards for every market)
 	cd $(BACKEND) && uv run python -m lotscope.zoning.seed
+
+gold-set-select: ## Select the gold-set parcels for review (writes the gitignored real set)
+	cd $(BACKEND) && uv run python -m lotscope.goldset.select_cli $(ARGS)
 
 gold-set: ## Evaluate the Philadelphia gold set against current verdicts (FILE=... to override)
 	cd $(BACKEND) && uv run python -m lotscope.goldset.cli $(FILE)

@@ -134,7 +134,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-007 — Gold-set structure and review workflow
 
 - **PRD requirement:** LR-Q001, LR-Q002
-- **Priority:** P1 · **Status:** **Partial (reconciled 2026-08-01)** — format, evaluator (`make gold-set`) and category schema exist; **3 synthetic records against the required 100**. This is the G4 blocker
+- **Priority:** P1 · **Status:** **Done 2026-08-01** — `make gold-set-select` selects **118 parcels covering all 17 LR-Q001 categories**, deterministically and from source tables rather than our own flags; record format supports LR-Q003 severity; workflow documented. Expected facts and professional review are LR-B-008
 - **Problem:** No Philadelphia gold set exists. The 25-parcel packets that exist are Harrisburg and Pittsburgh (`docs/wave0-hbg-25parcel-packet.md`, `docs/wave1-pgh-25parcel-packet.md`), both still pending reviewer sign-off.
 - **User impact:** Without it, no defensible claim that Philadelphia output is correct — and §16 makes this a public-launch gate.
 - **Current implementation:** Prior-wave packet format only.

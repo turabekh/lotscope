@@ -98,3 +98,10 @@ def test_a_malformed_line_names_the_line_number(tmp_path: Path) -> None:
     path.write_text(json.dumps(_case()) + "\n{not json}\n", encoding="utf-8")
     with pytest.raises(GoldSetError, match=":2 "):
         load_cases(path)
+
+
+def test_a_case_with_no_expectations_is_distinguishable_from_a_clean_one() -> None:
+    assert ExpectedFacts().is_empty()
+    assert not ExpectedFacts(district_code="RSA-5").is_empty()
+    assert not ExpectedFacts(expected_risk_flags=["flood_zone"]).is_empty()
+    assert not ExpectedFacts(can_build_by_right=False).is_empty()
