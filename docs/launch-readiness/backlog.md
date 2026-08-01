@@ -88,7 +88,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-005 — Source freshness at the point of use
 
 - **PRD requirement:** §8.3, §6.5
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `GET /parcels/{n}/freshness` returns all eight §8.3 sources; `FreshnessPanel.vue` renders them
 - **Problem:** `dataset_freshness` is exposed only through the admin API. The customer-facing `DataCoverageChip` shows a static per-market note, not data age.
 - **User impact:** A developer underwriting against a six-month-old assessment or a stale L&I feed has no way to know. §6.5 requires source age near the result it qualifies.
 - **Current implementation:** `backend/src/lotscope/api/admin.py:58` (admin only); `frontend/src/components/DataCoverageChip.vue:8-23` (static note + pilot flag).
@@ -111,7 +111,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-006 — Philadelphia flagship framing and pilot demotion
 
 - **PRD requirement:** §0.1–0.2, §5.1, §24
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `MarketSwitcher` shows a `flagship` badge for Philadelphia and `pilot` for the others
 - **Problem:** All four markets present as peers in the switcher; nothing in the UI communicates that Philadelphia is the commercial product and the others are pilots, beyond a coverage chip.
 - **User impact:** A paying Philadelphia customer who switches to a pilot market and finds thin data will discount the whole product.
 - **Current implementation:** `frontend/src/components/MarketSwitcher.vue`, `DataCoverageChip.vue:9` (`isPilot`), `markets/capabilities.py`, `market.launch_status`.
@@ -134,7 +134,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-007 — Gold-set structure and review workflow
 
 - **PRD requirement:** LR-Q001, LR-Q002
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Partial (reconciled 2026-08-01)** — format, evaluator (`make gold-set`) and category schema exist; **3 synthetic records against the required 100**. This is the G4 blocker
 - **Problem:** No Philadelphia gold set exists. The 25-parcel packets that exist are Harrisburg and Pittsburgh (`docs/wave0-hbg-25parcel-packet.md`, `docs/wave1-pgh-25parcel-packet.md`), both still pending reviewer sign-off.
 - **User impact:** Without it, no defensible claim that Philadelphia output is correct — and §16 makes this a public-launch gate.
 - **Current implementation:** Prior-wave packet format only.
@@ -171,7 +171,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-009 — Screening recommendation
 
 - **PRD requirement:** LR-V001
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `verdict/decision.py` + ADR-0067; all six labels present in production data
 - **Problem:** The dossier leads with `opportunity_score` and a `summary`; there is no pursue/investigate/pass label.
 - **User impact:** JTBD-2 asks for a useful screening result in ~30 seconds. Today the user synthesizes it from several panels.
 - **Current implementation:** `verdict/schemas.py:13-14`; `frontend/src/components/VerdictHero.vue`.
@@ -188,7 +188,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-010 — Likely development program
 
 - **PRD requirement:** LR-V002
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Needs criteria review (reconciled 2026-08-01)** — `recommended_units` and assumptions exist; the "verified rules vs calculated geometry" wording is a judgement the code does not settle
 - **Problem:** Program facts exist as separate numeric fields with no plain-language synthesis and no verified/calculated distinction.
 - **User impact:** The developer's first question is "what can I build here" — currently answered by assembling four fields.
 - **Current implementation:** `verdict/schemas.py:15-19`.
@@ -205,7 +205,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-011 — Financial headline with input origins
 
 - **PRD requirement:** LR-V003
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `DealPanel.vue` with "Show assumptions and formula"; every assumption carries an origin
 - **Problem:** Financial figures exist but do not identify whether each is a default, source-derived, calculated, or user-overridden value, and there is no direct path to the assumptions.
 - **User impact:** §6.4 forbids black-box financial results. A developer cannot act on an MAO whose inputs are invisible.
 - **Current implementation:** `verdict/schemas.py:20-29`; `deal/service.py:31` (`assumptions_source`).
@@ -222,7 +222,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-012 — Top deal killers
 
 - **PRD requirement:** LR-V004
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `lib/deal-killers.ts` + `rank_deal_killers`, deterministic and unit-tested
 - **Problem:** `risk_flags[]` is an unranked list; nothing surfaces the three that would change the decision.
 - **User impact:** JTBD-5 requires material risks be impossible to overlook.
 - **Current implementation:** `verdict/schemas.py:31`; `risk/`.
@@ -239,7 +239,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-013 — Required next checks
 
 - **PRD requirement:** LR-V005
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `ChecklistPanel.vue` + ADR-0068; gap-driven with `not_evaluated` surfaced
 - **Problem:** The existing checklist is driven by four domain codes plus market capability categories — not by the specific gaps and flags found on this parcel.
 - **User impact:** JTBD-5 asks that unknowns convert into a due-diligence list the developer can act on.
 - **Current implementation:** `checklist/logic.py` (14 `ChecklistItem` constructions across codes `zoning`, `valuation`, `deal`, `abatement`), `checklist/service.py`, `api/parcels.py:382`, `frontend/src/components/ChecklistPanel.vue`.
@@ -256,7 +256,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-014 — Visible score dimensions and naming
 
 - **PRD requirement:** §10.1, §10.2, §10.4
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `WhyScoreDrawer.vue` + `lib/verdict-explain.ts`; existing score preserved
 - **Problem:** `opportunity_score` is the sole headline. Buildability, deal, and risk scores exist, but acquisition access / seller motivation is not a verdict dimension — it lives in a separate `distress` endpoint.
 - **User impact:** A single composite hides which dimension drove the result, which §24 names an anti-pattern.
 - **Current implementation:** `verdict/schemas.py:12,13,28,30`; `distress/` separate.
@@ -277,7 +277,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-015 — Buildability check expansion
 
 - **PRD requirement:** LR-B001
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Partial (reconciled 2026-08-01)** — the five-value `ChecklistStatus` enum is shipped; **10 live checks against LR-B001's ~17**. Yards, unit density, parking and loading, utilities, deed restrictions, subdivision and master-plan are still absent
 - **Problem:** LR-B001 lists ~17 checks; the current checklist covers four domain codes plus capability categories. Yards, unit density, parking and loading, utilities, deed restrictions, subdivision, and master-plan requirement are not individually represented.
 - **User impact:** A developer cannot see which specific rule failed or was never evaluated — the core of JTBD-3.
 - **Current implementation:** `checklist/logic.py`, `checklist/schemas.py` (`ChecklistStatus = pass|warn|fail|info`).
@@ -294,7 +294,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-016 — Buildability confidence rules
 
 - **PRD requirement:** LR-B004
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Needs criteria review (reconciled 2026-08-01)** — the invariant lives in the PRD, not the ticket
 - **Problem:** `buildability_score` exists, but nothing prevents a high-confidence label coexisting with unresolved critical unknowns — which LR-B004 forbids.
 - **User impact:** False confidence on a parcel with unevaluated access or overlays is precisely the failure that costs money.
 - **Current implementation:** `verdict/schemas.py:12`; `deal/analysis.py` `Confidence`.
@@ -311,7 +311,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-017 — Historical variance context guardrails
 
 - **PRD requirement:** LR-B003
-- **Priority:** P2 · **Status:** Not started
+- **Priority:** P2 · **Status:** **Done (reconciled 2026-08-01)** — `VarianceOutlookLine.vue` + ADR-0050
 - **Problem:** ZBA variance outlook exists over 9,687 appeals; whether it withholds percentages on thin evidence and states sample size, relief type, window, and geography is unverified.
 - **User impact:** An approval percentage from insufficient matched evidence is worse than none.
 - **Current implementation:** ADR-0050, `zba/`, `frontend/src/components/VarianceOutlookLine.vue`.
@@ -367,7 +367,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-020 — Launch metrics dashboard
 
 - **PRD requirement:** LR-A004
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Partial (reconciled 2026-08-01)** — `OpsPage.vue` + `/admin/ops/*` endpoints exist; whether all 12 metrics are reportable is unverified
 - **Problem:** Admin dashboards report operational health, not activation, conversion, or retention.
 - **User impact:** Indirect — the owner cannot run §20 gate reviews.
 - **Current implementation:** `api/ops.py`, `ops/stats.py`, `ops/digest.py`.
@@ -387,7 +387,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-021 — Assumption inventory and calculation contract (LR-6A)
 
 - **PRD requirement:** LR-U001, LR-U002, LR-U006
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — underwriting returns 12 assumptions with origins; MAO exposes formula, inputs, exclusions
 - **Problem:** `DealAssumptions` carries **6** fields against ~40 required across six groups. Financing, time and carrying costs, itemised acquisition, construction, soft, and exit costs are all absent. MAO shows no formula, inputs, exclusions, or timestamp.
 - **User impact:** A developer cannot reproduce their own underwriting, which is the launch promise. §6.4 forbids black-box financial output.
 - **Current implementation:** `deal/analysis.py:15-20` (`construction_cost_per_sqft`, `soft_cost_pct`, `selling_cost_pct`, `target_margin`, `default_unit_sqft`, `max_unit_sqft`); `deal/service.py:26-47`; `api/parcels.py:467+` (5 override query params).
@@ -404,7 +404,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-022 — User underwriting profiles (LR-6B)
 
 - **PRD requirement:** LR-U005
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `/underwriting/profiles` CRUD, profile_id-addressable
 - **Problem:** No persisted buy box or underwriting profile exists. `BuyBoxPanel.vue` binds ephemeral filter and area-search stores; there is no `buy_box` concept in the backend.
 - **User impact:** The user re-enters criteria every session, and prior analyses cannot be reproduced.
 - **Current implementation:** `frontend/src/components/BuyBoxPanel.vue:6-11`; zero backend matches for `buy_box`.
@@ -421,7 +421,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-023 — Base, downside, and upside scenarios (LR-6C)
 
 - **PRD requirement:** LR-U003
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — three cases returned with a `case_version`
 - **Problem:** `build_scenarios` varies **unit count** (`deal/scenarios.py:19-33` — `Scenario` carries `units`, `by_right`), not case. There is no Base/Downside/Upside axis.
 - **User impact:** A developer cannot see downside exposure, which is the risk half of the underwriting decision.
 - **Current implementation:** `deal/scenarios.py`.
@@ -438,7 +438,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-024 — Sensitivity analysis (LR-6D)
 
 - **PRD requirement:** LR-U004
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — 2-D table (exit x cost multipliers) with `available`/`unavailable_reason` gating
 - **Problem:** No sensitivity analysis exists.
 - **User impact:** The developer cannot see which variable dominates the outcome.
 - **Current implementation:** None.
@@ -454,7 +454,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-025 — Dossier underwriting experience (LR-6E)
 
 - **PRD requirement:** LR-U001, LR-U006, §6.4
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done (reconciled 2026-08-01)** — `UnderwritingPanel.vue` mounted on the dossier Deal tab
 - **Problem:** Only 2 of the 5 override parameters are editable in the UI, and edits do not persist.
 - **User impact:** The assumptions the customer cares about most are the ones they cannot change.
 - **Current implementation:** `frontend/src/components/DealPanel.vue:155-164` (acquisition price, target margin); `ScenariosPanel.vue` read-only.
