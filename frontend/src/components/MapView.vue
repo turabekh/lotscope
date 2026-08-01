@@ -183,6 +183,10 @@ function markerFilter(): FilterSpecification {
   const conditions: ExpressionSpecification[] = [['==', ['get', 'is_vacant'], true]]
   const cls = classCondition()
   if (cls) conditions.push(cls)
+  const underEnvelope = envelopeIsShowing() ? (detail.value?.parcel_number ?? null) : null
+  if (underEnvelope !== null) {
+    conditions.push(['!=', ['get', 'parcel_number'], underEnvelope])
+  }
   return ['all', ...conditions]
 }
 
@@ -521,13 +525,13 @@ function envelopeIsShowing(): boolean {
   return show3d.value && env !== null && env.buildable_footprint !== null
 }
 
-function applyMarkerVisibility(): void {
+function applyMarkerFilter(): void {
   if (!map?.getLayer('vacant-markers')) return
-  map.setLayoutProperty('vacant-markers', 'visibility', envelopeIsShowing() ? 'none' : 'visible')
+  map.setFilter('vacant-markers', markerFilter())
 }
 
 function renderEnvelope(): void {
-  applyMarkerVisibility()
+  applyMarkerFilter()
   const source = map?.getSource('envelope')
   if (!(source instanceof maplibregl.GeoJSONSource)) return
   const env = envelope.value
