@@ -19,6 +19,7 @@ class WatchlistChange(BaseModel):
     code: str
     label: str
     severity: Literal["high", "medium", "info"]
+    direction: Literal["up", "down", "none"] = "none"
 
 
 class WatchlistItem(BaseModel):

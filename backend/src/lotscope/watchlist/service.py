@@ -178,7 +178,9 @@ async def list_saved(session: AsyncSession, user_id: int) -> list[WatchlistItem]
                 note=row.note,
                 created_at=row.created_at,
                 changes=[
-                    WatchlistChange(code=c.code, label=c.label, severity=c.severity)
+                    WatchlistChange(
+                        code=c.code, label=c.label, severity=c.severity, direction=c.direction
+                    )
                     for c in changes
                 ],
                 has_alerts=len(changes) > 0,

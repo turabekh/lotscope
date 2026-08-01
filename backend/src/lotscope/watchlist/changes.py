@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 Severity = Literal["high", "medium", "info"]
+Direction = Literal["up", "down", "none"]
 
 
 @dataclass(frozen=True)
@@ -9,6 +10,7 @@ class Change:
     code: str
     label: str
     severity: Severity
+    direction: Direction = "none"
 
 
 def _num(value: Any) -> float | None:
@@ -31,12 +33,12 @@ def compute_changes(snapshot: dict[str, Any] | None, current: dict[str, Any]) ->
     cur_due = _num(current.get("total_due")) or 0.0
     snap_due = _num(snapshot.get("total_due")) or 0.0
     if cur_due - snap_due > 0.5:
-        changes.append(Change("tax_up", f"Tax owed +${cur_due - snap_due:,.0f}", "medium"))
+        changes.append(Change("tax_up", f"Tax owed +${cur_due - snap_due:,.0f}", "medium", "up"))
 
     cur_v = int(current.get("violations") or 0)
     snap_v = int(snapshot.get("violations") or 0)
     if cur_v > snap_v:
-        changes.append(Change("li_new", f"{cur_v - snap_v} new L&I violation(s)", "medium"))
+        changes.append(Change("li_new", f"{cur_v - snap_v} new L&I violation(s)", "medium", "up"))
 
     if current.get("dangerous") and not snapshot.get("dangerous"):
         changes.append(Change("danger", "New unsafe / dangerous L&I flag", "high"))
@@ -55,11 +57,25 @@ def compute_changes(snapshot: dict[str, Any] | None, current: dict[str, Any]) ->
     cur_op = current.get("opportunity_score")
     snap_op = snapshot.get("opportunity_score")
     if cur_op is not None and snap_op is not None and cur_op != snap_op:
-        changes.append(Change("opportunity", f"Opportunity {snap_op} → {cur_op}", "info"))
+        changes.append(
+            Change(
+                "opportunity",
+                f"Opportunity {snap_op} → {cur_op}",
+                "info",
+                "up" if cur_op > snap_op else "down",
+            )
+        )
 
     cur_d = current.get("distress_score")
     snap_d = snapshot.get("distress_score")
     if cur_d is not None and snap_d is not None and cur_d > snap_d:
-        changes.append(Change("distress", f"Distress {snap_d} → {cur_d}", "medium"))
+        changes.append(
+            Change(
+                "distress",
+                f"Distress {snap_d} → {cur_d}",
+                "medium",
+                "up" if cur_d > snap_d else "down",
+            )
+        )
 
     return changes
