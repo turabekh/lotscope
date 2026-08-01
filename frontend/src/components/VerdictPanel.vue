@@ -14,6 +14,7 @@ import {
   severityVar,
 } from '@/lib/format'
 import { BY_RIGHT_NOT_MET, byRightQualifier } from '@/lib/by-right'
+import { wideAreaSearchNote } from '@/lib/comp-tier'
 import type { ParcelChecklist, VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 
@@ -60,6 +61,8 @@ const SEVERITY_HINT: Record<string, string> = {
 function severityHint(severity: string): string {
   return SEVERITY_HINT[severity] ?? ''
 }
+
+const wideAreaNote = computed(() => wideAreaSearchNote(props.verdict))
 
 const hasValueEstimate = computed(
   () => props.verdict.value_estimate_low != null || props.verdict.value_estimate_high != null,
@@ -149,13 +152,17 @@ const buildQualifier = computed(() => {
         <div class="value-figure lot-numeric">
           {{ formatRange(verdict.value_estimate_low, verdict.value_estimate_high) }}
         </div>
+        <div v-if="wideAreaNote" class="wide-area-note" data-test="wide-area-note">
+          <q-icon name="travel_explore" size="15px" class="q-mr-xs" />
+          <span>{{ wideAreaNote }}</span>
+        </div>
         <div class="row q-col-gutter-sm q-mt-xs">
           <div class="stat" :class="developed ? 'col-12' : 'col-6'">
             <div class="stat-label">Confidence</div>
             <div class="stat-value lot-numeric">{{ formatPercent(verdict.value_confidence) }}</div>
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-              How tightly recent comparable sales agree. Lower confidence means thin or scattered
-              comps.
+              How tightly recent comparable sales agree. Lower confidence means thin, scattered, or
+              more distant comps.
             </q-tooltip>
           </div>
           <div v-if="!developed" class="col-6 stat">
@@ -233,6 +240,15 @@ const buildQualifier = computed(() => {
   letter-spacing: 0.04em;
   color: var(--lot-muted);
   margin-bottom: 6px;
+}
+.wide-area-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--lot-muted);
 }
 .value-figure {
   font-size: 18px;
