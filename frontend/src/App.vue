@@ -18,24 +18,38 @@ const showShell = computed(() => route.meta.requiresAuth === true)
 
 const authResolved = ref(false)
 
-const REFRESH_INTERVAL_MS = 30 * 60 * 1000
-let refreshTimer: ReturnType<typeof setInterval> | undefined
+const FALLBACK_CHECK_MS = 5 * 60 * 1000
+let refreshTimer: ReturnType<typeof setTimeout> | undefined
 
-function rollSession(): void {
-  if (document.visibilityState === 'visible') void auth.refresh()
+function scheduleRefresh(): void {
+  if (refreshTimer !== undefined) clearTimeout(refreshTimer)
+  const due = auth.millisecondsUntilNextRefresh()
+  const delay = due === null ? FALLBACK_CHECK_MS : Math.min(Math.max(due, 1000), FALLBACK_CHECK_MS)
+  refreshTimer = setTimeout(() => {
+    void rollSession()
+  }, delay)
+}
+
+async function rollSession(): Promise<void> {
+  if (document.visibilityState === 'visible') await auth.refreshIfExpiring()
+  scheduleRefresh()
+}
+
+function onVisibilityChange(): void {
+  void rollSession()
 }
 
 onMounted(async () => {
   await auth.ensureRestored()
   authResolved.value = true
   void market.load()
-  refreshTimer = setInterval(rollSession, REFRESH_INTERVAL_MS)
-  document.addEventListener('visibilitychange', rollSession)
+  scheduleRefresh()
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onUnmounted(() => {
-  if (refreshTimer !== undefined) clearInterval(refreshTimer)
-  document.removeEventListener('visibilitychange', rollSession)
+  if (refreshTimer !== undefined) clearTimeout(refreshTimer)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 

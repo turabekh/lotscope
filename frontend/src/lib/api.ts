@@ -87,9 +87,21 @@ import type {
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 let authToken: string | null = null
+let unauthorizedHandler: (() => void) | null = null
 
 export function setAuthToken(token: string | null): void {
   authToken = token
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler
+}
+
+const UNAUTHENTICATED_PATHS = ['/auth/login', '/auth/register']
+
+function reportUnauthorized(path: string): void {
+  if (UNAUTHENTICATED_PATHS.some((candidate) => path.startsWith(candidate))) return
+  unauthorizedHandler?.()
 }
 
 export class ApiError extends Error {
@@ -110,6 +122,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (authToken !== null) headers.authorization = `Bearer ${authToken}`
   const response = await fetch(`${BASE_URL}${path}`, { ...init, headers })
   if (!response.ok) {
+    if (response.status === 401) reportUnauthorized(path)
     const body = (await response.json().catch(() => null)) as { detail?: string } | null
     throw new ApiError(response.status, body?.detail ?? response.statusText)
   }
