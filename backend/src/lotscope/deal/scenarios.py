@@ -13,6 +13,7 @@ class ScenarioInputs:
     finished_comp_prices: list[float]
     land_value: float | None
     acquisition_price: float | None
+    land_value_is_assessed: bool = False
 
 
 @dataclass(frozen=True)
@@ -85,6 +86,7 @@ def build_scenarios(
                 estimated_floors=inputs.estimated_floors,
                 finished_comp_prices=inputs.finished_comp_prices,
                 land_value=inputs.land_value,
+                land_value_is_assessed=inputs.land_value_is_assessed,
                 acquisition_price=inputs.acquisition_price,
             ),
             assumptions,

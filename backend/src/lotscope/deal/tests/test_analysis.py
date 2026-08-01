@@ -183,3 +183,36 @@ def test_missing_acquisition_and_land_value_still_reports_mao() -> None:
 def test_confidence_degrades_with_thin_comps() -> None:
     thin = analyze_deal(_inputs(finished_comp_prices=[300_000.0, 700_000.0]), ASSUMPTIONS)
     assert thin.confidence == "low"
+
+
+def test_an_assessed_fallback_is_not_called_a_modelled_value() -> None:
+    assessed = analyze_deal(
+        DealInputs(
+            units=4,
+            buildable_area_sqft=1342,
+            estimated_floors=3,
+            finished_comp_prices=[880000.0, 890000.0, 875000.0],
+            land_value=527800.0,
+            acquisition_price=None,
+            land_value_is_assessed=True,
+        ),
+        ASSUMPTIONS,
+    )
+    reason = " ".join(assessed.reasons)
+    assert "assessed value" in reason
+    assert "no comparable land sales were available" in reason
+    assert "AVM" not in reason
+
+    modelled = analyze_deal(
+        DealInputs(
+            units=4,
+            buildable_area_sqft=1342,
+            estimated_floors=3,
+            finished_comp_prices=[880000.0, 890000.0, 875000.0],
+            land_value=527800.0,
+            acquisition_price=None,
+            land_value_is_assessed=False,
+        ),
+        ASSUMPTIONS,
+    )
+    assert "modelled land value" in " ".join(modelled.reasons)
