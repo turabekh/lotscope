@@ -10,6 +10,7 @@ from lotscope.checklist.schemas import ParcelChecklist
 from lotscope.distress.schemas import DistressResult
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.verdict.schemas import VerdictResult
+from lotscope.zoning.schemas import BuildabilityResult
 
 _BRAND = (15, 75, 168)
 _INK = (31, 41, 51)
@@ -229,6 +230,22 @@ def _sources(pdf: _Dossier, verdict: VerdictResult) -> None:
     )
 
 
+def _buildability_reasons(pdf: _Dossier, buildability: BuildabilityResult | None) -> None:
+    if buildability is None or not buildability.reasons:
+        return
+    pdf.ln(1)
+    pdf.set_font("Helvetica", "B", 7.5)
+    pdf.set_text_color(*_MUTED)
+    pdf.cell(0, 4, "HOW THESE FIGURES WERE REACHED", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", "", 8)
+    for reason in buildability.reasons:
+        pdf.set_x(pdf.l_margin + 2)
+        pdf.set_text_color(*_MUTED)
+        pdf.cell(3, 4.2, "-")
+        pdf.set_text_color(*_INK)
+        pdf.multi_cell(0, 4.2, _s(reason), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+
 def _tag(pdf: _Dossier, text: str, color: tuple[int, int, int]) -> None:
     pdf.set_font("Helvetica", "B", 8)
     width = pdf.get_string_width(_s(text)) + 6
@@ -242,6 +259,7 @@ def render_dossier_pdf(
     *,
     detail: ParcelDetail,
     verdict: VerdictResult | None,
+    buildability: BuildabilityResult | None = None,
     assemblage: AssemblageResult | None,
     distress: DistressResult | None,
     checklist: ParcelChecklist | None = None,
@@ -304,6 +322,7 @@ def render_dossier_pdf(
         value = f"{_money(low)} - {_money(high)}" if low is not None else "Not enough comps"
         _kv(pdf, "Estimated land value", value)
         _kv(pdf, "vs. assessment", _money(verdict.assessment_market_gap))
+        _buildability_reasons(pdf, buildability)
 
         if verdict.max_allowable_offer is not None and verdict.max_allowable_offer <= 0:
             _section(pdf, "Deal analysis")
