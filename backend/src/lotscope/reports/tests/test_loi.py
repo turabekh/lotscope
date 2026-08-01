@@ -130,3 +130,33 @@ def test_render_pdf_without_valuation_smoke() -> None:
 
 def test_loi_filename_slugs_parcel() -> None:
     assert loi_filename(_compose(100000.0)) == "lotscope-loi-phl-123.pdf"
+
+
+def test_an_open_offer_says_so_rather_than_printing_a_dash() -> None:
+    from lotscope.reports.loi import LoiTerms, _terms_lines
+
+    lines = dict(_terms_lines(LoiTerms(expiration=None)))
+    assert lines["Offer valid through"] == "Open until withdrawn in writing"
+
+
+def test_the_letter_carries_signature_lines_for_both_parties() -> None:
+    from datetime import UTC, datetime
+
+    from lotscope.reports.loi import LoiDocument, LoiSigner, LoiTerms, render_loi_pdf
+
+    document = LoiDocument(
+        parcel_number="phl:1",
+        local_key="1",
+        address="5346 Spruce St",
+        offer_price=45000.0,
+        price_provenance="Offer price is the LotScope Maximum Allowable Offer of $45,000.",
+        mao_framing=True,
+        terms=LoiTerms(),
+        signer=LoiSigner(entity_name="Acme Land LLC", signer_name="T. Holmirzaev"),
+        has_appendix=False,
+        disclaimer="Informational only.",
+        generated_at=datetime(2026, 8, 1, tzinfo=UTC),
+    )
+    with_block = render_loi_pdf(document, None)
+    assert with_block[:4] == b"%PDF"
+    assert len(with_block) > 1500

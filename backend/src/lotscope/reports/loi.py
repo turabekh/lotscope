@@ -121,6 +121,46 @@ def loi_filename(document: LoiDocument) -> str:
     return f"lotscope-loi-{document.parcel_number.replace(':', '-')}.pdf"
 
 
+def _signature_line(pdf: _Dossier, label: str, x: float, width: float, y: float) -> None:
+    pdf.set_draw_color(*_MUTED)
+    pdf.line(x, y, x + width, y)
+    pdf.set_xy(x, y + 1)
+    pdf.set_font("Helvetica", "", 7.5)
+    pdf.set_text_color(*_MUTED)
+    pdf.cell(width, 4, _s(label))
+
+
+def _signature_block(pdf: _Dossier, document: LoiDocument) -> None:
+    pdf.ln(6)
+    _section(pdf, "Signatures")
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(*_MUTED)
+    pdf.multi_cell(
+        0,
+        4,
+        _s(
+            "This letter is an expression of interest and does not create a binding obligation "
+            "on either party. A binding agreement arises only on a fully executed purchase "
+            "and sale agreement."
+        ),
+        align="L",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.ln(8)
+    usable = pdf.w - pdf.l_margin - pdf.r_margin
+    column = (usable - 10) / 2
+    y = pdf.get_y()
+    buyer = document.signer.signer_name or document.signer.entity_name or "Buyer"
+    _signature_line(pdf, _s(f"{buyer} - buyer"), pdf.l_margin, column, y)
+    _signature_line(pdf, "Date", pdf.l_margin + column + 10, column, y)
+    pdf.set_y(y + 14)
+    y = pdf.get_y()
+    _signature_line(pdf, "Owner - acknowledged", pdf.l_margin, column, y)
+    _signature_line(pdf, "Date", pdf.l_margin + column + 10, column, y)
+    pdf.set_y(y + 12)
+
+
 def _terms_lines(terms: LoiTerms) -> list[tuple[str, str]]:
     return [
         ("Structure", "All cash" if terms.all_cash else "Financed"),
@@ -130,15 +170,21 @@ def _terms_lines(terms: LoiTerms) -> list[tuple[str, str]]:
         ("Target closing", f"{terms.close_days} days from acceptance"),
         (
             "Offer valid through",
-            terms.expiration.strftime("%B %-d, %Y") if terms.expiration is not None else "-",
+            terms.expiration.strftime("%B %-d, %Y")
+            if terms.expiration is not None
+            else "Open until withdrawn in writing",
         ),
     ]
 
 
 def render_loi_pdf(document: LoiDocument, valuation: ValuationResult | None) -> bytes:
     pdf = _Dossier(format="A4")
-    pdf.set_auto_page_break(auto=True, margin=18)
+    pdf.running_title = _s(document.address)
+    pdf.running_subtitle = _s(f"Parcel {document.parcel_number}")
+    pdf.footer_note = _s("Letter of intent - non-binding")
+    pdf.set_auto_page_break(auto=True, margin=20)
     pdf.set_margins(16, 16, 16)
+    pdf.alias_nb_pages()
     pdf.add_page()
 
     pdf.set_fill_color(*_BRAND)
@@ -173,6 +219,9 @@ def render_loi_pdf(document: LoiDocument, valuation: ValuationResult | None) -> 
             "The undersigned submits this non-binding letter of intent to purchase the property "
             "identified above on the following principal terms."
         ),
+        align="L",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
     )
     pdf.ln(3)
 
@@ -181,7 +230,9 @@ def render_loi_pdf(document: LoiDocument, valuation: ValuationResult | None) -> 
     pdf.ln(1)
     pdf.set_font("Helvetica", "", 8.5)
     pdf.set_text_color(*_MUTED)
-    pdf.multi_cell(0, 4.2, _s(document.price_provenance))
+    pdf.multi_cell(
+        0, 4.2, _s(document.price_provenance), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+    )
     pdf.ln(2)
 
     _section(pdf, "Principal terms")
@@ -205,7 +256,7 @@ def render_loi_pdf(document: LoiDocument, valuation: ValuationResult | None) -> 
             pdf.ln(1)
             pdf.set_font("Helvetica", "", 8)
             pdf.set_text_color(*_MUTED)
-            pdf.multi_cell(0, 4, _s(reason))
+            pdf.multi_cell(0, 4, _s(reason), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     pdf.ln(4)
     _section(pdf, "Submitted by")
@@ -214,12 +265,14 @@ def render_loi_pdf(document: LoiDocument, valuation: ValuationResult | None) -> 
     _kv(pdf, "Phone", document.signer.signer_phone or "-")
     _kv(pdf, "Email", document.signer.signer_email or "-")
 
+    _signature_block(pdf, document)
+
     pdf.ln(6)
     pdf.set_draw_color(*_MUTED)
     pdf.set_font("Helvetica", "", 8)
     pdf.set_text_color(*_MUTED)
     pdf.multi_cell(0, 3.8, _s(f"Prepared {document.generated_at.strftime('%B %-d, %Y')}."))
     pdf.ln(1)
-    pdf.multi_cell(0, 3.8, _s(document.disclaimer))
+    pdf.multi_cell(0, 3.8, _s(document.disclaimer), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     return bytes(pdf.output())
