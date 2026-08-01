@@ -191,8 +191,11 @@ const features = [
 
 <style scoped>
 .site-header {
-  background: #312e81;
+  background: #2a2c5c;
   color: #fff;
+}
+body.body--dark .site-header {
+  background: #141a2c;
 }
 .toolbar {
   min-height: 52px;
@@ -205,9 +208,14 @@ const features = [
 .hero {
   color: #fff;
   background:
-    radial-gradient(130% 120% at 8% 0%, #6366f1 0%, transparent 58%),
-    linear-gradient(140deg, #312e81, #6d28d9);
+    radial-gradient(120% 120% at 12% 0%, rgba(99, 102, 241, 0.5) 0%, transparent 58%),
+    linear-gradient(150deg, #2a2c5c, #47306f);
   padding: 28px 20px 36px;
+}
+body.body--dark .hero {
+  background:
+    radial-gradient(120% 120% at 12% 0%, rgba(129, 140, 248, 0.24) 0%, transparent 58%),
+    linear-gradient(150deg, #151a2e, #2a2148);
 }
 .hero-inner {
   max-width: 1080px;
@@ -221,7 +229,7 @@ const features = [
   color: #fcd34d;
 }
 .eyebrow-dark {
-  color: var(--q-primary);
+  color: var(--lot-accent);
 }
 .hero-title {
   font-size: clamp(27px, 7vw, 46px);
@@ -259,11 +267,12 @@ const features = [
 
 .preview {
   margin-top: 22px;
-  background: #fff;
-  color: #1f2933;
+  background: var(--lot-surface);
+  color: var(--lot-ink);
+  border: 1px solid var(--lot-border);
   border-radius: 14px;
   padding: 14px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 16px 34px rgba(8, 12, 24, 0.32);
   max-width: 420px;
 }
 .preview-head {
@@ -278,7 +287,7 @@ const features = [
 }
 .preview-sub {
   font-size: 11.5px;
-  color: #6b7280;
+  color: var(--lot-muted);
   margin-top: 1px;
 }
 .preview-chips {
@@ -294,16 +303,20 @@ const features = [
   white-space: nowrap;
 }
 .tag-example {
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--lot-accent-soft);
+  color: var(--lot-accent-ink, #4338ca);
 }
 .tag-zone {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--lot-accent-soft);
+  color: var(--lot-accent-ink, #3730a3);
 }
 .tag-vacant {
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--lot-sev-medium, #92400e);
+}
+.flag {
+  background: rgba(239, 68, 68, 0.14);
+  color: var(--lot-sev-high, #b91c1c);
 }
 .preview-rows {
   margin-top: 12px;
@@ -318,7 +331,7 @@ const features = [
   font-size: 13px;
 }
 .plabel {
-  color: #6b7280;
+  color: var(--lot-muted);
 }
 .pvalue {
   font-weight: 700;
@@ -333,16 +346,14 @@ const features = [
   font-size: 11px;
   border-radius: 999px;
   padding: 3px 9px;
-  background: #fef2f2;
-  color: #b91c1c;
 }
 .preview-foot {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  border-top: 1px solid var(--lot-border);
   font-size: 11px;
   line-height: 1.45;
-  color: #6b7280;
+  color: var(--lot-muted);
 }
 
 .features {

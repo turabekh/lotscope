@@ -248,6 +248,28 @@ async function activate(plan: PlanInfo): Promise<void> {
   flex-direction: column;
   border-radius: 16px;
 }
+body.body--dark .cadence-toggle :deep(.q-btn.bg-grey-3) {
+  background: var(--lot-surface-3) !important;
+  color: var(--lot-muted) !important;
+}
+.plan-card .q-btn--outline {
+  color: var(--lot-accent) !important;
+}
+body.body--dark body.body--dark .cadence-toggle .q-btn-toggle {
+  background: var(--lot-surface-2) !important;
+}
+body.body--dark .cadence-toggle .q-btn-toggle .q-btn {
+  color: var(--lot-muted) !important;
+}
+body.body--dark .cadence-toggle .q-btn-toggle .q-btn.bg-primary {
+  color: #fff !important;
+}
+.plan-card .q-btn--outline {
+  color: var(--lot-accent-strong) !important;
+}
+body.body--dark .plan-card .q-btn--outline.disabled {
+  color: var(--lot-muted) !important;
+}
 .plan-card.featured {
   border-color: var(--q-primary);
   border-width: 2px;

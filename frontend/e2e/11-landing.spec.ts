@@ -28,3 +28,25 @@ test('the landing page leads with one full-width call to action on a phone', asy
 
   await expect(page.getByText('Base district · 3 units')).toBeVisible()
 })
+
+test('landing controls stay legible in dark mode', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/')
+
+  const luminanceOf = (locator: import('@playwright/test').Locator) =>
+    locator.evaluate((node) => {
+      const parsed = getComputedStyle(node).color.match(/\d+(\.\d+)?/g) ?? []
+      const [r, g, b] = parsed.slice(0, 3).map((value) => Number(value) / 255)
+      const channel = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+      return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+    })
+
+  const eyebrow = page.getByText('Pricing', { exact: true })
+  await expect(eyebrow).toBeVisible()
+  expect(await luminanceOf(eyebrow)).toBeGreaterThan(0.2)
+
+  const outlineCta = page.getByRole('button', { name: 'Get started', exact: true })
+  await expect(outlineCta).toBeVisible()
+  expect(await luminanceOf(outlineCta)).toBeGreaterThan(0.2)
+})
