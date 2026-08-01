@@ -22,6 +22,8 @@ import type {
   CheckoutResponse,
   CheckoutTier,
   CorrectionCreate,
+  CorrectionResolve,
+  CorrectionStatus,
   CreditBalance,
   CreditPackKey,
   DatasetStatus,
@@ -404,6 +406,17 @@ export const api = {
   },
   updateAdminUser(userId: number, payload: AdminUserUpdate): Promise<User> {
     return request(`/admin/users/${userId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+  },
+  getCorrectionQueue(status?: CorrectionStatus, limit = 100): Promise<CorrectionRecord[]> {
+    const query = new URLSearchParams({ limit: String(limit) })
+    if (status) query.set('status', status)
+    return request(`/admin/corrections?${query.toString()}`)
+  },
+  triageCorrection(correctionId: number, payload: CorrectionResolve): Promise<CorrectionRecord> {
+    return request(`/admin/corrections/${correctionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
   },
   reportCorrection(parcelNumber: string, payload: CorrectionCreate): Promise<unknown> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/corrections`, {

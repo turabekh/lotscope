@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
+import CorrectionsQueue from '@/components/CorrectionsQueue.vue'
 import { api } from '@/lib/api'
 import type {
   AdminOverview,
@@ -324,6 +325,9 @@ onBeforeUnmount(() => {
           </q-chip>
         </div>
       </q-card>
+
+      <div class="text-subtitle2 q-mt-md q-mb-xs">Corrections</div>
+      <CorrectionsQueue />
 
       <div class="text-subtitle2 q-mt-md q-mb-xs">Dataset freshness</div>
       <q-markup-table flat bordered dense>

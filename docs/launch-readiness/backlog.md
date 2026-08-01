@@ -71,8 +71,8 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-004 — Correction workflow ("Report incorrect data")
 
 - **PRD requirement:** §8.5, §6.7
-- **Priority:** P0 · **Status:** Not started
-- **Problem:** No correction capability exists anywhere in the repository.
+- **Priority:** P0 · **Status:** **Done 2026-08-01** — reporting shipped earlier (LR-9C); the operator triage UI (`CorrectionsQueue.vue`, mounted on the admin page) closes the last acceptance clause.
+- **Problem:** No correction capability exists anywhere in the repository. *(Superseded: reporting and the admin endpoints were built; the endpoints simply had no frontend consumer, which the 2026-08-01 gate review found — see its §1.2.)*
 - **User impact:** When LotScope is wrong about a real parcel, the customer has no route to say so and the product gets no signal. This is the difference between a beta that improves and one that silently loses trust — and Amendment 03 §22 lists "no correction route" as P0.
 - **Current implementation:** None. Zero repository matches.
 - **Proposed solution:** New `corrections/` domain module capturing user, parcel + market, field/section, verdict version, computed timestamp, source refs and freshness state, description, optional attachment reference, triage status, resolution and resolution timestamp. Dossier entry point on every parcel. Admin triage view reusing the existing admin console patterns.

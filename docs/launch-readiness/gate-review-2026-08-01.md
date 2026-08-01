@@ -34,7 +34,9 @@ LR-B-004's acceptance criteria require that *"triage status is visible to an ope
 
 This is the pattern the programme keeps repeating, one layer up each time: ADR-0065's `field_trust` shipped without persistence; LR-6A/6C/6D were unreachable until 6E; LR-9C found service functions with no endpoint and built the endpoints — then stopped before the UI that consumes them. **Check the call path to a user, not to the next layer.**
 
-Not fixed here: LR-12 is documentation-only unless a newly discovered P0 defect requires its own branch. This is a P0 acceptance gap rather than a production defect — nothing is broken for users, and no data is at risk — so it is recorded and left for its own slice.
+Not fixed here: LR-12 is documentation-only unless a newly discovered P0 defect requires its own branch. This is a P0 acceptance gap rather than a production defect — nothing is broken for users, and no data is at risk — so it was recorded and left for its own slice.
+
+**Closed 2026-08-01** on branch `feat/corrections-triage`: `CorrectionsQueue.vue` on the admin page lists the queue by status, shows the evidence captured with each report, and triages to triaged/resolved/rejected with a note to the reporter. Verified against the running API rather than the mount alone — a reporter filed a correction, and an admin session rendered it with `verdict_version`, `field_status`, and `source_label` intact.
 
 ### 1.3 A correction to this review — added 2026-08-01
 
@@ -80,10 +82,10 @@ Each gate carries the seven fields LR-12 requires.
 | Blocked on | Tickets |
 |---|---|
 | **Owner or external** | LR-B-018, LR-B-019 (vendor approval) · LR-B-028 (legal copy) · LR-B-029 (support address) · LR-B-030 (Stripe) · LR-B-032 (email) · LR-B-034 (GitHub plan) |
-| **Unblocked engineering** | LR-B-004 (operator triage UI). LR-B-002 was on this list and closed 2026-08-01 (§1.3) |
+| **Unblocked engineering** | none remaining — LR-B-002 and LR-B-004 both closed 2026-08-01 (§1.2, §1.3) |
 | **Unconfirmed** | LR-B-001 (appears shipped; needs acceptance check) |
 
-**Only one open P0 is engineering work this team can start today** (two at the time of review; LR-B-002 has since closed). The gate is owner-gated, not engineering-gated — the single most useful fact in this review.
+**No open P0 is engineering work this team can start today** (two at the time of review; both closed 2026-08-01). Every remaining P0 is an owner or external action. The gate is owner-gated, not engineering-gated — the single most useful fact in this review.
 
 ### G2 — Broad public launch
 
@@ -257,7 +259,7 @@ The gap to a paid beta is overwhelmingly **owner actions**: legal copy, Stripe c
 **Engineering, available now:**
 
 1. ~~LR-B-002 — the by-right qualifier~~ — **closed 2026-08-01**
-2. **LR-B-004 operator triage UI** — closes the acceptance gap in §1.2
+2. ~~LR-B-004 operator triage UI~~ — **closed 2026-08-01**
 3. **LR-B-001 acceptance confirmation** — likely a status correction rather than work
 
 ### Next review
