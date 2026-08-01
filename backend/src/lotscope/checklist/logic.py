@@ -1,5 +1,6 @@
 from typing import Any
 
+from lotscope.checklist.dimensional import DimensionalContext, build_dimensional_items
 from lotscope.checklist.schemas import ChecklistItem, ChecklistStatus, ChecklistSummary
 from lotscope.markets.capabilities import (
     checklist_category_state,
@@ -248,6 +249,7 @@ def build_checklist(
     has_abatement: bool | None = False,
     market_code: str = "phl",
     tax_status_unknown: bool = False,
+    dimensional: DimensionalContext | None = None,
 ) -> tuple[list[ChecklistItem], ChecklistSummary]:
     flags = verdict.risk_flags
     items = [_zoning_item(verdict)]
@@ -272,6 +274,7 @@ def build_checklist(
         items.append(_abatement_item())
     elif has_abatement is None:
         items.append(_abatement_unknown_item())
+    items.extend(build_dimensional_items(dimensional or DimensionalContext()))
     items.append(_valuation_item(verdict))
     items.append(_deal_item(verdict))
 

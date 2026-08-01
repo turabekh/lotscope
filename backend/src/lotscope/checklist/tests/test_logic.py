@@ -84,7 +84,40 @@ def test_every_category_always_present() -> None:
         "overlays",
         "valuation",
         "deal",
+        "permitted_use",
+        "min_lot_area",
+        "min_lot_width",
+        "max_height",
+        "floor_area",
+        "yards",
+        "unit_density",
+        "master_plan",
+        "parking",
+        "utilities",
+        "deed_restrictions",
+        "subdivision",
     }
+
+
+def test_every_lr_b001_check_is_represented() -> None:
+    items, _ = build_checklist(_verdict())
+
+    assert len(items) >= 17
+    assert len({item.code for item in items}) == len(items)
+
+
+def test_dimensional_checks_default_to_not_evaluated_without_a_standard() -> None:
+    items, summary = build_checklist(_verdict())
+    dimensional = {
+        item.code: item
+        for item in items
+        if item.code in {"min_lot_area", "min_lot_width", "yards", "unit_density"}
+    }
+
+    assert dimensional
+    for item in dimensional.values():
+        assert item.status == "not_evaluated"
+    assert summary.ready is True
 
 
 def test_high_severity_flag_fails_its_category() -> None:
