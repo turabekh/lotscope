@@ -248,6 +248,28 @@ async function activate(plan: PlanInfo): Promise<void> {
   flex-direction: column;
   border-radius: 16px;
 }
+body.body--dark .cadence-toggle :deep(.q-btn.bg-grey-3) {
+  background: var(--lot-surface-3) !important;
+  color: var(--lot-muted) !important;
+}
+.plan-card .q-btn--outline {
+  color: var(--lot-accent) !important;
+}
+body.body--dark body.body--dark .cadence-toggle .q-btn-toggle {
+  background: var(--lot-surface-2) !important;
+}
+body.body--dark .cadence-toggle .q-btn-toggle .q-btn {
+  color: var(--lot-muted) !important;
+}
+body.body--dark .cadence-toggle .q-btn-toggle .q-btn.bg-primary {
+  color: #fff !important;
+}
+.plan-card .q-btn--outline {
+  color: var(--lot-accent-strong) !important;
+}
+body.body--dark .plan-card .q-btn--outline.disabled {
+  color: var(--lot-muted) !important;
+}
 .plan-card.featured {
   border-color: var(--q-primary);
   border-width: 2px;
@@ -270,7 +292,20 @@ async function activate(plan: PlanInfo): Promise<void> {
 }
 @media (max-width: 800px) {
   .plan-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding: 4px 20px 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .plan-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .plan-card {
+    flex: 0 0 82%;
+    scroll-snap-align: center;
   }
 }
 </style>
