@@ -188,7 +188,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-010 — Likely development program
 
 - **PRD requirement:** LR-V002
-- **Priority:** P1 · **Status:** **Needs criteria review (reconciled 2026-08-01)** — `recommended_units` and assumptions exist; the "verified rules vs calculated geometry" wording is a judgement the code does not settle
+- **Priority:** P1 · **Status:** **Not started (criteria reviewed 2026-08-01)** — the summary is a terse compound line (`RM-1: buildable by-right (4 unit); est. ...`) that meets none of LR-V002's four criteria: no verified-vs-calculated distinction, no conditional language, no standards citation
 - **Problem:** Program facts exist as separate numeric fields with no plain-language synthesis and no verified/calculated distinction.
 - **User impact:** The developer's first question is "what can I build here" — currently answered by assembling four fields.
 - **Current implementation:** `verdict/schemas.py:15-19`.
@@ -294,7 +294,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-016 — Buildability confidence rules
 
 - **PRD requirement:** LR-B004
-- **Priority:** P1 · **Status:** **Needs criteria review (reconciled 2026-08-01)** — the invariant lives in the PRD, not the ticket
+- **Priority:** P1 · **Status:** **Not started (criteria reviewed 2026-08-01)** — `_confidence()` reads only lot area and lot width; **five of LR-B004's seven inputs are not consulted** and the "high confidence cannot coexist with unresolved critical unknowns" invariant is unenforced
 - **Problem:** `buildability_score` exists, but nothing prevents a high-confidence label coexisting with unresolved critical unknowns — which LR-B004 forbids.
 - **User impact:** False confidence on a parcel with unevaluated access or overlays is precisely the failure that costs money.
 - **Current implementation:** `verdict/schemas.py:12`; `deal/analysis.py` `Confidence`.
@@ -367,7 +367,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-020 — Launch metrics dashboard
 
 - **PRD requirement:** LR-A004
-- **Priority:** P1 · **Status:** **Partial (reconciled 2026-08-01)** — `OpsPage.vue` + `/admin/ops/*` endpoints exist; whether all 12 metrics are reportable is unverified
+- **Priority:** P1 · **Status:** **Not started (criteria reviewed 2026-08-01)** — the ops surface reports operational health only; **none of LR-A004's twelve activation/conversion/retention metrics is computed**
 - **Problem:** Admin dashboards report operational health, not activation, conversion, or retention.
 - **User impact:** Indirect — the owner cannot run §20 gate reviews.
 - **Current implementation:** `api/ops.py`, `ops/stats.py`, `ops/digest.py`.
