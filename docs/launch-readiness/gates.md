@@ -1,5 +1,7 @@
 # Launch gates — LR-0
 
+> **This file is the LR-0 baseline.** Several `Current state` entries below have been overtaken by later slices — G3, G6, and G7 in particular. The measured position, with per-gate evidence and an acceptance decision, is **`gate-review-2026-08-01.md`** (decision: **PAUSE**). Read that first; treat this file as the definition of each gate rather than a report of where it stands.
+
 **Baseline SHA:** `e68f16baa14a2b892ff9d9f62c7b74228dfb137f` · **Assessed:** 2026-07-28
 **Requirement source:** `docs/PRD-amendment-03-launch-readiness.md` §16, §17, §18, §23
 
