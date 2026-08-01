@@ -28,6 +28,7 @@ class DealInputs:
     finished_comp_prices: list[float]
     land_value: float | None
     acquisition_price: float | None
+    land_value_is_assessed: bool = False
 
 
 @dataclass(frozen=True)
@@ -143,9 +144,15 @@ def analyze_deal(inputs: DealInputs, assumptions: DealAssumptions) -> DealAnalys
     if acquisition_cost is None:
         if inputs.land_value is not None:
             acquisition_cost = inputs.land_value
-            acquisition_reason = (
-                f"Acquisition assumed at the AVM land value ${acquisition_cost:,.0f}."
-            )
+            if inputs.land_value_is_assessed:
+                acquisition_reason = (
+                    f"Acquisition assumed at the assessed value ${acquisition_cost:,.0f}; "
+                    "no comparable land sales were available to estimate a market price."
+                )
+            else:
+                acquisition_reason = (
+                    f"Acquisition assumed at the modelled land value ${acquisition_cost:,.0f}."
+                )
         else:
             acquisition_reason = "No acquisition price or land value available."
     else:

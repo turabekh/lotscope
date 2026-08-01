@@ -128,8 +128,10 @@ async def analyze_parcel_scenarios(
     finished_prices = [comp.sale_price for comp in finished_comps]
 
     land_value = valuation.estimate if valuation is not None else None
+    land_value_is_assessed = False
     if acquisition_price is None and land_value is None:
         land_value = _as_float(subject.market_value)
+        land_value_is_assessed = land_value is not None
 
     assumptions = _assumptions(
         construction_cost_per_sqft=construction_cost_per_sqft,
@@ -147,6 +149,7 @@ async def analyze_parcel_scenarios(
             finished_comp_prices=finished_prices,
             land_value=land_value,
             acquisition_price=acquisition_price,
+            land_value_is_assessed=land_value_is_assessed,
         ),
         assumptions,
     )
@@ -225,8 +228,10 @@ async def build_deal(
 
     units = buildability.by_right_units if buildability is not None else None
     land_value = valuation.estimate if valuation is not None else None
+    land_value_is_assessed = False
     if acquisition_price is None and land_value is None:
         land_value = market_value
+        land_value_is_assessed = land_value is not None
 
     assumptions = _assumptions(
         construction_cost_per_sqft=construction_cost_per_sqft,
@@ -244,6 +249,7 @@ async def build_deal(
             finished_comp_prices=finished_prices,
             land_value=land_value,
             acquisition_price=acquisition_price,
+            land_value_is_assessed=land_value_is_assessed,
         ),
         assumptions,
     )
