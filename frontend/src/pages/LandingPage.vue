@@ -13,69 +13,60 @@ const features = [
   {
     icon: 'architecture',
     title: 'Buildability by-right',
-    text: 'Zoning resolved against the full Title 14 standards — by-right units, height, and setbacks, or a clear "needs a variance".',
+    text: 'By-right units, height and setbacks under Title 14 — or a clear “needs a variance”.',
   },
   {
     icon: 'payments',
     title: 'Recorded-sale valuation',
-    text: 'Land value from real nearby deeds, segmented by use class and trimmed of outliers, with a confidence signal.',
+    text: 'Land value from real nearby deeds, with a confidence signal.',
   },
   {
     icon: 'warning_amber',
     title: 'Risk flags',
-    text: 'Tax delinquency, L&I violations, flood zones, and city ownership surfaced on every parcel.',
+    text: 'Liens, L&I violations, flood zones and city ownership, per parcel.',
   },
   {
     icon: 'forum',
     title: 'Ask the parcel',
-    text: 'Grounded, cited answers about what you can build — straight from Philadelphia’s zoning code.',
+    text: 'Cited answers drawn from Philadelphia’s zoning code.',
   },
 ]
 </script>
 
 <template>
   <q-layout view="hHh Lpr fFf">
-    <q-header class="bg-transparent text-white">
-      <q-toolbar class="q-py-sm">
-        <q-icon name="location_city" size="28px" class="q-mr-sm" />
-        <q-toolbar-title class="text-weight-bold">
+    <q-header class="site-header">
+      <q-toolbar class="toolbar">
+        <q-icon name="location_city" size="24px" class="q-mr-sm" />
+        <q-toolbar-title class="brand">
           LotScope <span class="text-weight-light">PHL</span>
         </q-toolbar-title>
-        <template v-if="isAuthenticated">
-          <q-btn
-            unelevated
-            color="white"
-            text-color="primary"
-            no-caps
-            label="Open the map"
-            :to="{ name: 'explore', params: { market: market.active } }"
-          />
-        </template>
-        <template v-else>
-          <q-btn flat no-caps label="Sign in" :to="{ name: 'login' }" />
-          <q-btn
-            unelevated
-            color="white"
-            text-color="primary"
-            no-caps
-            label="Get started"
-            :to="{ name: 'register' }"
-          />
-        </template>
+        <q-btn
+          v-if="isAuthenticated"
+          unelevated
+          dense
+          color="white"
+          text-color="indigo-10"
+          no-caps
+          label="Open the map"
+          :to="{ name: 'explore', params: { market: market.active } }"
+        />
+        <q-btn v-else flat dense no-caps label="Sign in" :to="{ name: 'login' }" />
       </q-toolbar>
     </q-header>
 
     <q-page-container>
       <q-page>
-        <section class="hero text-white">
+        <section class="hero">
           <div class="hero-inner">
-            <div class="text-overline text-amber-4">Philadelphia parcel intelligence</div>
+            <div class="eyebrow">Philadelphia parcel intelligence</div>
             <h1 class="hero-title">Know what can be built on any Philadelphia lot.</h1>
             <p class="hero-sub">
-              Buildability, value, and risk for every parcel in the city — with the reasoning shown
-              and the sources cited. One screen, one verdict.
+              Buildability, value and risk for every parcel — with the reasoning shown and the
+              sources cited.
             </p>
-            <div class="q-gutter-sm q-mt-md">
+
+            <div class="hero-actions">
               <q-btn
                 v-if="isAuthenticated"
                 unelevated
@@ -85,6 +76,7 @@ const features = [
                 no-caps
                 icon="map"
                 label="Open the map"
+                class="cta-primary"
                 :to="{ name: 'explore', params: { market: market.active } }"
               />
               <template v-else>
@@ -95,53 +87,87 @@ const features = [
                   text-color="dark"
                   no-caps
                   label="Create a free account"
+                  class="cta-primary"
                   :to="{ name: 'register' }"
                 />
                 <q-btn
-                  outline
-                  size="lg"
-                  color="white"
+                  flat
                   no-caps
-                  label="Sign in"
+                  class="cta-secondary"
+                  label="or sign in"
                   :to="{ name: 'login' }"
                 />
               </template>
             </div>
-            <div class="text-caption text-blue-2 q-mt-sm">
-              Free plan includes 4 parcels and 10 AI questions a day.
+            <div class="hero-note">Free plan: 4 parcels and 10 AI questions a day.</div>
+
+            <div class="preview" aria-label="Example parcel verdict">
+              <div class="preview-head">
+                <div>
+                  <div class="preview-addr">1500 S Broad St</div>
+                  <div class="preview-sub">Parcel 88800001 · Philadelphia</div>
+                </div>
+                <span class="tag tag-example">Example</span>
+              </div>
+
+              <div class="preview-chips">
+                <span class="tag tag-zone">RSA-5</span>
+                <span class="tag tag-vacant">Vacant</span>
+              </div>
+
+              <div class="preview-rows">
+                <div class="prow">
+                  <span class="plabel">Buildability</span>
+                  <span class="pvalue">Base district · 3 units</span>
+                </div>
+                <div class="prow">
+                  <span class="plabel">Est. land value</span>
+                  <span class="pvalue">$95K – $180K</span>
+                </div>
+                <div class="prow">
+                  <span class="plabel">Risk</span>
+                  <span class="pvalue">20/100</span>
+                </div>
+              </div>
+
+              <div class="preview-flags">
+                <span class="flag">Tax delinquency</span>
+                <span class="flag">Historic overlay</span>
+              </div>
+
+              <div class="preview-foot">
+                Preliminary screening, not a construction approval — every figure cites its source.
+              </div>
             </div>
           </div>
         </section>
 
         <section class="features">
-          <div class="features-grid">
-            <q-card v-for="f in features" :key="f.title" flat bordered class="feature-card">
-              <q-card-section>
-                <q-icon :name="f.icon" size="32px" color="primary" />
-                <div class="text-h6 q-mt-sm">{{ f.title }}</div>
-                <div class="text-body2 text-grey-8 q-mt-xs">{{ f.text }}</div>
-              </q-card-section>
-            </q-card>
-          </div>
+          <ul class="feature-list">
+            <li v-for="f in features" :key="f.title" class="feature">
+              <q-icon :name="f.icon" size="22px" class="feature-icon" />
+              <div>
+                <div class="feature-title">{{ f.title }}</div>
+                <div class="feature-text">{{ f.text }}</div>
+              </div>
+            </li>
+          </ul>
         </section>
 
         <section class="pricing-section">
           <div class="pricing-inner">
-            <div class="text-center q-mb-md">
-              <div class="text-overline text-primary">Pricing</div>
-              <div class="text-h4 text-weight-bold">Simple plans for every operator</div>
-              <div class="text-body1 text-grey-7">
-                Start free. Upgrade when you need unlimited research.
-              </div>
+            <div class="pricing-head">
+              <div class="eyebrow eyebrow-dark">Pricing</div>
+              <h2 class="section-title">Start free. Upgrade when you need more.</h2>
             </div>
             <PricingPlans />
           </div>
         </section>
 
         <section class="cta">
-          <div class="text-h5 text-weight-bold">Start exploring Philadelphia lots</div>
+          <h2 class="section-title">Start exploring Philadelphia lots</h2>
           <q-btn
-            class="q-mt-md"
+            class="cta-primary q-mt-md"
             unelevated
             size="lg"
             color="primary"
@@ -153,10 +179,10 @@ const features = [
                 : { name: 'register' }
             "
           />
-          <div class="text-caption text-grey-6 q-mt-md">
-            Informational only — not legal, financial, or real-estate advice. City data is provided
+          <p class="disclaimer">
+            Informational only — not legal, financial or real-estate advice. City data is provided
             as-is.
-          </div>
+          </p>
         </section>
       </q-page>
     </q-page-container>
@@ -164,63 +190,276 @@ const features = [
 </template>
 
 <style scoped>
+.site-header {
+  background: #312e81;
+  color: #fff;
+}
+.toolbar {
+  min-height: 52px;
+}
+.brand {
+  font-weight: 700;
+  font-size: 17px;
+}
+
 .hero {
+  color: #fff;
   background:
-    radial-gradient(120% 120% at 10% 0%, #6366f1 0%, transparent 55%),
-    linear-gradient(135deg, #3730a3, #6d28d9);
-  padding: 76px 24px 92px;
+    radial-gradient(130% 120% at 8% 0%, #6366f1 0%, transparent 58%),
+    linear-gradient(140deg, #312e81, #6d28d9);
+  padding: 28px 20px 36px;
 }
 .hero-inner {
-  max-width: 820px;
+  max-width: 1080px;
   margin: 0 auto;
+}
+.eyebrow {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #fcd34d;
+}
+.eyebrow-dark {
+  color: var(--q-primary);
 }
 .hero-title {
-  font-size: clamp(28px, 5vw, 52px);
-  line-height: 1.1;
+  font-size: clamp(27px, 7vw, 46px);
+  line-height: 1.12;
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin: 8px 0 12px;
+  margin: 10px 0 10px;
 }
 .hero-sub {
-  font-size: clamp(15px, 2.4vw, 20px);
+  font-size: clamp(14.5px, 4vw, 18px);
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.86);
-  max-width: 640px;
+  max-width: 560px;
   margin: 0;
 }
+.hero-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 18px;
+}
+.cta-primary {
+  font-weight: 700;
+  border-radius: 12px;
+}
+.cta-secondary {
+  color: rgba(255, 255, 255, 0.9);
+}
+.hero-note {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.preview {
+  margin-top: 22px;
+  background: #fff;
+  color: #1f2933;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
+  max-width: 420px;
+}
+.preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.preview-addr {
+  font-weight: 700;
+  font-size: 15px;
+}
+.preview-sub {
+  font-size: 11.5px;
+  color: #6b7280;
+  margin-top: 1px;
+}
+.preview-chips {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+.tag-example {
+  background: #eef2ff;
+  color: #4338ca;
+}
+.tag-zone {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.tag-vacant {
+  background: #fef3c7;
+  color: #92400e;
+}
+.preview-rows {
+  margin-top: 12px;
+  display: grid;
+  gap: 7px;
+}
+.prow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+.plabel {
+  color: #6b7280;
+}
+.pvalue {
+  font-weight: 700;
+}
+.preview-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.flag {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.preview-foot {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  font-size: 11px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
 .features {
-  padding: 56px 24px;
+  padding: 26px 20px;
   background: var(--lot-bg);
 }
-.features-grid {
-  max-width: 1040px;
+.feature-list {
+  list-style: none;
   margin: 0 auto;
+  padding: 0;
+  max-width: 1080px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
-.feature-card {
-  border-radius: var(--lot-radius);
-  height: 100%;
-  background: var(--lot-surface);
-  border-color: var(--lot-border);
-  transition:
-    transform 0.16s ease,
-    box-shadow 0.16s ease;
+.feature {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
 }
-.feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--lot-shadow-lg);
+.feature-icon {
+  color: var(--q-primary);
+  flex: none;
+  margin-top: 2px;
 }
+.feature-title {
+  font-weight: 700;
+  font-size: 14.5px;
+}
+.feature-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--lot-muted, #6b7280);
+  margin-top: 2px;
+}
+
 .pricing-section {
-  padding: 64px 24px;
+  padding: 30px 0 34px;
   background: var(--lot-surface);
 }
 .pricing-inner {
-  max-width: 1040px;
+  max-width: 1080px;
   margin: 0 auto;
+}
+.pricing-head {
+  text-align: center;
+  padding: 0 20px;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-size: clamp(20px, 5.4vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  margin: 6px 0 0;
 }
 .cta {
   text-align: center;
-  padding: 64px 24px 80px;
+  padding: 34px 20px 44px;
+}
+.disclaimer {
+  margin: 16px auto 0;
+  max-width: 520px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--lot-muted, #6b7280);
+}
+
+@media (min-width: 720px) {
+  .hero {
+    padding: 56px 24px 64px;
+  }
+  .hero-inner {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    column-gap: 40px;
+    align-items: center;
+  }
+  .eyebrow,
+  .hero-title,
+  .hero-sub,
+  .hero-actions,
+  .hero-note {
+    grid-column: 1;
+  }
+  .hero-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .cta-primary {
+    flex: none;
+  }
+  .preview {
+    grid-column: 2;
+    grid-row: 1 / span 5;
+    margin-top: 0;
+    justify-self: end;
+    width: 100%;
+  }
+  .features {
+    padding: 44px 24px;
+  }
+  .feature-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px 32px;
+  }
+  .pricing-section {
+    padding: 52px 0 56px;
+  }
+  .cta {
+    padding: 52px 24px 64px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .feature-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 </style>

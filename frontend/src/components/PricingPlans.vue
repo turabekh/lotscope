@@ -270,7 +270,20 @@ async function activate(plan: PlanInfo): Promise<void> {
 }
 @media (max-width: 800px) {
   .plan-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding: 4px 20px 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .plan-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .plan-card {
+    flex: 0 0 82%;
+    scroll-snap-align: center;
   }
 }
 </style>
