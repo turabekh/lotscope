@@ -1292,17 +1292,31 @@ export interface UnderwritingProfile {
   buy_box: BuyBox
 }
 
+export type CorrectionStatus = 'open' | 'triaged' | 'resolved' | 'rejected'
+
 export interface CorrectionRecord {
   id: number
   parcel_number: string
   market_code: string
+  reported_by?: number
   section: string
   field_name: string | null
+  verdict_version?: string | null
+  verdict_computed_at?: string | null
+  field_status?: string | null
+  source_label?: string | null
+  source_as_of?: string | null
+  attachment_ref?: string | null
   description: string
   status: string
   resolution: string | null
   resolved_at: string | null
   created_at: string
+}
+
+export interface CorrectionResolve {
+  status: CorrectionStatus
+  resolution: string | null
 }
 
 export interface PolicySummary {
