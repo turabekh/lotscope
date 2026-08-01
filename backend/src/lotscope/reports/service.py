@@ -12,6 +12,7 @@ from lotscope.reports.appeal_packet import render_appeal_packet_pdf
 from lotscope.reports.dossier import render_dossier_pdf
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict.service import get_or_compute_current_verdict
+from lotscope.zoning.service import assess_parcel
 
 _DISCLAIMER = (
     "Informational only - not legal, financial, or real-estate advice. "
@@ -35,10 +36,12 @@ async def build_parcel_dossier(
     assemblage = await compute_assemblage(session, parcel_number)
     distress = await assess_parcel_distress(session, parcel_number)
     checklist = await build_parcel_checklist(session, parcel_number)
+    buildability = await assess_parcel(session, parcel_number)
 
     return render_dossier_pdf(
         detail=detail,
         verdict=verdict,
+        buildability=buildability,
         assemblage=assemblage,
         distress=distress,
         checklist=checklist,

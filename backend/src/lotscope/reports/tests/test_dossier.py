@@ -244,3 +244,71 @@ def test_dossier_carries_page_furniture_and_sources() -> None:
     )
     assert pdf[:4] == b"%PDF"
     assert len(pdf) > 2000
+
+
+def test_a_zero_buildable_area_carries_its_reasoning() -> None:
+    from lotscope.zoning.schemas import BuildabilityResult
+
+    verdict = VerdictResult(
+        parcel_number="000000001",
+        verdict_version="v8",
+        buildability_score=20,
+        opportunity_score=54,
+        summary="RSA-3: variance likely.",
+        can_build_by_right=False,
+        by_right_units=1,
+        max_height_ft=38,
+        needs_variance=True,
+        buildable_area_sqft=0,
+        value_estimate_low=None,
+        value_estimate_high=None,
+        value_confidence=None,
+        assessment_market_gap=None,
+        arv=None,
+        est_profit=None,
+        est_margin=None,
+        max_allowable_offer=None,
+        deal_score=None,
+        is_underpriced=None,
+        risk_score=10,
+        risk_flags=[],
+        sources=[],
+        computed_at=_NOW,
+    )
+    buildability = BuildabilityResult(
+        parcel_number="000000001",
+        district_code="RSA-3",
+        district_method="spatial",
+        cited_section="Title 14 RSA-3",
+        conforming=False,
+        can_build_by_right=False,
+        needs_variance=True,
+        by_right_units=1,
+        max_height_ft=38,
+        buildable_area_sqft=0,
+        buildability_score=20,
+        confidence="high",
+        reasons=["Lot width 16 ft is below the 25 ft minimum for RSA-3."],
+        sources=[],
+        computed_at=_NOW,
+    )
+    with_reasons = render_dossier_pdf(
+        detail=_detail(address="5346 Spruce St"),
+        verdict=verdict,
+        buildability=buildability,
+        assemblage=None,
+        distress=None,
+        generated_at=_NOW,
+        disclaimer="Informational only.",
+    )
+    without = render_dossier_pdf(
+        detail=_detail(address="5346 Spruce St"),
+        verdict=verdict,
+        buildability=None,
+        assemblage=None,
+        distress=None,
+        generated_at=_NOW,
+        disclaimer="Informational only.",
+    )
+    assert with_reasons[:4] == b"%PDF"
+    assert len(with_reasons) > len(without)
