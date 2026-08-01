@@ -157,6 +157,8 @@ def compose_verdict(
         est_margin=deal.margin if deal is not None else None,
         deal_infeasible=deal.infeasible if deal is not None else False,
         risk_score=risk_score,
+        land_value_modelled=valuation is not None and valuation.estimate is not None,
+        risk_flag_count=len(risk.flags) if risk is not None else 0,
     )
 
     return ComposedVerdict(
