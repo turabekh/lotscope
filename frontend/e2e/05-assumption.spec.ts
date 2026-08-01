@@ -14,7 +14,7 @@ test('flow 6 — editing an assumption recomputes the deal', async ({ page }) =>
   await acquisition.fill('40000')
   await page.getByRole('button', { name: 'Recompute' }).click()
 
-  await expect(page.getByRole('button', { name: 'Reset' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeEnabled()
 })
 
 test('flow 6 — resetting returns the deal to market defaults', async ({ page }) => {
@@ -26,7 +26,7 @@ test('flow 6 — resetting returns the deal to market defaults', async ({ page }
 
   await page.getByRole('spinbutton', { name: 'Target margin (%)' }).fill('45')
   await page.getByRole('button', { name: 'Recompute' }).click()
-  await page.getByRole('button', { name: 'Reset' }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
 
   await expect(page.getByText('Assumptions: market default')).toBeVisible()
 })

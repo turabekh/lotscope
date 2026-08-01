@@ -8,6 +8,7 @@ export const SEEDED = {
   bestMargin: { number: 'phl:99900002', address: '1502 E2E FIXTURE WAY' },
   midMargin: { number: 'phl:99900003', address: '1504 E2E FIXTURE WAY' },
   cityOwned: { number: 'phl:99900005', address: '1508 E2E FIXTURE WAY' },
+  longAddress: { number: 'phl:99900006', address: '2909-11 E2E LONG FIXTURE BOULEVARD' },
 } as const
 
 export const PRIMARY_DESTINATIONS = ['Home', 'Find lots', 'Leads', 'Pipeline', 'Lists'] as const

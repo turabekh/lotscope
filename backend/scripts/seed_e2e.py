@@ -12,7 +12,7 @@ from lotscope.verdict.service import recompute_verdicts
 MARKET_CODE = "phl"
 LOCAL_SRID = 2272
 SOURCE = "e2e"
-PARCEL_NUMBERS = [f"{MARKET_CODE}:9990000{index}" for index in range(1, 6)]
+PARCEL_NUMBERS = [f"{MARKET_CODE}:9990000{index}" for index in range(1, 7)]
 
 PARCEL_ROWS = [
     ("99900001", "1500 E2E FIXTURE WAY", "Acme Land Holdings LLC", 1600, 18, 90, 120000, True),
@@ -20,6 +20,16 @@ PARCEL_ROWS = [
     ("99900003", "1504 E2E FIXTURE WAY", "John Developer", 1100, 16, 68, 95000, True),
     ("99900004", "1506 E2E FIXTURE WAY", "Smith Family Trust", 1050, 16, 65, 92000, True),
     ("99900005", "1508 E2E FIXTURE WAY", "City of Philadelphia", 2000, 20, 100, 140000, True),
+    (
+        "99900006",
+        "2909-11 E2E LONG FIXTURE BOULEVARD",
+        "Long Name Holdings LLC",
+        1400,
+        18,
+        78,
+        105000,
+        True,
+    ),
 ]
 
 COMP_SALES = [

@@ -62,9 +62,9 @@ test('the back control keeps its row for the actions rather than a word', async 
 test('a long address is not squeezed by the actions', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'actions-long')
-  await page.goto(`/parcel/${MARKET_SLUG}/phl:324053201`)
+  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.longAddress.number}`)
 
-  const address = page.getByText('2909-11 CECIL B MOORE AVE').first()
+  const address = page.getByText(SEEDED.longAddress.address).first()
   await expect(address).toBeVisible()
   const box = await address.boundingBox()
   expect(box?.height ?? 99, 'the address wrapped again').toBeLessThan(32)
