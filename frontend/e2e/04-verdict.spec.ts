@@ -59,9 +59,7 @@ test('flow 5 — the owner section always says something about the owner', async
   await page.getByRole('tab', { name: 'Risk' }).click()
   await expect(page.locator('[data-test="risk-panel"]')).toBeVisible()
 
-  const owner = page.locator(
-    '[data-test="owner-sole-holding"], [data-test="owner-portfolio-list"]',
-  )
+  const owner = page.locator('[data-test="owner-sole-holding"], [data-test="owner-portfolio-list"]')
   await expect(owner).toBeVisible()
   await expect(owner).toContainText('Owner portfolio')
 })
