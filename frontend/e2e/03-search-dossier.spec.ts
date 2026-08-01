@@ -1,0 +1,27 @@
+import { expect, test } from '@playwright/test'
+
+import { MARKET_SLUG, openDossier, registerAndSettle, SEEDED } from './support/app'
+
+test('flows 3 and 4 — search by address reaches the dossier', async ({ page }) => {
+  await registerAndSettle(page, 'search')
+
+  await page.getByPlaceholder('Search address, owner, or parcel #').fill('1502 E2E FIXTURE')
+
+  const suggestion = page.getByText(SEEDED.bestMargin.address).first()
+  await expect(suggestion).toBeVisible()
+  await suggestion.click()
+
+  await expect(page).toHaveURL(new RegExp(`/parcel/${MARKET_SLUG}/`))
+  await expect(page.getByText('Parcel 99900002')).toBeVisible()
+})
+
+test('flow 4 — a dossier opens directly by parcel number', async ({ page }) => {
+  await registerAndSettle(page, 'dossier')
+
+  await openDossier(page, SEEDED.bestMargin.number)
+
+  await expect(page.getByRole('button', { name: SEEDED.bestMargin.address })).toBeVisible()
+  for (const tab of ['Verdict', 'Deal', 'Land', 'Risk', 'Docs']) {
+    await expect(page.getByRole('tab', { name: tab })).toBeVisible()
+  }
+})

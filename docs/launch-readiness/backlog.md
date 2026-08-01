@@ -474,7 +474,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-026 — Launch navigation consolidation
 
 - **PRD requirement:** §12.1, §12.4
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done** — shipped as LR-7A (`9d23cd1`, ADR-0070); five primary destinations with the drifted five in a Research group, verified rendering by e2e flow 1
 - **Problem:** 10 primary destinations against a target of 5. Explore, Feed, Sheriff sales, Top plays, Cash buyers, and Leads are six discovery variants competing for one intent.
 - **User impact:** A new user has no obvious primary workflow, which directly undermines first-session activation.
 - **Current implementation:** `frontend/src/components/AppSidebar.vue:30-43`; routes in `frontend/src/router/index.ts`.
@@ -491,7 +491,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-027 — Buy-box onboarding and immediate results
 
 - **PRD requirement:** LR-O001, LR-O002, LR-O003, LR-O004, §4.1
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Done** — shipped as LR-7B (`a1d3949`); `BuyBoxOnboarding.vue` collects criteria and `GET /underwriting/matches` returns matches, verified by e2e flow 2
 - **Problem:** Onboarding is a 4-slide feature tour (`OnboardingTour.vue:16-31` — Welcome, Explore the map, Read the Parcel Verdict, Track your deals) that collects **no** acquisition criteria. Only `onboarded_at` is persisted (`accounts/models.py:26`).
 - **User impact:** A new user lands with no matched results and no configured buy box, so the §4.2 activation event is unreachable without founder explanation.
 - **Current implementation:** `OnboardingTour.vue`, `api/auth.py:86` (`POST /auth/onboarded`).
@@ -628,8 +628,8 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-035 — Critical end-to-end tests
 
 - **PRD requirement:** LR-P007
-- **Priority:** P1 · **Status:** **Blocked by owner action** (dependency approval)
-- **Problem:** No E2E framework exists. Zero Playwright references; `make e2e` exits with "not implemented yet".
+- **Priority:** P1 · **Status:** **Partially done** — Playwright approved 2026-08-01 (ADR-0071); 12 of the 14 flows automated and running in CI. Flows 10 and 11 remain blocked on LR-B-030 (Stripe) and are declared as explicit skips, not silent gaps.
+- **Problem:** No E2E framework existed. Zero Playwright references; `make e2e` exited with "not implemented yet".
 - **User impact:** A regression in register → onboard → search → dossier → save can reach production undetected.
 - **Current implementation:** None. Backend 1,174 tests and frontend 138 cover units and integration only.
 - **Proposed solution:** Automate the 14 LR-P007 flows including the mobile path.

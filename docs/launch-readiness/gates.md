@@ -93,7 +93,7 @@ Every gate below is **not met** at the baseline. No gate is marked met without e
 | **Evidence required** | Protected `main` with required checks; scheduled encrypted off-machine backups with a **performed** restore test; documented RTO/RPO; migration rollback procedure; the 14 LR-P007 E2E flows in CI; incident runbook |
 | **Evidence source** | GitHub settings; restore-test record; `docs/runbook.md`; CI run |
 | **Owner** | Owner (GitHub plan, backup destination, Playwright approval); Claude Code (implementation) |
-| **Current state** | **Not met** — CI complete and armed, deploy has a SHA-drift guard and `/health` verification; but **branch protection is plan-blocked** (403, Pro-only), **no backup or restore procedure is documented**, and **no E2E framework exists** |
+| **Current state** | **Not met** — CI complete and armed, deploy has a SHA-drift guard and `/health` verification; the pre-migration backup gate now runs unattended (first proven 2026-08-01) and **E2E exists for 12 of the 14 flows** (ADR-0071). Still outstanding: **branch protection is plan-blocked** (403, Pro-only), **no retention policy, RTO/RPO, or performed restore test**, and **flows 10–11 await Stripe** |
 | **Blocker** | LR-B-033, LR-B-034, LR-B-035 |
 | **Exception policy** | **No exception** for backups (LR-B-033) — data loss is unrecoverable. Branch protection may be waived only with a recorded interim control; the current interim control is: wait for `gh pr checks` to show `lint-type-unit`, `integration`, and `web` green before merging, because `gh pr merge --auto` silently degrades to an immediate merge when no required checks exist |
 
