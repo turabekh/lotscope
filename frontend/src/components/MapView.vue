@@ -865,9 +865,9 @@ onBeforeUnmount(() => {
     <q-tooltip anchor="center right" self="center left">Back to Philadelphia</q-tooltip>
   </q-btn>
   <div v-if="envelopeCaption" class="envelope-caption">
-    <q-icon name="deployed_code" size="16px" class="q-mr-xs" />
-    <span>{{ envelopeCaption }}</span>
-    <span class="ec-note">approx · informational</span>
+    <q-icon name="architecture" size="15px" />
+    <span class="ec-main" :title="envelopeCaption">{{ envelopeCaption }}</span>
+    <span class="ec-note">approx</span>
   </div>
   <div class="map-attribution">{{ attributionText }}</div>
 </template>
@@ -910,20 +910,29 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  max-width: calc(100vw - 32px);
-  padding: 6px 12px;
+  max-width: calc(100vw - 24px);
+  padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(13, 71, 161, 0.92);
+  background: rgba(13, 71, 161, 0.94);
   color: #fff;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
+  white-space: nowrap;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
 }
+.envelope-caption .ec-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .envelope-caption .ec-note {
+  flex: none;
   font-weight: 400;
-  font-size: 11px;
-  opacity: 0.8;
-  margin-left: 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  padding-left: 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
 }
 .map-attribution {
   position: absolute;
