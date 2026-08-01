@@ -69,3 +69,28 @@ test('a long address is not squeezed by the actions', async ({ page }) => {
   const box = await address.boundingBox()
   expect(box?.height ?? 99, 'the address wrapped again').toBeLessThan(32)
 })
+
+test('a laptop gets the map beside the dossier, not dead space', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await registerAndSettle(page, 'split-desktop')
+  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.bestMargin.number}`)
+
+  const map = page.locator('[data-test="dossier-map"]')
+  await expect(map).toBeVisible()
+
+  const mapBox = await map.boundingBox()
+  const frameBox = await page.locator('.dossier-frame').boundingBox()
+  expect(mapBox?.width ?? 0, 'the map should take the free width').toBeGreaterThan(500)
+  expect(frameBox?.width ?? 0).toBeGreaterThan(380)
+  expect((mapBox?.width ?? 0) + (frameBox?.width ?? 0)).toBeGreaterThan(1100)
+})
+
+test('a phone keeps the dossier full width with no map', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await registerAndSettle(page, 'split-mobile')
+  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.bestMargin.number}`)
+
+  await expect(page.locator('[data-test="dossier-map"]')).toHaveCount(0)
+  const frame = await page.locator('.dossier-frame').boundingBox()
+  expect(frame?.width ?? 0).toBeGreaterThan(360)
+})
