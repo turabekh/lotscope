@@ -47,6 +47,7 @@ async def evaluate_gold_set(session: AsyncSession, cases: list[GoldCase]) -> Eva
         total_cases=len(cases),
         evaluated=0,
         reviewed_cases=sum(1 for case in cases if case.review_status == "reviewed"),
+        cases_without_expectations=sum(1 for case in cases if case.expected.is_empty()),
         category_coverage=dict(sorted(coverage.items())),
     )
 

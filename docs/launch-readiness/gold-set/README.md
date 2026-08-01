@@ -1,7 +1,7 @@
 # Philadelphia gold set — schema and review workflow
 
 **Requirement:** Amendment 03 §16 (LR-Q001–LR-Q004) · **Backlog:** LR-B-007 (framework), LR-B-008 (review)
-**Status:** framework built; the real set is unpopulated and unreviewed.
+**Status:** framework built; **118 parcels selected covering all 17 LR-Q001 categories**; expected facts and professional review outstanding (LR-B-008).
 
 This is the machinery for checking LotScope's Philadelphia output against reality. It does not, and cannot, produce a professional conclusion — §16 is explicit that automated tests do not replace this review.
 
@@ -23,6 +23,27 @@ That distinction is the whole point of the gate. `reviewed_cases` is reported se
 |---|---|---|
 | `backend/data/goldset/phl-sample.jsonl` | Three synthetic cases demonstrating the format | **Yes** |
 | `backend/data/goldset/phl.jsonl` | The real set | **No — gitignored** |
+
+## Producing the set
+
+```bash
+make gold-set-select            # writes backend/data/goldset/phl.jsonl
+make gold-set                   # evaluates it against current verdicts
+```
+
+Selection is **deterministic** — parcels are ordered by `md5(parcel_number)`, so the same database yields the same set and a reviewer's work is not invalidated by a re-run. `--per-category N` (default 10) and `--out PATH` are available; the command exits non-zero if any category finds no candidates or the total falls below the 100 LR-Q001 requires.
+
+Two properties of the selection are deliberate.
+
+**Categories are drawn from source tables, never from our own output.** `historic` comes from `historic_district`, `flood_exposure` from `flood_zone`, `zoning_appeal` from `zba_appeal`, and so on — not from `parcel_verdict.risk_flags`. Selecting by our own flags would only ever sample parcels where we already believe the flag applies, so the review could never catch a flag we *missed*.
+
+**Cases are written with no expected facts.** `expected` is empty and `review_status` is `unreviewed`. Pre-filling expectations from LotScope's own verdict would make every case pass trivially and turn the gate into a mirror. The reviewer supplies expected facts from LR-Q002 sources.
+
+Because `compare_case` skips any field whose expectation is `None`, a set of empty stubs would otherwise evaluate as zero discrepancies and read as a perfect score. The report therefore counts `cases_without_expectations` and says so on the discrepancy line:
+
+```
+critical: 0  material: 0  minor: 0  (no expectations recorded on 118 case(s) - nothing was compared for them)
+```
 
 Gold-set evidence may be licensed, owner-confidential, or contain owner names, so the real file stays out of the repository (CLAUDE.md §13). The synthetic sample carries no real parcel and no PII.
 

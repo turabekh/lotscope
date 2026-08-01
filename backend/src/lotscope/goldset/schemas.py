@@ -45,6 +45,16 @@ class ExpectedFacts(BaseModel):
     street_access: bool | None = None
     expected_risk_flags: list[str] = Field(default_factory=list)
 
+    def is_empty(self) -> bool:
+        return (
+            self.district_code is None
+            and self.can_build_by_right is None
+            and self.by_right_units is None
+            and self.requires_master_plan is None
+            and self.street_access is None
+            and not self.expected_risk_flags
+        )
+
 
 class GoldCase(BaseModel):
     parcel_number: str
@@ -81,6 +91,7 @@ class EvaluationReport(BaseModel):
     missing_verdict: list[str] = Field(default_factory=list)
     discrepancies: list[Discrepancy] = Field(default_factory=list)
     reviewed_cases: int = 0
+    cases_without_expectations: int = 0
     category_coverage: dict[str, int] = Field(default_factory=dict)
 
     @property

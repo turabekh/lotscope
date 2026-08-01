@@ -19,8 +19,15 @@ def render(report: EvaluationReport) -> str:
         f"Gold set — verdict {report.verdict_version}",
         f"  cases: {report.total_cases}  evaluated: {report.evaluated}",
         f"  professionally reviewed: {report.reviewed_cases}/{report.total_cases}",
+        f"  awaiting expected facts: {report.cases_without_expectations}/{report.total_cases}",
         f"  categories covered: {len(report.category_coverage)}/{_CATEGORY_TOTAL}",
-        f"  critical: {report.critical}  material: {report.material}  minor: {report.minor}",
+        f"  critical: {report.critical}  material: {report.material}  minor: {report.minor}"
+        + (
+            "  (no expectations recorded on "
+            f"{report.cases_without_expectations} case(s) - nothing was compared for them)"
+            if report.cases_without_expectations
+            else ""
+        ),
     ]
     if report.missing_verdict:
         lines.append(f"  no verdict for: {', '.join(report.missing_verdict[:10])}")
