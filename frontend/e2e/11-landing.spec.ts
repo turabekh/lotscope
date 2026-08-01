@@ -26,7 +26,13 @@ test('the landing page leads with one full-width call to action on a phone', asy
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
   expect(box?.width ?? 0).toBeGreaterThan(280)
 
-  await expect(page.getByText('Base district · 3 units')).toBeVisible()
+  const showcase = page.locator('[data-test="hero-showcase"]')
+  await expect(showcase).toBeVisible()
+  await showcase.locator('[data-test="showcase-tab-deal"]').click()
+  await expect(showcase.locator('[data-test="showcase-tab-deal"]')).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
 })
 
 test('landing controls stay legible in dark mode', async ({ page }) => {
