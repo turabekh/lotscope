@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin mailpit
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -90,11 +90,15 @@ fmt: ## Format and autofix (backend + frontend)
 	cd $(BACKEND) && uv run ruff format . && uv run ruff check --fix .
 	cd $(FRONTEND) && pnpm format
 
+fmt-check: ## Check formatting without writing (backend + frontend); mirrors CI
+	cd $(BACKEND) && uv run ruff format --check .
+	cd $(FRONTEND) && pnpm format:check
+
 typecheck: ## Type-check (backend + frontend)
 	cd $(BACKEND) && uv run mypy
 	cd $(FRONTEND) && pnpm typecheck
 
-check: lint typecheck test-unit web-test ## Run lint, type-check, and unit tests (fast pre-commit gate)
+check: lint fmt-check typecheck test-unit web-test ## Run lint, format, type-check, and unit tests (fast pre-commit gate)
 
 web-install: ## Install frontend dependencies
 	cd $(FRONTEND) && pnpm install
