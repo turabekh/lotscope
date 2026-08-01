@@ -83,9 +83,70 @@ describe('VerdictHero', () => {
     const text = wrapper.text()
     expect(text).toContain('Base district · 1 unit')
     expect(text).toContain('dimensionally eligible')
-    expect(text).toContain('Not a construction approval')
+    expect(text).toContain('preliminary screening, not a construction approval')
+    expect(text).toContain('Still to check')
     expect(text).not.toContain('Developable under Title 14')
     expect(text).not.toContain('Variance likely')
+  })
+
+  it('names the outstanding checks beside the eligibility claim', () => {
+    const wrapper = mount(VerdictHero, {
+      props: {
+        verdict: makeVerdict({
+          can_build_by_right: true,
+          needs_variance: false,
+          by_right_units: 2,
+        }),
+        checklist: {
+          parcel_number: 'phl:000000001',
+          items: [
+            {
+              code: 'access',
+              category: 'Access & frontage',
+              status: 'not_evaluated',
+              detail: '',
+              source: null,
+            },
+            {
+              code: 'liens',
+              category: 'Liens & taxes',
+              status: 'pass',
+              detail: '',
+              source: null,
+            },
+          ],
+          summary: {
+            not_evaluated: 1,
+            passed: 1,
+            warnings: 0,
+            failures: 0,
+            info: 0,
+            ready: true,
+          },
+          computed_at: '2026-08-01T00:00:00Z',
+        },
+      },
+      global: {
+        plugins: [[Quasar, {}]],
+        stubs: { QTooltip: { template: '<div class="q-tooltip-stub"><slot /></div>' } },
+      },
+    })
+    const text = wrapper.text()
+    expect(text).toContain('Still to check: Access & frontage.')
+    expect(text).not.toContain('Liens & taxes')
+  })
+
+  it('never states an unconditional by-right permission', () => {
+    for (const verdict of [
+      makeVerdict({ can_build_by_right: true, needs_variance: false }),
+      makeVerdict({ can_build_by_right: false, needs_variance: true }),
+      makeVerdict({ can_build_by_right: null, needs_variance: false }),
+    ]) {
+      const text = mountHero(verdict).text().toLowerCase()
+      expect(text).not.toContain('buildable by right')
+      expect(text).not.toContain('can build by right')
+      expect(text).not.toContain('approved')
+    }
   })
 
   it('qualifies the clean risk pillar with the coverage note of the parcel market', () => {

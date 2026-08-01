@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import { byRightQualifier } from '@/lib/by-right'
 import { formatRange, marketCodeFromParcelNumber, scoreVar } from '@/lib/format'
 import { screeningDisplay } from '@/lib/screening'
 import { rankedDealKillers } from '@/lib/deal-killers'
-import type { VerdictResult } from '@/lib/types'
+import type { ParcelChecklist, VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 
-const props = defineProps<{ verdict: VerdictResult; developed?: boolean }>()
+const props = defineProps<{
+  verdict: VerdictResult
+  developed?: boolean
+  checklist?: ParcelChecklist | null
+}>()
 const emit = defineEmits<{ explain: [] }>()
 
 const market = useMarketStore()
@@ -42,7 +47,7 @@ const buildPillar = computed<Pillar>(() => {
         : 'Base district eligible',
       icon: 'check_circle',
       tone: 'positive',
-      hint: 'Appears dimensionally eligible under the listed base-district standards, subject to the limitations and checks below. Not a construction approval.',
+      hint: byRightQualifier(props.checklist ?? null),
     }
   }
   if (v.needs_variance) {

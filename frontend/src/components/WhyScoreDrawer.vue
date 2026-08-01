@@ -9,10 +9,15 @@ import {
   severityColor,
   severityIcon,
 } from '@/lib/format'
-import type { VerdictResult } from '@/lib/types'
+import { byRightQualifier } from '@/lib/by-right'
+import type { ParcelChecklist, VerdictResult } from '@/lib/types'
 import { flagWeight, scoreBreakdown, severityHint, sourceLabel } from '@/lib/verdict-explain'
 
-const props = defineProps<{ modelValue: boolean; verdict: VerdictResult }>()
+const props = defineProps<{
+  modelValue: boolean
+  verdict: VerdictResult
+  checklist?: ParcelChecklist | null
+}>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 
 const open = computed({
@@ -91,14 +96,17 @@ const computedAtLabel = computed(() =>
             <div class="section-label">Buildability</div>
             <ul class="facts">
               <li>
-                By-right:
+                Base district:
                 <b>{{
                   verdict.can_build_by_right === null
                     ? 'unresolved'
                     : verdict.can_build_by_right
-                      ? 'yes'
-                      : 'no'
+                      ? 'dimensionally eligible'
+                      : 'standards not met'
                 }}</b>
+                <div v-if="verdict.can_build_by_right" class="qualifier">
+                  {{ byRightQualifier(checklist ?? null) }}
+                </div>
               </li>
               <li v-if="verdict.by_right_units !== null">
                 By-right units: <b>{{ verdict.by_right_units }}</b>
@@ -178,6 +186,13 @@ const computedAtLabel = computed(() =>
 </template>
 
 <style scoped>
+.qualifier {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--lot-muted);
+}
+
 .why-card {
   width: 400px;
   max-width: 92vw;

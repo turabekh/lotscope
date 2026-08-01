@@ -38,7 +38,8 @@ import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useParcelStore()
-const { detail, verdict, nextSheriffSale, loading, error, errorStatus } = storeToRefs(store)
+const { detail, verdict, checklist, nextSheriffSale, loading, error, errorStatus } =
+  storeToRefs(store)
 const watchlist = useWatchlistStore()
 const pipeline = usePipelineStore()
 const compare = useCompareStore()
@@ -435,9 +436,15 @@ async function toggleSave(): Promise<void> {
               v-if="verdict"
               :verdict="verdict"
               :developed="isDeveloped"
+              :checklist="checklist"
               @explain="whyOpen = true"
             />
-            <WhyScoreDrawer v-if="verdict" v-model="whyOpen" :verdict="verdict" />
+            <WhyScoreDrawer
+              v-if="verdict"
+              v-model="whyOpen"
+              :verdict="verdict"
+              :checklist="checklist"
+            />
             <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
               <template #avatar><q-icon name="info" color="grey-7" /></template>
               No verdict yet.
@@ -446,7 +453,12 @@ async function toggleSave(): Promise<void> {
               </template>
             </q-banner>
             <SnapshotPanel :parcel-number="detail.parcel_number" />
-            <VerdictPanel v-if="verdict" :verdict="verdict" :developed="isDeveloped" />
+            <VerdictPanel
+              v-if="verdict"
+              :verdict="verdict"
+              :developed="isDeveloped"
+              :checklist="checklist"
+            />
             <DistressPanel />
             <ChecklistPanel />
             <div class="tab-foot">
