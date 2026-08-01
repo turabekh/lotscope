@@ -154,3 +154,40 @@ def test_an_estimated_field_is_not_treated_as_a_critical_unknown() -> None:
         }
     )
     assert result.recommendation == "strong_candidate"
+
+
+def test_a_strong_margin_on_an_assessed_land_value_is_only_worth_investigating() -> None:
+    result = _decide(land_value_modelled=False)
+    assert result.recommendation == "worth_investigating"
+    assert "rests on the assessed value" in result.reason
+    assert "no comparable land sales" in result.reason
+
+
+def test_a_strong_margin_on_a_modelled_land_value_still_stands() -> None:
+    assert _decide(land_value_modelled=True).recommendation == "strong_candidate"
+
+
+def test_the_strong_reason_names_the_flags_it_sits_beside() -> None:
+    result = _decide(risk_score=30.0, risk_flag_count=3)
+    assert result.recommendation == "strong_candidate"
+    assert "3 flags recorded" in result.reason
+    assert "no elevated risk signal" not in result.reason
+    assert "review them before committing" in result.reason
+
+
+def test_a_single_flag_reads_in_the_singular() -> None:
+    assert "1 flag recorded" in _decide(risk_score=20.0, risk_flag_count=1).reason
+
+
+def test_a_clean_parcel_says_no_flags_rather_than_no_elevated_signal() -> None:
+    result = _decide(risk_flag_count=0)
+    assert "no risk flags recorded" in result.reason
+    assert "no elevated risk signal" not in result.reason
+
+
+def test_the_assessed_downgrade_does_not_override_an_earlier_rule() -> None:
+    infeasible = _decide(land_value_modelled=False, deal_infeasible=True)
+    assert infeasible.recommendation == "economics_unattractive"
+
+    variance = _decide(land_value_modelled=False, can_build_by_right=False, needs_variance=True)
+    assert variance.recommendation == "high_entitlement_risk"

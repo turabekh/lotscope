@@ -65,6 +65,18 @@ def rank_deal_killers(risk_flags: list[dict[str, object]]) -> list[dict[str, obj
     return ranked[:DEAL_KILLER_LIMIT]
 
 
+def _risk_clause(risk_score: float | None, risk_flag_count: int) -> str:
+    if risk_flag_count <= 0:
+        return "no risk flags recorded"
+    plural = "flag" if risk_flag_count == 1 else "flags"
+    if risk_score is None:
+        return f"{risk_flag_count} risk {plural} recorded - review them before committing"
+    return (
+        f"a risk score of {risk_score:.0f}/100 below the elevated threshold, but "
+        f"{risk_flag_count} {plural} recorded - review them before committing"
+    )
+
+
 def decide(
     *,
     field_trust: dict[str, FieldProvenance],
@@ -74,6 +86,8 @@ def decide(
     est_margin: float | None,
     deal_infeasible: bool,
     risk_score: float | None,
+    land_value_modelled: bool = True,
+    risk_flag_count: int = 0,
 ) -> ScreeningDecision:
     missing = _unavailable_critical(field_trust)
     if missing:
@@ -122,10 +136,21 @@ def decide(
 
     elevated_risk = risk_score is not None and risk_score >= ELEVATED_RISK_SCORE
     if est_margin is not None and est_margin >= STRONG_MARGIN and not elevated_risk:
+        if not land_value_modelled:
+            return ScreeningDecision(
+                recommendation="worth_investigating",
+                reason=(
+                    f"Projected margin of {est_margin:.0%} rests on the assessed value - no "
+                    "comparable land sales were available to price the land, so the margin is "
+                    "not yet evidence of a strong deal."
+                ),
+            )
         return ScreeningDecision(
             recommendation="strong_candidate",
-            reason=f"Appears dimensionally eligible with a projected margin of {est_margin:.0%} "
-            "and no elevated risk signal.",
+            reason=(
+                f"Appears dimensionally eligible with a projected margin of {est_margin:.0%} "
+                f"and {_risk_clause(risk_score, risk_flag_count)}."
+            ),
         )
 
     return ScreeningDecision(
