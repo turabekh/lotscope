@@ -47,6 +47,18 @@ The drift runs the opposite way from the last audit (`measure-dont-trust-ticket-
 | LR-B-010 likely development program | `recommended_units` and assumptions exist, but "distinguishes verified rules from calculated geometry and assumptions; cites standards version" is a wording judgement not settled by the code |
 | LR-B-016 buildability confidence rules | The invariant is stated in the PRD, not the ticket; verifying "holds across all markets" needs that definition |
 
+### Criteria review resolved (2026-08-01, later the same day)
+
+The three items left as **Needs criteria review** were measured rather than guessed. All three resolve to *not started*, with specifics that make each actionable.
+
+**LR-B-010 — likely development program.** The stored summary reads `RM-1: buildable by-right (4 unit); est. $251,807-$1,337,143; 3 risk flag(s); MAO $1,763,035 (underpriced)`. LR-V002 asks for a plain-language program that distinguishes verified district rules from calculated geometry and assumptions, uses conditional language where overlays, lot shape, access, parking, utilities or title are not fully evaluated, and cites the standards version. The line does none of those. Parts of the requirement are met *elsewhere* in the dossier — the buildability qualifier and the checklist enumerate unevaluated checks — but the program summary itself does not meet LR-V002.
+
+**LR-B-016 — buildability confidence.** `_confidence()` in `zoning/buildability.py` reads exactly two inputs: whether lot area is known and whether lot width is known. LR-B004 requires seven — source completeness, district certainty, geometry quality, lot-shape complexity, overlay coverage, standard version, and evaluated-versus-unevaluated checks. **Five are not consulted at all**, and no code path inspects a critical unknown before assigning `high`, so the stated invariant — a high confidence label cannot coexist with unresolved critical unknowns — is not enforced by construction. The one existing mitigation is a market-wide downgrade for provisional zoning in `zoning/service.py`, which is not a per-parcel check.
+
+*A caution for whoever picks this up:* `parcel.resolved_zoning_source` is almost entirely unpopulated (544,886 null against 27 `spatial`). That is a materialisation gap, not evidence that districts are unresolved — districts do resolve at request time, as a live checklist returning `RM-1` shows. Do not read that column as a confidence signal without checking it is backfilled.
+
+**LR-B-020 — launch metrics dashboard.** The ops surface reports operational health: `/admin/ops/{fleet,gates,markets,sheriff-coverage}`. None of LR-A004's twelve metrics — activation, time to first verdict, first-session save rate, seven-day return, weekly active paid, verdicts per paid user, saved searches per paid user, checkout conversion, cancellation, correction reports, data freshness, critical job failures — is computed. The ticket's own problem statement said exactly this and was right.
+
 ### Statuses that were accurate (19)
 
 Done and confirmed: **LR-B-001** (550,976 of 550,976 phl verdicts carry `field_trust`), **LR-B-002**, **LR-B-003**, **LR-B-004**, **LR-B-026**, **LR-B-027**, **LR-B-033** (restore performed).
