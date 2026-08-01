@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import { ApiError, api, setAuthToken } from '@/lib/api'
+import { ApiError, api, setAuthToken, setUnauthorizedHandler } from '@/lib/api'
+import { isTokenExpired, millisecondsUntilRefresh, shouldRefreshToken } from '@/lib/session'
 import type { RegisterPayload, SignerProfile, Usage, User } from '@/lib/types'
 import { useAreaSearchStore } from '@/stores/areaSearch'
 import { usePipelineStore } from '@/stores/pipeline'
@@ -18,8 +19,10 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
 
   setAuthToken(token.value)
+  setUnauthorizedHandler(() => void handleUnauthorized())
 
-  const isAuthenticated = computed(() => token.value !== null && user.value !== null)
+  const hasLiveToken = computed(() => token.value !== null && !isTokenExpired(token.value))
+  const isAuthenticated = computed(() => hasLiveToken.value && user.value !== null)
 
   function persist(value: string | null): void {
     token.value = value
@@ -60,11 +63,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function restore(): Promise<void> {
     if (token.value === null) return
+    if (isTokenExpired(token.value)) {
+      endSession()
+      return
+    }
     try {
       user.value = await api.getMe()
-    } catch {
-      persist(null)
-      user.value = null
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) endSession()
     }
   }
 
@@ -77,12 +83,29 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function refresh(): Promise<void> {
     if (token.value === null) return
+    if (isTokenExpired(token.value)) {
+      endSession()
+      return
+    }
     try {
       const response = await api.refreshToken()
       persist(response.access_token)
-    } catch {
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) endSession()
+    }
+  }
+
+  async function refreshIfExpiring(): Promise<void> {
+    if (token.value === null) return
+    if (isTokenExpired(token.value)) {
+      endSession()
       return
     }
+    if (shouldRefreshToken(token.value)) await refresh()
+  }
+
+  function millisecondsUntilNextRefresh(): number | null {
+    return millisecondsUntilRefresh(token.value)
   }
 
   async function refreshUser(): Promise<void> {
@@ -118,6 +141,30 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  let verifyingSession = false
+
+  async function handleUnauthorized(): Promise<void> {
+    if (token.value === null) return
+    if (isTokenExpired(token.value)) {
+      endSession()
+      return
+    }
+    if (verifyingSession) return
+    verifyingSession = true
+    try {
+      user.value = await api.getMe()
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) endSession()
+    } finally {
+      verifyingSession = false
+    }
+  }
+
+  function endSession(): void {
+    if (token.value === null && user.value === null) return
+    logout()
+  }
+
   function logout(): void {
     persist(null)
     user.value = null
@@ -135,11 +182,16 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     isAuthenticated,
+    hasLiveToken,
     login,
     register,
     restore,
     ensureRestored,
     refresh,
+    refreshIfExpiring,
+    millisecondsUntilNextRefresh,
+    endSession,
+    handleUnauthorized,
     refreshUser,
     setDigest,
     setSigner,

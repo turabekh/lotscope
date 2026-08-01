@@ -185,10 +185,11 @@ export const marketGuard: NavigationGuard = async (to) => {
     market.set(marketParam)
   }
 
-  if (to.meta.requiresAuth && auth.token === null) {
+  if (to.meta.requiresAuth && !auth.hasLiveToken) {
+    auth.endSession()
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  if (to.meta.guestOnly && auth.token !== null) {
+  if (to.meta.guestOnly && auth.hasLiveToken) {
     return { name: 'home', params: { market: market.active } }
   }
   if (to.meta.requiresAdmin) {
@@ -197,7 +198,7 @@ export const marketGuard: NavigationGuard = async (to) => {
       return { name: 'home', params: { market: market.active } }
     }
   }
-  if (to.name === 'landing' && auth.token !== null) {
+  if (to.name === 'landing' && auth.hasLiveToken) {
     return { name: 'home', params: { market: market.active } }
   }
   return true

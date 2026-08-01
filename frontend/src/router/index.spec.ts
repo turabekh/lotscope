@@ -26,6 +26,17 @@ function authenticate(): void {
   useAuthStore().token = 'test-token'
 }
 
+function tokenExpiringIn(seconds: number): string {
+  const payload = btoa(JSON.stringify({ sub: '1', exp: Math.floor(Date.now() / 1000) + seconds }))
+  return `header.${payload}.signature`
+}
+
+function authenticateWithExpiredToken(): void {
+  const auth = useAuthStore()
+  auth.token = tokenExpiringIn(-60)
+  localStorage.setItem('lotscope_token', auth.token)
+}
+
 describe('marketGuard', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -114,5 +125,28 @@ describe('marketGuard', () => {
     const router = makeRouter()
     await router.push('/admin')
     expect(router.currentRoute.value.name).not.toBe('admin')
+  })
+
+  it('sends an expired session to login instead of into the app', async () => {
+    authenticateWithExpiredToken()
+    const router = makeRouter()
+    await router.push('/philadelphia/pipeline')
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/philadelphia/pipeline')
+  })
+
+  it('clears the dead token rather than leaving it to fail every request', async () => {
+    authenticateWithExpiredToken()
+    const router = makeRouter()
+    await router.push('/philadelphia/pipeline')
+    expect(useAuthStore().token).toBeNull()
+    expect(localStorage.getItem('lotscope_token')).toBeNull()
+  })
+
+  it('lets an expired session see the landing page rather than bouncing it to home', async () => {
+    authenticateWithExpiredToken()
+    const router = makeRouter()
+    await router.push('/')
+    expect(router.currentRoute.value.name).toBe('landing')
   })
 })
