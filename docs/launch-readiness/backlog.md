@@ -596,8 +596,8 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-033 — Backup, retention, and restore procedure
 
 - **PRD requirement:** LR-P005
-- **Priority:** P0 · **Status:** Not started
-- **Problem:** No documented backup, retention, or restore procedure. `docs/runbook.md` has no match for backup, restore, or `pg_dump`; the only `sync-db.sh` is gitignored and local-only.
+- **Priority:** P0 · **Status:** **Done 2026-08-01** — weekly cron + pre-migration backups, 30-day retention at script and bucket, documented RTO/RPO, migration rollback, bad-verdict recompute, and a **performed restore test** recorded in `gates.md` G6.
+- **Problem:** No documented backup, retention, or restore procedure. `docs/runbook.md` has no match for backup, restore, or `pg_dump`; the only `sync-db.sh` is gitignored and local-only. *(Superseded: the runbook and `scripts/backup-db.sh` had in fact been written; the real gaps were that no schedule existed and no restore had ever been performed.)*
 - **User impact:** Paying customers' pipelines, saved searches, and underwriting sit in one database with no tested recovery path.
 - **Current implementation:** None documented.
 - **Proposed solution:** Scheduled encrypted off-machine backups, retention policy, monthly restore test, documented RTO/RPO, migration rollback, and a bad-verdict-recompute response.

@@ -110,6 +110,23 @@ Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006.
 
 If the revision comparison cannot be made, the backup is taken anyway. Failing towards a backup costs a minute; failing away from one costs the database.
 
+**A weekly backup also runs from the VM's crontab**, Sundays at 03:00 UTC, labelled `weekly`:
+
+```cron
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+BACKUP_BUCKET=gs://lotscope-501014-db-backups
+BACKUP_LABEL=weekly
+0 3 * * 0 cd /home/turaboy/lotscope && /bin/bash scripts/backup-db.sh >> /home/turaboy/backup.log 2>&1
+```
+
+`PATH` is set explicitly because `gcloud` lives in `/snap/bin`, which cron's default `PATH` does not include. Without that line the job fails every week with `gcloud: command not found` and nothing announces it — the failure mode this schedule exists to prevent.
+
+Installed and verified 2026-08-01 by running the command in a stripped environment (`env -i`), which produced `lotscope-weekly-20260801T020511Z.dump`.
+
+**Weekly, not nightly, is a deliberate trade.** It sets the real RPO at 7 days (see *Objectives*). Nightly would cost roughly seven times the storage — still only cents a month — so if losing a week of pipelines, saved searches, and underwriting is unacceptable, change the schedule rather than the RPO figure.
+
+**Expect one `ERROR` line in a successful run.** `gcloud` reports that it cannot check bucket compatibility for parallel composite uploads, because the VM service account holds `roles/storage.objectAdmin` (objects) and not `storage.buckets.get`. It falls back to a normal upload and succeeds. This is a performance note wearing an error's clothing; it is not a failed backup.
+
 A deploy that cannot back up does not migrate — the script exits non-zero and the deploy stops. This is deliberate: LR-P006 requires a production backup before risky migrations, and a requirement that can be forgotten is not a control.
 
 The escape hatch is the **`skip_pre_migration_backup`** input on the Deploy workflow, which sets `SKIP_PRE_MIGRATION_BACKUP=1` for that run only and prints a warning into the log.
@@ -124,20 +141,13 @@ It is a per-run input rather than a repository variable on purpose. A variable w
 
 **Production bucket:** `gs://lotscope-501014-db-backups` — US-EAST1 (same region as the VM), uniform access, 30-day delete lifecycle. The VM service account holds `roles/storage.objectAdmin`, which the script needs for both upload and pruning.
 
-### Blocker: the VM cannot write to Cloud Storage
+### Resolved: the VM can write to Cloud Storage
 
-The instance was created with the OAuth scope `devstorage.read_only`. **Access scopes are a ceiling above IAM** — the `objectAdmin` binding above is correct but unreachable, and an upload fails with *"Provided scope(s) are not authorized"*. This is also why `sync-db.sh` uploads from a workstation and only downloads on the VM.
+The instance was originally created with the OAuth scope `devstorage.read_only`. **Access scopes are a ceiling above IAM**, so the `objectAdmin` binding was correct but unreachable and uploads failed with *"Provided scope(s) are not authorized"*.
 
-The dump itself works: a production `pg_dump` produced 426 MB on 2026-07-28. Only the upload is blocked.
+**Fixed 2026-07-28** by widening the scope to `devstorage.read_write`, verified by a real write and delete from the VM. The gate has since run unattended twice: a pre-migration backup on 2026-08-01 and the first scheduled `weekly` backup the same day.
 
-Two ways out, and the choice is the owner's because both have a cost:
-
-| Option | Cost |
-|---|---|
-| Widen the instance scope to `devstorage.read_write` or `cloud-platform` | Requires **stopping the instance** — real production downtime |
-| Place a service-account key on the VM and `gcloud auth activate-service-account` | No downtime, but a long-lived credential on the box, against §13's preference |
-
-Until one is chosen, **`scripts/deploy.sh` will halt before migrating.** That is the gate behaving correctly, not a regression.
+Widening a scope requires the instance to be `TERMINATED`, and stopping it released the VM's ephemeral external IP. See *The IP incident* in `docs/handoff/0030-2026-07-28.md`: **check `natIP` allocation type before stopping a GCE instance.** The address is now the reserved static `lotscope-static`, so a stop/start cannot repeat it — but note that the deploy path also holds the address as a literal in the `VM_HOST` GitHub secret, which must be updated in the same breath as DNS if it ever changes again.
 
 The lifecycle rule and the script's `BACKUP_RETAIN_DAYS` both sit at 30 days deliberately. The script prunes by the timestamp in each filename; the lifecycle prunes by object age. If the script's pruning ever breaks, the bucket rule still caps storage growth.
 
@@ -179,10 +189,12 @@ docker compose exec -T db pg_restore -U lotscope -d lotscope_restore --no-owner 
 
 | Objective | Target | Basis |
 |---|---|---|
-| **RPO** | 24 hours, and zero for migration-caused loss | Backups are pre-migration plus whatever schedule is configured; a migration failure loses nothing because the backup precedes it |
-| **RTO** | 1 hour | Download, restore into a scratch database, verify, promote |
+| **RPO** | **7 days**, and zero for migration-caused loss | The schedule is weekly (Sundays 03:00 UTC), plus a pre-migration backup; a migration failure loses nothing because the backup precedes it |
+| **RTO** | 1 hour | Measured 2026-08-01: 4s download + 4m19s restore + verification. The remaining budget is promotion and service restart |
 
-Both are targets, not guarantees, and neither is credible until a restore has actually been performed.
+The RPO is **7 days because the schedule is weekly**, not because a week of loss is comfortable. It is the figure the configuration actually supports. Moving to a nightly cron makes it 24 hours for a few cents a month; changing the number without changing the schedule makes it fiction.
+
+RTO is now evidence-based rather than estimated, but it covers a *verified scratch restore* — the promote-and-restart step has still never been performed under pressure.
 
 ## Monthly restore test
 
@@ -193,7 +205,18 @@ A backup that has never been restored is a hypothesis. Once a month:
 3. Drop the scratch database.
 4. Record the date and the counts in `docs/launch-readiness/gates.md` under **G6**.
 
-Until step 4 has happened at least once, **G6 is not met** regardless of what this document says.
+**Do not stop `api`, `worker`, or `web` for this test.** The *Restore* section above stops them because it describes a real recovery, where the live database is about to be replaced. The monthly test writes only to a scratch database, so stopping services would take production down to verify a copy — cost with no benefit.
+
+**Performed 2026-08-01**, the first time. `pg_restore` returned 0 with no stderr output, and every count matched live exactly:
+
+| Measure | Live | Restored |
+|---|---|---|
+| phl / pgh / wlm / hbg parcels | 550,976 / 143,355 / 26,197 / 19,502 | identical |
+| `parcel_verdict` | 740,030 | identical |
+| `app_user` / `deal` / `deal_activity` / `saved_search` | 10 / 5 / 2 / 3 | identical |
+| Tables | 45 | 44 |
+
+The single table difference is `policy_document`, and the restored `alembic_version` is `d9f3b1c7e485` rather than `b3c45f2553b6`. That is correct: the dump is labelled `pre-migration` and was taken before `b3c45f2553b6` applied. A pre-migration backup that already contained the migration would be the defect.
 
 ## Migration rollback
 
