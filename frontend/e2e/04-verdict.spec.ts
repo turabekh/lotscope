@@ -30,3 +30,12 @@ test('flow 5 — a parcel with weak economics is not recommended', async ({ page
 
   await expect(page.getByText('Screening result')).toBeVisible()
 })
+
+test('flow 5 — the buildability qualifier is visible without hovering', async ({ page }) => {
+  await registerAndSettle(page, 'verdict-qualifier')
+  await openDossier(page, SEEDED.bestMargin.number)
+
+  const qualifier = page.locator('[data-test="build-qualifier"]')
+  await expect(qualifier).toBeVisible()
+  await expect(qualifier).not.toBeEmpty()
+})
