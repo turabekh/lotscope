@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin mailpit
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e web-install web-dev web-build web-test web-lint web-typecheck docker-prune
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 demo test-image test test-unit test-integration lint fmt typecheck check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -117,5 +117,12 @@ web-typecheck: ## Type-check the frontend
 ingest: ## Run data ingestion (all datasets, or: make ingest DATASETS="opa pwd")
 	cd $(BACKEND) && uv run python -m lotscope.ingestion.cli $(DATASETS)
 
-e2e: ## Run end-to-end tests (added with the frontend slice)
-	@echo "e2e is not implemented yet (see CLAUDE.md build order step 10)" && exit 1
+e2e: ## Run end-to-end tests (needs make up and a running api: make dev-api)
+	cd $(BACKEND) && uv run python scripts/seed_e2e.py
+	cd $(FRONTEND) && pnpm exec playwright test
+
+e2e-seed: ## Load the end-to-end fixture parcels and compute their verdicts
+	cd $(BACKEND) && uv run python scripts/seed_e2e.py
+
+e2e-install: ## Install the Chromium build Playwright drives
+	cd $(FRONTEND) && pnpm exec playwright install --with-deps chromium
