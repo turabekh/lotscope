@@ -29,12 +29,8 @@ watch(() => route.params.id, load)
 
 <template>
   <div class="dossier-page" :class="{ mobile: isMobile }">
-    <div v-if="isMobile" class="back-bar">
-      <q-btn flat dense round icon="chevron_left" aria-label="Back" @click="goBack" />
-      <span class="back-label">Back</span>
-    </div>
     <div class="dossier-frame">
-      <ParcelDossier />
+      <ParcelDossier :show-back="isMobile" @back="goBack" />
     </div>
   </div>
 </template>
@@ -70,19 +66,5 @@ watch(() => route.params.id, load)
   box-shadow: none;
   flex: 1;
   min-height: 0;
-}
-.back-bar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px 6px;
-  background: var(--lot-surface);
-  border-bottom: 1px solid var(--lot-border);
-}
-.back-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--lot-muted);
 }
 </style>
