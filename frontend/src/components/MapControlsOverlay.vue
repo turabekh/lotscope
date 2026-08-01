@@ -129,7 +129,7 @@ function radiusLabel(meters: number): string {
         <section class="mc-section">
           <q-toggle
             v-model="show3d"
-            icon="deployed_code"
+            icon="architecture"
             label="3D building envelope"
             dense
             color="primary"
