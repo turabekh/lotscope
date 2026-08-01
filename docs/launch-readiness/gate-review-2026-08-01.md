@@ -20,7 +20,7 @@ Every finding below was measured against code, the production database, or a liv
 |---|---|---|
 | LR-B-001 field-state taxonomy | Not started | **Substantially shipped** — ADR-0065, `verdict/trust.py` with per-field method versions and explicit not-evaluated reasons; 550,976 of 550,976 phl verdicts carry `field_trust`. Full acceptance not confirmed (see §2 G3) |
 | LR-B-004 correction workflow | Not started | **Partial** — reporting is live and reachable; operator triage is not (§1.2) |
-| LR-B-002 by-right qualifier | Not started | **Accurate.** No qualifier string exists on by-right wording; searched `VerdictPanel.vue` and sibling components |
+| LR-B-002 by-right qualifier | Not started | **Wrong — corrected 2026-08-01, see §1.3.** A qualifier already existed in `VerdictHero.vue`; the review's search terms missed it |
 | LR-B-029 support route | Not started | **Accurate.** No support address anywhere in `backend/src`, `frontend/src`, or `.env.example`; the only match is a test fixture |
 | LR-B-033 backup and restore | Not started | **Closed 2026-08-01** — weekly schedule installed, restore performed (`gates.md` G6) |
 
@@ -35,6 +35,27 @@ LR-B-004's acceptance criteria require that *"triage status is visible to an ope
 This is the pattern the programme keeps repeating, one layer up each time: ADR-0065's `field_trust` shipped without persistence; LR-6A/6C/6D were unreachable until 6E; LR-9C found service functions with no endpoint and built the endpoints — then stopped before the UI that consumes them. **Check the call path to a user, not to the next layer.**
 
 Not fixed here: LR-12 is documentation-only unless a newly discovered P0 defect requires its own branch. This is a P0 acceptance gap rather than a production defect — nothing is broken for users, and no data is at risk — so it is recorded and left for its own slice.
+
+### 1.3 A correction to this review — added 2026-08-01
+
+**The review's LR-B-002 finding was wrong, in the same way the statuses it criticised are wrong.**
+
+It reported that no by-right qualifier existed. One did: `VerdictHero.vue` already rendered *"Appears dimensionally eligible under the listed base-district standards, subject to the limitations and checks below. Not a construction approval,"* and `VerdictPanel.vue` already showed a "Dimensionally eligible" chip. The search that produced the finding looked for `preliminary`, `screening`, and `not a determination`, and matched none of them — the wording was there under different words.
+
+The review's method section claims measurement over assumption. This finding was a keyword search presented as a measurement, which is the weaker thing wearing the stronger thing's clothes.
+
+**What was genuinely outstanding**, and is now closed by the same commit that adds this correction:
+
+| Surface | Was | Now |
+|---|---|---|
+| `WhyScoreDrawer.vue` | `By-right: yes` | `Base district: dimensionally eligible`, with the qualifier |
+| `MapView.vue` popup | `3 units by-right`, `Not by-right` | `Base district: 3 units`, plus *"Dimensional screening only — not an approval"* |
+| `MapView.vue` height | `~3 floors by-right` | `~3 floors under base district` |
+| Qualifier binding | fixed prose: *"the checks below"* | enumerates the checklist's actual `not_evaluated` categories |
+
+The last row is the one the acceptance criteria turned on: the qualifier now *names* what is outstanding rather than gesturing at it.
+
+**G3's assessment does not change** — the gate was correctly marked not met, and the criterion was correctly identified as the outstanding one. Only the reason was wrong, and the work was smaller than described.
 
 ---
 
@@ -59,10 +80,10 @@ Each gate carries the seven fields LR-12 requires.
 | Blocked on | Tickets |
 |---|---|
 | **Owner or external** | LR-B-018, LR-B-019 (vendor approval) · LR-B-028 (legal copy) · LR-B-029 (support address) · LR-B-030 (Stripe) · LR-B-032 (email) · LR-B-034 (GitHub plan) |
-| **Unblocked engineering** | LR-B-002 (by-right qualifier) · LR-B-004 (operator triage UI) |
+| **Unblocked engineering** | LR-B-004 (operator triage UI). LR-B-002 was on this list and closed 2026-08-01 (§1.3) |
 | **Unconfirmed** | LR-B-001 (appears shipped; needs acceptance check) |
 
-**Only two open P0s are engineering work this team can start today.** The gate is owner-gated, not engineering-gated — the single most useful fact in this review.
+**Only one open P0 is engineering work this team can start today** (two at the time of review; LR-B-002 has since closed). The gate is owner-gated, not engineering-gated — the single most useful fact in this review.
 
 ### G2 — Broad public launch
 
@@ -88,7 +109,7 @@ Each gate carries the seven fields LR-12 requires.
 | **Owner** | Claude Code (implementation); owner (contract approval) |
 | **Open risk** | A user reads a by-right conclusion as a zoning determination |
 | **Exception** | **No exception** for §8.4 — and §8.4 is satisfied |
-| **Decision** | **Conditionally accept on closing LR-B-002.** One criterion outstanding, and it is unblocked |
+| **Decision** | **Conditionally accept.** LR-B-002 closed 2026-08-01; the remaining shortfall is operator triage (§1.2), which is an LR-B-004 acceptance gap rather than a G3 criterion |
 
 | Criterion | State |
 |---|---|
@@ -96,7 +117,7 @@ Each gate carries the seven fields LR-12 requires.
 | Freshness visible at point of use | **Met** — `_source_ages` feeds the dossier's data-coverage chip |
 | §8.4 audit complete, zero prohibited translations | **Met** — LR-B-003 marked Complete 2026-07-28, six findings closed |
 | Correction workflow live | **Met** for users (report + own view, reachable from every dossier); **operator triage missing** (§1.2) |
-| By-right wording carries the LR-B-002 qualifier | **Not met** — no qualifier found |
+| By-right wording carries the LR-B-002 qualifier | **Met 2026-08-01** — a qualifier already existed on the hero and panel; the drawer and map popup are now reworded and the qualifier is bound to the checklist's not-evaluated categories (§1.3) |
 
 ADR-0067's *"Screening result"* framing improves the recommendation surface, but it is not the by-right qualifier LR-B-002 specifies, and should not be counted as one.
 
@@ -235,7 +256,7 @@ The gap to a paid beta is overwhelmingly **owner actions**: legal copy, Stripe c
 
 **Engineering, available now:**
 
-1. **LR-B-002** — the by-right qualifier; the only thing standing between G3 and acceptance
+1. ~~LR-B-002 — the by-right qualifier~~ — **closed 2026-08-01**
 2. **LR-B-004 operator triage UI** — closes the acceptance gap in §1.2
 3. **LR-B-001 acceptance confirmation** — likely a status correction rather than work
 

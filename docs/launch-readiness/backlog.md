@@ -36,7 +36,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-002 — By-right wording and preliminary-screening framing
 
 - **PRD requirement:** LR-B002, §6.3, §24
-- **Priority:** P0 · **Status:** Not started
+- **Priority:** P0 · **Status:** **Done 2026-08-01** — the hero and panel already carried the qualifier; the drawer and map popup are now reworded and the qualifier is bound to the checklist's `not_evaluated` categories via `lib/by-right.ts`
 - **Problem:** `can_build_by_right` is a boolean rendered as a definitive statement. Amendment 03 §24 explicitly names "treat a base-district check as final approval" an anti-pattern.
 - **User impact:** A developer reading "buildable by right" as permission may pursue or bid on a parcel that fails on overlays, access, utilities, or title — none of which the base-district check evaluates.
 - **Current implementation:** `backend/src/lotscope/verdict/schemas.py:15`; wording throughout `frontend/src/components/VerdictHero.vue`, `VerdictPanel.vue`.

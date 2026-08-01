@@ -381,9 +381,9 @@ function popupHtml(properties: Record<string, unknown>): string {
     const units = properties.by_right_units
     const byRight =
       typeof units === 'number'
-        ? `${units} unit${units === 1 ? '' : 's'} by-right`
+        ? `Base district: ${units} unit${units === 1 ? '' : 's'}`
         : properties.can_build_by_right === false
-          ? 'Not by-right'
+          ? 'Base district: standards not met'
           : ''
     const value =
       typeof properties.value_low === 'number'
@@ -392,11 +392,14 @@ function popupHtml(properties: Record<string, unknown>): string {
     if (byRight || value) {
       rows += `<div class="lp-extra">${[byRight, value].filter(Boolean).join(' · ')}</div>`
     }
+    if (byRight) {
+      rows += `<div class="lp-note">Dimensional screening only — not an approval.</div>`
+    }
   }
   const maxHeight = properties.max_height_ft
   if (typeof maxHeight === 'number' && maxHeight > 0) {
     const floors = Math.max(1, Math.floor(maxHeight / 10.5))
-    rows += `<div class="lp-extra">Up to ${maxHeight} ft · ~${floors} floor${floors === 1 ? '' : 's'} by-right</div>`
+    rows += `<div class="lp-extra">Up to ${maxHeight} ft · ~${floors} floor${floors === 1 ? '' : 's'} under base district</div>`
   }
   return (
     `<div class="lot-pop"><div class="lp-addr">${address}</div>` +
@@ -971,6 +974,11 @@ onBeforeUnmount(() => {
 .lot-pop .lp-extra {
   font-size: 12px;
   color: #455a64;
+  margin-top: 2px;
+}
+.lot-pop .lp-note {
+  font-size: 10.5px;
+  color: #78909c;
   margin-top: 2px;
 }
 .lot-pop .lp-hint {

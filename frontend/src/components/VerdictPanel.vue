@@ -13,10 +13,15 @@ import {
   severityIcon,
   severityVar,
 } from '@/lib/format'
-import type { VerdictResult } from '@/lib/types'
+import { BY_RIGHT_NOT_MET, byRightQualifier } from '@/lib/by-right'
+import type { ParcelChecklist, VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 
-const props = defineProps<{ verdict: VerdictResult; developed?: boolean }>()
+const props = defineProps<{
+  verdict: VerdictResult
+  developed?: boolean
+  checklist?: ParcelChecklist | null
+}>()
 
 const market = useMarketStore()
 
@@ -78,6 +83,12 @@ const buildStatus = computed<Status>(() => {
   }
   return { label: 'Buildability uncertain', color: 'grey-6', icon: 'help_outline' }
 })
+
+const buildQualifier = computed(() => {
+  if (props.verdict.can_build_by_right) return byRightQualifier(props.checklist ?? null)
+  if (props.verdict.needs_variance) return BY_RIGHT_NOT_MET
+  return 'Base-district standards could not be evaluated for this parcel.'
+})
 </script>
 
 <template>
@@ -88,9 +99,8 @@ const buildStatus = computed<Status>(() => {
       </div>
       <q-chip dense square :color="buildStatus.color" text-color="white" :icon="buildStatus.icon">
         {{ buildStatus.label }}
-        <q-tooltip max-width="260px" anchor="top middle" self="bottom middle">
-          Whether the lot can be developed under Title 14 without a zoning variance. "Variance
-          likely" means a board (ZBA) approval would be needed.
+        <q-tooltip max-width="280px" anchor="top middle" self="bottom middle">
+          {{ buildQualifier }}
         </q-tooltip>
       </q-chip>
       <div v-if="developed" class="redev-note">
