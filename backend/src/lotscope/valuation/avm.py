@@ -53,6 +53,17 @@ def land_use_class(base_zoning_code: str | None) -> str | None:
     return _USE_CLASS_BY_PREFIX.get(base_zoning_code.strip().upper()[:1])
 
 
+_INTERCHANGEABLE_USE_CLASSES = frozenset({"residential", "commercial"})
+
+
+def wide_area_use_classes(use_class: str | None) -> list[str] | None:
+    if use_class is None:
+        return None
+    if use_class in _INTERCHANGEABLE_USE_CLASSES:
+        return sorted(_INTERCHANGEABLE_USE_CLASSES)
+    return [use_class]
+
+
 def price_per_sqft(sale_price: float, lot_area_sqft: float | None) -> float | None:
     if lot_area_sqft is None or lot_area_sqft <= 0:
         return None
@@ -102,6 +113,7 @@ def estimate_land_value(
     comps: list[Comp],
     *,
     related_party_excluded: int = 0,
+    wide_area: bool = False,
 ) -> ValuationEstimate:
     if subject_area_sqft is None or subject_area_sqft <= 0:
         return _unknown(len(comps), "Subject lot area is unknown; cannot estimate land value.")
@@ -128,7 +140,7 @@ def estimate_land_value(
         range_reason = f"Range is the full range of {len(usable_rates)} comp(s)."
     low = round(low_rate * subject_area_sqft)
     high = round(high_rate * subject_area_sqft)
-    confidence = _confidence(len(usable_rates), cv)
+    confidence: Confidence = "low" if wide_area else _confidence(len(usable_rates), cv)
 
     reasons = [
         f"Estimate from {len(usable_rates)} comparable land sale(s); median "
@@ -136,6 +148,12 @@ def estimate_land_value(
         range_reason,
         f"Price dispersion (coefficient of variation) ~{cv:.2f}.",
     ]
+    if wide_area:
+        reasons.insert(
+            0,
+            "No land sales were found close by, so this estimate falls back on a wider "
+            "search and is a rough guide rather than a market read.",
+        )
     if trimmed:
         reasons.append(
             f"Excluded {trimmed} price-per-sqft outlier(s) beyond the interquartile fence."

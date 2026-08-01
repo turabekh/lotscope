@@ -9,6 +9,7 @@ from lotscope.valuation.avm import (
     land_use_class,
     price_per_sqft,
     trim_outlier_rates,
+    wide_area_use_classes,
 )
 
 
@@ -171,3 +172,39 @@ def test_estimate_omits_related_party_reason_when_none_excluded() -> None:
     comps = [_comp(rate) for rate in (98, 100, 101, 99)]
     result = estimate_land_value(2000.0, comps)
     assert not any("related-party" in reason.lower() for reason in result.reasons)
+
+
+def test_wide_area_estimate_is_always_low_confidence() -> None:
+    comps = [
+        Comp("p1", 2400.0, 95000.0, date(2024, 1, 1), 1000.0, 95.0),
+        Comp("p2", 2500.0, 98000.0, date(2024, 2, 1), 1000.0, 98.0),
+        Comp("p3", 2600.0, 100000.0, date(2024, 3, 1), 1000.0, 100.0),
+        Comp("p4", 2700.0, 102000.0, date(2024, 4, 1), 1000.0, 102.0),
+        Comp("p5", 2800.0, 105000.0, date(2024, 5, 1), 1000.0, 105.0),
+        Comp("p6", 2900.0, 100000.0, date(2024, 6, 1), 1000.0, 100.0),
+    ]
+    tight = estimate_land_value(1000.0, comps)
+    wide = estimate_land_value(1000.0, comps, wide_area=True)
+
+    assert tight.confidence == "high"
+    assert wide.confidence == "low"
+    assert wide.estimate == tight.estimate
+
+
+def test_wide_area_estimate_says_it_fell_back() -> None:
+    comps = [Comp("p1", 2900.0, 100000.0, date(2024, 1, 1), 1000.0, 100.0)]
+    wide = estimate_land_value(1000.0, comps, wide_area=True)
+
+    assert "wider" in wide.reasons[0]
+    assert "rough guide" in wide.reasons[0]
+
+
+def test_residential_and_commercial_are_interchangeable_when_widening() -> None:
+    assert wide_area_use_classes("residential") == ["commercial", "residential"]
+    assert wide_area_use_classes("commercial") == ["commercial", "residential"]
+
+
+def test_industrial_and_special_stay_segregated_when_widening() -> None:
+    assert wide_area_use_classes("industrial") == ["industrial"]
+    assert wide_area_use_classes("special") == ["special"]
+    assert wide_area_use_classes(None) is None

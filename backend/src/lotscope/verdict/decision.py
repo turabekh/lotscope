@@ -87,6 +87,7 @@ def decide(
     deal_infeasible: bool,
     risk_score: float | None,
     land_value_modelled: bool = True,
+    land_value_is_wide_area: bool = False,
     risk_flag_count: int = 0,
 ) -> ScreeningDecision:
     missing = _unavailable_critical(field_trust)
@@ -136,6 +137,15 @@ def decide(
 
     elevated_risk = risk_score is not None and risk_score >= ELEVATED_RISK_SCORE
     if est_margin is not None and est_margin >= STRONG_MARGIN and not elevated_risk:
+        if land_value_is_wide_area:
+            return ScreeningDecision(
+                recommendation="worth_investigating",
+                reason=(
+                    f"Projected margin of {est_margin:.0%} rests on land sales from a wider "
+                    "search - none were found close by, so the price side is a rough guide "
+                    "rather than a market read for this block."
+                ),
+            )
         if not land_value_modelled:
             return ScreeningDecision(
                 recommendation="worth_investigating",

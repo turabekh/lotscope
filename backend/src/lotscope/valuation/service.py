@@ -11,6 +11,7 @@ from lotscope.valuation.avm import (
     is_related_party,
     land_use_class,
     price_per_sqft,
+    wide_area_use_classes,
 )
 from lotscope.valuation.schemas import CompResult, ValuationResult
 
@@ -18,6 +19,8 @@ DEFAULT_RADIUS_FT = 1500.0
 DEFAULT_YEARS = 3
 DEFAULT_MIN_PRICE = 1000.0
 DEFAULT_LIMIT = 25
+WIDE_AREA_RADIUS_FT = 3000.0
+WIDE_AREA_YEARS = 5
 
 _SUBJECT_SQL = text(
     "SELECT lot_area_sqft, base_zoning_code, (geom_local IS NOT NULL) AS has_geometry "
@@ -47,10 +50,10 @@ _COMPS_SQL = text(
     "  AND " + future_sale_exclusion_sql("s") + " "
     "  AND " + package_deed_exclusion_sql("s") + " "
     "  AND (NOT :vacant_only OR cp.is_vacant IS TRUE) "
-    "  AND ((:use_class)::text IS NULL OR CASE left(upper(cp.base_zoning_code), 1) "
+    "  AND ((:use_classes)::text[] IS NULL OR CASE left(upper(cp.base_zoning_code), 1) "
     "         WHEN 'R' THEN 'residential' WHEN 'C' THEN 'commercial' "
     "         WHEN 'I' THEN 'industrial' WHEN 'S' THEN 'special' ELSE NULL END "
-    "       = (:use_class)::text) "
+    "       = ANY((:use_classes)::text[])) "
     "  AND ST_DWithin(cp.geom_local, subject.pt, :radius_ft) "
     "ORDER BY distance_ft "
     "LIMIT :limit"
@@ -72,8 +75,10 @@ async def find_comps(
     vacant_only: bool = True,
     since: date | None = None,
     use_class: str | None = None,
+    use_classes: list[str] | None = None,
 ) -> tuple[list[Comp], int]:
     cutoff = since if since is not None else date.today() - timedelta(days=365 * years)
+    accepted = use_classes if use_classes is not None else ([use_class] if use_class else None)
     rows = await session.execute(
         _COMPS_SQL,
         {
@@ -83,7 +88,7 @@ async def find_comps(
             "vacant_only": vacant_only,
             "radius_ft": radius_ft,
             "limit": limit,
-            "use_class": use_class,
+            "use_classes": accepted,
         },
     )
     comps: list[Comp] = []
@@ -126,6 +131,7 @@ async def value_parcel(
     use_class = land_use_class(subject.base_zoning_code) if segment_by_use_class else None
     comps: list[Comp] = []
     related_party_excluded = 0
+    wide_area = False
     if subject.has_geometry:
         comps, related_party_excluded = await find_comps(
             session,
@@ -136,11 +142,22 @@ async def value_parcel(
             since=since,
             use_class=use_class,
         )
+        if not comps and since is None:
+            wide_area = True
+            comps, related_party_excluded = await find_comps(
+                session,
+                parcel_number,
+                radius_ft=WIDE_AREA_RADIUS_FT,
+                years=WIDE_AREA_YEARS,
+                vacant_only=vacant_only,
+                use_classes=wide_area_use_classes(use_class),
+            )
 
     estimate = estimate_land_value(
         _as_float(subject.lot_area_sqft),
         comps,
         related_party_excluded=related_party_excluded,
+        wide_area=wide_area,
     )
     return ValuationResult(
         parcel_number=parcel_number,
@@ -164,13 +181,16 @@ async def value_parcel(
             for comp in comps
         ],
         reasons=estimate.reasons,
+        wide_area=wide_area,
         sources=[
             {
                 "source": "rtt_summary",
                 "comp_count": len(comps),
-                "radius_ft": radius_ft,
-                "years": years,
+                "radius_ft": WIDE_AREA_RADIUS_FT if wide_area else radius_ft,
+                "years": WIDE_AREA_YEARS if wide_area else years,
                 "use_class": use_class,
+                "use_classes": wide_area_use_classes(use_class) if wide_area else None,
+                "comp_tier": "wide_area" if wide_area else "local",
                 "package_deeds_excluded": True,
             }
         ],
