@@ -39,3 +39,27 @@ test('flow 5 — the buildability qualifier is visible without hovering', async 
   await expect(qualifier).toBeVisible()
   await expect(qualifier).not.toBeEmpty()
 })
+
+test('flow 5 — the risk tab shows risk, not a blank pane', async ({ page }) => {
+  await registerAndSettle(page, 'verdict-risk')
+  await openDossier(page, SEEDED.bestMargin.number)
+
+  await page.getByRole('tab', { name: 'Risk' }).click()
+
+  const panel = page.locator('[data-test="risk-panel"]')
+  await expect(panel).toBeVisible()
+  await expect(page.locator('[data-test="risk-panel-score"]')).toBeVisible()
+  await expect(page.locator('[data-test="risk-panel-summary"]')).not.toBeEmpty()
+})
+
+test('flow 5 — the owner section always says something about the owner', async ({ page }) => {
+  await registerAndSettle(page, 'verdict-owner')
+  await openDossier(page, SEEDED.bestMargin.number)
+
+  await page.getByRole('tab', { name: 'Risk' }).click()
+  await expect(page.locator('[data-test="risk-panel"]')).toBeVisible()
+
+  const owner = page.locator('[data-test="owner-sole-holding"], [data-test="owner-portfolio-list"]')
+  await expect(owner).toBeVisible()
+  await expect(owner).toContainText('Owner portfolio')
+})
