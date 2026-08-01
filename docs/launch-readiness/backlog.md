@@ -560,7 +560,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-031 — Entitlement consistency audit
 
 - **PRD requirement:** §14.4
-- **Priority:** P1 · **Status:** Not started
+- **Priority:** P1 · **Status:** **Engineering complete 2026-08-01** — audit in `entitlement-audit-2026-08-01.md`; all six surfaces read from `tiers.py` and every numeric claim now has a binding test. Two Enterprise claims (`Team seats`, `API access`) have no implementation behind them and one Pro export entitlement is under-advertised: **three copy decisions are the owner's** before this can be called closed
 - **Problem:** Entitlements are centralized in `accounts/tiers.py`, but consistency across pricing page, API authorization, frontend gating, checkout, portal, and upgrade prompts is unverified.
 - **User impact:** A capability advertised on the pricing page but gated differently in the API is a refund conversation.
 - **Current implementation:** `accounts/tiers.py:63-123`; `api/deps.py`; `PricingPlans.vue`; `UpgradePrompt.vue`.
