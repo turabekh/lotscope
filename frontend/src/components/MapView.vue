@@ -516,11 +516,22 @@ function emptyCollection(): GeoJSON.FeatureCollection {
   return { type: 'FeatureCollection', features: [] }
 }
 
+function envelopeIsShowing(): boolean {
+  const env = envelope.value
+  return show3d.value && env !== null && env.buildable_footprint !== null
+}
+
+function applyMarkerVisibility(): void {
+  if (!map?.getLayer('vacant-markers')) return
+  map.setLayoutProperty('vacant-markers', 'visibility', envelopeIsShowing() ? 'none' : 'visible')
+}
+
 function renderEnvelope(): void {
+  applyMarkerVisibility()
   const source = map?.getSource('envelope')
   if (!(source instanceof maplibregl.GeoJSONSource)) return
   const env = envelope.value
-  if (!show3d.value || env === null || env.buildable_footprint === null) {
+  if (!envelopeIsShowing() || env === null || env.buildable_footprint === null) {
     source.setData(emptyCollection())
     return
   }
