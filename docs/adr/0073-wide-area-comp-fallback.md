@@ -38,6 +38,10 @@ This ordering is the point. Widening globally would pull more distant comps into
 
 **A wide-area estimate does not earn `strong_candidate`.** It produces a real land value, a real margin, and a distinct screening reason naming the wider search. The recommendation stays `worth_investigating`. Showing the figure while withholding the confidence claim is exactly the line ADR-0072 drew.
 
+**The fallback applies only to markets where its window has been measured.** A per-market registry (`valuation/fallback.py`) holds the radius and lookback, and Philadelphia is the only entry. An unregistered market gets no fallback and behaves exactly as before.
+
+This follows the discipline ADR-0057 established for distress profiles: per-market calibration is registered, not inherited. It matters here because the nightly `recompute_vacant_verdicts` cron runs with no market filter, so an ungated change would reach every market the night it deployed. Proportionally the pilots are far more exposed than Philadelphia - 18.5% of Philadelphia verdicts carry no valuation, against 91.9% for Pittsburgh and 100% for Harrisburg - and 3,000 ft spans a large share of a city the size of Harrisburg, where "wide-area" could amount to a citywide average. None of that has been measured, so none of it ships.
+
 **Provenance records the tier that actually ran**, not the tier requested: `comp_tier`, the effective `radius_ft` and `years`, and the accepted use classes flow into `valuation.sources` and from there into the verdict's provenance. No migration is needed — `parcel_verdict` already stores the merged sources.
 
 ## Consequences

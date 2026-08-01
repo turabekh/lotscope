@@ -13,17 +13,16 @@ from lotscope.valuation.avm import (
     price_per_sqft,
     wide_area_use_classes,
 )
+from lotscope.valuation.fallback import wide_area_policy_for_market
 from lotscope.valuation.schemas import CompResult, ValuationResult
 
 DEFAULT_RADIUS_FT = 1500.0
 DEFAULT_YEARS = 3
 DEFAULT_MIN_PRICE = 1000.0
 DEFAULT_LIMIT = 25
-WIDE_AREA_RADIUS_FT = 3000.0
-WIDE_AREA_YEARS = 5
 
 _SUBJECT_SQL = text(
-    "SELECT lot_area_sqft, base_zoning_code, (geom_local IS NOT NULL) AS has_geometry "
+    "SELECT lot_area_sqft, base_zoning_code, market_code, (geom_local IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _COMPS_SQL = text(
@@ -129,6 +128,7 @@ async def value_parcel(
     computed_at = datetime.now(UTC)
 
     use_class = land_use_class(subject.base_zoning_code) if segment_by_use_class else None
+    policy = wide_area_policy_for_market(subject.market_code)
     comps: list[Comp] = []
     related_party_excluded = 0
     wide_area = False
@@ -142,13 +142,13 @@ async def value_parcel(
             since=since,
             use_class=use_class,
         )
-        if not comps and since is None:
+        if not comps and since is None and policy is not None:
             wide_area = True
             comps, related_party_excluded = await find_comps(
                 session,
                 parcel_number,
-                radius_ft=WIDE_AREA_RADIUS_FT,
-                years=WIDE_AREA_YEARS,
+                radius_ft=policy.radius_ft,
+                years=policy.years,
                 vacant_only=vacant_only,
                 use_classes=wide_area_use_classes(use_class),
             )
@@ -186,8 +186,8 @@ async def value_parcel(
             {
                 "source": "rtt_summary",
                 "comp_count": len(comps),
-                "radius_ft": WIDE_AREA_RADIUS_FT if wide_area else radius_ft,
-                "years": WIDE_AREA_YEARS if wide_area else years,
+                "radius_ft": policy.radius_ft if wide_area and policy else radius_ft,
+                "years": policy.years if wide_area and policy else years,
                 "use_class": use_class,
                 "use_classes": wide_area_use_classes(use_class) if wide_area else None,
                 "comp_tier": "wide_area" if wide_area else "local",

@@ -11,6 +11,7 @@ from lotscope.valuation.avm import (
     trim_outlier_rates,
     wide_area_use_classes,
 )
+from lotscope.valuation.fallback import wide_area_policy_for_market
 
 
 @pytest.mark.parametrize(
@@ -208,3 +209,19 @@ def test_industrial_and_special_stay_segregated_when_widening() -> None:
     assert wide_area_use_classes("industrial") == ["industrial"]
     assert wide_area_use_classes("special") == ["special"]
     assert wide_area_use_classes(None) is None
+
+
+def test_only_measured_markets_get_a_wide_area_fallback() -> None:
+    assert wide_area_policy_for_market("phl") is not None
+    assert wide_area_policy_for_market("pgh") is None
+    assert wide_area_policy_for_market("hbg") is None
+    assert wide_area_policy_for_market("wlm") is None
+    assert wide_area_policy_for_market(None) is None
+
+
+def test_the_philadelphia_policy_matches_what_was_measured() -> None:
+    policy = wide_area_policy_for_market("phl")
+
+    assert policy is not None
+    assert policy.radius_ft == 3000.0
+    assert policy.years == 5
