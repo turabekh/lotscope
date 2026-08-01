@@ -113,7 +113,14 @@ watch(() => [...compare.parcelNumbers], load, { immediate: true })
       </div>
     </div>
 
-    <q-markup-table v-else-if="items.length" flat bordered separator="cell" class="compare-table">
+    <q-markup-table
+      v-else-if="items.length"
+      flat
+      bordered
+      separator="cell"
+      class="compare-table"
+      :style="{ '--compare-cols': items.length }"
+    >
       <thead>
         <tr>
           <th class="metric-col"></th>
@@ -159,19 +166,44 @@ watch(() => [...compare.parcelNumbers], load, { immediate: true })
 .compare-table {
   border-radius: var(--lot-radius);
 }
+.compare-table :deep(.q-markup-table),
+.compare-table {
+  overflow-x: auto;
+}
 .metric-col {
   text-align: left;
   font-weight: 600;
   color: var(--lot-muted);
   white-space: nowrap;
-  background: var(--lot-surface-2);
   position: sticky;
   left: 0;
+  z-index: 2;
+  background: var(--lot-surface-2);
+  box-shadow: 1px 0 0 var(--lot-border);
+}
+thead .metric-col {
+  z-index: 3;
 }
 .parcel-head {
   text-align: right;
   min-width: 150px;
   vertical-align: top;
+}
+@media (max-width: 720px) {
+  .compare-table :deep(table) {
+    table-layout: fixed;
+    min-width: calc(96px + var(--compare-cols, 2) * 112px);
+  }
+  .parcel-head {
+    min-width: 96px;
+  }
+  .metric-col {
+    max-width: 96px;
+    white-space: normal;
+  }
+  .value-cell {
+    white-space: normal;
+  }
 }
 .parcel-head .addr {
   font-weight: 700;
@@ -192,6 +224,9 @@ tr.emphasis td {
   font-weight: 700;
   background: var(--lot-accent-soft);
   color: var(--lot-ink);
+}
+tr.emphasis td.metric-col {
+  background: var(--lot-accent-soft);
 }
 .empty {
   text-align: center;

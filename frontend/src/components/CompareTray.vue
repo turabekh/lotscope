@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { useQuasar } from 'quasar'
 import { computed, ref } from 'vue'
 
 import CompareTable from '@/components/CompareTable.vue'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
 
+const $q = useQuasar()
 const compare = useCompareStore()
 const { parcelNumbers, count } = storeToRefs(compare)
 
@@ -63,7 +65,7 @@ const hint = computed(() => {
       />
     </div>
 
-    <q-dialog v-model="expanded">
+    <q-dialog v-model="expanded" :maximized="$q.screen.lt.sm">
       <q-card class="compare-dialog">
         <q-card-section class="row items-center q-py-sm">
           <div class="text-subtitle1 text-weight-bold">Compare lots</div>
@@ -139,8 +141,22 @@ const hint = computed(() => {
 .compare-dialog {
   width: 100%;
   max-width: 1000px;
+  display: flex;
+  flex-direction: column;
 }
 .compare-dialog-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   max-height: 70vh;
+}
+@media (max-width: 600px) {
+  .compare-dialog {
+    max-width: none;
+    height: 100%;
+  }
+  .compare-dialog-body {
+    max-height: none;
+  }
 }
 </style>
