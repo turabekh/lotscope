@@ -9,7 +9,8 @@ test('flow 5 — the verdict tab shows a screening result and its reasoning', as
   await expect(page.getByRole('tab', { name: 'Verdict' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByText('Screening result')).toBeVisible()
   await expect(page.getByRole('button', { name: /Why this result\?/ })).toBeVisible()
-  await expect(page.getByText(/verdict v\d+/)).toBeVisible()
+  await expect(page.getByText('Buildability').first()).toBeVisible()
+  await expect(page.getByText('Est. land value').first()).toBeVisible()
 })
 
 test('flow 5 — the deal tab shows the offer the verdict is built on', async ({ page }) => {

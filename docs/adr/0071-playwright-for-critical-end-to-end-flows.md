@@ -66,6 +66,8 @@ E2E fixtures never use production credentials. Each run registers its own user a
 
 **A slower feedback loop on every push.** The e2e job will be the long pole in CI. This is the price of the coverage and is accepted.
 
+**Assertions must not depend on services CI does not have.** CI runs without an Anthropic key, so anything gated on the AI layer is absent there — the first CI run failed on exactly this, asserting a provenance string that renders only inside the AI `SnapshotPanel` (`v-if="summary"`). It passed locally, where a summary exists. The same applies to data a developer's local database happens to hold: the fixture parcels sit inside real Philadelphia overlay and RCO geometry locally, and neither exists in CI's empty database. Assert on verdict-derived output, not on the AI narrative or on incidental local data.
+
 **Flakiness is a real risk and is treated as a defect.** CLAUDE.md §12 requires no flaky tests — fix or delete. A flaky e2e suite is worse than none, because it trains people to ignore a red gate that is also the only gate. Any flake is fixed or the test is removed.
 
 **Fourteen-of-fourteen is not claimed.** Gate G6 stays unmet on the E2E criterion until flows 10 and 11 exist. What this ADR delivers is twelve flows and the infrastructure; the gate closes with LR-9A.
