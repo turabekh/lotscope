@@ -191,3 +191,32 @@ def test_the_assessed_downgrade_does_not_override_an_earlier_rule() -> None:
 
     variance = _decide(land_value_modelled=False, can_build_by_right=False, needs_variance=True)
     assert variance.recommendation == "high_entitlement_risk"
+
+
+def test_wide_area_land_value_does_not_earn_strong_candidate() -> None:
+    result = _decide(est_margin=0.55, risk_score=10.0, land_value_is_wide_area=True)
+
+    assert result.recommendation == "worth_investigating"
+    assert "wider search" in result.reason
+    assert "rough guide" in result.reason
+
+
+def test_wide_area_reason_is_distinct_from_the_assessed_fallback() -> None:
+    wide = _decide(est_margin=0.55, risk_score=10.0, land_value_is_wide_area=True)
+    assessed = _decide(est_margin=0.55, risk_score=10.0, land_value_modelled=False)
+
+    assert wide.reason != assessed.reason
+    assert "assessed value" in assessed.reason
+    assert "assessed value" not in wide.reason
+
+
+def test_local_land_value_still_earns_strong_candidate() -> None:
+    result = _decide(est_margin=0.55, risk_score=10.0, land_value_is_wide_area=False)
+
+    assert result.recommendation == "strong_candidate"
+
+
+def test_a_wide_area_estimate_cannot_rescue_infeasible_economics() -> None:
+    result = _decide(deal_infeasible=True, est_margin=0.55, land_value_is_wide_area=True)
+
+    assert result.recommendation == "economics_unattractive"

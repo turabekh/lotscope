@@ -94,3 +94,46 @@ describe('VerdictPanel buildability qualifier', () => {
     expect(text).not.toContain('approved')
   })
 })
+
+describe('wide-area land value', () => {
+  const WIDE_SOURCES = [
+    {
+      dimension: 'valuation',
+      sources: [{ source: 'rtt_summary', comp_tier: 'wide_area', radius_ft: 3000, years: 5 }],
+    },
+  ]
+
+  it('tells the reader the estimate came from a wider search', () => {
+    const wrapper = mountPanel(makeVerdict({ sources: WIDE_SOURCES }))
+    const note = wrapper.find('[data-test="wide-area-note"]')
+
+    expect(note.exists()).toBe(true)
+    expect(note.isVisible()).toBe(true)
+    expect(note.text()).toContain('3,000 ft')
+    expect(note.text()).toContain('rough guide')
+  })
+
+  it('says nothing when the comps were local', () => {
+    const wrapper = mountPanel(
+      makeVerdict({
+        sources: [
+          { dimension: 'valuation', sources: [{ comp_tier: 'local', radius_ft: 1500, years: 3 }] },
+        ],
+      }),
+    )
+
+    expect(wrapper.find('[data-test="wide-area-note"]').exists()).toBe(false)
+  })
+
+  it('does not show the note when there is no estimate at all', () => {
+    const wrapper = mountPanel(
+      makeVerdict({
+        value_estimate_low: null,
+        value_estimate_high: null,
+        sources: WIDE_SOURCES,
+      }),
+    )
+
+    expect(wrapper.find('[data-test="wide-area-note"]').exists()).toBe(false)
+  })
+})

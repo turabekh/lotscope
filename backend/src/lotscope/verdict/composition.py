@@ -158,6 +158,9 @@ def compose_verdict(
         deal_infeasible=deal.infeasible if deal is not None else False,
         risk_score=risk_score,
         land_value_modelled=valuation is not None and valuation.estimate is not None,
+        land_value_is_wide_area=valuation is not None
+        and valuation.estimate is not None
+        and valuation.wide_area,
         risk_flag_count=len(risk.flags) if risk is not None else 0,
     )
 

@@ -25,5 +25,6 @@ class ValuationResult(BaseModel):
     coefficient_of_variation: float | None
     comps: list[CompResult]
     reasons: list[str]
+    wide_area: bool = False
     sources: list[dict[str, Any]]
     computed_at: datetime
