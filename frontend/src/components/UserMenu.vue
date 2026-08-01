@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
 import { useMarketStore } from '@/stores/market'
+import { useThemeStore } from '@/stores/theme'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
@@ -16,6 +17,7 @@ const { alerts } = storeToRefs(watchlist)
 const savedSearches = useSavedSearchesStore()
 const { newTotal } = storeToRefs(savedSearches)
 const router = useRouter()
+const theme = useThemeStore()
 
 const initial = computed(() => (user.value?.email ?? '?').charAt(0).toUpperCase())
 
@@ -116,6 +118,11 @@ function goAdmin(): void {
           <q-item-section avatar><q-icon name="admin_panel_settings" /></q-item-section>
           <q-item-section>Admin console</q-item-section>
         </q-item>
+        <q-item clickable data-test="user-menu-theme" @click="theme.cycle()">
+          <q-item-section avatar><q-icon :name="theme.icon" /></q-item-section>
+          <q-item-section>{{ theme.label }}</q-item-section>
+        </q-item>
+        <q-separator />
         <q-item v-close-popup clickable @click="signOut">
           <q-item-section avatar><q-icon name="logout" /></q-item-section>
           <q-item-section>Sign out</q-item-section>

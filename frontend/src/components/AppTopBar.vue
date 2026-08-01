@@ -16,6 +16,7 @@ const theme = useThemeStore()
 const $q = useQuasar()
 
 const isMobile = computed(() => $q.screen.lt.md)
+const isNarrow = computed(() => $q.screen.lt.sm)
 const title = computed(() => {
   if (isMobile.value) return ''
   if (route.name === 'sheriff-sales' && market.activeInfo?.forced_sale_surface_label) {
@@ -28,18 +29,21 @@ const title = computed(() => {
 <template>
   <q-header class="topbar">
     <q-toolbar class="topbar-toolbar">
-      <MarketSwitcher v-if="isMobile" variant="pill" class="q-mr-xs" />
+      <MarketSwitcher v-if="isMobile" variant="pill" :compact="isNarrow" class="q-mr-xs" />
       <span v-if="title" class="page-title">{{ title }}</span>
-      <GlobalSearch />
+      <GlobalSearch v-if="!isNarrow" />
       <slot name="lead" />
 
       <q-space />
 
       <slot name="actions" />
 
+      <GlobalSearch v-if="isNarrow" />
+
       <DataCoverageChip v-if="!isMobile" class="q-mr-xs" />
 
       <q-btn
+        v-if="!isMobile"
         flat
         dense
         round
@@ -67,9 +71,12 @@ const title = computed(() => {
 }
 .topbar-toolbar {
   min-height: 54px;
-  padding-left: 16px;
-  padding-right: 10px;
-  gap: 4px;
+  padding-left: 12px;
+  padding-right: 8px;
+  gap: 6px;
+}
+.topbar-toolbar :deep(.global-search) {
+  min-width: 0;
 }
 .page-title {
   font-weight: 600;
