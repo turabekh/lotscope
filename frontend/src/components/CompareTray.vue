@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import CompareTable from '@/components/CompareTable.vue'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
@@ -9,49 +9,59 @@ const compare = useCompareStore()
 const { parcelNumbers, count } = storeToRefs(compare)
 
 const expanded = ref(false)
+
+const ready = computed(() => count.value >= 2)
+const hint = computed(() => {
+  if (!ready.value) return 'Add one more lot to compare them side by side'
+  return 'Ready — open the side-by-side table'
+})
 </script>
 
 <template>
   <div v-if="count > 0" class="compare-tray" role="region" aria-label="Compare tray">
-    <q-icon name="compare_arrows" size="20px" class="tray-icon" />
-    <span class="tray-count">{{ count }} / {{ MAX_COMPARE }}</span>
+    <div class="tray-main">
+      <q-icon name="compare_arrows" size="18px" class="tray-icon" />
+      <div class="tray-text">
+        <div class="tray-count">{{ count }} of {{ MAX_COMPARE }} selected</div>
+        <div class="tray-hint">{{ hint }}</div>
+      </div>
+      <q-btn
+        flat
+        dense
+        no-caps
+        size="sm"
+        class="tray-clear"
+        label="Clear"
+        data-test="compare-clear"
+        @click="compare.clear()"
+      />
+      <q-btn
+        unelevated
+        dense
+        no-caps
+        :color="ready ? 'primary' : 'grey-5'"
+        :text-color="ready ? 'white' : 'grey-8'"
+        icon="table_chart"
+        label="Compare"
+        :disable="!ready"
+        data-test="compare-open"
+        @click="expanded = true"
+      />
+    </div>
 
-    <div class="tray-chips">
+    <div v-if="parcelNumbers.length" class="tray-chips">
       <q-chip
         v-for="parcelNumber in parcelNumbers"
         :key="parcelNumber"
         dense
         removable
         size="sm"
-        color="grey-3"
-        text-color="grey-9"
-        :label="parcelNumber"
+        class="tray-chip"
+        :label="compare.labelFor(parcelNumber)"
+        :data-test="`compare-chip-${parcelNumber}`"
         @remove="compare.remove(parcelNumber)"
       />
     </div>
-
-    <q-space />
-
-    <q-btn
-      flat
-      dense
-      no-caps
-      size="sm"
-      color="grey-7"
-      label="Clear"
-      icon="clear_all"
-      @click="compare.clear()"
-    />
-    <q-btn
-      unelevated
-      dense
-      no-caps
-      color="primary"
-      icon="table_chart"
-      :label="`Compare (${count})`"
-      :disable="count < 2"
-      @click="expanded = true"
-    />
 
     <q-dialog v-model="expanded">
       <q-card class="compare-dialog">
@@ -76,11 +86,9 @@ const expanded = ref(false)
   left: 50%;
   transform: translateX(-50%);
   z-index: 3000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: min(720px, calc(100vw - 32px));
-  padding: 8px 12px;
+  display: block;
+  width: min(560px, calc(100vw - 24px));
+  padding: 10px 12px;
   background: var(--lot-surface);
   border: 1px solid var(--lot-border);
   border-radius: var(--lot-radius);
@@ -89,17 +97,44 @@ const expanded = ref(false)
 .tray-icon {
   color: var(--lot-accent);
 }
+.tray-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tray-text {
+  min-width: 0;
+  flex: 1;
+}
 .tray-count {
   font-weight: 700;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--lot-ink);
   white-space: nowrap;
+}
+.tray-hint {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--lot-muted);
+}
+.tray-clear {
+  color: var(--lot-muted);
 }
 .tray-chips {
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  max-width: 340px;
+  margin-top: 8px;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.tray-chips::-webkit-scrollbar {
+  display: none;
+}
+.tray-chip {
+  background: var(--lot-surface-2);
+  color: var(--lot-ink);
 }
 .compare-dialog {
   width: 100%;

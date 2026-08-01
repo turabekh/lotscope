@@ -176,7 +176,7 @@ function toggleCompare(): void {
     $q.notify({ message: 'Removed from compare', color: 'grey-8', icon: 'compare_arrows' })
     return
   }
-  if (compare.add(detail.value.parcel_number)) {
+  if (compare.add(detail.value.parcel_number, detail.value.address)) {
     $q.notify({ message: 'Added to compare', color: 'positive', icon: 'compare_arrows' })
   } else {
     $q.notify({
