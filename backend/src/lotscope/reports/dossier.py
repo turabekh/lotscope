@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
@@ -63,7 +64,11 @@ def _s(text: str | None) -> str:
 
 
 def _money(value: float | None) -> str:
-    return f"${value:,.0f}" if value is not None else "-"
+    if value is None:
+        return "-"
+    if value < 0:
+        return f"-${abs(value):,.0f}"
+    return f"${value:,.0f}"
 
 
 def _num(value: float | None, suffix: str = "") -> str:
@@ -71,15 +76,38 @@ def _num(value: float | None, suffix: str = "") -> str:
 
 
 class _Dossier(FPDF):
+    running_title: str = ""
+    running_subtitle: str = ""
+    footer_note: str = ""
+
     def header(self) -> None:
-        if self.page_no() != 1:
+        if self.page_no() == 1:
             return
+        self.set_y(8)
+        half = (self.w - self.l_margin - self.r_margin) / 2
+        self.set_font("Helvetica", "B", 8)
+        self.set_text_color(*_BRAND)
+        self.cell(half, 4, _s(self.running_title))
+        self.set_font("Helvetica", "", 8)
+        self.set_text_color(*_MUTED)
+        self.cell(
+            half, 4, _s(self.running_subtitle), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+        )
+        self.ln(1)
+        self.set_draw_color(*_LINE)
+        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+        self.set_y(20)
 
     def footer(self) -> None:
-        self.set_y(-14)
-        self.set_font("Helvetica", "", 7)
+        self.set_y(-13)
+        self.set_draw_color(*_LINE)
+        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+        self.ln(1)
+        half = (self.w - self.l_margin - self.r_margin) / 2
+        self.set_font("Helvetica", "", 6.5)
         self.set_text_color(*_MUTED)
-        self.cell(0, 5, f"Page {self.page_no()}", align="R")
+        self.cell(half * 1.4, 4, _s(self.footer_note))
+        self.cell(half * 0.6, 4, f"Page {self.page_no()} of {{nb}}", align="R")
 
 
 def _section(pdf: _Dossier, title: str) -> None:
@@ -99,6 +127,106 @@ def _kv(pdf: _Dossier, label: str, value: str) -> None:
     pdf.set_text_color(*_INK)
     pdf.set_font("Helvetica", "B", 9)
     pdf.cell(0, 5.5, _s(value), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+
+def _market_label(detail: ParcelDetail) -> str:
+    return f"Market {detail.market_code.upper()}"
+
+
+def _summary_band(pdf: _Dossier, verdict: VerdictResult) -> None:
+    low, high = verdict.value_estimate_low, verdict.value_estimate_high
+    land = f"{_money(low)} - {_money(high)}" if low is not None else "Not enough comps"
+    if verdict.max_allowable_offer is not None and verdict.max_allowable_offer > 0:
+        deal_label, deal_value = "Max allowable offer", _money(verdict.max_allowable_offer)
+    elif verdict.arv is not None:
+        deal_label, deal_value = "After-build value", _money(verdict.arv)
+    else:
+        deal_label, deal_value = "Deal model", "Not evaluated"
+    risk = "-" if verdict.risk_score is None else f"{round(verdict.risk_score)}/100"
+
+    cells = [
+        ("Opportunity score", f"{round(verdict.opportunity_score)}/100"),
+        ("Estimated land value", land),
+        (deal_label, deal_value),
+        ("Risk score", risk),
+    ]
+    usable = pdf.w - pdf.l_margin - pdf.r_margin
+    width = usable / len(cells)
+    top = pdf.get_y()
+    pdf.set_draw_color(*_LINE)
+    pdf.set_fill_color(247, 249, 252)
+    pdf.rect(pdf.l_margin, top, usable, 17, style="DF")
+    for index, (label, value) in enumerate(cells):
+        x = pdf.l_margin + index * width
+        if index:
+            pdf.line(x, top + 2, x, top + 15)
+        pdf.set_xy(x + 3, top + 3)
+        pdf.set_font("Helvetica", "", 6.5)
+        pdf.set_text_color(*_MUTED)
+        pdf.cell(width - 6, 3.5, _s(label.upper()), new_x=XPos.LEFT, new_y=YPos.NEXT)
+        pdf.set_x(x + 3)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(*_INK)
+        pdf.cell(width - 6, 6, _s(value))
+    pdf.set_y(top + 21)
+
+
+def _source_names(entry: dict[str, Any]) -> str:
+    raw = entry.get("sources")
+    if not isinstance(raw, list):
+        return "-"
+    names: list[str] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("source", "")).strip()
+        if not name:
+            continue
+        version = item.get("version") or item.get("code")
+        names.append(f"{name} ({version})" if version else name)
+    return ", ".join(dict.fromkeys(names)) or "-"
+
+
+def _sources(pdf: _Dossier, verdict: VerdictResult) -> None:
+    _section(pdf, "Data sources")
+    pdf.set_font("Helvetica", "", 7.5)
+    pdf.set_text_color(*_MUTED)
+    pdf.multi_cell(
+        0,
+        3.8,
+        _s(
+            "Every figure above is computed from the datasets below. City data is published "
+            "as-is; verify against the recorded document before relying on a result."
+        ),
+        align="L",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.ln(1)
+    for entry in verdict.sources:
+        dimension = str(entry.get("dimension", "")).replace("_", " ").title() or "-"
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*_INK)
+        pdf.cell(34, 4.5, _s(dimension))
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(*_MUTED)
+        pdf.multi_cell(
+            0, 4.5, _s(_source_names(entry)), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+        )
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_text_color(*_INK)
+    pdf.cell(34, 4.5, "Verdict")
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(*_MUTED)
+    computed = verdict.computed_at.strftime("%d %B %Y")
+    pdf.multi_cell(
+        0,
+        4.5,
+        _s(f"{verdict.verdict_version}, computed {computed}"),
+        align="L",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
 
 
 def _tag(pdf: _Dossier, text: str, color: tuple[int, int, int]) -> None:
@@ -121,33 +249,44 @@ def render_dossier_pdf(
     generated_at: datetime,
     disclaimer: str,
 ) -> bytes:
+    title = detail.address or detail.parcel_number
+    stamp = generated_at.strftime("%d %B %Y, %H:%M UTC")
+
     pdf = _Dossier(format="A4")
-    pdf.set_auto_page_break(auto=True, margin=18)
+    pdf.running_title = _s(title)
+    pdf.running_subtitle = _s(f"Parcel {detail.parcel_number}")
+    pdf.footer_note = _s("LotScope - informational only, not legal, financial or property advice")
+    pdf.set_auto_page_break(auto=True, margin=20)
     pdf.set_margins(16, 16, 16)
+    pdf.alias_nb_pages()
     pdf.add_page()
 
     pdf.set_fill_color(*_BRAND)
-    pdf.rect(0, 0, pdf.w, 26, style="F")
+    pdf.rect(0, 0, pdf.w, 30, style="F")
     pdf.set_xy(16, 7)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.set_text_color(210, 225, 245)
-    pdf.cell(0, 4, "LOTSCOPE PHL - PARCEL DOSSIER", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_text_color(190, 212, 240)
+    pdf.cell(0, 4, "PARCEL DOSSIER", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_x(16)
-    pdf.set_font("Helvetica", "B", 15)
+    pdf.set_font("Helvetica", "B", 16)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(0, 8, _s(detail.address or detail.parcel_number))
-    pdf.set_y(30)
+    pdf.cell(0, 9, _s(title), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_x(16)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(190, 212, 240)
+    meta = f"Parcel {detail.parcel_number}   |   {_market_label(detail)}   |   Generated {stamp}"
+    pdf.cell(0, 4, _s(meta))
+    pdf.set_y(36)
 
-    pdf.set_font("Helvetica", "", 9)
-    pdf.set_text_color(*_MUTED)
-    pdf.cell(0, 5, _s(f"Parcel {detail.parcel_number}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(1)
     _tag(pdf, detail.base_zoning_code or "No zoning", _BRAND)
     if detail.is_vacant:
         _tag(pdf, "VACANT", (245, 158, 11))
     if detail.is_city_owned:
         _tag(pdf, "CITY-OWNED", (216, 67, 21))
-    pdf.ln(8)
+    pdf.ln(9)
+
+    if verdict is not None:
+        _summary_band(pdf, verdict)
 
     if verdict is not None:
         _section(pdf, "Parcel verdict")
@@ -156,7 +295,7 @@ def render_dossier_pdf(
         pdf.cell(26, 10, str(round(verdict.opportunity_score)))
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(*_INK)
-        pdf.multi_cell(0, 4.5, _s(verdict.summary or "Opportunity score (0-100)."))
+        pdf.multi_cell(0, 4.5, _s(verdict.summary or "Opportunity score (0-100)."), align="L")
         pdf.ln(2)
         _kv(pdf, "By-right units", _num(verdict.by_right_units))
         _kv(pdf, "Max height", _num(verdict.max_height_ft, " ft"))
@@ -180,6 +319,9 @@ def render_dossier_pdf(
                     "Estimated build cost exceeds achievable finished value; new construction is "
                     "not economical here at current pricing."
                 ),
+                align="L",
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
             )
         elif verdict.max_allowable_offer is not None:
             _section(pdf, "Deal analysis")
@@ -205,17 +347,17 @@ def render_dossier_pdf(
                 pdf.set_fill_color(*color)
                 pdf.set_text_color(255, 255, 255)
                 pdf.set_font("Helvetica", "B", 7)
-                pdf.cell(16, 4.5, _s(severity.upper()), align="C", fill=True)
+                pdf.cell(23, 4.5, _s(severity.upper()), align="C", fill=True)
                 pdf.cell(2, 4.5, "")
                 pdf.set_text_color(*_INK)
                 pdf.set_font("Helvetica", "B", 8.5)
                 pdf.cell(
                     0, 4.5, _s(str(flag.get("label", ""))), new_x=XPos.LMARGIN, new_y=YPos.NEXT
                 )
-                pdf.set_x(34)
+                pdf.set_x(41)
                 pdf.set_text_color(*_MUTED)
                 pdf.set_font("Helvetica", "", 8)
-                pdf.multi_cell(0, 4, _s(str(flag.get("detail", ""))))
+                pdf.multi_cell(0, 4, _s(str(flag.get("detail", ""))), align="L")
         else:
             pdf.set_text_color(*_MUTED)
             pdf.set_font("Helvetica", "", 9)
@@ -229,7 +371,7 @@ def render_dossier_pdf(
         pdf.ln(8)
         pdf.set_font("Helvetica", "B", 10)
         pdf.set_text_color(*_INK)
-        pdf.multi_cell(0, 5, _s(report.headline))
+        pdf.multi_cell(0, 5, _s(report.headline), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(1)
         for report_section in report.sections:
             pdf.set_font("Helvetica", "B", 8.5)
@@ -238,14 +380,18 @@ def render_dossier_pdf(
             pdf.cell(0, 4.5, heading, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.set_font("Helvetica", "", 9)
             pdf.set_text_color(*_INK)
-            pdf.multi_cell(0, 4.5, _s(report_section.body))
+            pdf.multi_cell(
+                0, 4.5, _s(report_section.body), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+            )
             pdf.ln(1)
         pdf.set_font("Helvetica", "B", 8.5)
         pdf.set_text_color(*_BRAND)
         pdf.cell(0, 4.5, "RECOMMENDATION", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(*_INK)
-        pdf.multi_cell(0, 4.5, _s(report.recommendation))
+        pdf.multi_cell(
+            0, 4.5, _s(report.recommendation), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+        )
 
     if checklist is not None and checklist.items:
         _section(pdf, "Due-diligence checklist")
@@ -267,7 +413,7 @@ def render_dossier_pdf(
             pdf.set_fill_color(*color)
             pdf.set_text_color(255, 255, 255)
             pdf.set_font("Helvetica", "B", 7)
-            pdf.cell(16, 4.5, _s(_STATUS_LABEL.get(item.status, "")), align="C", fill=True)
+            pdf.cell(23, 4.5, _s(_STATUS_LABEL.get(item.status, "")), align="C", fill=True)
             pdf.cell(2, 4.5, "")
             pdf.set_text_color(*_INK)
             pdf.set_font("Helvetica", "B", 8.5)
@@ -275,7 +421,7 @@ def render_dossier_pdf(
             pdf.set_x(34)
             pdf.set_text_color(*_MUTED)
             pdf.set_font("Helvetica", "", 8)
-            pdf.multi_cell(0, 4, _s(item.detail))
+            pdf.multi_cell(0, 4, _s(item.detail), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     _section(pdf, "Property")
     _kv(pdf, "Owner", detail.owner or "-")
@@ -307,14 +453,23 @@ def render_dossier_pdf(
             pdf.set_font("Helvetica", "", 8.5)
             pdf.cell(0, 4.5, _s(f"- {factor.label}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
+    if verdict is not None and verdict.sources:
+        _sources(pdf, verdict)
+
     pdf.ln(6)
     pdf.set_draw_color(*_LINE)
     pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
     pdf.ln(2)
     pdf.set_font("Helvetica", "", 7)
     pdf.set_text_color(*_MUTED)
-    stamp = generated_at.strftime("%Y-%m-%d %H:%M UTC")
-    pdf.multi_cell(0, 3.6, _s(f"Generated {stamp}. {disclaimer}"))
+    pdf.multi_cell(
+        0,
+        3.6,
+        _s(f"Generated {stamp}. {disclaimer}"),
+        align="L",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
 
     return bytes(pdf.output())
 
