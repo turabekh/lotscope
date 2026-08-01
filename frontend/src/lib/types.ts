@@ -263,6 +263,7 @@ export interface WatchlistChange {
   code: string
   label: string
   severity: 'high' | 'medium' | 'info'
+  direction?: 'up' | 'down' | 'none'
 }
 
 export interface WatchlistItem {

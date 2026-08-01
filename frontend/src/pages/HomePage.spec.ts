@@ -4,6 +4,7 @@ import { Quasar } from 'quasar'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 
+import { api } from '@/lib/api'
 import HomePage from '@/pages/HomePage.vue'
 
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -76,5 +77,50 @@ describe('HomePage', () => {
   it('shows the caught-up empty state when there is nothing new', async () => {
     const wrapper = await mountHome()
     expect(wrapper.text()).toContain("You're all caught up")
+  })
+
+  it('shows which way a watched score moved and whether that is good', async () => {
+    vi.mocked(api.getWatchlist).mockResolvedValueOnce({
+      limit: null,
+      used: 2,
+      alerts: 2,
+      items: [
+        {
+          parcel_number: 'phl:1',
+          address: '2250 KIMBALL ST',
+          has_alerts: true,
+          changes: [
+            {
+              code: 'opportunity',
+              label: 'Opportunity 54 → 46',
+              severity: 'info',
+              direction: 'down',
+            },
+          ],
+        },
+        {
+          parcel_number: 'phl:2',
+          address: '4939 CHESTNUT ST',
+          has_alerts: true,
+          changes: [
+            { code: 'distress', label: 'Distress 65 → 75', severity: 'medium', direction: 'up' },
+          ],
+        },
+      ],
+    } as never)
+
+    const wrapper = await mountHome()
+
+    const worse = wrapper.find('.meaning-worse')
+    const better = wrapper.find('.meaning-better')
+    expect(worse.exists()).toBe(true)
+    expect(better.exists()).toBe(true)
+    expect(wrapper.text()).toContain('Opportunity 54 → 46')
+    expect(wrapper.text()).toContain('Distress 65 → 75')
+  })
+
+  it('leads with an action rather than a status card', async () => {
+    const wrapper = await mountHome()
+    expect(wrapper.find('[data-test="next-action-explore"]').exists()).toBe(true)
   })
 })

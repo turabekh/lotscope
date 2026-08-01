@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 
 import BuyBoxOnboarding from '@/components/BuyBoxOnboarding.vue'
 import FirstSteps from '@/components/FirstSteps.vue'
+import NextAction from '@/components/NextAction.vue'
 import { api } from '@/lib/api'
 import { formatCurrency, formatNumber, scoreColor } from '@/lib/format'
 import type { LeadItem } from '@/lib/types'
@@ -37,7 +38,19 @@ interface ChangeRow {
   title: string
   detail: string
   severity: 'high' | 'medium' | 'info'
+  direction: 'up' | 'down' | 'none'
+  meaning: 'better' | 'worse' | 'neutral'
   to: () => void
+}
+
+const RISING_IS_BETTER: Record<string, boolean> = { distress: true, opportunity: true }
+
+function changeMeaning(code: string, direction: 'up' | 'down' | 'none'): ChangeRow['meaning'] {
+  if (direction === 'none') return 'neutral'
+  const risingIsBetter = RISING_IS_BETTER[code]
+  if (risingIsBetter === undefined) return 'neutral'
+  const rising = direction === 'up'
+  return rising === risingIsBetter ? 'better' : 'worse'
 }
 
 const changeRows = computed<ChangeRow[]>(() => {
@@ -51,6 +64,8 @@ const changeRows = computed<ChangeRow[]>(() => {
         title: item.address ?? item.parcel_number,
         detail: change.label,
         severity: change.severity,
+        direction: change.direction ?? 'none',
+        meaning: changeMeaning(change.code, change.direction ?? 'none'),
         to: () => openParcel(item.parcel_number),
       })
     }
@@ -63,6 +78,8 @@ const changeRows = computed<ChangeRow[]>(() => {
       title: search.name,
       detail: `${search.new_count} new ${search.new_count === 1 ? 'match' : 'matches'}`,
       severity: 'info',
+      direction: 'none',
+      meaning: 'neutral',
       to: () =>
         void router.push({
           name: 'lists',
@@ -133,6 +150,7 @@ onMounted(async () => {
         <div class="text-body2 text-grey-7">Your {{ marketLabel }} snapshot</div>
       </header>
 
+      <NextAction v-if="!needsBuyBox" :top-lead="leads[0] ?? null" class="q-mb-md" />
       <BuyBoxOnboarding v-if="needsBuyBox" class="q-mb-md" />
       <FirstSteps class="q-mb-md" />
 
@@ -159,7 +177,15 @@ onMounted(async () => {
                 </q-item-section>
                 <q-item-section>
                   <q-item-label class="ellipsis">{{ row.title }}</q-item-label>
-                  <q-item-label caption>{{ row.detail }}</q-item-label>
+                  <q-item-label caption class="change-detail">
+                    <q-icon
+                      v-if="row.direction !== 'none'"
+                      :name="row.direction === 'up' ? 'arrow_upward' : 'arrow_downward'"
+                      size="13px"
+                      :class="`meaning-${row.meaning}`"
+                    />
+                    <span :class="`meaning-${row.meaning}`">{{ row.detail }}</span>
+                  </q-item-label>
                 </q-item-section>
                 <q-item-section side><q-icon name="chevron_right" color="grey-5" /></q-item-section>
               </q-item>
@@ -321,6 +347,18 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.change-detail {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.meaning-better {
+  color: var(--lot-score-positive, #15803d);
+}
+.meaning-worse {
+  color: var(--lot-sev-high, #b91c1c);
+}
+
 .home-wrap {
   max-width: 1080px;
   margin: 0 auto;

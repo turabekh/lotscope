@@ -7,6 +7,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import FirstSteps from '@/components/FirstSteps.vue'
 import { api } from '@/lib/api'
 import { routes } from '@/router'
+import { useFirstStepsStore } from '@/stores/firstSteps'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
@@ -73,5 +74,29 @@ describe('FirstSteps', () => {
 
     const wrapper = await mountSteps()
     expect(wrapper.find('[data-test="first-steps"]').exists()).toBe(false)
+  })
+
+  it('collapses to a single prompt once most of the setup is done', async () => {
+    const store = useFirstStepsStore()
+    store.resolved = true
+    store.verdictSeen = true
+    store.assumptionsSet = true
+
+    const wrapper = mount(FirstSteps, { global: { plugins: [[Quasar, {}]] } })
+    await wrapper.vm.$nextTick()
+
+    const toggle = wrapper.find('[data-test="first-steps-toggle"]')
+    expect(toggle.exists()).toBe(true)
+    expect(toggle.text()).toContain('Finish setup')
+  })
+
+  it('keeps every step in view while the user is still new', async () => {
+    const store = useFirstStepsStore()
+    store.resolved = true
+
+    const wrapper = mount(FirstSteps, { global: { plugins: [[Quasar, {}]] } })
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-test="first-steps-toggle"]').exists()).toBe(false)
   })
 })

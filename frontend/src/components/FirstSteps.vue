@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
 import type { FirstStep } from '@/stores/firstSteps'
@@ -13,6 +13,14 @@ function stepTarget(step: FirstStep): RouteLocationRaw {
   if (!step.marketScoped) return { name: step.routeName }
   return { name: step.routeName, params: { market: market.active } }
 }
+
+const expandedByUser = ref(false)
+
+const mostlyDone = computed(
+  () => firstSteps.completed >= Math.ceil(firstSteps.steps.length / 2) && !firstSteps.allDone,
+)
+
+const showSteps = computed(() => !mostlyDone.value || expandedByUser.value)
 
 onMounted(() => {
   void firstSteps.refresh()
@@ -44,7 +52,19 @@ onMounted(() => {
         class="q-mb-sm"
       />
 
+      <button
+        v-if="mostlyDone"
+        type="button"
+        class="reveal"
+        data-test="first-steps-toggle"
+        @click="expandedByUser = !expandedByUser"
+      >
+        {{ expandedByUser ? 'Hide' : 'Finish setup' }}
+        <q-icon :name="expandedByUser ? 'expand_less' : 'expand_more'" size="16px" />
+      </button>
+
       <router-link
+        v-show="showSteps"
         v-for="step in firstSteps.steps"
         :key="step.code"
         :to="stepTarget(step)"
@@ -67,6 +87,21 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.reveal {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--lot-accent);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 2px 0 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
 .rounded-borders {
   border-radius: var(--lot-radius) !important;
   box-shadow: var(--lot-shadow);
