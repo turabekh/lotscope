@@ -103,6 +103,7 @@ const buildQualifier = computed(() => {
           {{ buildQualifier }}
         </q-tooltip>
       </q-chip>
+      <div class="build-qualifier" data-test="build-qualifier">{{ buildQualifier }}</div>
       <div v-if="developed" class="redev-note">
         Redevelopment scenario — assumes the existing structure is removed.
       </div>
@@ -237,6 +238,12 @@ const buildQualifier = computed(() => {
   font-size: 18px;
   font-weight: 700;
   color: var(--lot-accent-ink);
+}
+.build-qualifier {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--lot-muted);
 }
 .redev-note {
   font-size: 11.5px;
