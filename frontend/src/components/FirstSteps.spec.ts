@@ -77,13 +77,13 @@ describe('FirstSteps', () => {
   })
 
   it('collapses to a single prompt once most of the setup is done', async () => {
-    const store = useFirstStepsStore()
-    store.resolved = true
-    store.verdictSeen = true
-    store.assumptionsSet = true
+    stubStores()
+    vi.spyOn(api, 'listUnderwritingProfiles').mockResolvedValue([
+      { id: 1, name: 'Mine', is_default: true, assumptions: { margin: 0.2 }, buy_box: {} },
+    ] as never)
+    useFirstStepsStore().markVerdictSeen()
 
-    const wrapper = mount(FirstSteps, { global: { plugins: [[Quasar, {}]] } })
-    await wrapper.vm.$nextTick()
+    const wrapper = await mountSteps()
 
     const toggle = wrapper.find('[data-test="first-steps-toggle"]')
     expect(toggle.exists()).toBe(true)
@@ -91,11 +91,10 @@ describe('FirstSteps', () => {
   })
 
   it('keeps every step in view while the user is still new', async () => {
-    const store = useFirstStepsStore()
-    store.resolved = true
+    stubStores()
+    vi.spyOn(api, 'listUnderwritingProfiles').mockResolvedValue([])
 
-    const wrapper = mount(FirstSteps, { global: { plugins: [[Quasar, {}]] } })
-    await wrapper.vm.$nextTick()
+    const wrapper = await mountSteps()
 
     expect(wrapper.find('[data-test="first-steps-toggle"]').exists()).toBe(false)
   })
