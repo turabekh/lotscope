@@ -18,7 +18,7 @@ Every finding below was measured against code, the production database, or a liv
 
 | Ticket | Backlog said | Measured 2026-08-01 |
 |---|---|---|
-| LR-B-001 field-state taxonomy | Not started | **Substantially shipped** — ADR-0065, `verdict/trust.py` with per-field method versions and explicit not-evaluated reasons; 550,976 of 550,976 phl verdicts carry `field_trust`. Full acceptance not confirmed (see §2 G3) |
+| LR-B-001 field-state taxonomy | Not started | **Shipped — acceptance confirmed 2026-08-01 (§1.4).** ADR-0065; 550,976 of 550,976 phl verdicts carry `field_trust` |
 | LR-B-004 correction workflow | Not started | **Partial** — reporting is live and reachable; operator triage is not (§1.2) |
 | LR-B-002 by-right qualifier | Not started | **Wrong — corrected 2026-08-01, see §1.3.** A qualifier already existed in `VerdictHero.vue`; the review's search terms missed it |
 | LR-B-029 support route | Not started | **Accurate.** No support address anywhere in `backend/src`, `frontend/src`, or `.env.example`; the only match is a test fixture |
@@ -59,6 +59,23 @@ The last row is the one the acceptance criteria turned on: the qualifier now *na
 
 **G3's assessment does not change** — the gate was correctly marked not met, and the criterion was correctly identified as the outstanding one. Only the reason was wrong, and the work was smaller than described.
 
+### 1.4 LR-B-001 acceptance — confirmed 2026-08-01
+
+The review left this *unconfirmed*, having verified the mechanism by structure rather than against the criteria. Checked properly:
+
+| Criterion | Evidence |
+|---|---|
+| Four-value enum | `core/provenance.py:6` — `Literal["verified", "calculated", "estimated", "unavailable"]` |
+| Frontend wording identical to the API enum | `frontend/src/lib/types.ts:85` — the same four strings, character for character |
+| Every material field exposes a state | `compose_field_trust` covers eleven: three zoning, one envelope, two valuation, four deal, plus `assessment_market_gap` |
+| No field reports Verified without a source | `verified()` takes `source_label` as a required positional argument, so it cannot be constructed without one; pinned by `test_verified_requires_an_identified_source`, `test_a_derived_source_cannot_be_called_verified`, and `test_resolved_zoning_is_calculated_not_verified` |
+| Unavailable is never a bare default | `unavailable()` requires a reason string; pinned by `test_unavailable_must_state_why` |
+| ADR-recorded and verdict-version reviewed | ADR-0065; `v8`, unchanged |
+
+**Scope, stated plainly:** coverage is buildability, valuation, and deal — exactly the phase the ticket names ("apply first to the verdict contract's buildability, valuation, and deal fields"). Risk and the composite scores do **not** carry a field state. That is the ticket's own boundary, not an oversight, but anyone reading "every material verdict field" should know where the line currently sits.
+
+Nothing currently emits `verified` — every field resolves to calculated, estimated, or unavailable. The no-Verified-without-a-source rule is therefore satisfied by construction today, and the guard matters for the first source that does claim it.
+
 ---
 
 ## 2. Gate-by-gate
@@ -83,7 +100,6 @@ Each gate carries the seven fields LR-12 requires.
 |---|---|
 | **Owner or external** | LR-B-018, LR-B-019 (vendor approval) · LR-B-028 (legal copy) · LR-B-029 (support address) · LR-B-030 (Stripe) · LR-B-032 (email) · LR-B-034 (GitHub plan) |
 | **Unblocked engineering** | none remaining — LR-B-002 and LR-B-004 both closed 2026-08-01 (§1.2, §1.3) |
-| **Unconfirmed** | LR-B-001 (appears shipped; needs acceptance check) |
 
 **No open P0 is engineering work this team can start today** (two at the time of review; both closed 2026-08-01). Every remaining P0 is an owner or external action. The gate is owner-gated, not engineering-gated — the single most useful fact in this review.
 

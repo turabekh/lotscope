@@ -19,7 +19,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-001 — Field-state taxonomy and material-field metadata
 
 - **PRD requirement:** §8.1, §8.2
-- **Priority:** P0 · **Status:** Not started
+- **Priority:** P0 · **Status:** **Done — confirmed 2026-08-01** against acceptance criteria (ADR-0065). Scope is the phase this ticket names: the verdict contract's buildability, valuation, and deal fields.
 - **Problem:** Trust state exists only at market-category granularity (`no_data_source`, `pending_load`, `available`) and provenance only at verdict level (`sources[]`, `computed_at`). No material field declares whether it is Verified, Calculated, Estimated, or Unavailable.
 - **User impact:** An infill developer cannot tell whether "buildable" is a verified district rule, a calculated geometry inference, or an estimate. Amendment 03 §6.2 forbids exactly this ambiguity, and it is the difference between a defensible screen and a guess.
 - **Current implementation:** `backend/src/lotscope/markets/capabilities.py:3-14` (category states); `backend/src/lotscope/verdict/schemas.py:32-33` (`sources`, `computed_at`); `frontend/src/components/WhyScoreDrawer.vue:31-33` (renders verdict sources).
