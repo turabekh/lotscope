@@ -189,3 +189,58 @@ def test_dossier_with_report_renders_memo_section() -> None:
 
 def test_dossier_filename() -> None:
     assert dossier_filename("000000001") == "lotscope-dossier-000000001.pdf"
+
+
+def test_negative_gap_reads_as_a_negative_amount() -> None:
+    from lotscope.reports.dossier import _money
+
+    assert _money(-31099) == "-$31,099"
+    assert _money(31099) == "$31,099"
+    assert _money(None) == "-"
+
+
+def test_dossier_carries_page_furniture_and_sources() -> None:
+    verdict = VerdictResult(
+        parcel_number="000000001",
+        verdict_version="v8",
+        buildability_score=50,
+        opportunity_score=54,
+        summary="RSA-3: variance likely.",
+        can_build_by_right=False,
+        by_right_units=1,
+        max_height_ft=38,
+        needs_variance=True,
+        buildable_area_sqft=0,
+        value_estimate_low=9723,
+        value_estimate_high=195204,
+        value_confidence=0.3,
+        assessment_market_gap=-31099,
+        arv=180000,
+        est_profit=None,
+        est_margin=None,
+        max_allowable_offer=0,
+        deal_score=None,
+        is_underpriced=None,
+        risk_score=10,
+        risk_flags=[],
+        sources=[
+            {
+                "dimension": "buildability",
+                "sources": [
+                    {"source": "zoning_district", "method": "spatial"},
+                    {"source": "zoning_standard", "version": "title14-quickguide-2026-02"},
+                ],
+            }
+        ],
+        computed_at=_NOW,
+    )
+    pdf = render_dossier_pdf(
+        detail=_detail(address="5346 Spruce St", market_code="phl"),
+        verdict=verdict,
+        assemblage=None,
+        distress=None,
+        generated_at=_NOW,
+        disclaimer="Informational only.",
+    )
+    assert pdf[:4] == b"%PDF"
+    assert len(pdf) > 2000
