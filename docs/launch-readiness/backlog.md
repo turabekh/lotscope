@@ -277,7 +277,7 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-015 — Buildability check expansion
 
 - **PRD requirement:** LR-B001
-- **Priority:** P1 · **Status:** **Partial (reconciled 2026-08-01)** — the five-value `ChecklistStatus` enum is shipped; **10 live checks against LR-B001's ~17**. Yards, unit density, parking and loading, utilities, deed restrictions, subdivision and master-plan are still absent
+- **Priority:** P1 · **Status:** **Done 2026-08-01** — the five-value `ChecklistStatus` enum was already shipped; the twelve missing LR-B001 checks (permitted use, min lot area, min lot width, max height, floor area, yards, unit density, master plan, parking, utilities, deed restrictions, subdivision) are now built from `zoning_standard` and parcel dimensions via service interfaces. A real parcel returns 22 checks; anything without data reports `not_evaluated` with a reason rather than passing
 - **Problem:** LR-B001 lists ~17 checks; the current checklist covers four domain codes plus capability categories. Yards, unit density, parking and loading, utilities, deed restrictions, subdivision, and master-plan requirement are not individually represented.
 - **User impact:** A developer cannot see which specific rule failed or was never evaluated — the core of JTBD-3.
 - **Current implementation:** `checklist/logic.py`, `checklist/schemas.py` (`ChecklistStatus = pass|warn|fail|info`).
