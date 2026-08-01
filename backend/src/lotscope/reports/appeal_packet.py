@@ -71,8 +71,12 @@ def render_appeal_packet_pdf(
     generated_at: datetime,
 ) -> bytes:
     pdf = _Dossier(format="A4")
-    pdf.set_auto_page_break(auto=True, margin=18)
+    pdf.running_title = _s(detail.address or detail.parcel_number)
+    pdf.running_subtitle = _s(f"Parcel {detail.parcel_number}")
+    pdf.footer_note = _s("Assessment review packet - prepared from public city data")
+    pdf.set_auto_page_break(auto=True, margin=20)
     pdf.set_margins(16, 16, 16)
+    pdf.alias_nb_pages()
     pdf.add_page()
 
     pdf.set_fill_color(*_BRAND)
@@ -89,7 +93,14 @@ def render_appeal_packet_pdf(
 
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*_MUTED)
-    pdf.cell(0, 5, _s(f"Parcel {detail.parcel_number}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    stamp = generated_at.strftime("%d %B %Y")
+    pdf.cell(
+        0,
+        5,
+        _s(f"Parcel {detail.parcel_number}   |   Prepared {stamp}"),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
     pdf.ln(2)
     label, color = _STATUS_STYLE.get(assessment.status, _STATUS_STYLE["unknown"])
     _tag(pdf, label, color)
@@ -114,7 +125,7 @@ def render_appeal_packet_pdf(
         pdf.ln(1)
         pdf.set_font("Helvetica", "", 8.5)
         pdf.set_text_color(*_INK)
-        pdf.multi_cell(0, 4.2, _s(reason))
+        pdf.multi_cell(0, 4.2, _s(reason), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     _section(pdf, "Comparable sales")
     if valuation is not None and valuation.comps:
@@ -144,7 +155,7 @@ def render_appeal_packet_pdf(
     pdf.set_font("Helvetica", "", 8.5)
     pdf.set_text_color(*_INK)
     for pointer in _APPEAL_POINTERS:
-        pdf.multi_cell(0, 4.4, _s(f"- {pointer}"))
+        pdf.multi_cell(0, 4.4, _s(f"- {pointer}"), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(0.5)
 
     pdf.ln(4)
@@ -154,7 +165,14 @@ def render_appeal_packet_pdf(
     pdf.set_font("Helvetica", "", 7)
     pdf.set_text_color(*_MUTED)
     stamp = generated_at.strftime("%Y-%m-%d %H:%M UTC")
-    pdf.multi_cell(0, 3.6, _s(f"Generated {stamp}. {assessment.disclaimer}"))
+    pdf.multi_cell(
+        0,
+        3.6,
+        _s(f"Generated {stamp}. {assessment.disclaimer}"),
+        align="L",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
 
     return bytes(pdf.output())
 
