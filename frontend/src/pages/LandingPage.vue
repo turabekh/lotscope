@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 
+import HeroShowcase from '@/components/HeroShowcase.vue'
 import PricingPlans from '@/components/PricingPlans.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMarketStore } from '@/stores/market'
@@ -101,44 +102,7 @@ const features = [
             </div>
             <div class="hero-note">Free plan: 4 parcels and 10 AI questions a day.</div>
 
-            <div class="preview" aria-label="Example parcel verdict">
-              <div class="preview-head">
-                <div>
-                  <div class="preview-addr">1500 S Broad St</div>
-                  <div class="preview-sub">Parcel 88800001 · Philadelphia</div>
-                </div>
-                <span class="tag tag-example">Example</span>
-              </div>
-
-              <div class="preview-chips">
-                <span class="tag tag-zone">RSA-5</span>
-                <span class="tag tag-vacant">Vacant</span>
-              </div>
-
-              <div class="preview-rows">
-                <div class="prow">
-                  <span class="plabel">Buildability</span>
-                  <span class="pvalue">Base district · 3 units</span>
-                </div>
-                <div class="prow">
-                  <span class="plabel">Est. land value</span>
-                  <span class="pvalue">$95K – $180K</span>
-                </div>
-                <div class="prow">
-                  <span class="plabel">Risk</span>
-                  <span class="pvalue">20/100</span>
-                </div>
-              </div>
-
-              <div class="preview-flags">
-                <span class="flag">Tax delinquency</span>
-                <span class="flag">Historic overlay</span>
-              </div>
-
-              <div class="preview-foot">
-                Preliminary screening, not a construction approval — every figure cites its source.
-              </div>
-            </div>
+            <HeroShowcase class="preview" />
           </div>
         </section>
 
@@ -267,95 +231,7 @@ body.body--dark .hero {
 
 .preview {
   margin-top: 22px;
-  background: var(--lot-surface);
-  color: var(--lot-ink);
-  border: 1px solid var(--lot-border);
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 16px 34px rgba(8, 12, 24, 0.32);
-  max-width: 420px;
 }
-.preview-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-.preview-addr {
-  font-weight: 700;
-  font-size: 15px;
-}
-.preview-sub {
-  font-size: 11.5px;
-  color: var(--lot-muted);
-  margin-top: 1px;
-}
-.preview-chips {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-}
-.tag {
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 6px;
-  padding: 2px 7px;
-  white-space: nowrap;
-}
-.tag-example {
-  background: var(--lot-accent-soft);
-  color: var(--lot-accent-ink, #4338ca);
-}
-.tag-zone {
-  background: var(--lot-accent-soft);
-  color: var(--lot-accent-ink, #3730a3);
-}
-.tag-vacant {
-  background: rgba(245, 158, 11, 0.16);
-  color: var(--lot-sev-medium, #92400e);
-}
-.flag {
-  background: rgba(239, 68, 68, 0.14);
-  color: var(--lot-sev-high, #b91c1c);
-}
-.preview-rows {
-  margin-top: 12px;
-  display: grid;
-  gap: 7px;
-}
-.prow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 13px;
-}
-.plabel {
-  color: var(--lot-muted);
-}
-.pvalue {
-  font-weight: 700;
-}
-.preview-flags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-}
-.flag {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 3px 9px;
-}
-.preview-foot {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--lot-border);
-  font-size: 11px;
-  line-height: 1.45;
-  color: var(--lot-muted);
-}
-
 .features {
   padding: 26px 20px;
   background: var(--lot-bg);
