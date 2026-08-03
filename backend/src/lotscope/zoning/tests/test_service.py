@@ -85,6 +85,71 @@ async def test_assess_parcel_resolves_overlap_by_majority_area(db_session: Async
     assert first.district_code == second.district_code
 
 
+async def test_corroborated_district_earns_high_confidence(db_session: AsyncSession) -> None:
+    await _add_standard(db_session, "RSA-5")
+    await db_session.execute(
+        text(
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RSA-5', "
+            "ST_GeomFromText('POLYGON((-100 -100,-100 100,100 100,100 -100,-100 -100))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
+            "base_zoning_code, geom_local) VALUES "
+            "('000000021', 1600, 18, 90, 'RSA5', "
+            "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel(db_session, "000000021")
+    assert result is not None
+    assert result.district_method == "spatial"
+    assert result.confidence == "high"
+
+
+async def test_uncorroborated_district_cannot_be_high_confidence(db_session: AsyncSession) -> None:
+    await _add_standard(db_session, "RSA-5")
+    await db_session.execute(
+        text(
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RSA-5', "
+            "ST_GeomFromText('POLYGON((-100 -100,-100 100,100 100,100 -100,-100 -100))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
+            "base_zoning_code, geom_local) VALUES "
+            "('000000022', 1600, 18, 90, 'CMX-2', "
+            "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel(db_session, "000000022")
+    assert result is not None
+    assert result.district_code == "RSA-5"
+    assert result.confidence == "medium"
+    assert any("no second source confirms" in reason for reason in result.reasons)
+
+
+async def test_opa_only_district_cannot_be_high_confidence(db_session: AsyncSession) -> None:
+    await _add_standard(db_session, "RSA-5")
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, frontage_ft, depth_ft, "
+            "base_zoning_code) VALUES ('000000023', 1600, 18, 90, 'RSA-5')"
+        )
+    )
+    await db_session.flush()
+
+    result = await assess_parcel(db_session, "000000023")
+    assert result is not None
+    assert result.district_method == "opa_attribute"
+    assert result.confidence == "medium"
+
+
 async def test_assess_parcel_falls_back_to_opa_attribute(db_session: AsyncSession) -> None:
     await _add_standard(db_session, "RSA-5")
     await db_session.execute(

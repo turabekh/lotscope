@@ -171,6 +171,47 @@ def test_partial_dimensions_give_medium_confidence() -> None:
     assert result.confidence == "medium"
 
 
+def test_fully_known_lot_reports_no_critical_unknowns() -> None:
+    result = assess_buildability(
+        ParcelDimensions(lot_area_sqft=1600, lot_width_ft=18, depth_ft=90), _rsa5()
+    )
+    assert result.critical_unknowns == ()
+    assert result.confidence == "high"
+
+
+def test_missing_height_standard_blocks_high_confidence() -> None:
+    result = assess_buildability(
+        ParcelDimensions(lot_area_sqft=1600, lot_width_ft=18, depth_ft=90),
+        _rsa5(max_height_ft=None),
+    )
+    assert "height_standard_missing" in result.critical_unknowns
+    assert result.confidence == "medium"
+
+
+def test_coverage_estimated_footprint_blocks_high_confidence() -> None:
+    standard = _rsa5(
+        front_setback_ft=None,
+        rear_setback_ft=None,
+        side_setback_ft=None,
+        max_occupancy_pct=75.0,
+    )
+    result = assess_buildability(
+        ParcelDimensions(lot_area_sqft=1600, lot_width_ft=18, depth_ft=90), standard
+    )
+    assert result.buildable_area_sqft == 1200.0
+    assert "footprint_not_setback_derived" in result.critical_unknowns
+    assert result.confidence == "medium"
+
+
+def test_missing_permitted_uses_blocks_high_confidence() -> None:
+    result = assess_buildability(
+        ParcelDimensions(lot_area_sqft=1600, lot_width_ft=18, depth_ft=90),
+        _rsa5(permitted_uses=[]),
+    )
+    assert "permitted_uses_missing" in result.critical_unknowns
+    assert result.confidence == "medium"
+
+
 def test_master_plan_district_is_not_by_right() -> None:
     standard = _rsa5(
         code="SP-INS",

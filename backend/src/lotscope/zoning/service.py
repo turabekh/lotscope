@@ -15,6 +15,12 @@ from lotscope.zoning.buildability import (
     estimate_density_units,
 )
 from lotscope.zoning.codes import normalize_zoning_code
+from lotscope.zoning.confidence import (
+    CriticalUnknown,
+    critical_unknown_reasons,
+    dimensional_confidence,
+    resolve_confidence,
+)
 from lotscope.zoning.envelope import estimate_floors, representative_inset_ft
 from lotscope.zoning.schemas import BuildabilityResult, DistrictResolution, EnvelopeResult
 
@@ -79,10 +85,16 @@ async def resolve_district(
     base_zoning_code: str | None,
     has_geometry: bool,
 ) -> DistrictResolution | None:
-    if has_geometry:
-        code = await session.scalar(_SPATIAL_DISTRICT_SQL, {"parcel_number": parcel_number})
-        if code:
-            return DistrictResolution(code=code, method="spatial")
+    spatial_code = (
+        await session.scalar(_SPATIAL_DISTRICT_SQL, {"parcel_number": parcel_number})
+        if has_geometry
+        else None
+    )
+    if spatial_code:
+        corroborated = base_zoning_code is not None and normalize_zoning_code(
+            base_zoning_code
+        ) == normalize_zoning_code(spatial_code)
+        return DistrictResolution(code=spatial_code, method="spatial", corroborated=corroborated)
     if base_zoning_code:
         return DistrictResolution(code=base_zoning_code, method="opa_attribute")
     return None
@@ -233,16 +245,19 @@ def _build_result(
         depth_ft=_as_float(parcel.depth_ft),
     )
     buildability = assess_buildability(dims, standard)
-    provisional = "provisional" in standard.code_version
-    confidence = (
-        "low" if provisional and buildability.confidence != "low" else buildability.confidence
+    critical_unknowns: list[CriticalUnknown] = list(buildability.critical_unknowns)
+    if not resolution.corroborated:
+        critical_unknowns.append("district_uncorroborated")
+    if "provisional" in standard.code_version:
+        critical_unknowns.append("standards_provisional")
+    confidence = resolve_confidence(
+        dimensional_confidence(
+            lot_area_known=dims.lot_area_sqft is not None,
+            lot_width_known=dims.lot_width_ft is not None,
+        ),
+        critical_unknowns,
     )
-    reasons = list(buildability.reasons)
-    if provisional:
-        reasons.append(
-            "Zoning standards for this market are provisional pending local review; "
-            "treat the by-right read as preliminary."
-        )
+    reasons = list(buildability.reasons) + critical_unknown_reasons(critical_unknowns)
     sources = [
         {"source": "zoning_district", "method": resolution.method},
         {"source": "zoning_standard", "code": standard.code, "version": standard.code_version},

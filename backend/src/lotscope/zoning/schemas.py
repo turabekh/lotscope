@@ -9,6 +9,7 @@ ResolutionMethod = Literal["spatial", "opa_attribute"]
 class DistrictResolution(BaseModel):
     code: str
     method: ResolutionMethod
+    corroborated: bool = False
 
 
 class EnvelopeResult(BaseModel):
