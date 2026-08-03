@@ -59,10 +59,24 @@ export interface ChecklistSummary {
   ready: boolean
 }
 
+export interface ProgramClaim {
+  label: string
+  value: string
+  state: FieldState
+}
+
+export interface DevelopmentProgram {
+  statement: string
+  claims: ProgramClaim[]
+  citation: string | null
+  conditions: string[]
+}
+
 export interface ParcelChecklist {
   parcel_number: string
   items: ChecklistItem[]
   summary: ChecklistSummary
+  program: DevelopmentProgram | null
   buildability_confidence: 'high' | 'medium' | 'low' | null
   buildability_confidence_reasons: string[]
   computed_at: string

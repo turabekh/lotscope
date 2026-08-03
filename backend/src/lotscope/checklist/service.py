@@ -5,7 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.checklist.dimensional import DimensionalContext
 from lotscope.checklist.logic import build_checklist
-from lotscope.checklist.schemas import ParcelChecklist
+from lotscope.checklist.schemas import (
+    ChecklistItem,
+    DevelopmentProgramOut,
+    ParcelChecklist,
+    ProgramClaimOut,
+)
 from lotscope.core.config import get_settings
 from lotscope.documents.service import get_deed_restrictions
 from lotscope.parcels.abatement import has_active_exemption
@@ -13,7 +18,11 @@ from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.subdivision.service import analyze_parcel_subdivision
 from lotscope.verdict.service import get_or_compute_current_verdict
+from lotscope.zoning.buildability import FootprintBasis, UnitBasis
 from lotscope.zoning.confidence import critical_unknown_reasons
+from lotscope.zoning.dispositions import is_unregulated
+from lotscope.zoning.program import ProgramInputs, compose_development_program
+from lotscope.zoning.schemas import BuildabilityResult
 from lotscope.zoning.service import assess_parcel, get_parcel_standard
 
 _TAX_KNOWN_SQL = text("SELECT is_delinquent FROM tax_status WHERE parcel_number = :parcel_number")
@@ -67,6 +76,66 @@ async def _dimensional_context(
     )
 
 
+def _unit_basis(dimensional: DimensionalContext) -> UnitBasis | None:
+    if dimensional.lot_area_per_unit_sqft is not None:
+        return "per_unit"
+    if dimensional.max_units is not None:
+        return "flat_cap"
+    return None
+
+
+def _footprint_basis(buildability: BuildabilityResult) -> FootprintBasis:
+    if buildability.buildable_area_sqft is None:
+        return "unavailable"
+    if "footprint_not_setback_derived" in buildability.critical_unknowns:
+        return "coverage_estimate"
+    return "setback_calculated"
+
+
+def _program_for(
+    buildability: BuildabilityResult | None,
+    dimensional: DimensionalContext,
+    items: list[ChecklistItem],
+) -> DevelopmentProgramOut | None:
+    if buildability is None:
+        return None
+    program = compose_development_program(
+        ProgramInputs(
+            district_code=buildability.district_code,
+            cited_section=buildability.cited_section,
+            lot_area_sqft=dimensional.lot_area_sqft,
+            permitted_uses=dimensional.permitted_uses,
+            requires_master_plan=dimensional.requires_master_plan,
+            can_build_by_right=buildability.can_build_by_right,
+            needs_variance=buildability.needs_variance,
+            by_right_units=buildability.by_right_units,
+            unit_basis=_unit_basis(dimensional),
+            max_height_ft=buildability.max_height_ft,
+            height_unregulated=is_unregulated(dimensional.field_dispositions, "max_height_ft"),
+            max_floor_area_ratio_pct=dimensional.max_floor_area_ratio_pct,
+            max_occupancy_pct=dimensional.max_occupancy_pct,
+            buildable_area_sqft=buildability.buildable_area_sqft,
+            footprint_basis=_footprint_basis(buildability),
+            confidence=buildability.confidence,
+            outstanding_checks=tuple(
+                item.label for item in items if item.status == "not_evaluated"
+            ),
+            flagged_checks=tuple(
+                item.label for item in items if item.status in {"potential_issue", "fail"}
+            ),
+        )
+    )
+    return DevelopmentProgramOut(
+        statement=program.statement,
+        claims=[
+            ProgramClaimOut(label=claim.label, value=claim.value, state=claim.state)
+            for claim in program.claims
+        ],
+        citation=program.citation,
+        conditions=list(program.conditions),
+    )
+
+
 async def build_parcel_checklist(
     session: AsyncSession, parcel_number: str
 ) -> ParcelChecklist | None:
@@ -82,22 +151,24 @@ async def build_parcel_checklist(
     )
     market = parcel_number.split(":", 1)[0]
     buildability = await assess_parcel(session, parcel_number)
+    dimensional = await _dimensional_context(
+        session,
+        parcel_number,
+        detail,
+        buildability.district_code if buildability is not None else None,
+    )
     items, summary = build_checklist(
         verdict,
         has_abatement=has_abatement,
         market_code=market,
         tax_status_unknown=await _tax_status_unknown(session, parcel_number),
-        dimensional=await _dimensional_context(
-            session,
-            parcel_number,
-            detail,
-            buildability.district_code if buildability is not None else None,
-        ),
+        dimensional=dimensional,
     )
     return ParcelChecklist(
         parcel_number=parcel_number,
         items=items,
         summary=summary,
+        program=_program_for(buildability, dimensional, items),
         buildability_confidence=buildability.confidence if buildability is not None else None,
         buildability_confidence_reasons=(
             critical_unknown_reasons(buildability.critical_unknowns)

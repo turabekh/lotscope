@@ -52,6 +52,7 @@ function makeChecklist(overrides: Partial<ParcelChecklist> = {}): ParcelChecklis
     summary: { not_evaluated: 1, passed: 0, warnings: 0, failures: 0, info: 0, ready: true },
     buildability_confidence: 'high',
     buildability_confidence_reasons: [],
+    program: null,
     computed_at: '2026-08-01T00:00:00Z',
     ...overrides,
   }

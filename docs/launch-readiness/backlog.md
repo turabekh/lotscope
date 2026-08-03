@@ -188,7 +188,8 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-010 — Likely development program
 
 - **PRD requirement:** LR-V002
-- **Priority:** P1 · **Status:** **Not started (criteria reviewed 2026-08-01)** — the summary is a terse compound line (`RM-1: buildable by-right (4 unit); est. ...`) that meets none of LR-V002's four criteria: no verified-vs-calculated distinction, no conditional language, no standards citation
+- **Priority:** P1 · **Status:** **Done 2026-08-03** — `zoning/program.py` composes a plain-language program statement rendered by `DevelopmentProgramPanel.vue` on the dossier. All four LR-V002 criteria met: prose synthesis, a per-claim `verified` / `calculated` / `estimated` / `unavailable` state reusing the LR-B-001 taxonomy, conditional language driven by the checklist's own unevaluated and flagged rows, and a citation carrying the standards version (`CMX-4 (Title 14, title14-quickguide-2026-02)`). The stored terse `summary` is unchanged — the program is composed at request time on the checklist payload, so there is no migration and no recompute
+- **Contradictions the tests caught and the copy now avoids:** a master-plan district reported "1 by-right unit" beneath a statement saying development is not permitted by right; a non-conforming lot needing a variance reported "By-right units: 2". Units are now labelled *"Units if a variance is granted"* and phrased *"Were a variance granted, the district standards would support…"*. Footprint prose distinguishes a setback calculation from a lot-coverage estimate, and flagged checks warn that the figures may move
 - **Problem:** Program facts exist as separate numeric fields with no plain-language synthesis and no verified/calculated distinction.
 - **User impact:** The developer's first question is "what can I build here" — currently answered by assembling four fields.
 - **Current implementation:** `verdict/schemas.py:15-19`.

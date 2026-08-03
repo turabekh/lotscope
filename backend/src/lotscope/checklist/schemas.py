@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from lotscope.core.provenance import FieldState
 from lotscope.zoning.confidence import Confidence
 
 ChecklistStatus = Literal["pass", "fail", "potential_issue", "not_evaluated", "not_applicable"]
@@ -28,10 +29,24 @@ class ChecklistSummary(BaseModel):
     ready: bool
 
 
+class ProgramClaimOut(BaseModel):
+    label: str
+    value: str
+    state: FieldState
+
+
+class DevelopmentProgramOut(BaseModel):
+    statement: str
+    claims: list[ProgramClaimOut] = []
+    citation: str | None = None
+    conditions: list[str] = []
+
+
 class ParcelChecklist(BaseModel):
     parcel_number: str
     items: list[ChecklistItem]
     summary: ChecklistSummary
+    program: DevelopmentProgramOut | None = None
     buildability_confidence: Confidence | None = None
     buildability_confidence_reasons: list[str] = []
     computed_at: datetime
