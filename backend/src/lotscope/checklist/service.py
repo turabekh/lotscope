@@ -13,7 +13,8 @@ from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.subdivision.service import analyze_parcel_subdivision
 from lotscope.verdict.service import get_or_compute_current_verdict
-from lotscope.zoning.service import get_parcel_standard
+from lotscope.zoning.confidence import critical_unknown_reasons
+from lotscope.zoning.service import assess_parcel, get_parcel_standard
 
 _TAX_KNOWN_SQL = text("SELECT is_delinquent FROM tax_status WHERE parcel_number = :parcel_number")
 
@@ -82,9 +83,16 @@ async def build_parcel_checklist(
         tax_status_unknown=await _tax_status_unknown(session, parcel_number),
         dimensional=await _dimensional_context(session, parcel_number, detail),
     )
+    buildability = await assess_parcel(session, parcel_number)
     return ParcelChecklist(
         parcel_number=parcel_number,
         items=items,
         summary=summary,
+        buildability_confidence=buildability.confidence if buildability is not None else None,
+        buildability_confidence_reasons=(
+            critical_unknown_reasons(buildability.critical_unknowns)
+            if buildability is not None
+            else []
+        ),
         computed_at=datetime.now(UTC),
     )

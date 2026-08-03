@@ -62,6 +62,8 @@ export interface ParcelChecklist {
   parcel_number: string
   items: ChecklistItem[]
   summary: ChecklistSummary
+  buildability_confidence: 'high' | 'medium' | 'low' | null
+  buildability_confidence_reasons: string[]
   computed_at: string
 }
 

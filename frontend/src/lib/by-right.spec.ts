@@ -19,6 +19,8 @@ function checklist(items: ChecklistItem[]): ParcelChecklist {
       info: 0,
       ready: true,
     },
+    buildability_confidence: 'high',
+    buildability_confidence_reasons: [],
     computed_at: '2026-08-01T00:00:00Z',
   }
 }

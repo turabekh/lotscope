@@ -3,6 +3,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from lotscope.zoning.confidence import CriticalUnknown
+
 ResolutionMethod = Literal["spatial", "opa_attribute"]
 
 
@@ -41,6 +43,7 @@ class BuildabilityResult(BaseModel):
     buildable_area_sqft: float | None
     buildability_score: float
     confidence: Literal["high", "medium", "low"]
+    critical_unknowns: list[CriticalUnknown] = []
     requires_master_plan: bool = False
     reasons: list[str]
     sources: list[dict[str, Any]]

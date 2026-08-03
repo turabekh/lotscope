@@ -24,6 +24,8 @@ function mountPanel(items: ChecklistItem[]) {
       not_evaluated: items.filter((i) => i.status === 'not_evaluated').length,
       ready: !items.some((i) => i.status === 'fail'),
     },
+    buildability_confidence: 'high',
+    buildability_confidence_reasons: [],
     computed_at: '2026-07-28T00:00:00Z',
   }
   return mount(ChecklistPanel, { global: { plugins: [[Quasar, {}]] } })
