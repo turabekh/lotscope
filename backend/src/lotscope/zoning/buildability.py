@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 from lotscope.zoning.confidence import (
     Confidence,
@@ -7,6 +7,7 @@ from lotscope.zoning.confidence import (
     dimensional_confidence,
     resolve_confidence,
 )
+from lotscope.zoning.dispositions import is_unregulated
 
 UnitBasis = Literal["per_unit", "far_estimate", "flat_cap"]
 FootprintBasis = Literal["setback_calculated", "coverage_estimate", "unavailable"]
@@ -38,6 +39,7 @@ class DistrictStandard:
     rear_setback_ft: float | None = None
     side_setback_ft: float | None = None
     requires_master_plan: bool = False
+    field_dispositions: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -139,7 +141,9 @@ def _critical_unknowns(
         unknowns.append("conformance_unresolved")
     if footprint_basis != "setback_calculated":
         unknowns.append("footprint_not_setback_derived")
-    if standard.max_height_ft is None:
+    if standard.max_height_ft is None and not is_unregulated(
+        standard.field_dispositions, "max_height_ft"
+    ):
         unknowns.append("height_standard_missing")
     if not has_permitted_uses:
         unknowns.append("permitted_uses_missing")

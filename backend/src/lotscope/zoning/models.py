@@ -91,6 +91,9 @@ class ZoningStandard(Base, TimestampMixin):
 
     permitted_uses: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
     dimensional: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    field_dispositions: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default="{}"
+    )
 
     min_lot_area_sqft: Mapped[float | None] = mapped_column(Numeric(12, 2))
     min_lot_width_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))

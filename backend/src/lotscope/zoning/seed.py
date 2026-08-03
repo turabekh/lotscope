@@ -386,7 +386,80 @@ _DIMENSIONAL_FIELDS = (
     "side_setback_ft",
     "min_parking_spaces",
 )
-_UPDATE_COLUMNS = ("source", "permitted_uses", "requires_master_plan", *_DIMENSIONAL_FIELDS)
+_UPDATE_COLUMNS = (
+    "source",
+    "permitted_uses",
+    "requires_master_plan",
+    "field_dispositions",
+    *_DIMENSIONAL_FIELDS,
+)
+
+_UNREGULATED = {"disposition": "unregulated"}
+
+
+def _conditional(note: str) -> dict[str, str]:
+    return {"disposition": "conditional", "note": note}
+
+
+_NO_LOT_MINIMUMS = {
+    "min_lot_area_sqft": _UNREGULATED,
+    "min_lot_width_ft": _UNREGULATED,
+}
+_FAR_GOVERNED_HEIGHT = {
+    "min_lot_area_sqft": _UNREGULATED,
+    "min_lot_width_ft": _UNREGULATED,
+    "max_height_ft": {
+        "disposition": "unregulated",
+        "note": (
+            "building size is governed by the floor-area ratio and the bonus provisions instead"
+        ),
+    },
+}
+_INDUSTRIAL_HEIGHT = _conditional(
+    "60 ft. where the lot abuts a Residential or SP-PO district; otherwise no height limit"
+)
+_CMX1_MATCHES_NEIGHBOURS = _conditional(
+    "Occupied area, building dimensions, and height follow the requirements of the adjacent "
+    "residential districts, so they vary by location rather than by district"
+)
+
+PHL_FIELD_DISPOSITIONS: dict[str, dict[str, dict[str, str]]] = {
+    "CMX-1": {
+        "min_lot_area_sqft": _CMX1_MATCHES_NEIGHBOURS,
+        "min_lot_width_ft": _CMX1_MATCHES_NEIGHBOURS,
+        "max_height_ft": _CMX1_MATCHES_NEIGHBOURS,
+    },
+    "CMX-2": _NO_LOT_MINIMUMS,
+    "CMX-2.5": _NO_LOT_MINIMUMS,
+    "CMX-3": _FAR_GOVERNED_HEIGHT,
+    "CMX-4": _FAR_GOVERNED_HEIGHT,
+    "CMX-5": _FAR_GOVERNED_HEIGHT,
+    "IRMX": _NO_LOT_MINIMUMS,
+    "ICMX": _NO_LOT_MINIMUMS,
+    "I-1": {**_NO_LOT_MINIMUMS, "max_height_ft": _INDUSTRIAL_HEIGHT},
+    "I-2": {**_NO_LOT_MINIMUMS, "max_height_ft": _INDUSTRIAL_HEIGHT},
+    "I-3": {**_NO_LOT_MINIMUMS, "max_height_ft": _INDUSTRIAL_HEIGHT},
+    "RMX-1": _NO_LOT_MINIMUMS,
+    "RMX-2": _NO_LOT_MINIMUMS,
+    "RMX-3": _NO_LOT_MINIMUMS,
+    "CA-1": {"min_lot_width_ft": _UNREGULATED},
+    "CA-2": {"min_lot_width_ft": _UNREGULATED},
+    "RM-2": {
+        "max_height_ft": _conditional(
+            "expressed as a floor-area ratio (70% of lot area) rather than a fixed height"
+        )
+    },
+    "RM-3": {
+        "max_height_ft": _conditional(
+            "expressed as a floor-area ratio (150% of lot area) rather than a fixed height"
+        )
+    },
+    "RM-4": {
+        "max_height_ft": _conditional(
+            "expressed as a floor-area ratio (350% of lot area) rather than a fixed height"
+        )
+    },
+}
 
 
 def _row(entry: dict[str, Any]) -> dict[str, Any]:
@@ -397,6 +470,9 @@ def _row(entry: dict[str, Any]) -> dict[str, Any]:
         "source": entry.get("source", TITLE_14_SOURCE),
         "permitted_uses": entry["permitted_uses"],
         "requires_master_plan": entry.get("requires_master_plan", False),
+        "field_dispositions": PHL_FIELD_DISPOSITIONS.get(entry["code"], {})
+        if entry.get("market_code", "phl") == "phl"
+        else {},
     }
     for field_name in _DIMENSIONAL_FIELDS:
         row[field_name] = entry.get(field_name)

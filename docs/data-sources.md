@@ -74,12 +74,30 @@ City-owned property and Land Bank / PHDC inventory — flags publicly-owned lots
 ## Title 14 zoning standards (reference data)
 
 The `zoning_standard` table is populated by an idempotent seed
-(`lotscope.zoning.seed`, run via `make seed`), not an API. The shipped values
-are **provisional** (`code_version = title14-provisional-2024`): the district
-taxonomy and well-established figures (e.g. RSA-5 = 1,440 sq ft / 16 ft / 38 ft)
-are encoded, and fields not yet confirmed are left NULL so the engine degrades
-honestly rather than asserting false precision. **Verify every value against
-the official Title 14 text before production use** and re-run the seed to update.
+(`lotscope.zoning.seed`, run via `make seed`), not an API. The Philadelphia
+values come from the [Base Districts Quick Guide, February 2026](https://www.phila.gov/media/20260213170558/ZONING-QUICK-GUIDE_feb-2026.pdf)
+(`code_version = title14-quickguide-2026-02`) — a summary published by the
+Planning Commission, **not the code text**. Other markets ship provisional
+values pending local review.
+
+A NULL dimensional field means one of two things, and they are not
+interchangeable — see **ADR-0075**. Where the guide shows a district genuinely
+sets no such standard (CMX-3/4/5 have no height row; RMX lot width reads
+`N/A`), that is recorded in `field_dispositions` as `unregulated` and the
+product answers the check rather than reporting it unevaluated. Where a
+standard exists but cannot be reduced to one figure (I-1/2/3 height is
+conditional on abutting districts; RM-2/3/4 height is expressed as an FAR;
+CMX-1 inherits its dimensions from adjacent districts), the disposition is
+`conditional` and the rule itself is shown. A NULL with **no** disposition
+means the value has simply not been captured, and stays that way until read
+from a primary source.
+
+Dispositions are recorded only for districts read directly from the guide;
+asserting "no standard applies" without that evidence would be worse than the
+vagueness it replaces. **Verify every value against the official Title 14 text
+before production use** and re-run the seed to update. Note the guide carries
+no parking table — `min_parking_spaces` is null for every district because
+Chapter 14-800 has never been ingested.
 
 ## Title 14 RAG corpus
 

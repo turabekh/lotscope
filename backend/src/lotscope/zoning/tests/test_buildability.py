@@ -229,3 +229,31 @@ def test_master_plan_district_is_not_by_right() -> None:
     assert result.by_right_units is None
     assert any("master plan" in reason.lower() for reason in result.reasons)
     assert result.buildability_score == 25.0
+
+
+def test_an_unregulated_height_is_not_a_critical_unknown() -> None:
+    standard = _rsa5(
+        code="CMX-4",
+        max_height_ft=None,
+        field_dispositions={"max_height_ft": {"disposition": "unregulated"}},
+    )
+    result = assess_buildability(
+        ParcelDimensions(lot_area_sqft=15592, lot_width_ft=66, depth_ft=200), standard
+    )
+
+    assert "height_standard_missing" not in result.critical_unknowns
+
+
+def test_a_conditional_height_remains_a_critical_unknown() -> None:
+    standard = _rsa5(
+        code="I-1",
+        max_height_ft=None,
+        field_dispositions={
+            "max_height_ft": {"disposition": "conditional", "note": "60 ft. where abutting"}
+        },
+    )
+    result = assess_buildability(
+        ParcelDimensions(lot_area_sqft=15592, lot_width_ft=66, depth_ft=200), standard
+    )
+
+    assert "height_standard_missing" in result.critical_unknowns
