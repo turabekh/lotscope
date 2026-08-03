@@ -4,7 +4,7 @@ import { baseDistrictSummary, byRightQualifier, outstandingCheckLabels } from '@
 import type { ChecklistItem, ParcelChecklist, VerdictResult } from '@/lib/types'
 
 function item(code: string, category: string, status: ChecklistItem['status']): ChecklistItem {
-  return { code, category, status, detail: '', source: null }
+  return { code, label: category, category, status, detail: '', source: null }
 }
 
 function checklist(items: ChecklistItem[]): ParcelChecklist {

@@ -28,20 +28,34 @@ class DimensionalContext:
     by_right_units: int | None = None
     deed_restriction_count: int | None = None
     subdivision_potential: bool | None = None
+    standard_loaded: bool = False
 
 
-_NO_STANDARD = "No zoning standard is loaded for this district, so this check was not evaluated."
 _NO_DISTRICT = "The base district could not be resolved, so this check was not evaluated."
 
 
-def _unevaluated(code: str, category: str, detail: str) -> ChecklistItem:
-    return ChecklistItem(code=code, category=category, status="not_evaluated", detail=detail)
-
-
-def _standard_missing(code: str, category: str, context: DimensionalContext) -> ChecklistItem:
-    return _unevaluated(
-        code, category, _NO_DISTRICT if context.district_code is None else _NO_STANDARD
+def _unevaluated(code: str, label: str, category: str, detail: str) -> ChecklistItem:
+    return ChecklistItem(
+        code=code, label=label, category=category, status="not_evaluated", detail=detail
     )
+
+
+def _standard_missing(
+    code: str, label: str, category: str, context: DimensionalContext, field_description: str
+) -> ChecklistItem:
+    if context.district_code is None:
+        detail = _NO_DISTRICT
+    elif not context.standard_loaded:
+        detail = (
+            f"No zoning standard is loaded for {context.district_code}, "
+            "so this check was not evaluated."
+        )
+    else:
+        detail = (
+            f"The {context.district_code} standard on file records {field_description}, "
+            "so this check was not evaluated."
+        )
+    return _unevaluated(code, label, category, detail)
 
 
 def _cite(context: DimensionalContext) -> str | None:
@@ -52,15 +66,21 @@ def lot_area_item(context: DimensionalContext) -> ChecklistItem:
     minimum = context.min_lot_area_sqft
     actual = context.lot_area_sqft
     if minimum is None:
-        return _standard_missing("min_lot_area", _ZONING, context)
+        return _standard_missing(
+            "min_lot_area", "Minimum lot area", _ZONING, context, "no minimum lot area"
+        )
     if actual is None or actual <= 0:
         return _unevaluated(
-            "min_lot_area", _ZONING, "Lot area is not recorded, so it cannot be compared."
+            "min_lot_area",
+            "Minimum lot area",
+            _ZONING,
+            "Lot area is not recorded, so it cannot be compared.",
         )
     status: ChecklistStatus = "pass" if actual >= minimum else "fail"
     verb = "meets" if status == "pass" else "is below"
     return ChecklistItem(
         code="min_lot_area",
+        label="Minimum lot area",
         category=_ZONING,
         status=status,
         detail=(
@@ -75,10 +95,13 @@ def lot_width_item(context: DimensionalContext) -> ChecklistItem:
     minimum = context.min_lot_width_ft
     actual = context.frontage_ft
     if minimum is None:
-        return _standard_missing("min_lot_width", _ZONING, context)
+        return _standard_missing(
+            "min_lot_width", "Minimum lot width", _ZONING, context, "no minimum lot width"
+        )
     if actual is None or actual <= 0:
         return _unevaluated(
             "min_lot_width",
+            "Minimum lot width",
             _ZONING,
             "Frontage is not recorded for this parcel, so lot width cannot be compared.",
         )
@@ -86,6 +109,7 @@ def lot_width_item(context: DimensionalContext) -> ChecklistItem:
     verb = "meets" if status == "pass" else "is below"
     return ChecklistItem(
         code="min_lot_width",
+        label="Minimum lot width",
         category=_ZONING,
         status=status,
         detail=f"{actual:,.0f} ft frontage {verb} the {minimum:,.0f} ft minimum.",
@@ -95,9 +119,12 @@ def lot_width_item(context: DimensionalContext) -> ChecklistItem:
 
 def height_item(context: DimensionalContext) -> ChecklistItem:
     if context.max_height_ft is None:
-        return _standard_missing("max_height", _ZONING, context)
+        return _standard_missing(
+            "max_height", "Maximum height", _ZONING, context, "no maximum height"
+        )
     return ChecklistItem(
         code="max_height",
+        label="Maximum height",
         category=_ZONING,
         status="pass",
         detail=(
@@ -112,7 +139,13 @@ def floor_area_item(context: DimensionalContext) -> ChecklistItem:
     far = context.max_floor_area_ratio_pct
     occupancy = context.max_occupancy_pct
     if far is None and occupancy is None:
-        return _standard_missing("floor_area", _ZONING, context)
+        return _standard_missing(
+            "floor_area",
+            "Floor area & coverage",
+            _ZONING,
+            context,
+            "neither a floor-area ratio nor a lot-coverage limit",
+        )
     parts = []
     if occupancy is not None:
         parts.append(f"lot coverage is capped at {occupancy:,.0f}%")
@@ -120,6 +153,7 @@ def floor_area_item(context: DimensionalContext) -> ChecklistItem:
         parts.append(f"floor-area ratio at {far:,.0f}%")
     return ChecklistItem(
         code="floor_area",
+        label="Floor area & coverage",
         category=_ZONING,
         status="pass",
         detail=f"For {context.district_code}, {' and '.join(parts)}.",
@@ -135,12 +169,15 @@ def yards_item(context: DimensionalContext) -> ChecklistItem:
     }
     known = {name: value for name, value in setbacks.items() if value is not None}
     if not known:
-        return _standard_missing("yards", _ZONING, context)
+        return _standard_missing(
+            "yards", "Required yards", _ZONING, context, "no yard or setback requirement"
+        )
     described = ", ".join(f"{name} {value:,.0f} ft" for name, value in known.items())
     missing = [name for name, value in setbacks.items() if value is None]
     if missing:
         return ChecklistItem(
             code="yards",
+            label="Required yards",
             category=_ZONING,
             status="potential_issue",
             detail=(
@@ -151,6 +188,7 @@ def yards_item(context: DimensionalContext) -> ChecklistItem:
         )
     return ChecklistItem(
         code="yards",
+        label="Required yards",
         category=_ZONING,
         status="pass",
         detail=f"Required yards applied to the envelope: {described}.",
@@ -162,12 +200,15 @@ def unit_density_item(context: DimensionalContext) -> ChecklistItem:
     per_unit = context.lot_area_per_unit_sqft
     max_units = context.max_units
     if per_unit is None and max_units is None:
-        return _standard_missing("unit_density", _ZONING, context)
+        return _standard_missing(
+            "unit_density", "Unit density", _ZONING, context, "no density limit"
+        )
     if per_unit is not None and context.lot_area_sqft:
         supported = int(context.lot_area_sqft // per_unit)
         if supported < 1:
             return ChecklistItem(
                 code="unit_density",
+                label="Unit density",
                 category=_ZONING,
                 status="fail",
                 detail=(
@@ -178,6 +219,7 @@ def unit_density_item(context: DimensionalContext) -> ChecklistItem:
             )
         return ChecklistItem(
             code="unit_density",
+            label="Unit density",
             category=_ZONING,
             status="pass",
             detail=(
@@ -188,6 +230,7 @@ def unit_density_item(context: DimensionalContext) -> ChecklistItem:
         )
     return ChecklistItem(
         code="unit_density",
+        label="Unit density",
         category=_ZONING,
         status="pass",
         detail=f"The district caps density at {max_units} unit(s).",
@@ -197,10 +240,11 @@ def unit_density_item(context: DimensionalContext) -> ChecklistItem:
 
 def master_plan_item(context: DimensionalContext) -> ChecklistItem:
     if context.district_code is None:
-        return _unevaluated("master_plan", _ZONING, _NO_DISTRICT)
+        return _unevaluated("master_plan", "Master plan", _ZONING, _NO_DISTRICT)
     if context.requires_master_plan:
         return ChecklistItem(
             code="master_plan",
+            label="Master plan",
             category=_ZONING,
             status="fail",
             detail=(
@@ -211,6 +255,7 @@ def master_plan_item(context: DimensionalContext) -> ChecklistItem:
         )
     return ChecklistItem(
         code="master_plan",
+        label="Master plan",
         category=_ZONING,
         status="pass",
         detail="No master plan is required for this district.",
@@ -222,11 +267,13 @@ def permitted_use_item(context: DimensionalContext) -> ChecklistItem:
     if not context.permitted_uses:
         return _unevaluated(
             "permitted_use",
+            "Permitted uses",
             _ZONING,
             "The loaded standard lists no permitted uses, so use permission was not evaluated.",
         )
     return ChecklistItem(
         code="permitted_use",
+        label="Permitted uses",
         category=_ZONING,
         status="pass",
         detail=(
@@ -240,6 +287,7 @@ def permitted_use_item(context: DimensionalContext) -> ChecklistItem:
 def parking_item(context: DimensionalContext) -> ChecklistItem:
     return _unevaluated(
         "parking",
+        "Parking & loading",
         _SITE,
         "Parking and loading requirements are not modelled. Confirm the district's minimum "
         "against Title 14 before relying on the unit count.",
@@ -249,6 +297,7 @@ def parking_item(context: DimensionalContext) -> ChecklistItem:
 def utilities_item(context: DimensionalContext) -> ChecklistItem:
     return _unevaluated(
         "utilities",
+        "Utility service",
         _SITE,
         "No utility-connection data is ingested, so water, sewer, and electric service cannot "
         "be confirmed. This is not confirmation that service exists.",
@@ -260,6 +309,7 @@ def deed_restriction_item(context: DimensionalContext) -> ChecklistItem:
     if count is None:
         return _unevaluated(
             "deed_restrictions",
+            "Deed restrictions",
             _TITLE,
             "Recorded deeds were not read for this parcel, so restrictions and easements are "
             "unconfirmed.",
@@ -267,6 +317,7 @@ def deed_restriction_item(context: DimensionalContext) -> ChecklistItem:
     if count > 0:
         return ChecklistItem(
             code="deed_restrictions",
+            label="Deed restrictions",
             category=_TITLE,
             status="potential_issue",
             detail=(
@@ -277,6 +328,7 @@ def deed_restriction_item(context: DimensionalContext) -> ChecklistItem:
         )
     return ChecklistItem(
         code="deed_restrictions",
+        label="Deed restrictions",
         category=_TITLE,
         status="not_evaluated",
         detail=(
@@ -292,12 +344,14 @@ def subdivision_item(context: DimensionalContext) -> ChecklistItem:
     if potential is None:
         return _unevaluated(
             "subdivision",
+            "Subdivision potential",
             _ZONING,
             "Subdivision potential was not evaluated for this parcel.",
         )
     if potential:
         return ChecklistItem(
             code="subdivision",
+            label="Subdivision potential",
             category=_ZONING,
             status="potential_issue",
             detail=(
@@ -308,6 +362,7 @@ def subdivision_item(context: DimensionalContext) -> ChecklistItem:
         )
     return ChecklistItem(
         code="subdivision",
+        label="Subdivision potential",
         category=_ZONING,
         status="not_applicable",
         detail="The lot is not large enough to subdivide under the district minimums.",

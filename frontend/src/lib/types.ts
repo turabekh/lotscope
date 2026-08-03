@@ -42,6 +42,7 @@ export type ChecklistAvailability = 'available' | 'no_data_source' | 'pending_lo
 
 export interface ChecklistItem {
   code: string
+  label: string
   category: string
   status: ChecklistStatus
   detail: string

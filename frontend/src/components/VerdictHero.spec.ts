@@ -102,6 +102,7 @@ describe('VerdictHero', () => {
           items: [
             {
               code: 'access',
+              label: 'Access & frontage',
               category: 'Access & frontage',
               status: 'not_evaluated',
               detail: '',
@@ -109,6 +110,7 @@ describe('VerdictHero', () => {
             },
             {
               code: 'liens',
+              label: 'Liens & taxes',
               category: 'Liens & taxes',
               status: 'pass',
               detail: '',
