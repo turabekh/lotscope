@@ -44,6 +44,7 @@ async def _dimensional_context(
     return DimensionalContext(
         district_code=standard.code if standard is not None else resolved_district_code,
         standard_loaded=standard is not None,
+        field_dispositions=standard.field_dispositions if standard is not None else {},
         citation_label=standard.citation_label if standard is not None else None,
         lot_area_sqft=detail.lot_area_sqft if detail is not None else None,
         frontage_ft=detail.frontage_ft if detail is not None else None,

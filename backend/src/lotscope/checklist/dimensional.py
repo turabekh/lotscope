@@ -1,6 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 from lotscope.checklist.schemas import ChecklistItem, ChecklistStatus
+from lotscope.zoning.dispositions import disposition_of
 
 _ZONING = "Zoning & buildability"
 _SITE = "Site & servicing"
@@ -29,6 +31,7 @@ class DimensionalContext:
     deed_restriction_count: int | None = None
     subdivision_potential: bool | None = None
     standard_loaded: bool = False
+    field_dispositions: dict[str, Any] = field(default_factory=dict)
 
 
 _NO_DISTRICT = "The base district could not be resolved, so this check was not evaluated."
@@ -41,21 +44,53 @@ def _unevaluated(code: str, label: str, category: str, detail: str) -> Checklist
 
 
 def _standard_missing(
-    code: str, label: str, category: str, context: DimensionalContext, field_description: str
+    code: str,
+    label: str,
+    category: str,
+    context: DimensionalContext,
+    field_description: str,
+    field_name: str = "",
 ) -> ChecklistItem:
     if context.district_code is None:
-        detail = _NO_DISTRICT
-    elif not context.standard_loaded:
-        detail = (
+        return _unevaluated(code, label, category, _NO_DISTRICT)
+    if not context.standard_loaded:
+        return _unevaluated(
+            code,
+            label,
+            category,
             f"No zoning standard is loaded for {context.district_code}, "
-            "so this check was not evaluated."
+            "so this check was not evaluated.",
         )
-    else:
-        detail = (
-            f"The {context.district_code} standard on file records {field_description}, "
-            "so this check was not evaluated."
+    disposition, note = disposition_of(context.field_dispositions, field_name)
+    if disposition == "unregulated":
+        qualifier = f" — {note}" if note else ""
+        return ChecklistItem(
+            code=code,
+            label=label,
+            category=category,
+            status="not_applicable",
+            detail=f"{context.district_code} sets {field_description}{qualifier}.",
+            source=_cite(context),
         )
-    return _unevaluated(code, label, category, detail)
+    if disposition == "conditional" and note:
+        return ChecklistItem(
+            code=code,
+            label=label,
+            category=category,
+            status="not_evaluated",
+            detail=(
+                f"In {context.district_code} this standard is {note}, so it cannot be "
+                "reduced to a single figure and is not modelled."
+            ),
+            source=_cite(context),
+        )
+    return _unevaluated(
+        code,
+        label,
+        category,
+        f"The {context.district_code} standard on file records {field_description}, "
+        "so this check was not evaluated.",
+    )
 
 
 def _cite(context: DimensionalContext) -> str | None:
@@ -67,7 +102,12 @@ def lot_area_item(context: DimensionalContext) -> ChecklistItem:
     actual = context.lot_area_sqft
     if minimum is None:
         return _standard_missing(
-            "min_lot_area", "Minimum lot area", _ZONING, context, "no minimum lot area"
+            "min_lot_area",
+            "Minimum lot area",
+            _ZONING,
+            context,
+            "no minimum lot area",
+            "min_lot_area_sqft",
         )
     if actual is None or actual <= 0:
         return _unevaluated(
@@ -96,7 +136,12 @@ def lot_width_item(context: DimensionalContext) -> ChecklistItem:
     actual = context.frontage_ft
     if minimum is None:
         return _standard_missing(
-            "min_lot_width", "Minimum lot width", _ZONING, context, "no minimum lot width"
+            "min_lot_width",
+            "Minimum lot width",
+            _ZONING,
+            context,
+            "no minimum lot width",
+            "min_lot_width_ft",
         )
     if actual is None or actual <= 0:
         return _unevaluated(
@@ -120,7 +165,12 @@ def lot_width_item(context: DimensionalContext) -> ChecklistItem:
 def height_item(context: DimensionalContext) -> ChecklistItem:
     if context.max_height_ft is None:
         return _standard_missing(
-            "max_height", "Maximum height", _ZONING, context, "no maximum height"
+            "max_height",
+            "Maximum height",
+            _ZONING,
+            context,
+            "no maximum height",
+            "max_height_ft",
         )
     return ChecklistItem(
         code="max_height",
@@ -201,7 +251,12 @@ def unit_density_item(context: DimensionalContext) -> ChecklistItem:
     max_units = context.max_units
     if per_unit is None and max_units is None:
         return _standard_missing(
-            "unit_density", "Unit density", _ZONING, context, "no density limit"
+            "unit_density",
+            "Unit density",
+            _ZONING,
+            context,
+            "no density limit",
+            "max_units",
         )
     if per_unit is not None and context.lot_area_sqft:
         supported = int(context.lot_area_sqft // per_unit)

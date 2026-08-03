@@ -63,7 +63,8 @@ _MIN_BUILDABLE_RATIO = 0.05
 _STANDARD_SQL = text(
     "SELECT code, code_version, permitted_uses, min_lot_area_sqft, min_lot_width_ft, "
     "max_height_ft, max_units, lot_area_per_unit_sqft, max_floor_area_ratio_pct, "
-    "max_occupancy_pct, front_setback_ft, rear_setback_ft, side_setback_ft, requires_master_plan "
+    "max_occupancy_pct, front_setback_ft, rear_setback_ft, side_setback_ft, requires_master_plan, "
+    "field_dispositions "
     "FROM zoning_standard WHERE upper(replace(replace(code, '-', ''), ' ', '')) = :code "
     "AND market_code = :market_code "
     "ORDER BY code_version DESC LIMIT 1"
@@ -154,6 +155,7 @@ async def _get_standard(
         rear_setback_ft=_as_float(row.rear_setback_ft),
         side_setback_ft=_as_float(row.side_setback_ft),
         requires_master_plan=row.requires_master_plan,
+        field_dispositions=dict(row.field_dispositions or {}),
     )
 
 

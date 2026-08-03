@@ -175,3 +175,58 @@ def test_every_check_carries_a_distinct_label() -> None:
 
     assert len(labels) == len(set(labels))
     assert all(label for label in labels)
+
+
+_CMX4_WITH_DISPOSITIONS = DimensionalContext(
+    **{
+        **_CMX4.__dict__,
+        "field_dispositions": {
+            "min_lot_area_sqft": {"disposition": "unregulated"},
+            "max_height_ft": {
+                "disposition": "unregulated",
+                "note": "building size is governed by the floor-area ratio",
+            },
+        },
+    }
+)
+
+
+def test_an_unregulated_standard_is_answered_not_left_unevaluated() -> None:
+    item = lot_area_item(_CMX4_WITH_DISPOSITIONS)
+
+    assert item.status == "not_applicable"
+    assert item.detail == "CMX-4 sets no minimum lot area."
+
+
+def test_an_unregulated_standard_can_say_what_governs_instead() -> None:
+    item = height_item(_CMX4_WITH_DISPOSITIONS)
+
+    assert item.status == "not_applicable"
+    assert item.detail == (
+        "CMX-4 sets no maximum height — building size is governed by the floor-area ratio."
+    )
+
+
+def test_a_conditional_standard_says_why_it_cannot_be_reduced_to_a_figure() -> None:
+    context = DimensionalContext(
+        district_code="I-1",
+        standard_loaded=True,
+        field_dispositions={
+            "max_height_ft": {
+                "disposition": "conditional",
+                "note": "60 ft. where the lot abuts a Residential district; otherwise no limit",
+            }
+        },
+    )
+    item = height_item(context)
+
+    assert item.status == "not_evaluated"
+    assert "60 ft. where the lot abuts a Residential district" in item.detail
+    assert "not modelled" in item.detail
+
+
+def test_a_field_with_no_disposition_still_reports_as_uncaptured() -> None:
+    item = height_item(_CMX4)
+
+    assert item.status == "not_evaluated"
+    assert "standard on file records no maximum height" in item.detail
