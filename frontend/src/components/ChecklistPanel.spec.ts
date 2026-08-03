@@ -26,6 +26,7 @@ function mountPanel(items: ChecklistItem[]) {
     },
     buildability_confidence: 'high',
     buildability_confidence_reasons: [],
+    program: null,
     computed_at: '2026-07-28T00:00:00Z',
   }
   return mount(ChecklistPanel, { global: { plugins: [[Quasar, {}]] } })

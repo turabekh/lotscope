@@ -9,6 +9,7 @@ import RepositoryBadge from '@/components/RepositoryBadge.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import AssessmentPanel from '@/components/AssessmentPanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
+import DevelopmentProgramPanel from '@/components/DevelopmentProgramPanel.vue'
 import CompsPanel from '@/components/CompsPanel.vue'
 import DealPanel from '@/components/DealPanel.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
@@ -478,6 +479,7 @@ async function toggleSave(): Promise<void> {
               :developed="isDeveloped"
               :checklist="checklist"
             />
+            <DevelopmentProgramPanel />
             <DistressPanel />
             <ChecklistPanel />
             <div class="tab-foot">

@@ -72,3 +72,18 @@ test('flow 5 — the owner section always says something about the owner', async
   await expect(owner).toBeVisible()
   await expect(owner).toContainText('Owner portfolio')
 })
+
+test('flow 5 — the dossier answers what can be built, with its basis', async ({ page }) => {
+  await registerAndSettle(page, 'verdict-program')
+  await openDossier(page, SEEDED.bestMargin.number)
+
+  const panel = page.locator('[data-test="program-panel"]')
+  await expect(panel).toBeVisible()
+  await expect(page.locator('[data-test="program-statement"]')).not.toBeEmpty()
+  await expect(page.locator('[data-test="program-claims"]')).toContainText(
+    /verified|calculated|estimated|unavailable/,
+  )
+  await expect(page.locator('[data-test="program-conditions"]')).toContainText(
+    'not a zoning determination',
+  )
+})

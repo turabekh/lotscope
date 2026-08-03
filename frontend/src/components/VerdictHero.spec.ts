@@ -127,6 +127,7 @@ describe('VerdictHero', () => {
           },
           buildability_confidence: 'high',
           buildability_confidence_reasons: [],
+          program: null,
           computed_at: '2026-08-01T00:00:00Z',
         },
       },
