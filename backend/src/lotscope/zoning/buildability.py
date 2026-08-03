@@ -1,8 +1,15 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-Confidence = Literal["high", "medium", "low"]
+from lotscope.zoning.confidence import (
+    Confidence,
+    CriticalUnknown,
+    dimensional_confidence,
+    resolve_confidence,
+)
+
 UnitBasis = Literal["per_unit", "far_estimate", "flat_cap"]
+FootprintBasis = Literal["setback_calculated", "coverage_estimate", "unavailable"]
 
 _AVG_GROSS_FLOOR_PER_UNIT_SQFT = 1100.0
 
@@ -46,6 +53,7 @@ class Buildability:
     buildability_score: float
     confidence: Confidence
     reasons: list[str]
+    critical_unknowns: tuple[CriticalUnknown, ...] = ()
     requires_master_plan: bool = False
 
 
@@ -92,7 +100,7 @@ def _check_conformance(
 
 def _net_buildable_area(
     dims: ParcelDimensions, standard: DistrictStandard, reasons: list[str]
-) -> float | None:
+) -> tuple[float | None, FootprintBasis]:
     has_setbacks = (
         standard.front_setback_ft is not None
         or standard.rear_setback_ft is not None
@@ -106,24 +114,36 @@ def _net_buildable_area(
         net_depth = max(0.0, dims.depth_ft - front - rear)
         area = round(net_width * net_depth, 1)
         reasons.append(f"Estimated buildable footprint ~{area:.0f} sqft after setbacks.")
-        return area
+        return area, "setback_calculated"
     if dims.lot_area_sqft and standard.max_occupancy_pct:
         area = round(dims.lot_area_sqft * standard.max_occupancy_pct / 100, 1)
         reasons.append(
             f"Estimated buildable footprint ~{area:.0f} sqft at "
             f"{standard.max_occupancy_pct:.0f}% lot coverage."
         )
-        return area
-    return None
+        return area, "coverage_estimate"
+    return None, "unavailable"
 
 
-def _confidence(dims: ParcelDimensions) -> Confidence:
-    known = [dims.lot_area_sqft is not None, dims.lot_width_ft is not None]
-    if all(known):
-        return "high"
-    if any(known):
-        return "medium"
-    return "low"
+def _critical_unknowns(
+    dims: ParcelDimensions,
+    standard: DistrictStandard,
+    conforming: bool | None,
+    footprint_basis: FootprintBasis,
+    has_permitted_uses: bool,
+) -> tuple[CriticalUnknown, ...]:
+    unknowns: list[CriticalUnknown] = []
+    if dims.lot_area_sqft is None or dims.lot_width_ft is None:
+        unknowns.append("dimensions_incomplete")
+    if conforming is None:
+        unknowns.append("conformance_unresolved")
+    if footprint_basis != "setback_calculated":
+        unknowns.append("footprint_not_setback_derived")
+    if standard.max_height_ft is None:
+        unknowns.append("height_standard_missing")
+    if not has_permitted_uses:
+        unknowns.append("permitted_uses_missing")
+    return tuple(unknowns)
 
 
 def _score(
@@ -191,7 +211,7 @@ def estimate_density_units(
 def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> Buildability:
     reasons: list[str] = []
     conforming = _check_conformance(dims, standard, reasons)
-    buildable_area = _net_buildable_area(dims, standard, reasons)
+    buildable_area, footprint_basis = _net_buildable_area(dims, standard, reasons)
 
     has_permitted_uses = bool(standard.permitted_uses)
     if not has_permitted_uses:
@@ -228,6 +248,9 @@ def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> B
                 f"District {standard.code} permits up to {by_right_units} unit(s) by-right."
             )
 
+    critical_unknowns = _critical_unknowns(
+        dims, standard, conforming, footprint_basis, has_permitted_uses
+    )
     return Buildability(
         district_code=standard.code,
         cited_section=f"{standard.code} ({standard.citation_label}, {standard.code_version})",
@@ -244,7 +267,14 @@ def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> B
             by_right_units,
             standard.requires_master_plan,
         ),
-        confidence=_confidence(dims),
+        confidence=resolve_confidence(
+            dimensional_confidence(
+                lot_area_known=dims.lot_area_sqft is not None,
+                lot_width_known=dims.lot_width_ft is not None,
+            ),
+            critical_unknowns,
+        ),
         reasons=reasons,
+        critical_unknowns=critical_unknowns,
         requires_master_plan=standard.requires_master_plan,
     )

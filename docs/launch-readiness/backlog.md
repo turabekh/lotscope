@@ -294,19 +294,20 @@ Ordered by dependency and risk. Slice headings follow the recommended sequence, 
 ## LR-B-016 — Buildability confidence rules
 
 - **PRD requirement:** LR-B004
-- **Priority:** P1 · **Status:** **Not started (criteria reviewed 2026-08-01)** — `_confidence()` reads only lot area and lot width; **five of LR-B004's seven inputs are not consulted** and the "high confidence cannot coexist with unresolved critical unknowns" invariant is unenforced
-- **Problem:** `buildability_score` exists, but nothing prevents a high-confidence label coexisting with unresolved critical unknowns — which LR-B004 forbids.
+- **Priority:** P1 · **Status:** **Partial (invariant shipped 2026-08-03, ADR-0074)** — the invariant is enforced by construction over six critical unknowns; **overlay classification is the remaining gap** and is blocked on ingesting Title 14 §14-500
+- **Problem:** `buildability_score` exists, but nothing prevented a high-confidence label coexisting with unresolved critical unknowns — which LR-B004 forbids.
 - **User impact:** False confidence on a parcel with unevaluated access or overlays is precisely the failure that costs money.
-- **Current implementation:** `verdict/schemas.py:12`; `deal/analysis.py` `Confidence`.
-- **Proposed solution:** Derive confidence from source completeness, district certainty, geometry quality, lot-shape complexity, overlay coverage, standards version, and evaluated-vs-unevaluated ratio, with a hard rule blocking high confidence alongside critical unknowns.
-- **Dependencies:** LR-B-001, LR-B-015.
-- **Likely files/modules:** `zoning/`, `verdict/composition.py`.
-- **ADR:** Required if confidence semantics change in the contract.
-- **Migration:** Possible.
+- **Current implementation:** `zoning/confidence.py` (pure rules), `zoning/buildability.py`, `zoning/service.py`.
+- **What shipped:** `high` now requires zero critical unknowns — incomplete dimensions, uncorroborated district, unresolved conformance, coverage-estimated footprint, missing height standard, missing permitted uses. `standards_provisional` still forces `low`. Each unknown carries a user-facing reason. Measured on 1,200 spread-sampled phl parcels through the real code path: **95.6% high, 3.5% medium, 0.9% low** — 4.4% demoted, from 99.0% previously eligible for high.
+- **What remains:** overlay membership as a critical unknown. **Do not apply it bluntly** — 96.4% of phl parcels intersect an overlay, 90% of that being `/NIS`, which cannot affect a vacant lot's envelope; a blanket rule demotes the city for nothing. Needs Title 14 §14-500 ingested, then the 43 phl overlay codes classified as envelope-constraining or not, then per-parcel material-overlay membership precomputed (the spatial intersect is far too slow for per-request use). Also open: 20 of 39 phl districts record no `max_height_ft`, which is what drives 3.2 of the 4.4 points demoted — filling the standards table would recover most of them.
+- **Dependencies:** LR-B-001 ✓, LR-B-015 ✓. Overlay slice additionally depends on Title 14 §14-500 ingestion.
+- **Likely files/modules:** `zoning/`, and `ingestion/` for the overlay slice.
+- **ADR:** ADR-0074 (accepted 2026-08-03).
+- **Migration:** None required — buildability confidence is computed on read, not persisted. `parcel_verdict` has no confidence column and `field_trust` records `confidence: null` for buildability fields, so **no recompute is needed** and `VERDICT_VERSION` stays `v8`. Persisting it (so displayed confidence is auditable) is deferred to the overlay slice.
 - **Security/privacy:** None.
-- **Tests:** A test asserting high confidence is unreachable with any unresolved critical unknown.
-- **Acceptance criteria:** The invariant holds across all markets.
-- **Owner action:** Define which unknowns are "critical".
+- **Tests:** A parametrised test asserts every declared critical unknown blocks `high`, so a newly added unknown inherits the guarantee. Integration tests cover corroborated, conflicting, and single-source district resolution.
+- **Acceptance criteria:** The invariant holds across all markets — met; pilots are additionally forced to `low` by `standards_provisional`.
+- **Owner action:** Resolved for this slice (critical set agreed 2026-08-03). The overlay classification will need a further decision once §14-500 is retrievable.
 
 ## LR-B-017 — Historical variance context guardrails
 
