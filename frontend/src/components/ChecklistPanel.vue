@@ -78,7 +78,7 @@ const headlineColor = computed(() => {
             class="check-icon"
           />
           <div class="check-body">
-            <div class="check-cat">{{ item.category }}</div>
+            <div class="check-cat" data-test="check-label">{{ item.label }}</div>
             <div class="check-detail">{{ item.detail }}</div>
           </div>
         </div>
