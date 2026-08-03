@@ -43,6 +43,9 @@ docker compose stop api worker web || true
 echo "==> Running migrations"
 docker compose run --rm migrate
 
+echo "==> Seeding reference data (zoning standards)"
+docker compose run --rm --entrypoint python migrate -m lotscope.zoning.seed
+
 echo "==> Starting app"
 docker compose --profile app up -d
 
