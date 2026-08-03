@@ -275,6 +275,7 @@ def _build_result(
         buildable_area_sqft=buildability.buildable_area_sqft,
         buildability_score=buildability.buildability_score,
         confidence=confidence,
+        critical_unknowns=critical_unknowns,
         requires_master_plan=buildability.requires_master_plan,
         reasons=reasons,
         sources=sources,

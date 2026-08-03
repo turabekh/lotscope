@@ -36,7 +36,7 @@ function makeVerdict(overrides: Partial<VerdictResult>): VerdictResult {
   } as VerdictResult
 }
 
-function makeChecklist(): ParcelChecklist {
+function makeChecklist(overrides: Partial<ParcelChecklist> = {}): ParcelChecklist {
   return {
     parcel_number: 'phl:000000001',
     items: [
@@ -49,7 +49,10 @@ function makeChecklist(): ParcelChecklist {
       },
     ],
     summary: { not_evaluated: 1, passed: 0, warnings: 0, failures: 0, info: 0, ready: true },
+    buildability_confidence: 'high',
+    buildability_confidence_reasons: [],
     computed_at: '2026-08-01T00:00:00Z',
+    ...overrides,
   }
 }
 
@@ -92,6 +95,50 @@ describe('VerdictPanel buildability qualifier', () => {
     const text = mountPanel(makeVerdict({}), makeChecklist()).text().toLowerCase()
     expect(text).not.toContain('buildable by right')
     expect(text).not.toContain('approved')
+  })
+})
+
+describe('buildability confidence', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('shows the confidence label on the buildability card', () => {
+    const wrapper = mountPanel(makeVerdict({}), makeChecklist())
+    const chip = wrapper.find('[data-test="buildability-confidence"]')
+
+    expect(chip.exists()).toBe(true)
+    expect(chip.isVisible()).toBe(true)
+    expect(chip.text()).toContain('High confidence')
+  })
+
+  it('names the unverified inputs outside any tooltip when confidence is not high', () => {
+    const wrapper = mountPanel(
+      makeVerdict({}),
+      makeChecklist({
+        buildability_confidence: 'medium',
+        buildability_confidence_reasons: [
+          'No by-right height standard is recorded for this district, so the vertical envelope is unverified.',
+        ],
+      }),
+    )
+    const chip = wrapper.find('[data-test="buildability-confidence"]')
+    const reasons = wrapper.find('[data-test="confidence-reasons"]')
+
+    expect(chip.text()).toContain('Medium confidence')
+    expect(reasons.exists()).toBe(true)
+    expect(reasons.isVisible()).toBe(true)
+    expect(reasons.text()).toContain('vertical envelope is unverified')
+  })
+
+  it('lists no reasons when every input is verified', () => {
+    const wrapper = mountPanel(makeVerdict({}), makeChecklist())
+    expect(wrapper.find('[data-test="confidence-reasons"]').exists()).toBe(false)
+  })
+
+  it('shows nothing when the checklist has not loaded', () => {
+    const wrapper = mountPanel(makeVerdict({}), null)
+    expect(wrapper.find('[data-test="buildability-confidence"]').exists()).toBe(false)
   })
 })
 

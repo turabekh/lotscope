@@ -92,6 +92,25 @@ const buildQualifier = computed(() => {
   if (props.verdict.needs_variance) return BY_RIGHT_NOT_MET
   return 'Base-district standards could not be evaluated for this parcel.'
 })
+
+const CONFIDENCE_STYLE: Record<string, Status> = {
+  high: { label: 'High confidence', color: 'positive', icon: 'verified' },
+  medium: { label: 'Medium confidence', color: 'warning', icon: 'help_outline' },
+  low: { label: 'Low confidence', color: 'grey-6', icon: 'error_outline' },
+}
+
+const confidence = computed(() => {
+  const level = props.checklist?.buildability_confidence
+  return level ? CONFIDENCE_STYLE[level] : null
+})
+
+const confidenceReasons = computed(() => props.checklist?.buildability_confidence_reasons ?? [])
+
+const confidenceHint = computed(() =>
+  confidenceReasons.value.length > 0
+    ? 'How well this by-right read is evidenced. These inputs are unverified:'
+    : 'Every input this by-right read depends on is verified.',
+)
 </script>
 
 <template>
@@ -106,7 +125,27 @@ const buildQualifier = computed(() => {
           {{ buildQualifier }}
         </q-tooltip>
       </q-chip>
+      <q-chip
+        v-if="confidence"
+        dense
+        square
+        outline
+        :color="confidence.color"
+        :icon="confidence.icon"
+        data-test="buildability-confidence"
+      >
+        {{ confidence.label }}
+        <q-tooltip max-width="300px" anchor="top middle" self="bottom middle">
+          {{ confidenceHint }}
+          <ul v-if="confidenceReasons.length" class="confidence-tip-list">
+            <li v-for="reason in confidenceReasons" :key="reason">{{ reason }}</li>
+          </ul>
+        </q-tooltip>
+      </q-chip>
       <div class="build-qualifier" data-test="build-qualifier">{{ buildQualifier }}</div>
+      <ul v-if="confidenceReasons.length" class="confidence-list" data-test="confidence-reasons">
+        <li v-for="reason in confidenceReasons" :key="reason">{{ reason }}</li>
+      </ul>
       <div v-if="developed" class="redev-note">
         Redevelopment scenario — assumes the existing structure is removed.
       </div>
@@ -260,6 +299,17 @@ const buildQualifier = computed(() => {
   font-size: 11.5px;
   line-height: 1.45;
   color: var(--lot-muted);
+}
+.confidence-list {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--lot-muted);
+}
+.confidence-tip-list {
+  margin: 4px 0 0;
+  padding-left: 16px;
 }
 .redev-note {
   font-size: 11.5px;

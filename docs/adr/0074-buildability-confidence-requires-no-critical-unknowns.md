@@ -52,3 +52,11 @@ The invariant now holds by construction and is enforced by a parametrised test a
 **No migration, no recompute, and no verdict-contract change.** LR-B-016 was recorded as verdict-affecting work needing a batch recompute. It is not: `parcel_verdict` has no buildability-confidence column, and the buildability entries in the stored `field_trust` blob carry `confidence: null`. Buildability confidence is computed on read by `assess_parcel` and reaches users through the buildability endpoint and the LR-B001 checklist. The new labels therefore take effect on deploy, and `VERDICT_VERSION` stays at `v8`.
 
 That absence is itself a gap worth naming: the confidence a user is shown for the by-right read is not recorded with the verdict, so there is no stored provenance for it and no way to audit after the fact what confidence a parcel displayed on a given date. Persisting it belongs with the overlay slice, not here, because doing it now would mean a migration and a full recompute for a value this decision does not change for 95.6% of parcels.
+
+## Addendum (2026-08-03) — surfacing
+
+When this ADR was accepted, nothing in the codebase read `BuildabilityResult.confidence`: it was computed, returned on the schema, and consumed by nobody, so the invariant was correct but invisible. The label is now carried on the parcel checklist response — which is already computed per request from zoning and already reaches the dossier — and rendered on the Buildability card as a chip, with the unresolved inputs listed inline beneath the by-right qualifier rather than hidden in a tooltip.
+
+The checklist rather than the verdict carries it deliberately. The verdict is a stored row with no confidence column; adding a read-time field there would mean either a migration and a recompute, or a spatial district query on every verdict read. The checklist is already request-time and already zoning-derived, so it costs one additional district resolution on a path that performs several queries regardless.
+
+Both halves are asserted where a user would see them: a component test requires the chip and the reason list to be visible outside any tooltip, and an end-to-end test opens a real dossier in a browser and reads the label off the rendered page.

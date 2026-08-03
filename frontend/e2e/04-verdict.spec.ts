@@ -40,6 +40,15 @@ test('flow 5 — the buildability qualifier is visible without hovering', async 
   await expect(qualifier).not.toBeEmpty()
 })
 
+test('flow 5 — the by-right read carries a visible confidence label', async ({ page }) => {
+  await registerAndSettle(page, 'verdict-confidence')
+  await openDossier(page, SEEDED.bestMargin.number)
+
+  const label = page.locator('[data-test="buildability-confidence"]')
+  await expect(label).toBeVisible()
+  await expect(label).toContainText(/High confidence|Medium confidence|Low confidence/)
+})
+
 test('flow 5 — the risk tab shows risk, not a blank pane', async ({ page }) => {
   await registerAndSettle(page, 'verdict-risk')
   await openDossier(page, SEEDED.bestMargin.number)
