@@ -11,6 +11,7 @@ ChecklistAvailability = Literal["available", "no_data_source", "pending_load"]
 
 class ChecklistItem(BaseModel):
     code: str
+    label: str
     category: str
     status: ChecklistStatus
     detail: str

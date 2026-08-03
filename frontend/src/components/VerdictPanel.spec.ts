@@ -42,6 +42,7 @@ function makeChecklist(overrides: Partial<ParcelChecklist> = {}): ParcelChecklis
     items: [
       {
         code: 'access',
+        label: 'Access & frontage',
         category: 'Access & frontage',
         status: 'not_evaluated',
         detail: '',

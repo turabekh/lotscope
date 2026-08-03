@@ -82,6 +82,7 @@ def _risk_item(
     if unknown_detail is not None and not any(flag.get("code") in flag_codes for flag in flags):
         return ChecklistItem(
             code=code,
+            label=category,
             category=category,
             status="not_evaluated",
             detail=unknown_detail,
@@ -89,6 +90,7 @@ def _risk_item(
     if availability != "available":
         return ChecklistItem(
             code=code,
+            label=category,
             category=category,
             status="not_evaluated",
             detail=state_detail or "This check was not evaluated for this market.",
@@ -96,7 +98,9 @@ def _risk_item(
         )
     matched = [flag for flag in flags if flag.get("code") in flag_codes]
     if not matched:
-        return ChecklistItem(code=code, category=category, status="pass", detail=clear_detail)
+        return ChecklistItem(
+            code=code, label=category, category=category, status="pass", detail=clear_detail
+        )
     status: ChecklistStatus = "potential_issue"
     details: list[str] = []
     sources: set[str] = set()
@@ -110,6 +114,7 @@ def _risk_item(
             sources.add(str(flag.get("source")))
     return ChecklistItem(
         code=code,
+        label=category,
         category=category,
         status=status,
         detail=" ".join(details),
@@ -120,6 +125,7 @@ def _risk_item(
 def _abatement_item() -> ChecklistItem:
     return ChecklistItem(
         code="abatement",
+        label="Tax abatement",
         category="Liens & taxes",
         status="not_evaluated",
         detail=(
@@ -133,6 +139,7 @@ def _abatement_item() -> ChecklistItem:
 def _abatement_unknown_item() -> ChecklistItem:
     return ChecklistItem(
         code="abatement",
+        label="Tax abatement",
         category="Liens & taxes",
         status="not_evaluated",
         detail=(
@@ -149,6 +156,7 @@ def _zoning_item(verdict: VerdictResult) -> ChecklistItem:
         suffix = f" ({units} unit(s))" if units else ""
         return ChecklistItem(
             code="zoning",
+            label="Zoning conformance",
             category="Zoning & buildability",
             status="pass",
             detail=f"Buildable by-right{suffix} under the resolved district.",
@@ -157,6 +165,7 @@ def _zoning_item(verdict: VerdictResult) -> ChecklistItem:
     if verdict.needs_variance:
         return ChecklistItem(
             code="zoning",
+            label="Zoning conformance",
             category="Zoning & buildability",
             status="potential_issue",
             detail="A variance or special exception is likely required to build.",
@@ -164,6 +173,7 @@ def _zoning_item(verdict: VerdictResult) -> ChecklistItem:
         )
     return ChecklistItem(
         code="zoning",
+        label="Zoning conformance",
         category="Zoning & buildability",
         status="not_evaluated",
         detail="Zoning conformance could not be determined for this parcel.",
@@ -175,6 +185,7 @@ def _valuation_item(verdict: VerdictResult) -> ChecklistItem:
     if verdict.value_estimate_low is None or verdict.value_estimate_high is None:
         return ChecklistItem(
             code="valuation",
+            label="Valuation confidence",
             category="Valuation confidence",
             status="potential_issue",
             detail="Not enough comparable sales for a confident value estimate.",
@@ -183,6 +194,7 @@ def _valuation_item(verdict: VerdictResult) -> ChecklistItem:
     if verdict.value_confidence is not None and verdict.value_confidence >= 0.6:
         return ChecklistItem(
             code="valuation",
+            label="Valuation confidence",
             category="Valuation confidence",
             status="pass",
             detail=(
@@ -193,6 +205,7 @@ def _valuation_item(verdict: VerdictResult) -> ChecklistItem:
         )
     return ChecklistItem(
         code="valuation",
+        label="Valuation confidence",
         category="Valuation confidence",
         status="potential_issue",
         detail="Value estimate rests on thin or dispersed comps; treat it as low-confidence.",
@@ -204,6 +217,7 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
     if verdict.max_allowable_offer is None:
         return ChecklistItem(
             code="deal",
+            label="Deal feasibility",
             category="Deal feasibility",
             status="not_evaluated",
             detail="Not enough zoning or comp data to model the deal.",
@@ -212,6 +226,7 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
     if verdict.is_underpriced:
         return ChecklistItem(
             code="deal",
+            label="Deal feasibility",
             category="Deal feasibility",
             status="pass",
             detail=(
@@ -223,6 +238,7 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
     if verdict.est_margin is not None and verdict.est_margin < 0:
         return ChecklistItem(
             code="deal",
+            label="Deal feasibility",
             category="Deal feasibility",
             status="potential_issue",
             detail="Project does not pencil at the modeled costs and ARV.",
@@ -230,6 +246,7 @@ def _deal_item(verdict: VerdictResult) -> ChecklistItem:
         )
     return ChecklistItem(
         code="deal",
+        label="Deal feasibility",
         category="Deal feasibility",
         status="not_evaluated",
         detail=f"Max allowable offer ${verdict.max_allowable_offer:,.0f} at the target margin.",

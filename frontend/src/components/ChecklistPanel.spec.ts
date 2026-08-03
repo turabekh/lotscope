@@ -7,8 +7,8 @@ import ChecklistPanel from '@/components/ChecklistPanel.vue'
 import type { ChecklistItem, ChecklistStatus } from '@/lib/types'
 import { useParcelStore } from '@/stores/parcel'
 
-function item(code: string, status: ChecklistStatus, detail: string): ChecklistItem {
-  return { code, category: code, status, detail, source: null, availability: 'available' }
+function item(code: string, status: ChecklistStatus, detail: string, label = code): ChecklistItem {
+  return { code, label, category: code, status, detail, source: null, availability: 'available' }
 }
 
 function mountPanel(items: ChecklistItem[]) {
@@ -63,5 +63,17 @@ describe('ChecklistPanel', () => {
   it('omits the not-checked count entirely when everything was evaluated', () => {
     const wrapper = mountPanel([item('zoning', 'pass', 'Resolved.')])
     expect(wrapper.text()).not.toContain('not checked')
+  })
+
+  it('names each check rather than repeating its category', () => {
+    const wrapper = mountPanel([
+      item('min_lot_area', 'not_evaluated', 'No minimum lot area.', 'Minimum lot area'),
+      item('max_height', 'not_evaluated', 'No maximum height.', 'Maximum height'),
+      item('unit_density', 'not_evaluated', 'No density limit.', 'Unit density'),
+    ])
+    const labels = wrapper.findAll('[data-test="check-label"]').map((node) => node.text())
+
+    expect(labels).toEqual(['Minimum lot area', 'Maximum height', 'Unit density'])
+    expect(new Set(labels).size).toBe(labels.length)
   })
 })

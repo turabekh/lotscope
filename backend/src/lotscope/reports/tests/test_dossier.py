@@ -121,6 +121,7 @@ def test_full_dossier_renders_all_sections() -> None:
         items=[
             ChecklistItem(
                 code="zoning",
+                label="Zoning conformance",
                 category="Zoning & buildability",
                 status="potential_issue",
                 detail="A variance is likely required.",
@@ -128,6 +129,7 @@ def test_full_dossier_renders_all_sections() -> None:
             ),
             ChecklistItem(
                 code="liens_taxes",
+                label="Liens & taxes",
                 category="Liens & taxes",
                 status="fail",
                 detail="$31,000 owed.",
@@ -135,6 +137,7 @@ def test_full_dossier_renders_all_sections() -> None:
             ),
             ChecklistItem(
                 code="flood",
+                label="Flood & environmental",
                 category="Flood & environmental",
                 status="pass",
                 detail="Not in a mapped flood zone.",

@@ -25,7 +25,10 @@ async def _tax_status_unknown(session: AsyncSession, parcel_number: str) -> bool
 
 
 async def _dimensional_context(
-    session: AsyncSession, parcel_number: str, detail: ParcelDetail | None
+    session: AsyncSession,
+    parcel_number: str,
+    detail: ParcelDetail | None,
+    resolved_district_code: str | None,
 ) -> DimensionalContext:
     standard = await get_parcel_standard(session, parcel_number)
     try:
@@ -39,7 +42,8 @@ async def _dimensional_context(
         deed_count = None
     subdivision = await analyze_parcel_subdivision(session, parcel_number)
     return DimensionalContext(
-        district_code=standard.code if standard is not None else None,
+        district_code=standard.code if standard is not None else resolved_district_code,
+        standard_loaded=standard is not None,
         citation_label=standard.citation_label if standard is not None else None,
         lot_area_sqft=detail.lot_area_sqft if detail is not None else None,
         frontage_ft=detail.frontage_ft if detail is not None else None,
@@ -76,14 +80,19 @@ async def build_parcel_checklist(
         else None
     )
     market = parcel_number.split(":", 1)[0]
+    buildability = await assess_parcel(session, parcel_number)
     items, summary = build_checklist(
         verdict,
         has_abatement=has_abatement,
         market_code=market,
         tax_status_unknown=await _tax_status_unknown(session, parcel_number),
-        dimensional=await _dimensional_context(session, parcel_number, detail),
+        dimensional=await _dimensional_context(
+            session,
+            parcel_number,
+            detail,
+            buildability.district_code if buildability is not None else None,
+        ),
     )
-    buildability = await assess_parcel(session, parcel_number)
     return ParcelChecklist(
         parcel_number=parcel_number,
         items=items,

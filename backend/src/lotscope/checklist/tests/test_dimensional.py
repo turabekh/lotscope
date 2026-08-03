@@ -2,6 +2,7 @@ from lotscope.checklist.dimensional import (
     DimensionalContext,
     build_dimensional_items,
     deed_restriction_item,
+    height_item,
     lot_area_item,
     lot_width_item,
     subdivision_item,
@@ -132,3 +133,45 @@ def test_no_dimensional_check_invents_a_pass_without_data() -> None:
 
     for item in build_dimensional_items(empty):
         assert item.status in {"not_evaluated", "not_applicable"}
+
+
+_CMX4 = DimensionalContext(
+    district_code="CMX-4",
+    citation_label="Title 14",
+    lot_area_sqft=15592.0,
+    frontage_ft=66.0,
+    max_occupancy_pct=90.0,
+    max_floor_area_ratio_pct=500.0,
+    side_setback_ft=8.0,
+    permitted_uses=("multi_family", "commercial"),
+    standard_loaded=True,
+)
+
+
+def test_a_loaded_standard_is_never_reported_as_missing() -> None:
+    details = [item.detail for item in build_dimensional_items(_CMX4)]
+
+    assert not any("No zoning standard is loaded" in detail for detail in details)
+
+
+def test_an_unrecorded_field_names_the_district_and_the_field() -> None:
+    detail = height_item(_CMX4).detail
+
+    assert detail == (
+        "The CMX-4 standard on file records no maximum height, so this check was not evaluated."
+    )
+
+
+def test_a_district_with_no_standard_says_so() -> None:
+    context = DimensionalContext(district_code="CMX-4", standard_loaded=False)
+
+    assert height_item(context).detail == (
+        "No zoning standard is loaded for CMX-4, so this check was not evaluated."
+    )
+
+
+def test_every_check_carries_a_distinct_label() -> None:
+    labels = [item.label for item in build_dimensional_items(_CMX4)]
+
+    assert len(labels) == len(set(labels))
+    assert all(label for label in labels)
