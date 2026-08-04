@@ -27,6 +27,7 @@ function mountPanel(program: DevelopmentProgram | null) {
   store.checklist = {
     parcel_number: 'phl:1',
     items: [],
+    posture: null,
     summary: { passed: 0, warnings: 0, failures: 0, info: 0, not_evaluated: 0, ready: true },
     buildability_confidence: 'high',
     buildability_confidence_reasons: [],

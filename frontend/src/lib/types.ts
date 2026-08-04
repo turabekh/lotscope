@@ -72,11 +72,18 @@ export interface DevelopmentProgram {
   conditions: string[]
 }
 
+export type BuildabilityPosture =
+  | 'by_right'
+  | 'variance_required'
+  | 'master_plan_required'
+  | 'undetermined'
+
 export interface ParcelChecklist {
   parcel_number: string
   items: ChecklistItem[]
   summary: ChecklistSummary
   program: DevelopmentProgram | null
+  posture: BuildabilityPosture | null
   buildability_confidence: 'high' | 'medium' | 'low' | null
   buildability_confidence_reasons: string[]
   computed_at: string
