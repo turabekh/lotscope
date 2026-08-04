@@ -128,8 +128,8 @@ def _use_sentence(inputs: ProgramInputs) -> str:
     )
     if inputs.requires_master_plan:
         return (
-            f"On {area}, development is not permitted by right — {district} is a special-purpose "
-            "district requiring an approved master plan before any construction."
+            f"On {area}, development is not permitted by right — {district} requires an approved "
+            "master plan before any construction."
         )
     if not inputs.permitted_uses:
         return (

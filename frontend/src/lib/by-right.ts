@@ -7,7 +7,7 @@ export const BY_RIGHT_NOT_MET =
   'The listed base-district standards are not met, so a variance or special exception would be needed.'
 
 export const MASTER_PLAN_REQUIRED =
-  'This is a special-purpose district: development is not permitted by right and requires an approved master plan or equivalent review.'
+  'Development is not permitted by right in this district: an approved master plan or equivalent review is required.'
 
 export const BUILDABILITY_UNDETERMINED =
   'Base-district standards could not be evaluated for this parcel.'
@@ -66,7 +66,7 @@ const UNIT_NOTES: Record<BuildabilityPosture, string> = {
   variance_required:
     'This lot does not meet the district minimums, so these units are not available by right. This is what the standards would support if a variance or special exception were granted.',
   master_plan_required:
-    'No units are available by right in a special-purpose district. Density is set through the master-plan approval, not by the base-district standards.',
+    'No units are available by right in this district. Density is set through the master-plan approval, not by the base-district standards.',
   undetermined:
     'Conformance with the district minimums could not be determined, so it is unknown whether these units are available by right or would need a variance.',
 }

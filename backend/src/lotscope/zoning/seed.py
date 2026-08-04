@@ -170,11 +170,13 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
         "code": "RMX-1",
         "permitted_uses": _RES_COMMERCIAL,
         "max_occupancy_pct": 50,
+        "requires_master_plan": True,
     },
     {
         "code": "RMX-2",
         "permitted_uses": _RES_COMMERCIAL,
         "max_occupancy_pct": 75,
+        "requires_master_plan": True,
     },
     {
         "code": "RMX-3",
@@ -184,6 +186,7 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
         "front_setback_ft": 25,
         "rear_setback_ft": 25,
         "side_setback_ft": 8,
+        "requires_master_plan": True,
     },
     {
         "code": "CA-1",
@@ -405,6 +408,10 @@ _NO_LOT_MINIMUMS = {
     "min_lot_area_sqft": _UNREGULATED,
     "min_lot_width_ft": _UNREGULATED,
 }
+_FAR_GOVERNED_DENSITY = {
+    "disposition": "unregulated",
+    "note": "unit yield is governed by the floor-area ratio rather than a lot-area-per-unit rule",
+}
 _FAR_GOVERNED_HEIGHT = {
     "min_lot_area_sqft": _UNREGULATED,
     "min_lot_width_ft": _UNREGULATED,
@@ -414,6 +421,18 @@ _FAR_GOVERNED_HEIGHT = {
             "building size is governed by the floor-area ratio and the bonus provisions instead"
         ),
     },
+    "max_units": _FAR_GOVERNED_DENSITY,
+    "lot_area_per_unit_sqft": _FAR_GOVERNED_DENSITY,
+}
+_MASTER_PLAN_DIMENSION = _conditional(
+    "set through the required master-plan approval rather than by a by-right district standard"
+)
+_MASTER_PLAN_DIMENSIONS = {
+    "min_lot_area_sqft": _UNREGULATED,
+    "min_lot_width_ft": _UNREGULATED,
+    "max_height_ft": _MASTER_PLAN_DIMENSION,
+    "max_units": _MASTER_PLAN_DIMENSION,
+    "lot_area_per_unit_sqft": _MASTER_PLAN_DIMENSION,
 }
 _INDUSTRIAL_HEIGHT = _conditional(
     "60 ft. where the lot abuts a Residential or SP-PO district; otherwise no height limit"
@@ -439,9 +458,9 @@ PHL_FIELD_DISPOSITIONS: dict[str, dict[str, dict[str, str]]] = {
     "I-1": {**_NO_LOT_MINIMUMS, "max_height_ft": _INDUSTRIAL_HEIGHT},
     "I-2": {**_NO_LOT_MINIMUMS, "max_height_ft": _INDUSTRIAL_HEIGHT},
     "I-3": {**_NO_LOT_MINIMUMS, "max_height_ft": _INDUSTRIAL_HEIGHT},
-    "RMX-1": _NO_LOT_MINIMUMS,
-    "RMX-2": _NO_LOT_MINIMUMS,
-    "RMX-3": _NO_LOT_MINIMUMS,
+    "RMX-1": _MASTER_PLAN_DIMENSIONS,
+    "RMX-2": _MASTER_PLAN_DIMENSIONS,
+    "RMX-3": _MASTER_PLAN_DIMENSIONS,
     "CA-1": {"min_lot_width_ft": _UNREGULATED},
     "CA-2": {"min_lot_width_ft": _UNREGULATED},
     "RM-2": {
