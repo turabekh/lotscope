@@ -3,6 +3,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.verdict.composition import VERDICT_VERSION
+from lotscope.verdict.decision import DECISION_VERSION
 from lotscope.verdict.models import ParcelVerdict
 from lotscope.verdict.service import (
     compute_verdict,
@@ -147,3 +148,39 @@ async def test_a_verdict_stored_before_the_contract_reads_as_no_states(
     legacy = await get_verdict(db_session, "000000001")
     assert legacy is not None
     assert legacy.field_trust == {}
+
+
+@pytest.mark.integration
+async def test_a_verdict_with_a_stale_decision_is_recomputed_on_read(
+    db_session: AsyncSession,
+) -> None:
+    await _setup_parcel(db_session)
+    await compute_verdict(db_session, "000000001")
+    await db_session.flush()
+    await db_session.execute(
+        text(
+            "UPDATE parcel_verdict SET decision_version = NULL, recommendation = NULL, "
+            "recommendation_reason = NULL WHERE parcel_number = '000000001'"
+        )
+    )
+    await db_session.flush()
+    db_session.expire_all()
+
+    refreshed = await get_or_compute_current_verdict(db_session, "000000001")
+
+    assert refreshed is not None
+    assert refreshed.decision_version == DECISION_VERSION
+    assert refreshed.recommendation is not None
+
+
+@pytest.mark.integration
+async def test_a_current_verdict_is_not_recomputed_on_read(db_session: AsyncSession) -> None:
+    await _setup_parcel(db_session)
+    computed = await compute_verdict(db_session, "000000001")
+    await db_session.flush()
+    assert computed is not None
+
+    cached = await get_or_compute_current_verdict(db_session, "000000001")
+
+    assert cached is not None
+    assert cached.computed_at == computed.computed_at

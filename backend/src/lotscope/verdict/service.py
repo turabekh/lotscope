@@ -13,6 +13,7 @@ from lotscope.ingestion.service import dataset_last_success, source_as_of
 from lotscope.risk.service import assess_parcel_risk
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict.composition import VERDICT_VERSION, ComposedVerdict, compose_verdict
+from lotscope.verdict.decision import DECISION_VERSION
 from lotscope.verdict.models import ParcelVerdict
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.zoning.service import assess_parcel as assess_zoning
@@ -147,7 +148,11 @@ async def get_or_compute_current_verdict(
     session: AsyncSession, parcel_number: str
 ) -> VerdictResult | None:
     verdict = await get_verdict(session, parcel_number)
-    if verdict is not None and verdict.verdict_version == VERDICT_VERSION:
+    if (
+        verdict is not None
+        and verdict.verdict_version == VERDICT_VERSION
+        and verdict.decision_version == DECISION_VERSION
+    ):
         return verdict
     return await compute_verdict(session, parcel_number)
 
