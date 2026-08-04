@@ -387,7 +387,6 @@ _DIMENSIONAL_FIELDS = (
     "front_setback_ft",
     "rear_setback_ft",
     "side_setback_ft",
-    "min_parking_spaces",
 )
 _UPDATE_COLUMNS = (
     "source",

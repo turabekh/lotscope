@@ -105,7 +105,6 @@ class ZoningStandard(Base, TimestampMixin):
     front_setback_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
     side_setback_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
     rear_setback_ft: Mapped[float | None] = mapped_column(Numeric(10, 2))
-    min_parking_spaces: Mapped[int | None] = mapped_column(Integer)
     requires_master_plan: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
