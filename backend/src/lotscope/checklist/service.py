@@ -21,6 +21,7 @@ from lotscope.verdict.service import get_or_compute_current_verdict
 from lotscope.zoning.buildability import FootprintBasis, UnitBasis
 from lotscope.zoning.confidence import critical_unknown_reasons
 from lotscope.zoning.dispositions import is_unregulated
+from lotscope.zoning.posture import resolve_posture
 from lotscope.zoning.program import ProgramInputs, compose_development_program
 from lotscope.zoning.schemas import BuildabilityResult
 from lotscope.zoning.service import assess_parcel, get_parcel_standard
@@ -157,17 +158,30 @@ async def build_parcel_checklist(
         detail,
         buildability.district_code if buildability is not None else None,
     )
+    posture = resolve_posture(
+        requires_master_plan=dimensional.requires_master_plan,
+        can_build_by_right=(
+            buildability.can_build_by_right
+            if buildability is not None
+            else verdict.can_build_by_right
+        ),
+        needs_variance=(
+            buildability.needs_variance if buildability is not None else verdict.needs_variance
+        ),
+    )
     items, summary = build_checklist(
         verdict,
         has_abatement=has_abatement,
         market_code=market,
         tax_status_unknown=await _tax_status_unknown(session, parcel_number),
         dimensional=dimensional,
+        posture=posture,
     )
     return ParcelChecklist(
         parcel_number=parcel_number,
         items=items,
         summary=summary,
+        posture=posture,
         program=_program_for(buildability, dimensional, items),
         buildability_confidence=buildability.confidence if buildability is not None else None,
         buildability_confidence_reasons=(

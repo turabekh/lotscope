@@ -16,6 +16,7 @@ function mountPanel(items: ChecklistItem[]) {
   store.checklist = {
     parcel_number: 'phl:1',
     items,
+    posture: null,
     summary: {
       passed: items.filter((i) => i.status === 'pass').length,
       warnings: items.filter((i) => i.status === 'potential_issue').length,

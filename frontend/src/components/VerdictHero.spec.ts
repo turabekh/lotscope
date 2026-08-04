@@ -4,7 +4,7 @@ import { Quasar } from 'quasar'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import VerdictHero from '@/components/VerdictHero.vue'
-import type { MarketInfo, VerdictResult } from '@/lib/types'
+import type { MarketInfo, ParcelChecklist, VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
 
 function makeVerdict(overrides: Partial<VerdictResult>): VerdictResult {
@@ -99,6 +99,7 @@ describe('VerdictHero', () => {
         }),
         checklist: {
           parcel_number: 'phl:000000001',
+          posture: null,
           items: [
             {
               code: 'access',
@@ -281,5 +282,72 @@ describe('VerdictHero screening result', () => {
   it('keeps the opportunity score reachable but demoted', () => {
     const wrapper = mountHero(makeVerdict({ recommendation: 'worth_investigating' }))
     expect(wrapper.text()).toContain('Opportunity score')
+  })
+})
+
+describe('VerdictHero never contradicts the checks beneath it', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  function mountWithChecklist(verdict: VerdictResult, checklist: ParcelChecklist) {
+    return mount(VerdictHero, {
+      props: { verdict, checklist },
+      global: {
+        plugins: [[Quasar, {}]],
+        stubs: { QTooltip: { template: '<div class="q-tooltip-stub"><slot /></div>' } },
+      },
+    })
+  }
+
+  const checklistWith = (
+    items: ParcelChecklist['items'],
+    posture: ParcelChecklist['posture'] = null,
+  ): ParcelChecklist => ({
+    parcel_number: 'phl:000000001',
+    posture,
+    items,
+    summary: {
+      passed: 0,
+      warnings: items.filter((i) => i.status === 'potential_issue').length,
+      failures: items.filter((i) => i.status === 'fail').length,
+      info: 0,
+      not_evaluated: items.filter((i) => i.status === 'not_evaluated').length,
+      ready: false,
+    },
+    program: null,
+    buildability_confidence: 'high',
+    buildability_confidence_reasons: [],
+    computed_at: '2026-08-01T00:00:00Z',
+  })
+
+  it('names a failing check under a by-right headline instead of only listing unknowns', () => {
+    const wrapper = mountWithChecklist(
+      makeVerdict({ can_build_by_right: true, by_right_units: 2 }),
+      checklistWith([
+        {
+          code: 'li',
+          label: 'L&I & demolition',
+          category: 'Risk',
+          status: 'fail',
+          detail: 'Unsafe structure on record.',
+          source: null,
+        },
+      ]),
+    )
+
+    expect(wrapper.text()).toContain('Flagged for a closer look: L&I & demolition')
+    expect(wrapper.text()).toContain('this eligibility may not hold')
+  })
+
+  it('does not advertise base-district units on a master-plan lot', () => {
+    const wrapper = mountWithChecklist(
+      makeVerdict({ can_build_by_right: true, by_right_units: 3 }),
+      checklistWith([], 'master_plan_required'),
+    )
+
+    expect(wrapper.text()).toContain('Master plan required')
+    expect(wrapper.text()).not.toContain('Base district · 3 units')
+    expect(wrapper.text()).toContain('not permitted by right')
   })
 })

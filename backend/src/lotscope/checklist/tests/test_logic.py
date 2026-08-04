@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
+from lotscope.checklist.dimensional import DimensionalContext
 from lotscope.checklist.logic import build_checklist
 from lotscope.verdict.schemas import VerdictResult
 
@@ -367,3 +368,36 @@ def test_unknown_abatement_shows_an_unevaluated_item_not_silence() -> None:
 def test_reported_absent_abatement_shows_no_item() -> None:
     items, _ = build_checklist(_verdict(), has_abatement=False)
     assert all(item.code != "abatement" for item in items)
+
+
+def test_a_master_plan_district_never_reports_conformance_as_undetermined() -> None:
+    items, _ = build_checklist(
+        _verdict(can_build_by_right=False, needs_variance=False),
+        posture="master_plan_required",
+    )
+    zoning = _item(items, "zoning")
+
+    assert "could not be determined" not in zoning.detail
+    assert "not permitted by right" in zoning.detail
+    assert "master plan" in zoning.detail
+    assert zoning.status == "potential_issue"
+
+
+def test_a_master_plan_district_is_not_described_as_buildable_by_right() -> None:
+    items, _ = build_checklist(
+        _verdict(can_build_by_right=True, by_right_units=4),
+        posture="master_plan_required",
+    )
+    zoning = _item(items, "zoning")
+
+    assert "Buildable by-right" not in zoning.detail
+    assert "4 unit" not in zoning.detail
+
+
+def test_the_posture_is_derived_from_the_district_when_not_supplied() -> None:
+    items, _ = build_checklist(
+        _verdict(can_build_by_right=False, needs_variance=False),
+        dimensional=DimensionalContext(requires_master_plan=True),
+    )
+
+    assert "master plan" in _item(items, "zoning").detail

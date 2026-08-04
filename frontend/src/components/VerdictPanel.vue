@@ -13,7 +13,14 @@ import {
   severityIcon,
   severityVar,
 } from '@/lib/format'
-import { BY_RIGHT_NOT_MET, byRightQualifier } from '@/lib/by-right'
+import {
+  buildQualifier as buildQualifierFor,
+  postureDisplay,
+  resolvePosture,
+  unitCountLabel,
+  unitCountNote,
+  unitCountValue,
+} from '@/lib/by-right'
 import { wideAreaSearchNote } from '@/lib/comp-tier'
 import type { ParcelChecklist, VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
@@ -73,25 +80,18 @@ const riskTone = computed(() => {
   return score >= 50 ? 'negative' : score >= 20 ? 'warning' : 'positive'
 })
 
+const posture = computed(() => resolvePosture(props.verdict, props.checklist))
+
 const buildStatus = computed<Status>(() => {
-  const v = props.verdict
-  if (v.summary?.toLowerCase().includes('master plan')) {
-    return { label: 'Master plan required', color: 'blue-grey-6', icon: 'account_balance' }
-  }
-  if (v.can_build_by_right) {
-    return { label: 'Dimensionally eligible', color: 'positive', icon: 'check_circle' }
-  }
-  if (v.needs_variance) {
-    return { label: 'Variance likely', color: 'warning', icon: 'gavel' }
-  }
-  return { label: 'Buildability uncertain', color: 'grey-6', icon: 'help_outline' }
+  const display = postureDisplay(posture.value)
+  return { label: display.label, color: display.color, icon: display.icon }
 })
 
-const buildQualifier = computed(() => {
-  if (props.verdict.can_build_by_right) return byRightQualifier(props.checklist ?? null)
-  if (props.verdict.needs_variance) return BY_RIGHT_NOT_MET
-  return 'Base-district standards could not be evaluated for this parcel.'
-})
+const buildQualifier = computed(() => buildQualifierFor(posture.value, props.checklist ?? null))
+
+const unitLabel = computed(() => unitCountLabel(posture.value))
+const unitValue = computed(() => unitCountValue(posture.value, props.verdict.by_right_units))
+const unitNote = computed(() => unitCountNote(posture.value))
 
 const CONFIDENCE_STYLE: Record<string, Status> = {
   high: { label: 'High confidence', color: 'positive', icon: 'verified' },
@@ -151,11 +151,10 @@ const confidenceHint = computed(() =>
       </div>
       <div class="row q-col-gutter-sm q-mt-xs">
         <div class="col-4 stat">
-          <div class="stat-label">By-right units</div>
-          <div class="stat-value lot-numeric">{{ verdict.by_right_units ?? '—' }}</div>
+          <div class="stat-label" data-test="unit-label">{{ unitLabel }}</div>
+          <div class="stat-value lot-numeric" data-test="unit-value">{{ unitValue }}</div>
           <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-            Dwelling units the base-district standards appear to allow without a variance. Subject
-            to overlays, access, parking, utilities, title, and the checks below.
+            {{ unitNote }}
           </q-tooltip>
         </div>
         <div class="col-4 stat">

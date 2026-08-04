@@ -39,6 +39,7 @@ function makeVerdict(overrides: Partial<VerdictResult>): VerdictResult {
 function makeChecklist(overrides: Partial<ParcelChecklist> = {}): ParcelChecklist {
   return {
     parcel_number: 'phl:000000001',
+    posture: null,
     items: [
       {
         code: 'access',
@@ -184,5 +185,46 @@ describe('wide-area land value', () => {
     )
 
     expect(wrapper.find('[data-test="wide-area-note"]').exists()).toBe(false)
+  })
+})
+
+describe('unit count never contradicts the buildability headline', () => {
+  it('does not label the count by-right on a lot that needs a variance', () => {
+    const wrapper = mountPanel(
+      makeVerdict({ can_build_by_right: false, needs_variance: true, by_right_units: 2 }),
+    )
+
+    expect(wrapper.get('[data-test="unit-label"]').text()).toBe('Units if a variance is granted')
+    expect(wrapper.get('[data-test="unit-value"]').text()).toBe('2')
+    expect(wrapper.get('[data-test="unit-label"]').text()).not.toContain('By-right')
+    expect(wrapper.text()).toContain('Variance likely')
+  })
+
+  it('shows no unit number at all for a master-plan district', () => {
+    const wrapper = mountPanel(
+      makeVerdict({ can_build_by_right: false, needs_variance: false, by_right_units: 4 }),
+      makeChecklist({ posture: 'master_plan_required' }),
+    )
+
+    expect(wrapper.get('[data-test="unit-value"]').text()).toBe('None')
+    expect(wrapper.get('[data-test="unit-value"]').text()).not.toContain('4')
+    expect(wrapper.text()).toContain('Master plan required')
+    expect(wrapper.text()).not.toContain('Buildability uncertain')
+  })
+
+  it('keeps the plain by-right label when the lot is eligible', () => {
+    const wrapper = mountPanel(makeVerdict({}), makeChecklist())
+
+    expect(wrapper.get('[data-test="unit-label"]').text()).toBe('By-right units')
+    expect(wrapper.get('[data-test="unit-value"]').text()).toBe('1')
+  })
+
+  it('does not promise by-right units when conformance is unresolved', () => {
+    const wrapper = mountPanel(
+      makeVerdict({ can_build_by_right: null, needs_variance: null, by_right_units: 3 }),
+    )
+
+    expect(wrapper.get('[data-test="unit-label"]').text()).not.toContain('By-right')
+    expect(wrapper.get('[data-test="unit-label"]').text()).toBe('Units the standards would support')
   })
 })

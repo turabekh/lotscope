@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { byRightQualifier } from '@/lib/by-right'
+import { buildQualifier, postureDisplay, resolvePosture } from '@/lib/by-right'
 import { formatRange, marketCodeFromParcelNumber, scoreVar } from '@/lib/format'
 import { screeningDisplay } from '@/lib/screening'
 import { rankedDealKillers } from '@/lib/deal-killers'
@@ -26,47 +26,22 @@ interface Pillar {
   hint: string
 }
 
+const posture = computed(() => resolvePosture(props.verdict, props.checklist))
+
 const buildPillar = computed<Pillar>(() => {
-  const v = props.verdict
-  if (v.summary?.toLowerCase().includes('master plan')) {
-    return {
-      key: 'build',
-      label: 'Buildability',
-      value: 'Master plan',
-      icon: 'account_balance',
-      tone: 'neutral',
-      hint: 'A civic/special-purpose district — a master plan or approval is required.',
-    }
-  }
-  if (v.can_build_by_right) {
-    return {
-      key: 'build',
-      label: 'Buildability',
-      value: v.by_right_units
-        ? `Base district · ${v.by_right_units} unit${v.by_right_units > 1 ? 's' : ''}`
-        : 'Base district eligible',
-      icon: 'check_circle',
-      tone: 'positive',
-      hint: byRightQualifier(props.checklist ?? null),
-    }
-  }
-  if (v.needs_variance) {
-    return {
-      key: 'build',
-      label: 'Buildability',
-      value: 'Variance likely',
-      icon: 'gavel',
-      tone: 'warning',
-      hint: 'A zoning variance or special exception is likely required.',
-    }
-  }
+  const display = postureDisplay(posture.value)
+  const units = props.verdict.by_right_units
+  const value =
+    posture.value === 'by_right' && units
+      ? `Base district · ${units} unit${units > 1 ? 's' : ''}`
+      : display.label
   return {
     key: 'build',
     label: 'Buildability',
-    value: 'Uncertain',
-    icon: 'help_outline',
-    tone: 'neutral',
-    hint: 'Zoning conformance could not be resolved for this parcel.',
+    value,
+    icon: display.icon,
+    tone: display.tone,
+    hint: buildQualifier(posture.value, props.checklist ?? null),
   }
 })
 

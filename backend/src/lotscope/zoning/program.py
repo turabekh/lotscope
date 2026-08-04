@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from lotscope.core.provenance import FieldState
 from lotscope.zoning.buildability import FootprintBasis, UnitBasis
 from lotscope.zoning.confidence import Confidence
+from lotscope.zoning.posture import BuildabilityPosture, resolve_posture, unit_claim
 
 
 @dataclass(frozen=True)
@@ -165,6 +166,14 @@ def _units_sentence(inputs: ProgramInputs) -> str | None:
     )
 
 
+def program_posture(inputs: ProgramInputs) -> BuildabilityPosture:
+    return resolve_posture(
+        requires_master_plan=inputs.requires_master_plan,
+        can_build_by_right=inputs.can_build_by_right,
+        needs_variance=inputs.needs_variance,
+    )
+
+
 def _claims(inputs: ProgramInputs) -> tuple[ProgramClaim, ...]:
     claims: list[ProgramClaim] = []
     if inputs.district_code:
@@ -183,14 +192,8 @@ def _claims(inputs: ProgramInputs) -> tuple[ProgramClaim, ...]:
         claims.append(ProgramClaim("Maximum height", "not regulated by the district", "verified"))
     else:
         claims.append(ProgramClaim("Maximum height", "not recorded", "unavailable"))
-    if inputs.requires_master_plan:
-        claims.append(ProgramClaim("By-right units", "none — master plan required", "unavailable"))
-    elif inputs.by_right_units is not None:
-        state: FieldState = "estimated" if inputs.unit_basis == "far_estimate" else "calculated"
-        label = "Units if a variance is granted" if inputs.needs_variance else "By-right units"
-        claims.append(ProgramClaim(label, f"{inputs.by_right_units:,}", state))
-    else:
-        claims.append(ProgramClaim("By-right units", "not determined", "unavailable"))
+    units = unit_claim(program_posture(inputs), inputs.by_right_units, unit_basis=inputs.unit_basis)
+    claims.append(ProgramClaim(units.label, units.value, units.state))
     if inputs.buildable_area_sqft is not None:
         footprint_state: FieldState = (
             "calculated" if inputs.footprint_basis == "setback_calculated" else "estimated"
