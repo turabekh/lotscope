@@ -36,3 +36,20 @@ async def test_seed_all_is_idempotent(db_session: AsyncSession) -> None:
     assert first == second
     total = await db_session.scalar(text("SELECT count(*) FROM zoning_standard"))
     assert total == sum(first.values())
+
+
+@pytest.mark.integration
+async def test_no_market_carries_another_markets_standards(db_session: AsyncSession) -> None:
+    await seed_all_zoning_standards(db_session)
+    await db_session.flush()
+
+    shared = (
+        await db_session.execute(
+            text(
+                "SELECT code_version, string_agg(DISTINCT market_code, ',' ORDER BY market_code) "
+                "FROM zoning_standard GROUP BY code_version HAVING count(DISTINCT market_code) > 1"
+            )
+        )
+    ).all()
+
+    assert shared == [], f"a code_version must belong to one market, found {shared}"
