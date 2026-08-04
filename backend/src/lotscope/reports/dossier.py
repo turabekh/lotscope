@@ -10,6 +10,7 @@ from lotscope.checklist.schemas import ParcelChecklist
 from lotscope.distress.schemas import DistressResult
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.verdict.schemas import VerdictResult
+from lotscope.zoning.posture import BuildabilityPosture, resolve_posture, unit_claim
 from lotscope.zoning.schemas import BuildabilityResult
 
 _BRAND = (15, 75, 168)
@@ -230,6 +231,18 @@ def _sources(pdf: _Dossier, verdict: VerdictResult) -> None:
     )
 
 
+def _report_posture(
+    verdict: VerdictResult, buildability: BuildabilityResult | None
+) -> BuildabilityPosture:
+    return resolve_posture(
+        requires_master_plan=(
+            buildability.requires_master_plan if buildability is not None else False
+        ),
+        can_build_by_right=verdict.can_build_by_right,
+        needs_variance=verdict.needs_variance,
+    )
+
+
 def _buildability_reasons(pdf: _Dossier, buildability: BuildabilityResult | None) -> None:
     if buildability is None or not buildability.reasons:
         return
@@ -315,7 +328,11 @@ def render_dossier_pdf(
         pdf.set_text_color(*_INK)
         pdf.multi_cell(0, 4.5, _s(verdict.summary or "Opportunity score (0-100)."), align="L")
         pdf.ln(2)
-        _kv(pdf, "By-right units", _num(verdict.by_right_units))
+        units = unit_claim(
+            _report_posture(verdict, buildability),
+            verdict.by_right_units,
+        )
+        _kv(pdf, units.label, units.value)
         _kv(pdf, "Max height", _num(verdict.max_height_ft, " ft"))
         _kv(pdf, "Buildable area", _num(verdict.buildable_area_sqft, " sq ft"))
         low, high = verdict.value_estimate_low, verdict.value_estimate_high

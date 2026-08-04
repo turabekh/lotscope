@@ -1,3 +1,5 @@
+import re
+import zlib
 from datetime import UTC, datetime
 from typing import Any
 
@@ -8,6 +10,7 @@ from lotscope.distress.schemas import DistressFactor, DistressResult
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.reports.dossier import dossier_filename, render_dossier_pdf
 from lotscope.verdict.schemas import VerdictResult
+from lotscope.zoning.schemas import BuildabilityResult
 
 _NOW = datetime(2026, 6, 28, tzinfo=UTC)
 
@@ -315,3 +318,98 @@ def test_a_zero_buildable_area_carries_its_reasoning() -> None:
     )
     assert with_reasons[:4] == b"%PDF"
     assert len(with_reasons) > len(without)
+
+
+def _pdf_text(raw: bytes) -> str:
+    streams = []
+    for match in re.finditer(rb"stream\r?\n(.*?)endstream", raw, re.S):
+        try:
+            streams.append(zlib.decompress(match.group(1)).decode("latin-1"))
+        except zlib.error:
+            continue
+    return "\n".join(streams)
+
+
+def _verdict_for_units(**overrides: Any) -> VerdictResult:
+    base: dict[str, Any] = {
+        "parcel_number": "000000001",
+        "verdict_version": "v8",
+        "buildability_score": 70.0,
+        "opportunity_score": 68.0,
+        "summary": "RSA-5",
+        "can_build_by_right": True,
+        "by_right_units": 2,
+        "max_height_ft": 38.0,
+        "needs_variance": False,
+        "buildable_area_sqft": 500.0,
+        "value_estimate_low": 100000.0,
+        "value_estimate_high": 200000.0,
+        "value_confidence": 0.6,
+        "assessment_market_gap": None,
+        "arv": None,
+        "est_profit": None,
+        "est_margin": None,
+        "max_allowable_offer": None,
+        "deal_score": None,
+        "is_underpriced": None,
+        "risk_score": 10.0,
+        "risk_flags": [],
+        "sources": [],
+        "computed_at": _NOW,
+    }
+    base.update(overrides)
+    return VerdictResult(**base)
+
+
+def _render(verdict: VerdictResult, buildability: BuildabilityResult | None = None) -> str:
+    return _pdf_text(
+        render_dossier_pdf(
+            detail=_detail(address="1 Main St"),
+            verdict=verdict,
+            assemblage=None,
+            distress=None,
+            generated_at=_NOW,
+            disclaimer="Informational only.",
+            buildability=buildability,
+        )
+    )
+
+
+def test_report_does_not_call_units_by_right_when_a_variance_is_needed() -> None:
+    text = _render(_verdict_for_units(can_build_by_right=False, needs_variance=True))
+
+    assert "Units if a variance is granted" in text
+    assert "By-right units" not in text
+
+
+def test_report_shows_no_unit_count_for_a_master_plan_district() -> None:
+    fields: dict[str, Any] = dict.fromkeys(BuildabilityResult.model_fields)
+    fields.update(
+        parcel_number="000000001",
+        district_code="SP-PO-A",
+        can_build_by_right=False,
+        needs_variance=None,
+        by_right_units=None,
+        requires_master_plan=True,
+        reasons=[],
+        sources=[],
+        critical_unknowns=[],
+        confidence="low",
+        buildability_score=25.0,
+        computed_at=_NOW,
+    )
+    buildability = BuildabilityResult(**fields)
+    text = _render(
+        _verdict_for_units(can_build_by_right=False, needs_variance=None, by_right_units=3),
+        buildability,
+    )
+
+    assert "none - master plan required" in text.lower()
+    assert "By-right units: 3" not in text
+
+
+def test_report_keeps_the_plain_label_for_a_by_right_lot() -> None:
+    text = _render(_verdict_for_units())
+
+    assert "By-right units" in text
+    assert "Units if a variance is granted" not in text
