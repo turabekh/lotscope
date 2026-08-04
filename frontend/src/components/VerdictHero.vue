@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { buildQualifier, postureDisplay, resolvePosture } from '@/lib/by-right'
 import { formatRange, marketCodeFromParcelNumber, scoreVar } from '@/lib/format'
 import { screeningDisplay } from '@/lib/screening'
+import { wideAreaSearchNote } from '@/lib/comp-tier'
 import { rankedDealKillers } from '@/lib/deal-killers'
 import type { ParcelChecklist, VerdictResult } from '@/lib/types'
 import { useMarketStore } from '@/stores/market'
@@ -48,17 +49,20 @@ const buildPillar = computed<Pillar>(() => {
 const valuePillar = computed<Pillar>(() => {
   const v = props.verdict
   const has = v.value_estimate_low != null && v.value_estimate_high != null
+  const band = v.value_confidence_band
+  const redevNote =
+    'Hypothetical land value for a teardown or redevelopment — not this property’s current improved value.'
   return {
     key: 'value',
     label: props.developed ? 'Redev. land value' : 'Est. land value',
-    value: has ? formatRange(v.value_estimate_low, v.value_estimate_high) : 'No comps',
+    value: has
+      ? `${formatRange(v.value_estimate_low, v.value_estimate_high)}${band ? ` · ${band}` : ''}`
+      : 'No comps',
     icon: 'payments',
-    tone: 'neutral',
-    hint: props.developed
-      ? 'Hypothetical land value for a teardown or redevelopment — not this property’s current improved value.'
-      : has
-        ? 'Estimated from recent recorded comparable sales nearby.'
-        : 'Not enough recorded comparable sales nearby yet.',
+    tone: has && band === 'low' ? 'warning' : 'neutral',
+    hint: [props.developed ? redevNote : null, wideAreaSearchNote(v) ?? v.value_support_note]
+      .filter(Boolean)
+      .join(' '),
   }
 })
 

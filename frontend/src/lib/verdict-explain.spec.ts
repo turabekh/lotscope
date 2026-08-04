@@ -18,6 +18,8 @@ function verdict(partial: Partial<VerdictResult>): VerdictResult {
     value_estimate_low: null,
     value_estimate_high: null,
     value_confidence: null,
+    value_confidence_band: null,
+    value_support_note: '',
     assessment_market_gap: null,
     arv: null,
     est_profit: null,

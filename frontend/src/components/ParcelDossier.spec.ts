@@ -60,6 +60,8 @@ const VERDICT: VerdictResult = {
   value_estimate_low: 151197,
   value_estimate_high: 505487,
   value_confidence: 0.6,
+  value_confidence_band: null,
+  value_support_note: '',
   assessment_market_gap: -232130,
   arv: 550000,
   est_profit: -71208,

@@ -351,3 +351,62 @@ describe('VerdictHero never contradicts the checks beneath it', () => {
     expect(wrapper.text()).toContain('not permitted by right')
   })
 })
+
+describe('VerdictHero value pillar states how well the estimate is supported', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('does not claim the sales were nearby when confidence is low', () => {
+    const wrapper = mountHero(
+      makeVerdict({
+        value_estimate_low: 100000,
+        value_estimate_high: 200000,
+        value_confidence: 0.3,
+        value_confidence_band: 'low',
+        value_support_note:
+          'The supporting sales are few, widely spread, or drawn from a wider search because none were found close by. Treat this as a rough guide, not a market read for this block.',
+      }),
+    )
+
+    expect(wrapper.text()).toContain('rough guide')
+    expect(wrapper.text()).not.toContain('recent recorded comparable sales nearby')
+  })
+
+  it('prefers the specific wider-search note over the generic one', () => {
+    const wrapper = mountHero(
+      makeVerdict({
+        value_estimate_low: 100000,
+        value_estimate_high: 200000,
+        value_confidence: 0.3,
+        value_confidence_band: 'low',
+        value_support_note: 'generic fallback note',
+        sources: [
+          {
+            dimension: 'valuation',
+            sources: [{ source: 'rtt_summary', comp_tier: 'wide_area', radius_ft: 3000, years: 5 }],
+          },
+        ],
+      }),
+    )
+
+    expect(wrapper.text()).toContain('No land sales were found close by')
+    expect(wrapper.text()).toContain('3,000 ft away')
+    expect(wrapper.text()).not.toContain('generic fallback note')
+  })
+
+  it('states plainly when there is no estimate rather than implying a weak one', () => {
+    const wrapper = mountHero(
+      makeVerdict({
+        value_estimate_low: null,
+        value_estimate_high: null,
+        value_confidence: null,
+        value_confidence_band: null,
+        value_support_note: 'Not enough recorded comparable sales nearby yet.',
+      }),
+    )
+
+    expect(wrapper.text()).toContain('No comps')
+    expect(wrapper.text()).toContain('Not enough recorded comparable sales nearby yet.')
+  })
+})
