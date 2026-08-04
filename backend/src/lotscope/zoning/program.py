@@ -192,9 +192,7 @@ def _claims(inputs: ProgramInputs) -> tuple[ProgramClaim, ...]:
         claims.append(ProgramClaim("Maximum height", "not regulated by the district", "verified"))
     else:
         claims.append(ProgramClaim("Maximum height", "not recorded", "unavailable"))
-    units = unit_claim(
-        program_posture(inputs), inputs.by_right_units, unit_basis=inputs.unit_basis
-    )
+    units = unit_claim(program_posture(inputs), inputs.by_right_units, unit_basis=inputs.unit_basis)
     claims.append(ProgramClaim(units.label, units.value, units.state))
     if inputs.buildable_area_sqft is not None:
         footprint_state: FieldState = (
