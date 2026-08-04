@@ -196,6 +196,8 @@ export interface VerdictResult {
   buildable_area_sqft: number | null
   value_estimate_low: number | null
   value_estimate_high: number | null
+  value_confidence_band: 'high' | 'medium' | 'low' | null
+  value_support_note: string
   value_confidence: number | null
   assessment_market_gap: number | null
   arv: number | null

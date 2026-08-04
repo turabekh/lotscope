@@ -5,6 +5,7 @@ from typing import Any
 from lotscope.core.provenance import FieldProvenance
 from lotscope.deal.schemas import DealResult
 from lotscope.risk.schemas import RiskResult
+from lotscope.valuation.confidence import CONFIDENCE_SCORE
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.verdict.decision import DECISION_VERSION, decide
 from lotscope.verdict.trust import compose_field_trust
@@ -12,7 +13,6 @@ from lotscope.zoning.schemas import BuildabilityResult
 
 VERDICT_VERSION = "v8"
 
-_CONFIDENCE_SCORE = {"high": 0.9, "medium": 0.6, "low": 0.3}
 _BUILDABILITY_WEIGHT = 0.6
 _RISK_WEIGHT = 0.4
 
@@ -63,7 +63,7 @@ def _assessment_market_gap(
 def _value_confidence(valuation: ValuationResult | None) -> float | None:
     if valuation is None or valuation.estimate is None:
         return None
-    return _CONFIDENCE_SCORE.get(valuation.confidence)
+    return CONFIDENCE_SCORE.get(valuation.confidence)
 
 
 def _merge_sources(

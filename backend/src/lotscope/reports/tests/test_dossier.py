@@ -413,3 +413,28 @@ def test_report_keeps_the_plain_label_for_a_by_right_lot() -> None:
 
     assert "By-right units" in text
     assert "Units if a variance is granted" not in text
+
+
+def test_report_does_not_call_a_low_confidence_estimate_a_nearby_comp_read() -> None:
+    text = _render(_verdict_for_units(value_confidence=0.3))
+
+    assert "low confidence" in text
+    assert "rough guide" in text
+    assert "Estimated from recent recorded comparable sales nearby" not in text
+
+
+def test_report_states_the_support_plainly_when_confidence_is_high() -> None:
+    text = _render(_verdict_for_units(value_confidence=0.9))
+
+    assert "high confidence" in text
+    assert "recent recorded comparable sales nearby" in text
+    assert "rough guide" not in text
+
+
+def test_report_does_not_imply_a_weak_estimate_when_there_is_none() -> None:
+    text = _render(
+        _verdict_for_units(value_estimate_low=None, value_estimate_high=None, value_confidence=None)
+    )
+
+    assert "Not enough comps" in text
+    assert "rough guide" not in text

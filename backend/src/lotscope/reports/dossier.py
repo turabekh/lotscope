@@ -131,6 +131,13 @@ def _kv(pdf: _Dossier, label: str, value: str) -> None:
     pdf.cell(0, 5.5, _s(value), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
+def _note(pdf: _Dossier, text: str) -> None:
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(*_MUTED)
+    pdf.multi_cell(0, 3.8, _s(text), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_text_color(*_INK)
+
+
 def _market_label(detail: ParcelDetail) -> str:
     return f"Market {detail.market_code.upper()}"
 
@@ -336,8 +343,11 @@ def render_dossier_pdf(
         _kv(pdf, "Max height", _num(verdict.max_height_ft, " ft"))
         _kv(pdf, "Buildable area", _num(verdict.buildable_area_sqft, " sq ft"))
         low, high = verdict.value_estimate_low, verdict.value_estimate_high
-        value = f"{_money(low)} - {_money(high)}" if low is not None else "Not enough comps"
+        band = verdict.value_confidence_band
+        suffix = f" ({band} confidence)" if low is not None and band is not None else ""
+        value = f"{_money(low)} - {_money(high)}{suffix}" if low is not None else "Not enough comps"
         _kv(pdf, "Estimated land value", value)
+        _note(pdf, verdict.value_support_note)
         _kv(pdf, "vs. assessment", _money(verdict.assessment_market_gap))
         _buildability_reasons(pdf, buildability)
 

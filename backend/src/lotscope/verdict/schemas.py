@@ -1,9 +1,14 @@
 from datetime import datetime
 from typing import Annotated, Any
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict
+from pydantic import BaseModel, BeforeValidator, ConfigDict, model_validator
 
 from lotscope.core.provenance import FieldProvenance
+from lotscope.valuation.confidence import (
+    ValueConfidence,
+    value_confidence_band,
+    value_support_note,
+)
 
 
 def _no_trust_when_absent(value: object) -> object:
@@ -44,3 +49,13 @@ class VerdictResult(BaseModel):
     recommendation_reason: str | None = None
     decision_version: str | None = None
     computed_at: datetime
+    value_confidence_band: ValueConfidence | None = None
+    value_support_note: str = ""
+
+    @model_validator(mode="after")
+    def _derive_value_support(self) -> "VerdictResult":
+        priced = self.value_estimate_low is not None and self.value_estimate_high is not None
+        band = value_confidence_band(self.value_confidence) if priced else None
+        self.value_confidence_band = band
+        self.value_support_note = value_support_note(band if priced else None)
+        return self
