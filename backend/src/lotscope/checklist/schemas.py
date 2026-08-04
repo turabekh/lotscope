@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from lotscope.core.provenance import FieldState
 from lotscope.zoning.confidence import Confidence
+from lotscope.zoning.posture import BuildabilityPosture
 
 ChecklistStatus = Literal["pass", "fail", "potential_issue", "not_evaluated", "not_applicable"]
 ChecklistAvailability = Literal["available", "no_data_source", "pending_load"]
@@ -47,6 +48,7 @@ class ParcelChecklist(BaseModel):
     items: list[ChecklistItem]
     summary: ChecklistSummary
     program: DevelopmentProgramOut | None = None
+    posture: BuildabilityPosture | None = None
     buildability_confidence: Confidence | None = None
     buildability_confidence_reasons: list[str] = []
     computed_at: datetime

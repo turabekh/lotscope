@@ -8,6 +8,7 @@ from lotscope.markets.capabilities import (
     clear_detail_override,
 )
 from lotscope.verdict.schemas import VerdictResult
+from lotscope.zoning.posture import BuildabilityPosture, resolve_posture
 
 _SEVERITY_STATUS: dict[str, ChecklistStatus] = {
     "high": "fail",
@@ -150,7 +151,19 @@ def _abatement_unknown_item() -> ChecklistItem:
     )
 
 
-def _zoning_item(verdict: VerdictResult) -> ChecklistItem:
+def _zoning_item(verdict: VerdictResult, posture: BuildabilityPosture) -> ChecklistItem:
+    if posture == "master_plan_required":
+        return ChecklistItem(
+            code="zoning",
+            label="Zoning conformance",
+            category="Zoning & buildability",
+            status="potential_issue",
+            detail=(
+                "This is a special-purpose district: development is not permitted by right and "
+                "requires an approved master plan or equivalent review before any construction."
+            ),
+            source="zoning",
+        )
     if verdict.can_build_by_right:
         units = verdict.by_right_units
         suffix = f" ({units} unit(s))" if units else ""
@@ -267,9 +280,16 @@ def build_checklist(
     market_code: str = "phl",
     tax_status_unknown: bool = False,
     dimensional: DimensionalContext | None = None,
+    posture: BuildabilityPosture | None = None,
 ) -> tuple[list[ChecklistItem], ChecklistSummary]:
+    context = dimensional or DimensionalContext()
+    resolved_posture = posture or resolve_posture(
+        requires_master_plan=context.requires_master_plan,
+        can_build_by_right=verdict.can_build_by_right,
+        needs_variance=verdict.needs_variance,
+    )
     flags = verdict.risk_flags
-    items = [_zoning_item(verdict)]
+    items = [_zoning_item(verdict, resolved_posture)]
     for code, category, flag_codes, clear_detail in _RISK_CATEGORIES:
         state = checklist_category_state(market_code, code)
         clear = clear_detail_override(market_code, code) or clear_detail
@@ -291,7 +311,7 @@ def build_checklist(
         items.append(_abatement_item())
     elif has_abatement is None:
         items.append(_abatement_unknown_item())
-    items.extend(build_dimensional_items(dimensional or DimensionalContext()))
+    items.extend(build_dimensional_items(context))
     items.append(_valuation_item(verdict))
     items.append(_deal_item(verdict))
 
