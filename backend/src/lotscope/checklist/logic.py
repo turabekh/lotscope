@@ -159,8 +159,8 @@ def _zoning_item(verdict: VerdictResult, posture: BuildabilityPosture) -> Checkl
             category="Zoning & buildability",
             status="potential_issue",
             detail=(
-                "This is a special-purpose district: development is not permitted by right and "
-                "requires an approved master plan or equivalent review before any construction."
+                "Development is not permitted by right in this district: an approved master plan "
+                "or equivalent review is required before any construction."
             ),
             source="zoning",
         )

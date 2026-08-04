@@ -90,6 +90,13 @@ def decide(
     land_value_is_wide_area: bool = False,
     risk_flag_count: int = 0,
 ) -> ScreeningDecision:
+    if requires_master_plan:
+        return ScreeningDecision(
+            recommendation="high_entitlement_risk",
+            reason="A master plan appears to be required, which is an entitlement process before "
+            "any by-right path.",
+        )
+
     missing = _unavailable_critical(field_trust)
     if missing:
         return ScreeningDecision(
@@ -98,13 +105,6 @@ def decide(
                 "Core buildability could not be established for this parcel "
                 f"({', '.join(missing)}), so no screening result is offered."
             ),
-        )
-
-    if requires_master_plan:
-        return ScreeningDecision(
-            recommendation="high_entitlement_risk",
-            reason="A master plan appears to be required, which is an entitlement process before "
-            "any by-right path.",
         )
 
     if can_build_by_right is False and needs_variance is True:

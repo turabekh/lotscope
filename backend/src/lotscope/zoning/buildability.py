@@ -233,8 +233,8 @@ def assess_buildability(dims: ParcelDimensions, standard: DistrictStandard) -> B
 
     if standard.requires_master_plan:
         reasons.append(
-            f"District {standard.code} is a special-purpose district; development is not "
-            "permitted by-right and requires an approved master plan or equivalent review."
+            f"District {standard.code} does not permit development by-right; an approved master "
+            "plan or equivalent review is required before any construction."
         )
         can_build_by_right = False
         by_right_units = None

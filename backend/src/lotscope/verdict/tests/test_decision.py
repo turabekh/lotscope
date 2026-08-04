@@ -220,3 +220,33 @@ def test_a_wide_area_estimate_cannot_rescue_infeasible_economics() -> None:
     result = _decide(deal_infeasible=True, est_margin=0.55, land_value_is_wide_area=True)
 
     assert result.recommendation == "economics_unattractive"
+
+
+def test_a_master_plan_district_is_screened_not_reported_as_unknown() -> None:
+    decision = decide(
+        field_trust={},
+        can_build_by_right=False,
+        needs_variance=None,
+        requires_master_plan=True,
+        est_margin=None,
+        deal_infeasible=False,
+        risk_score=None,
+    )
+
+    assert decision.recommendation == "high_entitlement_risk"
+    assert "master plan" in decision.reason
+    assert "could not be established" not in decision.reason
+
+
+def test_missing_buildability_still_reports_insufficient_data_without_a_master_plan() -> None:
+    decision = decide(
+        field_trust={},
+        can_build_by_right=None,
+        needs_variance=None,
+        requires_master_plan=False,
+        est_margin=None,
+        deal_infeasible=False,
+        risk_score=None,
+    )
+
+    assert decision.recommendation == "insufficient_data"
