@@ -3,6 +3,13 @@ from typing import Any
 
 from lotscope.checklist.schemas import ChecklistItem, ChecklistStatus
 from lotscope.zoning.dispositions import disposition_of
+from lotscope.zoning.parking import (
+    CHAPTER_14_800_SOURCE,
+    governing_section,
+    parking_requirement,
+    required_spaces,
+    requirement_phrase,
+)
 
 _ZONING = "Zoning & buildability"
 _SITE = "Site & servicing"
@@ -339,13 +346,74 @@ def permitted_use_item(context: DimensionalContext) -> ChecklistItem:
     )
 
 
+_LOADING_NOTE = "Loading requirements are separate and are not modelled."
+
+_DWELLING_USE_LABELS = {
+    "single_family": "a single-family home",
+    "two_family": "a two-family home",
+    "multi_family": "multi-family dwellings",
+}
+
+
+def _modelled_dwelling_use(permitted_uses: tuple[str, ...]) -> str | None:
+    for use in ("multi_family", "two_family", "single_family"):
+        if use in permitted_uses:
+            return use
+    return None
+
+
 def parking_item(context: DimensionalContext) -> ChecklistItem:
-    return _unevaluated(
-        "parking",
-        "Parking & loading",
-        _SITE,
-        "Parking and loading requirements are not modelled. Confirm the district's minimum "
-        "against Title 14 before relying on the unit count.",
+    district = context.district_code
+    if district is None:
+        return _unevaluated("parking", "Parking & loading", _SITE, _NO_DISTRICT)
+
+    section = governing_section(district)
+    if section is not None:
+        return _unevaluated(
+            "parking",
+            "Parking & loading",
+            _SITE,
+            f"Parking in {district} is set by {section} rather than the district parking "
+            f"tables, so it is not modelled. {_LOADING_NOTE}",
+        )
+
+    use = _modelled_dwelling_use(context.permitted_uses)
+    requirement = parking_requirement(district, use) if use is not None else None
+    if use is None or requirement is None:
+        return _unevaluated(
+            "parking",
+            "Parking & loading",
+            _SITE,
+            "Parking and loading requirements are not modelled for this district. Confirm the "
+            "minimum against Chapter 14-800 before relying on the unit count.",
+        )
+
+    phrase = requirement_phrase(requirement)
+    subject = _DWELLING_USE_LABELS[use]
+    if requirement.spaces == 0:
+        detail = (
+            f"{district} requires {phrase} for {subject} ({requirement.table}). {_LOADING_NOTE}"
+        )
+    else:
+        spaces = (
+            required_spaces(requirement, context.by_right_units) if context.by_right_units else None
+        )
+        modelled = (
+            f" The modelled {context.by_right_units} unit(s) would need {spaces} space(s)."
+            if spaces is not None
+            else ""
+        )
+        detail = (
+            f"{district} requires {phrase} for {subject} ({requirement.table}).{modelled} "
+            f"{_LOADING_NOTE}"
+        )
+    return ChecklistItem(
+        code="parking",
+        label="Parking & loading",
+        category=_SITE,
+        status="pass",
+        detail=detail,
+        source=CHAPTER_14_800_SOURCE,
     )
 
 

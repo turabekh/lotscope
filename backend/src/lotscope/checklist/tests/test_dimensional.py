@@ -5,6 +5,7 @@ from lotscope.checklist.dimensional import (
     height_item,
     lot_area_item,
     lot_width_item,
+    parking_item,
     subdivision_item,
     unit_density_item,
     utilities_item,
@@ -230,3 +231,59 @@ def test_a_field_with_no_disposition_still_reports_as_uncaptured() -> None:
 
     assert item.status == "not_evaluated"
     assert "standard on file records no maximum height" in item.detail
+
+
+def test_parking_states_when_a_district_requires_none() -> None:
+    item = parking_item(
+        DimensionalContext(district_code="RSA-5", permitted_uses=("single_family",))
+    )
+
+    assert item.status == "pass"
+    assert "RSA-5 requires no off-street parking for a single-family home" in item.detail
+    assert "Table 14-802-1" in item.detail
+    assert "not modelled" not in item.detail.split("Loading")[0]
+
+
+def test_parking_quantifies_the_modelled_units_when_the_ratio_divides() -> None:
+    item = parking_item(
+        DimensionalContext(
+            district_code="RM-4", permitted_uses=("multi_family",), by_right_units=10
+        )
+    )
+
+    assert item.status == "pass"
+    assert "3 off-street spaces per 10 dwelling units" in item.detail
+    assert "would need 3 space(s)" in item.detail
+
+
+def test_parking_invents_no_rounding_rule_for_a_partial_space() -> None:
+    item = parking_item(
+        DimensionalContext(district_code="RM-4", permitted_uses=("multi_family",), by_right_units=4)
+    )
+
+    assert "3 off-street spaces per 10 dwelling units" in item.detail
+    assert "would need" not in item.detail
+
+
+def test_parking_names_the_governing_section_where_the_tables_do_not_apply() -> None:
+    item = parking_item(DimensionalContext(district_code="CMX-1", permitted_uses=("multi_family",)))
+
+    assert item.status == "not_evaluated"
+    assert "§ 14-802(7)(a)" in item.detail
+    assert "not modelled" in item.detail
+
+
+def test_parking_always_says_loading_is_separate() -> None:
+    for context in (
+        DimensionalContext(district_code="RSA-5", permitted_uses=("single_family",)),
+        DimensionalContext(district_code="CMX-4", permitted_uses=("multi_family",)),
+        DimensionalContext(district_code="CMX-1", permitted_uses=("multi_family",)),
+    ):
+        assert "Loading requirements are separate" in parking_item(context).detail
+
+
+def test_parking_is_unmodelled_for_a_district_outside_the_tables() -> None:
+    item = parking_item(DimensionalContext(district_code="SP-INS", permitted_uses=("civic",)))
+
+    assert item.status == "not_evaluated"
+    assert "Chapter 14-800" in item.detail
