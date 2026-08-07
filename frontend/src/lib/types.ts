@@ -608,6 +608,7 @@ export interface ScenarioItem {
   roi: number | null
   max_allowable_offer: number | null
   deal_score: number | null
+  infeasible: boolean
 }
 
 export interface ScenariosResult {
@@ -694,6 +695,7 @@ export interface DealResult {
   max_allowable_offer: number | null
   is_underpriced: boolean | null
   deal_score: number | null
+  infeasible: boolean
   comp_count: number
   confidence: 'high' | 'medium' | 'low'
   assumptions: DealAssumptions

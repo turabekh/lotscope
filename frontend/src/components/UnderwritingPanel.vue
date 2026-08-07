@@ -69,8 +69,12 @@ watch(() => props.parcelNumber, load, { immediate: true })
       <div class="case-grid">
         <div v-for="item in cases" :key="item.case" class="case" :class="item.case">
           <div class="case-label">{{ item.label }}</div>
-          <div class="case-mao lot-numeric">{{ money(item.max_allowable_offer) }}</div>
-          <div class="case-margin">Margin {{ percent(item.margin) }}</div>
+          <div class="case-mao lot-numeric" :data-test="`case-mao-${item.case}`">
+            {{ item.infeasible ? 'No viable price' : money(item.max_allowable_offer) }}
+          </div>
+          <div class="case-margin">
+            {{ item.infeasible ? 'Build cost exceeds value' : `Margin ${percent(item.margin)}` }}
+          </div>
           <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
             {{ item.rationale }}
           </q-tooltip>

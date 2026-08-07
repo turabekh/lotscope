@@ -75,7 +75,12 @@ function reset(): void {
       <q-inner-loading :showing="dealLoading" color="primary" />
 
       <template v-if="deal && deal.arv != null">
-        <div v-if="deal.is_underpriced" class="underpriced-banner">
+        <div v-if="deal.infeasible" class="infeasible-banner" data-test="deal-infeasible">
+          <q-icon name="report_problem" size="16px" class="q-mr-xs" />
+          Modelled build cost exceeds the finished value, so new construction is not economical here
+          at any land price — the figures below describe that shortfall, not an opportunity.
+        </div>
+        <div v-else-if="deal.is_underpriced" class="underpriced-banner">
           <q-icon name="trending_down" size="16px" class="q-mr-xs" />
           Acquisition at or below max allowable offer — looks underpriced.
         </div>
@@ -83,7 +88,9 @@ function reset(): void {
         <div class="metric-grid q-mt-sm">
           <div class="metric metric--hero">
             <div class="metric-label">Max allowable offer</div>
-            <div class="metric-value">{{ money(deal.max_allowable_offer) }}</div>
+            <div class="metric-value" data-test="deal-mao">
+              {{ deal.infeasible ? 'No viable price' : money(deal.max_allowable_offer) }}
+            </div>
           </div>
           <div class="metric">
             <div class="metric-label">ARV (finished)</div>
@@ -147,7 +154,7 @@ function reset(): void {
           v-if="detail"
           v-model="offerOpen"
           :parcel-number="detail.parcel_number"
-          :max-allowable-offer="deal.max_allowable_offer ?? null"
+          :max-allowable-offer="deal.infeasible ? null : (deal.max_allowable_offer ?? null)"
         />
 
         <q-expansion-item dense label="Model a scenario" icon="tune" class="q-mt-xs scenario">
@@ -229,6 +236,18 @@ function reset(): void {
   font-weight: 600;
   color: var(--lot-score-positive);
   background: var(--lot-positive-soft);
+  border-radius: var(--lot-radius-sm);
+  padding: 6px 10px;
+}
+.infeasible-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--lot-sev-high, #c62828);
+  background: var(--lot-negative-soft, rgba(198, 40, 40, 0.08));
   border-radius: var(--lot-radius-sm);
   padding: 6px 10px;
 }
