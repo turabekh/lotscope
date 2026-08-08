@@ -68,7 +68,8 @@ _PRUNE = text(
 class TitleDerivationResult(BaseModel):
     title_number: str
     documents: int
-    deferred_tables: int
+    table_documents: int
+    skipped_continuations: int
     skipped_figures: int
     skipped_notes: int
     skipped_containers: int
@@ -89,8 +90,12 @@ class DerivationRunReport(BaseModel):
         return sum(result.documents for result in self.results)
 
     @property
-    def deferred_tables(self) -> int:
-        return sum(result.deferred_tables for result in self.results)
+    def table_documents(self) -> int:
+        return sum(result.table_documents for result in self.results)
+
+    @property
+    def skipped_continuations(self) -> int:
+        return sum(result.skipped_continuations for result in self.results)
 
     @property
     def provisions_seen(self) -> int:
@@ -139,6 +144,7 @@ async def derive_title(
             heading=row.heading,
             text=row.text,
             source_version=row.source_version,
+            table_data=row.table_data,
         )
         for row in rows
     ]
@@ -188,7 +194,8 @@ async def derive_title(
     return TitleDerivationResult(
         title_number=title_number,
         documents=report.documents,
-        deferred_tables=report.deferred_tables,
+        table_documents=report.table_documents,
+        skipped_continuations=report.skipped_continuations,
         skipped_figures=report.skipped_figures,
         skipped_notes=report.skipped_notes,
         skipped_containers=report.skipped_containers,
@@ -241,7 +248,8 @@ async def derive_corpus(
         derivation_version=derivation_version,
         titles=len(results),
         documents=report.documents,
-        deferred_tables=report.deferred_tables,
+        table_documents=report.table_documents,
+        skipped_continuations=report.skipped_continuations,
         provisions_seen=report.provisions_seen,
         reconciled=report.reconciled,
     )

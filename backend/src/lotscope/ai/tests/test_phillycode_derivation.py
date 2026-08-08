@@ -24,10 +24,10 @@ class FakeEmbedder:
 
 _INSERT = text(
     "INSERT INTO code_provision (market_code, id, cite, doc, kind, title_number, parent, "
-    "ordinal, path, heading, text, raw_text, refs, note_refs, page_start, page_end, "
-    "source_file, source_version) VALUES (:market_code, :id, :cite, 'code', :kind, "
+    "ordinal, path, heading, text, raw_text, refs, note_refs, table_data, page_start, "
+    "page_end, source_file, source_version) VALUES (:market_code, :id, :cite, 'code', :kind, "
     ":title_number, :parent, :ordinal, (:path)::jsonb, :heading, :text, :text, '[]'::jsonb, "
-    "'[]'::jsonb, 1, 1, 'x.pdf', 'May 25, 2026')"
+    "'[]'::jsonb, (:table_data)::jsonb, 1, 1, 'x.pdf', 'May 25, 2026')"
 )
 
 LONG = (
@@ -81,6 +81,14 @@ async def _seed(session: AsyncSession) -> None:
             "For printable PDF version, click HERE",
         ),
     ]
+    table_payload = json.dumps(
+        {
+            "caption": "Table 14-802-3: Required Parking in Industrial Districts",
+            "continuation_of": None,
+            "header_rows": [],
+            "rows": [[None, "IRMX", "ICMX I-1"], ["Household Living", "3/10 units", "1/2 units"]],
+        }
+    )
     for identifier, cite, kind, parent, ordinal, path, heading, body in rows:
         await session.execute(
             _INSERT,
@@ -95,6 +103,7 @@ async def _seed(session: AsyncSession) -> None:
                 "path": json.dumps(path),
                 "heading": heading,
                 "text": body,
+                "table_data": table_payload if kind == "table" else None,
             },
         )
     await session.flush()
@@ -110,17 +119,17 @@ async def _documents(session: AsyncSession) -> list[dict[str, Any]]:
     return [{"section": r[0], "content": r[1], "metadata": r[2]} for r in rows]
 
 
-async def test_derivation_emits_documents_and_defers_tables(db_session: AsyncSession) -> None:
+async def test_derivation_emits_prose_and_table_documents(db_session: AsyncSession) -> None:
     await _seed(db_session)
     embedder = FakeEmbedder()
 
     result = await derive_title(db_session, embedder, "14")
 
-    assert result.deferred_tables == 1
+    assert result.table_documents == 1
     assert result.skipped_figures == 1
     assert result.folded_leaves == 1
     assert result.skipped_containers == 1
-    assert result.documents == 2
+    assert result.documents == 3
     assert result.provisions_seen == 6
     assert result.reconciled is True
 
@@ -131,7 +140,7 @@ async def test_every_document_carries_its_provenance(db_session: AsyncSession) -
     await derive_title(db_session, FakeEmbedder(), "14")
 
     documents = await _documents(db_session)
-    assert [d["section"] for d in documents] == ["14-800", "14-802"]
+    assert [d["section"] for d in documents] == ["14-800", "14-802", "14-802#table1"]
     metadata = next(d["metadata"] for d in documents if d["section"] == "14-802")
     assert metadata["provision_id"] == "14-802"
     assert metadata["cite"] == "14-802"
@@ -139,17 +148,18 @@ async def test_every_document_carries_its_provenance(db_session: AsyncSession) -
     assert metadata["kind"] == "section"
     assert metadata["path"] == ["14", "14-800", "14-802"]
     assert metadata["source_version"] == "May 25, 2026"
-    assert metadata["derivation_version"] == "d1"
+    assert metadata["derivation_version"] == "d2"
     assert metadata["folded_provision_ids"] == ["14-802(1)"]
 
 
-async def test_no_table_node_becomes_a_document(db_session: AsyncSession) -> None:
+async def test_a_table_node_becomes_a_linearised_document(db_session: AsyncSession) -> None:
     await _seed(db_session)
 
     await derive_title(db_session, FakeEmbedder(), "14")
 
     documents = await _documents(db_session)
-    assert all(d["metadata"]["kind"] != "table" for d in documents)
+    table = next(d for d in documents if d["metadata"]["kind"] == "table")
+    assert "Table 14-802-3" in table["content"]
 
 
 async def test_the_embedded_content_carries_the_ancestor_prefix(db_session: AsyncSession) -> None:
@@ -176,8 +186,8 @@ async def test_re_deriving_updates_in_place_rather_than_duplicating(
     result = await derive_title(db_session, FakeEmbedder(), "14")
     second = await _documents(db_session)
 
-    assert result.documents == 2
-    assert len(second) == len(first) == 2
+    assert result.documents == 3
+    assert len(second) == len(first) == 3
     assert [d["content"] for d in second] == [d["content"] for d in first]
 
 
@@ -196,7 +206,7 @@ async def test_a_provision_removed_upstream_has_its_document_pruned(
     result = await derive_title(db_session, FakeEmbedder(), "14")
 
     assert result.pruned == 1
-    assert [d["section"] for d in await _documents(db_session)] == ["14-802"]
+    assert [d["section"] for d in await _documents(db_session)] == ["14-802", "14-802#table1"]
 
 
 async def test_the_run_report_reconciles_across_titles(db_session: AsyncSession) -> None:
@@ -205,8 +215,8 @@ async def test_the_run_report_reconciles_across_titles(db_session: AsyncSession)
     report = await derive_corpus(db_session, FakeEmbedder(), titles=["14"])
 
     assert report.reconciled is True
-    assert report.documents == 2
-    assert report.deferred_tables == 1
+    assert report.documents == 3
+    assert report.table_documents == 1
     assert report.provisions_seen == 6
     assert report.source_version == "May 25, 2026"
 

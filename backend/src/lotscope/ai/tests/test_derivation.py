@@ -32,6 +32,24 @@ def _provision(
     )
 
 
+def _table_node(
+    provision_id: str, *, parent: str, ordinal: int, table: dict[str, object]
+) -> SourceProvision:
+    return SourceProvision(
+        id=provision_id,
+        cite=provision_id,
+        kind="table",
+        title_number="14",
+        parent=parent,
+        ordinal=ordinal,
+        path=["14"],
+        heading=None,
+        text="rows",
+        source_version="May 25, 2026",
+        table_data=table,
+    )
+
+
 LONG = (
     "A provision long enough that it stands as its own document rather than folding into "
     "a parent, which needs more than one hundred and twenty characters of body text."
@@ -82,16 +100,88 @@ def test_an_unresolvable_path_token_is_skipped_rather_than_printed_bare() -> Non
     assert prefix.endswith("4-F-11 > 4-F-11#716")
 
 
-def test_table_nodes_are_deferred_and_counted_never_silently_absent() -> None:
+def test_a_table_node_embeds_its_linearised_rows() -> None:
     documents, report = derive(
         [
             _provision("14-802", kind="section", heading="Ratios", text=LONG, ordinal=1),
-            _provision("14-802#table1", kind="table", parent="14-802", text="rows", ordinal=2),
+            _table_node(
+                "14-802#table1",
+                parent="14-802",
+                ordinal=2,
+                table={
+                    "caption": "Table 14-802-3: Required Parking in Industrial Districts",
+                    "continuation_of": None,
+                    "header_rows": [],
+                    "rows": [
+                        [None, "IRMX", "ICMX I-1", "I-2/3 I-P"],
+                        ["Household Living", "3/10 units", "1/2 units", "1/2 units"],
+                    ],
+                },
+            ),
         ]
     )
 
-    assert report.deferred_tables == 1
-    assert [d.provision_id for d in documents] == ["14-802"]
+    assert report.table_documents == 1
+    assert report.skipped_continuations == 0
+    table = next(d for d in documents if d.kind == "table")
+    assert table.body == (
+        "Table 14-802-3: Required Parking in Industrial Districts\n"
+        "IRMX | ICMX I-1 | I-2/3 I-P\n"
+        "Household Living | 3/10 units | 1/2 units | 1/2 units"
+    )
+    assert report.reconciles()
+
+
+def test_a_continuation_stub_never_becomes_its_own_document() -> None:
+    documents, report = derive(
+        [
+            _provision("14-802", kind="section", heading="Ratios", text=LONG, ordinal=1),
+            _table_node(
+                "14-802#table1",
+                parent="14-802",
+                ordinal=2,
+                table={
+                    "caption": "T",
+                    "continuation_of": None,
+                    "header_rows": [],
+                    "rows": [["a", "b"]],
+                },
+            ),
+            _table_node(
+                "14-802#table2",
+                parent="14-802",
+                ordinal=3,
+                table={
+                    "caption": "T",
+                    "continuation_of": "14-802#table1",
+                    "header_rows": [],
+                    "rows": [],
+                },
+            ),
+        ]
+    )
+
+    assert report.table_documents == 1
+    assert report.skipped_continuations == 1
+    assert "14-802#table2" not in {d.provision_id for d in documents}
+    assert report.reconciles()
+
+
+def test_a_table_carrying_no_rows_at_all_is_skipped_not_embedded_empty() -> None:
+    _documents, report = derive(
+        [
+            _provision("14-802", kind="section", heading="Ratios", text=LONG, ordinal=1),
+            _table_node(
+                "14-802#table1",
+                parent="14-802",
+                ordinal=2,
+                table={"caption": None, "continuation_of": None, "header_rows": [], "rows": []},
+            ),
+        ]
+    )
+
+    assert report.table_documents == 0
+    assert report.skipped_continuations == 1
     assert report.reconciles()
 
 
@@ -224,7 +314,17 @@ def test_every_provision_lands_in_exactly_one_bucket() -> None:
             "14-802", kind="section", parent="14-800", heading="Ratios", text=LONG, ordinal=3
         ),
         _provision("14-802(1)", parent="14-802", text="Short.", ordinal=4),
-        _provision("14-802#table1", kind="table", parent="14-802", text="rows", ordinal=5),
+        _table_node(
+            "14-802#table1",
+            parent="14-802",
+            ordinal=5,
+            table={
+                "caption": "T",
+                "continuation_of": None,
+                "header_rows": [],
+                "rows": [["a", "b"]],
+            },
+        ),
         _provision("14-802#figure1", kind="figure", parent="14-802", text="click HERE", ordinal=6),
     ]
 
@@ -267,3 +367,15 @@ def test_a_single_oversized_document_still_gets_its_own_batch() -> None:
 
     assert len(batches) == 1
     assert len(batches[0]) == 1
+
+
+def test_a_heading_loses_its_trailing_footnote_marker() -> None:
+    assert clean_heading("Penalties. 9") == "Penalties"
+    assert clean_heading("SERVICE UTILITIES 142") == "SERVICE UTILITIES"
+    assert clean_heading("Ninth District Commercial Business Hour Restriction. 965.5") == (
+        "Ninth District Commercial Business Hour Restriction"
+    )
+    assert clean_heading("Fixing and Regulating Rates and Charges. 2") == (
+        "Fixing and Regulating Rates and Charges"
+    )
+    assert clean_heading("Title 14") is None
