@@ -114,6 +114,33 @@ The corpus history reads honestly as a result: excluded at Slice 1 for a stale s
 - Embedding volume rises from a few hundred chunks to tens of thousands of provisions. Voyage cost is negligible; HNSW index build time and table size are the practical considerations and are well within Postgres comfort at this scale.
 - The Quick Guide corpus remains authoritative until the eval says otherwise. Two grounding sources exist in the interim; the assistant's source attribution disambiguates them.
 
+### Addendum, 2026-08-08 — first retrieval measurement, and why §5's caution was right
+
+Title 14 is derived: **4,096 documents from 5,935 provisions**, 83 table nodes embedded, reconciliation exact. Corpus total 4,389 documents across Titles 1, 13 and 14.
+
+**The partial per-source HNSW indexes work.** With 4,389 `phillycode` rows sitting beside 39 `title14` rows, the incumbent corpus's top-5 for three fixed queries is **byte-identical** to the pre-derivation baseline. Without them, a `source`-filtered search over one global graph would have degraded silently.
+
+**Vector-only retrieval over the new corpus is currently worse than the incumbent**, and the numbers say so plainly. Rank of the provision that actually answers the question, out of 4,389:
+
+| question | correct provision | rank |
+|---|---|---|
+| dimensional standards for RSA-5 | `14-401(1)(a)(.1)#table1` (Table 14-401-1) | **37** |
+| maximum building height in CMX-3 | `14-701` Dimensional Standards | **12** |
+| off-street parking for multi-family | `14-802` Motor Vehicle Parking Ratios | 2 |
+
+Two of three fall outside any sane top-5 window. The incumbent Quick Guide corpus answers all three correctly at rank 1, because it holds one small hand-written document per district while the code holds the same facts in large tables.
+
+**This is a retrieval problem, not a coverage problem** — 27 documents mention RSA-5 and 60 mention CMX-3, including the correct tables. Two causes, both structural:
+
+1. **Linearised tables embed poorly against natural-language questions.** A 4,000-character wall of pipe-separated cells produces a vector about tables in general; no single district inside it is salient.
+2. **Chapter 14-500 (overlay districts) crowds out the base districts.** It is large, and its prose repeats district names and dimensional language, so overlay provisions dominate the top of every dimensional query.
+
+Consequences for the remaining slices, which this measurement makes concrete rather than theoretical:
+
+- **§4's hybrid cite/district lookup is a prerequisite, not an enhancement.** Vector search alone does not put the answer in reach on this corpus.
+- **§4's small-to-big expansion matters for the same reason** — a leaf that matches is not the unit that answers.
+- **§5's discipline is vindicated.** Run today, the golden-equivalence eval would say keep the Quick Guide, and it would be right. Nothing about this corpus's depth entitles it to replace a corpus that answers the question.
+
 ### Slice 2 preconditions, established by Slice 1 recon
 
 - ~~**The Table 14-802-3 caption orphan must be fixed upstream first, and it is larger than one table.**~~ **RESOLVED 2026-08-08** — fixed in phillyruleparser and the artifacts regenerated and re-copied. `ExtractedTable` now carries its fragment's column edges; continuation detection decides identity on geometry alone and re-lays the smaller fragment's cells onto the larger fragment's grid at merge time, because the larger fragment resolved more ruling lines. All four orphans merge with **uniform** grids — `14-802(4)(a)[1]#table1` 47 × 4, `F-105#table3` 52 × 3, `14-904(2)(a)(.4)#table1` 13 × 4, `14-904(2)(a)(.4)#table13` 14 × 4 — with zero cell text lost or gained. The parser gained a gate 5 (no orphaned page-break continuation, no table with mixed row widths) which is green on all 24 titles, so the property is enforced rather than merely achieved. **Table nodes are now safe for Slice 2b to embed.** The original text is struck rather than deleted so the corpus's history stays legible: `14-802(4)(a)[1]#table1` carries the caption and three header rows; its 44 data rows sit in `14-802(4)(a)[1]#table2` with `caption` and `continuation_of` both null. Investigated in phillyruleparser on 2026-08-08 (its `HANDOFF.md` §7): the root cause is that pdfplumber gave the 3-row header stub five column boundaries where the table has four, so the continuation detector's column-equality test failed — and there are **four** such orphans across Titles 4 and 14, not one. Merging them as-is yields *ragged* tables (3 rows × 5 then 44 × 4), where the correctly-linked Table 14-802-2 yields a uniform 41 × 4. A five-column header band over four-column parking data would mis-associate districts with their ratios, so the fix belongs in the parser's extract stage and was deliberately not shipped as a quick predicate change. LotScope does not patch around upstream defects, and it does not consume a half-fixed one either.
