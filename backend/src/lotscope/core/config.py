@@ -114,6 +114,9 @@ class Settings(BaseSettings):
     raw_retention_days: int = 90
     event_retention_months: int = 18
 
+    embedding_timeout_seconds: float = 120.0
+    embedding_max_retries: int = 5
+
     http_timeout_seconds: float = 30.0
     http_max_retries: int = 3
     http_backoff_seconds: float = 0.5

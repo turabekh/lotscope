@@ -28,9 +28,11 @@ class VoyageEmbedder:
         self._url = settings.voyage_url
         self._api_key = settings.voyage_api_key
         self._model = settings.embedding_model
-        self._max_retries = settings.http_max_retries
+        self._max_retries = settings.embedding_max_retries
         self._backoff = settings.http_backoff_seconds
-        self._client = httpx.AsyncClient(transport=transport, timeout=settings.http_timeout_seconds)
+        self._client = httpx.AsyncClient(
+            transport=transport, timeout=settings.embedding_timeout_seconds
+        )
 
     async def __aenter__(self) -> Self:
         return self

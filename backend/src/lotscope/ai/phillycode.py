@@ -13,6 +13,7 @@ from lotscope.ai.derivation import (
     derive,
 )
 from lotscope.ai.embeddings import Embedder
+from lotscope.ai.errors import EmbeddingError
 from lotscope.ai.retrieval import to_vector_literal
 from lotscope.core.logging import get_logger
 from lotscope.provisions.service import provisions_for_title, title_numbers
@@ -67,6 +68,7 @@ _PRUNE = text(
 
 class TitleDerivationResult(BaseModel):
     title_number: str
+    error: str | None = None
     documents: int
     table_documents: int
     skipped_continuations: int
@@ -104,6 +106,10 @@ class DerivationRunReport(BaseModel):
     @property
     def reconciled(self) -> bool:
         return all(result.reconciled for result in self.results)
+
+    @property
+    def failed_titles(self) -> list[str]:
+        return [result.title_number for result in self.results if result.error]
 
 
 def _metadata(document: DerivedDocument, derivation_version: str) -> str:
@@ -217,18 +223,41 @@ async def derive_corpus(
     pace_seconds: float = 0.0,
 ) -> DerivationRunReport:
     wanted = titles if titles is not None else await title_numbers(session, market_code)
-    results = [
-        await derive_title(
-            session,
-            embedder,
-            title_number,
-            market_code=market_code,
-            derivation_version=derivation_version,
-            max_batch_chars=max_batch_chars,
-            pace_seconds=pace_seconds,
-        )
-        for title_number in wanted
-    ]
+    results: list[TitleDerivationResult] = []
+    for title_number in wanted:
+        try:
+            result = await derive_title(
+                session,
+                embedder,
+                title_number,
+                market_code=market_code,
+                derivation_version=derivation_version,
+                max_batch_chars=max_batch_chars,
+                pace_seconds=pace_seconds,
+            )
+            await session.commit()
+        except EmbeddingError as error:
+            await session.rollback()
+            logger.error(
+                "phillycode_derivation_title_failed",
+                title_number=title_number,
+                error=str(error),
+            )
+            result = TitleDerivationResult(
+                title_number=title_number,
+                error=str(error),
+                documents=0,
+                table_documents=0,
+                skipped_continuations=0,
+                skipped_figures=0,
+                skipped_notes=0,
+                skipped_containers=0,
+                folded_leaves=0,
+                pruned=0,
+                provisions_seen=0,
+                reconciled=False,
+            )
+        results.append(result)
     source_version = None
     for title_number in wanted:
         rows = await provisions_for_title(session, market_code, title_number)

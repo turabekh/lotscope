@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.ai.errors import EmbeddingError
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
 from lotscope.ai.phillycode import derive_corpus, derive_title
 
@@ -236,3 +237,93 @@ async def test_the_incumbent_title14_source_is_never_touched(db_session: AsyncSe
         text("SELECT count(*) FROM document WHERE source = 'title14'")
     )
     assert remaining == 1
+
+
+class FailingEmbedder:
+    def __init__(self, fail_on_title: str) -> None:
+        self.fail_on_title = fail_on_title
+        self.seen: list[str] = []
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        self.seen.extend(texts)
+        if any(f"Title {self.fail_on_title} " in text for text in texts):
+            raise EmbeddingError("Request failed after retries")
+        return [[0.01] * EMBEDDING_DIMENSIONS for _ in texts]
+
+
+async def _seed_second_title(session: AsyncSession) -> None:
+    await session.execute(
+        _INSERT,
+        {
+            "market_code": "phl",
+            "id": "15",
+            "cite": "15",
+            "kind": "title",
+            "title_number": "15",
+            "parent": None,
+            "ordinal": 1,
+            "path": json.dumps(["15"]),
+            "heading": "Title 15",
+            "text": "",
+            "table_data": None,
+        },
+    )
+    await session.execute(
+        _INSERT,
+        {
+            "market_code": "phl",
+            "id": "15-100",
+            "cite": "15-100",
+            "kind": "chapter",
+            "title_number": "15",
+            "parent": "15",
+            "ordinal": 2,
+            "path": json.dumps(["15", "15-100"]),
+            "heading": "STREETS",
+            "text": LONG,
+            "table_data": None,
+        },
+    )
+    await session.flush()
+
+
+async def test_a_failing_title_does_not_discard_the_titles_already_embedded(
+    db_session: AsyncSession,
+) -> None:
+    await _seed(db_session)
+    await _seed_second_title(db_session)
+
+    report = await derive_corpus(
+        db_session, FailingEmbedder(fail_on_title="15"), titles=["14", "15"]
+    )
+
+    assert report.failed_titles == ["15"]
+    assert report.reconciled is False
+    succeeded = next(r for r in report.results if r.title_number == "14")
+    assert succeeded.error is None
+    assert succeeded.documents == 3
+    assert [d["metadata"]["title_number"] for d in await _documents(db_session)] == ["14"] * 3
+
+
+async def test_a_failing_title_writes_nothing_of_its_own(db_session: AsyncSession) -> None:
+    await _seed(db_session)
+    await _seed_second_title(db_session)
+    await db_session.commit()
+
+    await derive_corpus(db_session, FailingEmbedder(fail_on_title="15"), titles=["15", "14"])
+
+    titles = {d["metadata"]["title_number"] for d in await _documents(db_session)}
+    assert titles == {"14"}
+
+
+async def test_the_failure_is_named_in_the_report_not_swallowed(
+    db_session: AsyncSession,
+) -> None:
+    await _seed_second_title(db_session)
+
+    report = await derive_corpus(db_session, FailingEmbedder(fail_on_title="15"), titles=["15"])
+
+    failed = report.results[0]
+    assert failed.error == "Request failed after retries"
+    assert failed.documents == 0
+    assert failed.reconciled is False
