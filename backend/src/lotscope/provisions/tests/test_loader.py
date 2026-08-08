@@ -219,6 +219,63 @@ async def test_an_artifact_file_missing_for_a_summarised_title_fails_the_run(
     assert await _rows(db_session) == []
 
 
+def _apply_toc_exception(artifacts: Path, title_number: str) -> None:
+    path = artifacts / f"qa_title_{title_number}.json"
+    qa = json.loads(path.read_text())
+    qa["exceptions_applied"] = [
+        {
+            "approved_date": "July 27, 2022",
+            "bill_number": "210740-A",
+            "body_page": 493,
+            "cite": "8.1-999",
+            "footnotes": ["1247", "1248", "1249"],
+            "reason": "the source's table of contents was never regenerated",
+            "title_number": title_number,
+            "toc_page": 328,
+        }
+    ]
+    path.write_text(json.dumps(qa))
+
+
+async def test_a_title_loaded_under_a_toc_exception_carries_it_in_the_report(
+    db_session: AsyncSession, artifacts: Path
+) -> None:
+    _apply_toc_exception(artifacts, "8.1")
+
+    report = await load_provisions(db_session, artifacts)
+
+    excepted = next(result for result in report.results if result.title_number == "8.1")
+    assert excepted.loaded is True
+    assert [item.cite for item in excepted.exceptions] == ["8.1-999"]
+    assert excepted.exceptions[0].bill_number == "210740-A"
+    unexcepted = next(result for result in report.results if result.title_number == "7")
+    assert unexcepted.exceptions == []
+
+
+async def test_a_qa_file_without_the_exceptions_field_loads_unchanged(
+    db_session: AsyncSession, artifacts: Path
+) -> None:
+    report = await load_provisions(db_session, artifacts)
+
+    assert all(result.exceptions == [] for result in report.results)
+    assert report.total_provisions == 10
+
+
+async def test_an_exception_missing_its_evidence_is_refused(
+    db_session: AsyncSession, artifacts: Path
+) -> None:
+    path = artifacts / "qa_title_8.1.json"
+    qa = json.loads(path.read_text())
+    qa["exceptions_applied"] = [{"cite": "8.1-999", "title_number": "8.1"}]
+    path.write_text(json.dumps(qa))
+
+    with pytest.raises(ProvisionLoadError) as error:
+        await load_provisions(db_session, artifacts)
+
+    assert "qa_title_8.1.json" in str(error.value)
+    assert await _rows(db_session) == []
+
+
 async def test_a_single_title_can_be_loaded_without_disturbing_the_others(
     db_session: AsyncSession, artifacts: Path
 ) -> None:

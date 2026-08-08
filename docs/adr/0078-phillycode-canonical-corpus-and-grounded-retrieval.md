@@ -95,6 +95,16 @@ Measured against the real artifacts in `backend/data/phillycode/` before any cod
 - **Title 9's exclusion costs 7,226 provisions, 24.7% of the corpus**, caused by a single gate-1 TOC failure: 518 sections emitted against 519 listed, missing §9-3010. Gates 2 and 3 pass. The fix belongs to phillyruleparser and is that project's highest-leverage open item.
 - **Titles 5, 8, 4.1 and 4.2 are repealed stubs** holding two records each — a title root and an orphan history node. They pass the gates and load harmlessly.
 
+### Addendum, 2026-08-08 — Title 9 admitted under an evidenced exception
+
+Title 9 was excluded at Slice 1 because its QA gate 1 failed, and the deviation above records that as costing 7,226 provisions. The cause has since been established from the source itself and the title now loads.
+
+**§ 9-3010 does not exist in current Philadelphia law.** Bill No. 210740-A (approved July 27, 2022) deleted the former § 9-3007 and renumbered the sections after it; footnotes 1247, 1248 and 1249 on page 493 record the deletion and both renumberings, and the body prints the post-2022 numbering. Title 9's own table of contents, on page 328, was never regenerated and still lists the pre-2022 sequence ending at a § 9-3010 with no body. The deleted section's caption appears exactly once in Title 9 — in that table of contents — and nowhere in the body.
+
+The parser was correct and the gate was correctly reporting that the two sets differ. phillyruleparser now carries a conditional, evidence-carrying exception record: an entry excuses a cite only while the table of contents still lists it **and** the body still lacks it, and fails the gate as *stale* the moment either stops being true. The exception is therefore a re-checked claim about the source, not a suppression. It surfaces in `qa_title_9.json` as an `exceptions_applied` block, which this repository's loader parses and reports on the title's load line.
+
+The corpus history reads honestly as a result: excluded at Slice 1 for a stale source table of contents, admitted once a mechanism existed to record *why* — not by lowering the gate. Corpus total is now **29,297 provisions across 24 titles**, and the deviation above stands as the record of the interim state.
+
 ## Consequences
 
 - The assistant's zoning answers can cite the code itself, at provision granularity, with page-level provenance and a stated `source_version` — a claim no incumbent land-intelligence product makes for Philadelphia.

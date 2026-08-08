@@ -211,6 +211,7 @@ async def load_provisions(
                 loaded=True,
                 provision_count=len(rows),
                 pruned_count=pruned,
+                exceptions=qa_by_title[title_number].exceptions_applied,
             )
         )
 

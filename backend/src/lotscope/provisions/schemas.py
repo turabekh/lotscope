@@ -49,6 +49,19 @@ class TitleAnomaly(BaseModel):
     detail: str
 
 
+class TocException(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title_number: str
+    cite: str
+    bill_number: str
+    approved_date: str
+    footnotes: list[str]
+    toc_page: int
+    body_page: int
+    reason: str
+
+
 class TitleQa(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -56,6 +69,7 @@ class TitleQa(BaseModel):
     passed: bool
     gates: list[TitleGate]
     anomalies: list[TitleAnomaly] = Field(default_factory=list)
+    exceptions_applied: list[TocException] = Field(default_factory=list)
 
     def failing_gate(self) -> TitleGate | None:
         by_name = {gate.name: gate for gate in self.gates}
@@ -96,6 +110,7 @@ class TitleLoadResult(BaseModel):
     loaded: bool
     provision_count: int = 0
     pruned_count: int = 0
+    exceptions: list[TocException] = Field(default_factory=list)
     excluded_gate: str | None = None
     excluded_value: str | None = None
     excluded_detail: str | None = None
