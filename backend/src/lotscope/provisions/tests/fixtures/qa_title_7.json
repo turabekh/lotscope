@@ -1,0 +1,25 @@
+{
+ "anomalies": [],
+ "gates": [
+  {
+   "detail": "missing=[] extra=[] duplicates=[].",
+   "name": "1_toc_reconciliation",
+   "passed": true,
+   "value": "2 sections emitted, 2 listed in the title's TOC"
+  },
+  {
+   "detail": "0 orphan reference line(s); first: []",
+   "name": "2_coverage",
+   "passed": true,
+   "value": "99.9800% of reference characters land in a node (threshold 99.5%)"
+  },
+  {
+   "detail": "0 numbering irregularities recorded",
+   "name": "3_numbering_sanity",
+   "passed": true,
+   "value": "0 ordering failure(s)"
+  }
+ ],
+ "passed": true,
+ "title_number": "7"
+}
