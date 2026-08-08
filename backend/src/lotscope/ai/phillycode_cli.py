@@ -17,14 +17,20 @@ def render(report: DerivationRunReport) -> str:
         f"  documents:  {report.documents}",
         f"  provisions: {report.provisions_seen} seen, "
         f"{'all accounted for' if report.reconciled else 'RECONCILIATION FAILED'}",
-        f"  {report.deferred_tables} table nodes deferred pending Slice 2b",
+        f"  {report.table_documents} table nodes embedded as linearised rows",
     ]
     for result in report.results:
         pruned = f", {result.pruned} pruned" if result.pruned else ""
+        skipped = (
+            result.skipped_figures
+            + result.skipped_notes
+            + result.skipped_containers
+            + result.skipped_continuations
+        )
         lines.append(
             f"  title {result.title_number}: {result.documents} documents"
-            f" (folded {result.folded_leaves}, deferred {result.deferred_tables},"
-            f" skipped {result.skipped_figures + result.skipped_notes + result.skipped_containers})"
+            f" (folded {result.folded_leaves}, tables {result.table_documents},"
+            f" skipped {skipped})"
             f"{pruned}"
         )
     return "\n".join(lines)

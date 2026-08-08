@@ -1,10 +1,11 @@
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 PHILLYCODE_SOURCE = "phillycode"
-DERIVATION_VERSION = "d1"
+DERIVATION_VERSION = "d2"
 
-DEFERRED_KINDS = frozenset({"table"})
+TABLE_KIND = "table"
 SKIPPED_KINDS = frozenset({"figure"})
 FOLDABLE_KINDS = frozenset({"subsection"})
 FOLD_UNDER_CHARS = 120
@@ -16,6 +17,7 @@ _PROVENANCE_NOTE_RE = re.compile(
 )
 _RECENT_AMENDMENT_PREFIX = "Recent Amendment"
 _TRAILING_PERIOD_RE = re.compile(r"\.\s*$")
+_HEADING_MARKER_RE = re.compile(r"\s+\d{1,4}(?:\.\d{1,2})?\s*$")
 _TITLE_ECHO_RE = re.compile(r"^Title\s+[\d.]+$", re.IGNORECASE)
 
 
@@ -31,6 +33,7 @@ class SourceProvision:
     heading: str | None
     text: str | None
     source_version: str
+    table_data: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -53,7 +56,8 @@ class DerivedDocument:
 
 @dataclass
 class DerivationReport:
-    deferred_tables: int = 0
+    table_documents: int = 0
+    skipped_continuations: int = 0
     skipped_figures: int = 0
     skipped_notes: int = 0
     skipped_containers: int = 0
@@ -65,7 +69,7 @@ class DerivationReport:
     @property
     def accounted(self) -> int:
         return (
-            self.deferred_tables
+            self.skipped_continuations
             + self.skipped_figures
             + self.skipped_notes
             + self.skipped_containers
@@ -87,10 +91,11 @@ def is_provenance_note(text: str) -> bool:
 def clean_heading(heading: str | None) -> str | None:
     if heading is None:
         return None
-    stripped = _TRAILING_PERIOD_RE.sub("", heading.strip())
-    if not stripped or _TITLE_ECHO_RE.match(stripped):
+    stripped = heading.strip()
+    if _TITLE_ECHO_RE.match(stripped):
         return None
-    return stripped
+    stripped = _TRAILING_PERIOD_RE.sub("", _HEADING_MARKER_RE.sub("", stripped))
+    return stripped or None
 
 
 def build_prefix(provision: SourceProvision, ancestors: dict[str, SourceProvision]) -> str:
@@ -105,7 +110,24 @@ def build_prefix(provision: SourceProvision, ancestors: dict[str, SourceProvisio
     return " > ".join(parts)
 
 
+def linearise_table(table: dict[str, Any]) -> str:
+    def render(row: list[str | None]) -> str:
+        return " | ".join((cell or "").strip() for cell in row).strip(" |")
+
+    lines: list[str] = []
+    caption = table.get("caption")
+    if caption:
+        lines.append(str(caption).strip())
+    for row in list(table.get("header_rows") or []) + list(table.get("rows") or []):
+        rendered = render(row)
+        if rendered:
+            lines.append(rendered)
+    return "\n".join(lines)
+
+
 def body_for(provision: SourceProvision, folded: list[SourceProvision]) -> str:
+    if provision.kind == TABLE_KIND:
+        return linearise_table(provision.table_data or {})
     pieces: list[str] = []
     heading = clean_heading(provision.heading)
     if heading:
@@ -120,9 +142,13 @@ def body_for(provision: SourceProvision, folded: list[SourceProvision]) -> str:
 
 
 def _emits_document(provision: SourceProvision, is_leaf: bool, report: DerivationReport) -> bool:
-    if provision.kind in DEFERRED_KINDS:
-        report.deferred_tables += 1
-        return False
+    if provision.kind == TABLE_KIND:
+        table = provision.table_data or {}
+        if table.get("continuation_of") or not linearise_table(table):
+            report.skipped_continuations += 1
+            return False
+        report.table_documents += 1
+        return True
     if provision.kind in SKIPPED_KINDS:
         report.skipped_figures += 1
         return False
@@ -157,7 +183,7 @@ def derive(provisions: list[SourceProvision]) -> tuple[list[DerivedDocument], De
     for provision in ordered:
         if emitting[provision.id]:
             continue
-        if provision.kind in DEFERRED_KINDS or provision.kind in SKIPPED_KINDS:
+        if provision.kind == TABLE_KIND or provision.kind in SKIPPED_KINDS:
             continue
         if provision.id in children:
             continue
