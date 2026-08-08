@@ -10,10 +10,21 @@ const unevaluated = computed(
   () => subdivision.value !== null && subdivision.value.is_conforming === null,
 )
 
+const meetsMinimums = computed(
+  () =>
+    subdivision.value !== null &&
+    subdivision.value.is_conforming === true &&
+    !subdivision.value.can_subdivide &&
+    !subdivision.value.needs_consolidation,
+)
+
 const show = computed(
   () =>
     subdivision.value !== null &&
-    (subdivision.value.can_subdivide || subdivision.value.needs_consolidation || unevaluated.value),
+    (subdivision.value.can_subdivide ||
+      subdivision.value.needs_consolidation ||
+      unevaluated.value ||
+      meetsMinimums.value),
 )
 
 const style = computed(() => {
@@ -21,6 +32,9 @@ const style = computed(() => {
   if (value === null) return { label: '', color: 'blue-grey-6', icon: 'crop_free' }
   if (unevaluated.value) {
     return { label: 'Not evaluated', color: 'blue-grey-5', icon: 'help_outline' }
+  }
+  if (meetsMinimums.value) {
+    return { label: 'Too small to split', color: 'grey-7', icon: 'do_not_disturb_on' }
   }
   if (value.can_subdivide) {
     return { label: `Splits into ${value.max_lots} lots`, color: 'positive', icon: 'call_split' }
