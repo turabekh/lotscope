@@ -115,6 +115,7 @@ class ProvisionRead(BaseModel):
     path: list[str]
     heading: str | None
     text: str | None
+    refs: list[str]
     table_data: dict[str, Any] | None
     source_version: str
 
