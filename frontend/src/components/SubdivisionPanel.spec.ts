@@ -84,6 +84,25 @@ describe('SubdivisionPanel', () => {
     expect(wrapper.text()).not.toContain('Not evaluated')
   })
 
+  it('reports a lot that meets the minimums but cannot be split', () => {
+    const wrapper = render(
+      subdivision({
+        can_subdivide: false,
+        needs_consolidation: false,
+        max_lots: 1,
+        is_conforming: true,
+        min_lot_area_sqft: 1440,
+        min_lot_width_ft: 16,
+        reasons: ['Lot meets the district minimums but is not large enough to split.'],
+      }),
+    )
+
+    expect(wrapper.text()).toContain('Too small to split')
+    expect(wrapper.text()).toContain('not large enough to split')
+    expect(wrapper.text()).not.toContain('Not evaluated')
+    expect(wrapper.text()).not.toContain('a gap in what we hold')
+  })
+
   it('renders nothing when there is no subdivision result at all', () => {
     const wrapper = render(null)
 
