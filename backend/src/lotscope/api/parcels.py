@@ -417,6 +417,10 @@ async def parcel_underwriting(
     session: SessionDep,
     current_user: CurrentUserDep,
     acquisition_price: Annotated[float | None, Query(ge=0)] = None,
+    construction_cost_per_sqft: Annotated[float | None, Query(gt=0, le=2000)] = None,
+    soft_cost_pct: Annotated[float | None, Query(ge=0, le=1)] = None,
+    selling_cost_pct: Annotated[float | None, Query(ge=0, le=1)] = None,
+    target_margin: Annotated[float | None, Query(ge=0, lt=1)] = None,
 ) -> dict[str, Any]:
     detail = await get_parcel_detail(session, parcel_number)
     if detail is None:
@@ -433,6 +437,10 @@ async def parcel_underwriting(
         buildability=buildability,
         land_value=valuation.estimate if valuation is not None else None,
         acquisition_price=acquisition_price,
+        construction_cost_per_sqft=construction_cost_per_sqft,
+        soft_cost_pct=soft_cost_pct,
+        selling_cost_pct=selling_cost_pct,
+        target_margin=target_margin,
     )
     return {
         "parcel_number": parcel_number,
@@ -466,6 +474,7 @@ async def parcel_underwriting(
                     "cost_multiplier": cell.cost_multiplier,
                     "margin": cell.margin,
                     "profit": cell.profit,
+                    "infeasible": cell.infeasible,
                 }
                 for cell in analysis.sensitivity.cells
             ],

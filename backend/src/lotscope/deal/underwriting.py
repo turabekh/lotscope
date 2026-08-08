@@ -37,16 +37,31 @@ async def build_underwriting(
     buildability: BuildabilityResult | None,
     land_value: float | None,
     acquisition_price: float | None = None,
+    construction_cost_per_sqft: float | None = None,
+    soft_cost_pct: float | None = None,
+    selling_cost_pct: float | None = None,
+    target_margin: float | None = None,
 ) -> UnderwritingAnalysis:
     computed_at = datetime.now(UTC)
     settings = get_settings()
 
     profile_overrides = await default_assumptions(session, owner_id)
     market_overrides = await market_overrides_for(session, market_code)
+    scenario_overrides = {
+        key: value
+        for key, value in {
+            "construction_cost_per_sqft": construction_cost_per_sqft,
+            "soft_cost_pct": soft_cost_pct,
+            "selling_cost_pct": selling_cost_pct,
+            "target_margin": target_margin,
+        }.items()
+        if value is not None
+    }
     assumption_set = build_assumption_set(
         settings=settings,
         market_overrides=market_overrides,
         user_overrides=profile_overrides,
+        scenario_overrides=scenario_overrides,
     )
 
     envelope = await compute_envelope(session, parcel_number)
@@ -67,10 +82,18 @@ async def build_underwriting(
         land_value_is_assessed=land_value is None and market_value is not None,
     )
     assumptions: DealAssumptions = _assumptions(
-        construction_cost_per_sqft=profile_overrides.get("construction_cost_per_sqft"),
-        soft_cost_pct=profile_overrides.get("soft_cost_pct"),
-        selling_cost_pct=profile_overrides.get("selling_cost_pct"),
-        target_margin=profile_overrides.get("target_margin"),
+        construction_cost_per_sqft=construction_cost_per_sqft
+        if construction_cost_per_sqft is not None
+        else profile_overrides.get("construction_cost_per_sqft"),
+        soft_cost_pct=soft_cost_pct
+        if soft_cost_pct is not None
+        else profile_overrides.get("soft_cost_pct"),
+        selling_cost_pct=selling_cost_pct
+        if selling_cost_pct is not None
+        else profile_overrides.get("selling_cost_pct"),
+        target_margin=target_margin
+        if target_margin is not None
+        else profile_overrides.get("target_margin"),
         default_unit_sqft=profile_overrides.get("default_unit_sqft"),
         max_unit_sqft=profile_overrides.get("max_unit_sqft"),
         market_overrides=market_overrides,

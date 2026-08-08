@@ -42,9 +42,11 @@ def build_assumption_set(
     settings: Any,
     market_overrides: dict[str, Any] | None = None,
     user_overrides: dict[str, float] | None = None,
+    scenario_overrides: dict[str, float] | None = None,
 ) -> AssumptionSet:
     overrides = market_overrides or {}
     user = user_overrides or {}
+    scenario = scenario_overrides or {}
 
     def _resolve(
         name: str, group: str, unit: str, platform: float | None = None, **kw: Any
@@ -56,6 +58,7 @@ def build_assumption_set(
             platform_default=platform,
             market_default=overrides.get(name),
             user_override=user.get(name),
+            scenario_override=scenario.get(name),
             **kw,
         )
 

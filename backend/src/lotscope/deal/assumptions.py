@@ -88,9 +88,11 @@ def resolve(
     market_default: float | None = None,
     parcel_derived: float | None = None,
     user_override: float | None = None,
+    scenario_override: float | None = None,
     limitations: str | None = None,
 ) -> Assumption:
     for candidate, origin in (
+        (scenario_override, "scenario_override"),
         (user_override, "user_override"),
         (parcel_derived, "derived"),
         (market_default, "market_default"),

@@ -11,6 +11,7 @@ DefaultOrigin = Literal[
     "platform_default",
     "market_default",
     "user_override",
+    "scenario_override",
 ]
 
 VERIFIED_SOURCE_LABELS: frozenset[str] = frozenset(
