@@ -105,6 +105,19 @@ class QaSummary(BaseModel):
         return [entry.title for entry in self.titles]
 
 
+class ProvisionRead(BaseModel):
+    id: str
+    cite: str
+    kind: str
+    title_number: str
+    parent: str | None
+    ordinal: int
+    path: list[str]
+    heading: str | None
+    text: str | None
+    source_version: str
+
+
 class TitleLoadResult(BaseModel):
     title_number: str
     loaded: bool
