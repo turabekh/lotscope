@@ -69,6 +69,11 @@ function reset(): void {
           icon="insights"
         >
           {{ deal.deal_score }}/100
+          <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
+            0-100, from the modelled margin against the target margin. Buying exactly at the max
+            allowable offer scores 50 — the target is met, with no cushion. Higher means more margin
+            than the target requires.
+          </q-tooltip>
         </q-chip>
       </div>
 
@@ -112,6 +117,10 @@ function reset(): void {
           <div class="metric">
             <div class="metric-label">ROI</div>
             <div class="metric-value">{{ percent(deal.roi) }}</div>
+            <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
+              Profit divided by acquisition, construction and soft costs. Selling costs are
+              subtracted from profit but excluded from the basis.
+            </q-tooltip>
           </div>
         </div>
 

@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.config import get_settings
+from lotscope.core.logging import get_logger
 from lotscope.deal.analysis import DealAssumptions, DealInputs, analyze_deal
 from lotscope.deal.scenarios import ScenarioInputs, build_scenarios
 from lotscope.deal.schemas import (
@@ -28,10 +29,51 @@ _MARKET_OVERRIDES_SQL = text(
 )
 
 
+CANONICAL_ASSUMPTION_KEYS = frozenset(
+    {
+        "construction_cost_per_sqft",
+        "soft_cost_pct",
+        "selling_cost_pct",
+        "target_margin",
+        "default_unit_sqft",
+        "max_unit_sqft",
+    }
+)
+_CALIBRATION_FLAG = "calibrated"
+
+logger = get_logger(__name__)
+
+
 def assumptions_source(overrides: object) -> str:
-    if isinstance(overrides, dict) and bool(overrides.get("calibrated")):
+    if isinstance(overrides, dict) and bool(overrides.get(_CALIBRATION_FLAG)):
         return "calibrated"
     return "market_default"
+
+
+def normalize_overrides(raw: object) -> dict[str, float]:
+    if not isinstance(raw, dict):
+        return {}
+    resolved: dict[str, float] = {}
+    for key, value in raw.items():
+        if key == _CALIBRATION_FLAG:
+            continue
+        if key not in CANONICAL_ASSUMPTION_KEYS:
+            logger.warning("unknown_market_assumption_override", override_key=key)
+            continue
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            logger.warning("non_numeric_market_assumption_override", override_key=key)
+            continue
+        resolved[key] = float(value)
+    return resolved
+
+
+def market_code_of(parcel_number: str) -> str:
+    return parcel_number.split(":", 1)[0] if ":" in parcel_number else "phl"
+
+
+async def market_overrides_for(session: AsyncSession, market_code: str) -> dict[str, float]:
+    raw = await session.scalar(_MARKET_OVERRIDES_SQL, {"market_code": market_code})
+    return normalize_overrides(raw)
 
 
 def _as_float(value: Any) -> float | None:
@@ -40,23 +82,39 @@ def _as_float(value: Any) -> float | None:
 
 def _assumptions(
     *,
-    construction_cost_per_sqft: float | None,
-    soft_cost_pct: float | None,
-    selling_cost_pct: float | None,
-    target_margin: float | None,
+    construction_cost_per_sqft: float | None = None,
+    soft_cost_pct: float | None = None,
+    selling_cost_pct: float | None = None,
+    target_margin: float | None = None,
+    default_unit_sqft: float | None = None,
+    max_unit_sqft: float | None = None,
+    market_overrides: dict[str, float] | None = None,
 ) -> DealAssumptions:
     settings = get_settings()
+    market = market_overrides or {}
+
+    def resolve(requested: float | None, key: str, platform: float) -> float:
+        if requested is not None:
+            return requested
+        if key in market:
+            return market[key]
+        return platform
+
     return DealAssumptions(
-        construction_cost_per_sqft=construction_cost_per_sqft
-        if construction_cost_per_sqft is not None
-        else settings.deal_construction_cost_per_sqft,
-        soft_cost_pct=soft_cost_pct if soft_cost_pct is not None else settings.deal_soft_cost_pct,
-        selling_cost_pct=selling_cost_pct
-        if selling_cost_pct is not None
-        else settings.deal_selling_cost_pct,
-        target_margin=target_margin if target_margin is not None else settings.deal_target_margin,
-        default_unit_sqft=settings.deal_default_unit_sqft,
-        max_unit_sqft=settings.deal_max_unit_sqft,
+        construction_cost_per_sqft=resolve(
+            construction_cost_per_sqft,
+            "construction_cost_per_sqft",
+            settings.deal_construction_cost_per_sqft,
+        ),
+        soft_cost_pct=resolve(soft_cost_pct, "soft_cost_pct", settings.deal_soft_cost_pct),
+        selling_cost_pct=resolve(
+            selling_cost_pct, "selling_cost_pct", settings.deal_selling_cost_pct
+        ),
+        target_margin=resolve(target_margin, "target_margin", settings.deal_target_margin),
+        default_unit_sqft=resolve(
+            default_unit_sqft, "default_unit_sqft", settings.deal_default_unit_sqft
+        ),
+        max_unit_sqft=resolve(max_unit_sqft, "max_unit_sqft", settings.deal_max_unit_sqft),
     )
 
 
@@ -138,6 +196,7 @@ async def analyze_parcel_scenarios(
         soft_cost_pct=soft_cost_pct,
         selling_cost_pct=selling_cost_pct,
         target_margin=target_margin,
+        market_overrides=await market_overrides_for(session, market_code_of(parcel_number)),
     )
     analysis = build_scenarios(
         ScenarioInputs(
@@ -238,6 +297,7 @@ async def build_deal(
         soft_cost_pct=soft_cost_pct,
         selling_cost_pct=selling_cost_pct,
         target_margin=target_margin,
+        market_overrides=await market_overrides_for(session, market_code_of(parcel_number)),
     )
     analysis = analyze_deal(
         DealInputs(
@@ -254,8 +314,9 @@ async def build_deal(
         assumptions,
     )
 
-    market_code = parcel_number.split(":", 1)[0] if ":" in parcel_number else "phl"
-    overrides = await session.scalar(_MARKET_OVERRIDES_SQL, {"market_code": market_code})
+    overrides = await session.scalar(
+        _MARKET_OVERRIDES_SQL, {"market_code": market_code_of(parcel_number)}
+    )
 
     return DealResult(
         parcel_number=parcel_number,

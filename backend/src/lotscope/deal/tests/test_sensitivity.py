@@ -22,9 +22,14 @@ def _assumptions() -> DealAssumptions:
     )
 
 
-def _inputs(*, comps: list[float] | None = None, buildable: float | None = 2400.0) -> DealInputs:
+def _inputs(
+    *,
+    comps: list[float] | None = None,
+    buildable: float | None = 2400.0,
+    units: int | None = 2,
+) -> DealInputs:
     return DealInputs(
-        units=2,
+        units=units,
         buildable_area_sqft=buildable,
         estimated_floors=3,
         finished_comp_prices=[1_150_000.0, 1_180_000.0] if comps is None else comps,
@@ -72,11 +77,20 @@ def test_no_comps_yields_no_grid_and_says_why() -> None:
     assert "comparable" in grid.unavailable_reason
 
 
-def test_no_buildable_area_yields_no_grid_and_says_why() -> None:
+def test_a_deal_modelled_from_the_default_unit_size_still_gets_a_grid() -> None:
     grid = build_grid(_inputs(buildable=None), _assumptions(), computed_at=_NOW)
+
+    assert grid.available
+    assert grid.unavailable_reason is None
+    assert any(cell.margin is not None for cell in grid.cells)
+
+
+def test_no_development_programme_yields_no_grid_and_says_why() -> None:
+    grid = build_grid(_inputs(units=None, buildable=None), _assumptions(), computed_at=_NOW)
+
     assert not grid.available
     assert grid.unavailable_reason is not None
-    assert "buildable area" in grid.unavailable_reason
+    assert "by-right unit count" in grid.unavailable_reason
 
 
 def test_an_unavailable_grid_never_reports_zero_margin_cells() -> None:

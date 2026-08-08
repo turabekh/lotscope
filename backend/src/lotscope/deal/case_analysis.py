@@ -37,6 +37,7 @@ def _apply(inputs: DealInputs, assumptions: DealAssumptions, deltas: CaseDeltas)
         finished_comp_prices=adjusted_prices,
         land_value=inputs.land_value,
         acquisition_price=inputs.acquisition_price,
+        land_value_is_assessed=inputs.land_value_is_assessed,
     )
     adjusted_assumptions = DealAssumptions(
         construction_cost_per_sqft=assumptions.construction_cost_per_sqft
