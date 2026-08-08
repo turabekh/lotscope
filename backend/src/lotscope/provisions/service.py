@@ -1,4 +1,4 @@
-from sqlalchemy import Select, distinct, select
+from sqlalchemy import Select, Text, cast, distinct, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.provisions.models import CodeProvision
@@ -112,3 +112,63 @@ async def refs_of(
         .order_by(CodeProvision.title_number, CodeProvision.ordinal, CodeProvision.id),
     )
     return [row for row in resolved if row.id != provision_id]
+
+
+async def find_mentioning(
+    session: AsyncSession,
+    market_code: str,
+    terms: list[str],
+    *,
+    title_numbers: list[str] | None = None,
+    limit: int = 20,
+) -> list[ProvisionRead]:
+    if not terms:
+        return []
+    matches = or_(
+        CodeProvision.cite.in_(terms),
+        *[CodeProvision.text.ilike(f"%{term}%") for term in terms],
+        *[cast(CodeProvision.table_data, Text).ilike(f"%{term}%") for term in terms],
+    )
+    statement = (
+        select(CodeProvision)
+        .where(CodeProvision.market_code == market_code, matches)
+        .order_by(
+            CodeProvision.cite.in_(terms).desc(),
+            CodeProvision.ordinal,
+        )
+        .limit(limit)
+    )
+    if title_numbers:
+        statement = statement.where(CodeProvision.title_number.in_(title_numbers))
+    return await _fetch(session, statement)
+
+
+async def search_ranked(
+    session: AsyncSession,
+    market_code: str,
+    query: str,
+    *,
+    title_numbers: list[str] | None = None,
+    limit: int = 12,
+) -> list[ProvisionRead]:
+    if not query.strip():
+        return []
+    document = func.to_tsvector(
+        "english",
+        func.concat_ws(
+            " ",
+            CodeProvision.text,
+            CodeProvision.heading,
+            cast(CodeProvision.table_data["caption"], Text),
+        ),
+    )
+    tsquery = func.plainto_tsquery("english", query)
+    statement = (
+        select(CodeProvision)
+        .where(CodeProvision.market_code == market_code, document.op("@@")(tsquery))
+        .order_by(func.ts_rank(document, tsquery).desc(), CodeProvision.ordinal)
+        .limit(limit)
+    )
+    if title_numbers:
+        statement = statement.where(CodeProvision.title_number.in_(title_numbers))
+    return await _fetch(session, statement)
