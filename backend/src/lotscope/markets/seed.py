@@ -42,7 +42,7 @@ HARRISBURG: dict[str, Any] = {
     "recorder_url_template": (
         "https://www.dauphinpropertyinfo.org/search/CommonSearch.aspx?mode=REALPROP"
     ),
-    "deal_assumption_overrides": {"deal_construction_cost_per_sqft": 145.0},
+    "deal_assumption_overrides": {"construction_cost_per_sqft": 145.0},
     "source_config": {
         "arcgis_services_url": (
             "https://services2.arcgis.com/EEtiX55QzkHKYQKY/arcgis/rest/services"

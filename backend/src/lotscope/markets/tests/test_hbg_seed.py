@@ -15,5 +15,5 @@ def test_harrisburg_seed_row_is_a_pilot_in_2272() -> None:
     assert HARRISBURG["url_slug"] == "harrisburg"
     assert HARRISBURG["local_srid"] == 2272
     assert HARRISBURG["launch_status"] == "pilot"
-    assert HARRISBURG["deal_assumption_overrides"]["deal_construction_cost_per_sqft"] == 145.0
+    assert HARRISBURG["deal_assumption_overrides"]["construction_cost_per_sqft"] == 145.0
     assert HARRISBURG["source_config"]["municipality_filter"] == "CITY OF HARRISBURG"

@@ -8,7 +8,7 @@ from lotscope.deal.analysis import DealAssumptions, DealInputs
 from lotscope.deal.case_analysis import CaseAnalysis, analyze_cases
 from lotscope.deal.inventory import build_assumption_set, mao_disclosure
 from lotscope.deal.sensitivity import SensitivityGrid, build_grid
-from lotscope.deal.service import _MARKET_OVERRIDES_SQL, _assumptions
+from lotscope.deal.service import _assumptions, market_overrides_for
 from lotscope.underwriting.service import default_assumptions
 from lotscope.valuation.avm import land_use_class
 from lotscope.valuation.service import find_comps
@@ -42,10 +42,10 @@ async def build_underwriting(
     settings = get_settings()
 
     profile_overrides = await default_assumptions(session, owner_id)
-    market_overrides = await session.scalar(_MARKET_OVERRIDES_SQL, {"market_code": market_code})
+    market_overrides = await market_overrides_for(session, market_code)
     assumption_set = build_assumption_set(
         settings=settings,
-        market_overrides=market_overrides if isinstance(market_overrides, dict) else None,
+        market_overrides=market_overrides,
         user_overrides=profile_overrides,
     )
 
@@ -64,12 +64,16 @@ async def build_underwriting(
         finished_comp_prices=[comp.sale_price for comp in finished_comps],
         land_value=land_value if land_value is not None else market_value,
         acquisition_price=acquisition_price,
+        land_value_is_assessed=land_value is None and market_value is not None,
     )
     assumptions: DealAssumptions = _assumptions(
         construction_cost_per_sqft=profile_overrides.get("construction_cost_per_sqft"),
         soft_cost_pct=profile_overrides.get("soft_cost_pct"),
         selling_cost_pct=profile_overrides.get("selling_cost_pct"),
         target_margin=profile_overrides.get("target_margin"),
+        default_unit_sqft=profile_overrides.get("default_unit_sqft"),
+        max_unit_sqft=profile_overrides.get("max_unit_sqft"),
+        market_overrides=market_overrides,
     )
 
     disclosure = mao_disclosure(assumption_set, computed_at)

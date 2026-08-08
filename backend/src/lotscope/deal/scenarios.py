@@ -42,6 +42,9 @@ class ScenariosAnalysis:
 def _recommend(scenarios: list[Scenario]) -> int | None:
     pool = [s for s in scenarios if s.by_right] or scenarios
     with_profit = [s for s in pool if s.profit is not None]
+    viable = [s for s in with_profit if not s.infeasible and (s.profit or 0.0) > 0]
+    if viable:
+        return max(viable, key=lambda s: s.profit or 0.0).units
     if with_profit:
         return max(with_profit, key=lambda s: s.profit or 0.0).units
     with_mao = [s for s in pool if s.max_allowable_offer is not None]
@@ -116,7 +119,12 @@ def build_scenarios(
         chosen = next(s for s in scenarios if s.units == recommended)
         basis = "profit" if chosen.profit is not None else "max allowable offer"
         path = "by-right" if chosen.by_right else "with a variance"
-        reasons.append(f"{recommended} unit(s) {path} maximizes {basis} among the scenarios.")
+        unprofitable = chosen.profit is not None and (chosen.infeasible or chosen.profit <= 0)
+        verb = "is the least unprofitable on" if unprofitable else f"maximizes {basis} among"
+        tail = " among the scenarios." if unprofitable else " the scenarios."
+        reasons.append(
+            f"{recommended} unit(s) {path} {verb}" + (f" {basis}{tail}" if unprofitable else tail)
+        )
     return ScenariosAnalysis(
         scenarios=scenarios,
         by_right_units=by_right,

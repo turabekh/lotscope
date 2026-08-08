@@ -77,3 +77,55 @@ def test_zero_by_right_units_is_not_reported_as_undetermined() -> None:
     assert result.reasons == [
         "Zoning permits no units by right on this parcel; cannot model build scenarios."
     ]
+
+
+def test_a_profitable_scenario_is_preferred_over_a_larger_unprofitable_one() -> None:
+    analysis = build_scenarios(
+        ScenarioInputs(
+            by_right_units=3,
+            buildable_area_sqft=3000.0,
+            estimated_floors=2,
+            finished_comp_prices=[400_000.0, 410_000.0],
+            land_value=50_000.0,
+            acquisition_price=40_000.0,
+        ),
+        DealAssumptions(
+            construction_cost_per_sqft=150.0,
+            soft_cost_pct=0.15,
+            selling_cost_pct=0.07,
+            target_margin=0.20,
+            default_unit_sqft=1200.0,
+            max_unit_sqft=3000.0,
+        ),
+    )
+
+    chosen = next(s for s in analysis.scenarios if s.units == analysis.recommended_units)
+    profitable = [s for s in analysis.scenarios if s.profit is not None and s.profit > 0]
+    if profitable:
+        assert chosen.profit is not None
+        assert chosen.profit > 0
+
+
+def test_an_all_unprofitable_set_is_described_as_least_unprofitable() -> None:
+    analysis = build_scenarios(
+        ScenarioInputs(
+            by_right_units=2,
+            buildable_area_sqft=4000.0,
+            estimated_floors=3,
+            finished_comp_prices=[90_000.0, 95_000.0],
+            land_value=50_000.0,
+            acquisition_price=50_000.0,
+        ),
+        DealAssumptions(
+            construction_cost_per_sqft=400.0,
+            soft_cost_pct=0.15,
+            selling_cost_pct=0.07,
+            target_margin=0.20,
+            default_unit_sqft=1200.0,
+            max_unit_sqft=3000.0,
+        ),
+    )
+
+    joined = " ".join(analysis.reasons)
+    assert "maximizes profit" not in joined
+    assert "least unprofitable" in joined

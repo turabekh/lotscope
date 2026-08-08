@@ -47,6 +47,7 @@ def _cell(
         finished_comp_prices=[price * exit_multiplier for price in inputs.finished_comp_prices],
         land_value=inputs.land_value,
         acquisition_price=inputs.acquisition_price,
+        land_value_is_assessed=inputs.land_value_is_assessed,
     )
     adjusted_assumptions = DealAssumptions(
         construction_cost_per_sqft=assumptions.construction_cost_per_sqft * cost_multiplier,
@@ -86,12 +87,12 @@ def build_grid(
                 "sensitivity of this deal to exit value cannot be modelled.",
             }
         )
-    if inputs.buildable_area_sqft is None:
+    if inputs.units is None:
         return SensitivityGrid(
             **{
                 **empty.__dict__,
-                "unavailable_reason": "No buildable area was derived for this parcel, so "
-                "construction cost cannot be varied.",
+                "unavailable_reason": "No by-right unit count was derived for this parcel, so "
+                "there is no development programme to vary.",
             }
         )
 
