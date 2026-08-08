@@ -13,9 +13,7 @@ const unevaluated = computed(
 const show = computed(
   () =>
     subdivision.value !== null &&
-    (subdivision.value.can_subdivide ||
-      subdivision.value.needs_consolidation ||
-      unevaluated.value),
+    (subdivision.value.can_subdivide || subdivision.value.needs_consolidation || unevaluated.value),
 )
 
 const style = computed(() => {
