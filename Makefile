@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin mailpit
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set gold-set-select recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 load-phillycode demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set gold-set-select recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 load-phillycode derive-phillycode demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -71,6 +71,9 @@ ingest-title14: ## Embed the Title 14 corpus (use: make ingest-title14 FILE=data
 
 load-phillycode: ## Load the parsed Philadelphia Code (QA-gated) into code_provision
 	cd $(BACKEND) && uv run python -m lotscope.provisions.cli $(ARGS)
+
+derive-phillycode: ## Derive and embed document rows from code_provision (prose only; tables are Slice 2b)
+	cd $(BACKEND) && uv run python -m lotscope.ai.phillycode_cli $(ARGS)
 
 demo: ## Load a small synthetic demo dataset and compute its verdicts (local preview)
 	$(COMPOSE) exec -T db psql -U lotscope -d lotscope < $(BACKEND)/data/demo/demo.sql
