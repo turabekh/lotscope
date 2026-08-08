@@ -32,7 +32,9 @@ Three deficiencies in the current arrangement motivate this decision:
 
 phillyruleparser remains a standalone tool and learns nothing about LotScope. Its emitted artifacts — `title_N.jsonl`, `qa_title_N.json`, `qa_summary.json` — are **copied** (never moved; the parser's outputs remain regenerable in place) into `backend/data/phillycode/`, gitignored and mirrored to GCS alongside other data assets, keyed by `source_version`. LotScope's loader owns the mapping from the parser's `Provision` shape; the parser does not emit a LotScope-shaped export.
 
-Prerequisite: the parser repository, currently 11 local commits with no remote, is pushed before its output becomes a production input.
+**Accepted risk, revised 2026-08-08.** This decision originally named "the parser repository is pushed" a prerequisite before its output became a production input. That prerequisite was not met and the consumer shipped anyway (Slice 1, PR #126). Put to the owner explicitly, the answer was to keep the parser local-only — its own `CLAUDE.md` carries a standing "local commits only, never push" rule — so the condition is recorded here as an accepted risk rather than left standing as an unmet requirement, which would misrepresent the state of the system.
+
+What that means concretely: the code producing a production input exists on one machine with no off-machine copy, as do the 36 MB source PDF and every artifact — the parser gitignores `data/` in full, so even a push would protect the code and not the data. LotScope's own copy under `backend/data/phillycode/` is gitignored too and lives on the same disk. Revisit if the machine changes or a second person joins.
 
 ### 2. Canonical layer: `code_provision`
 
@@ -104,7 +106,7 @@ Measured against the real artifacts in `backend/data/phillycode/` before any cod
 
 ### Slice 2 preconditions, established by Slice 1 recon
 
-- **The Table 14-802-3 caption orphan must be fixed upstream first.** `14-802(4)(a)[1]#table1` carries the caption and three header rows; its 44 data rows sit in `14-802(4)(a)[1]#table2` with `caption` and `continuation_of` both null, so the table's body is severed from its name. Table 14-802-2's continuation is linked correctly, which is what makes this a defect rather than a convention. It is fixed in phillyruleparser and the artifacts regenerated before table nodes are embedded — LotScope does not patch around upstream defects.
+- **The Table 14-802-3 caption orphan must be fixed upstream first, and it is larger than one table.** `14-802(4)(a)[1]#table1` carries the caption and three header rows; its 44 data rows sit in `14-802(4)(a)[1]#table2` with `caption` and `continuation_of` both null. Investigated in phillyruleparser on 2026-08-08 (its `HANDOFF.md` §7): the root cause is that pdfplumber gave the 3-row header stub five column boundaries where the table has four, so the continuation detector's column-equality test failed — and there are **four** such orphans across Titles 4 and 14, not one. Merging them as-is yields *ragged* tables (3 rows × 5 then 44 × 4), where the correctly-linked Table 14-802-2 yields a uniform 41 × 4. A five-column header band over four-column parking data would mis-associate districts with their ratios, so the fix belongs in the parser's extract stage and was deliberately not shipped as a quick predicate change. LotScope does not patch around upstream defects, and it does not consume a half-fixed one either.
 - **Table nodes embed a linearised rendering of the structured `rows` only, never `raw_text`.** The `raw_text` on continuation nodes is column-bled to the point of being unreadable, while the structured rows on the parent node are clean.
 - **Cross-reference expansion is targeted, not broad.** `refs` is populated on 1,444 of 29,297 rows — 4.93%.
 
