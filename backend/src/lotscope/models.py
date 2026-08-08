@@ -13,6 +13,7 @@ from lotscope.neighborhoods.models import Neighborhood
 from lotscope.ops.models import MarketGateItem, MarketStats, OpsAlertState
 from lotscope.parcels.models import Parcel
 from lotscope.policies.models import PolicyDocument
+from lotscope.provisions.models import CodeProvision
 from lotscope.risk.models import FloodZone, LiEvent, TaxStatus
 from lotscope.streets.models import StreetCenterline
 from lotscope.underwriting.models import UnderwritingProfile
@@ -26,6 +27,7 @@ metadata = Base.metadata
 __all__ = [
     "AppealPacketEntitlement",
     "BuyerProfile",
+    "CodeProvision",
     "DatasetFreshness",
     "Document",
     "FloodZone",
