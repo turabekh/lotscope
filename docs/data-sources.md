@@ -109,6 +109,43 @@ Voyage, and replaced on each run. A provisional sample ships at
 a data task you supply at `backend/data/title14/sections.jsonl`. See that
 directory's README for the format. Requires `VOYAGE_API_KEY`.
 
+## Philadelphia Code canonical corpus (`code_provision`)
+
+The parsed Philadelphia Code, produced by the standalone **phillyruleparser**
+project from the city's published PDF and copied — never moved — into
+`backend/data/phillycode/` (gitignored by `/backend/data/*`). Artifacts per run:
+`title_N.jsonl` (one provision per line), `qa_title_N.json`, `qa_summary.json`,
+and `inventory.json` (PDF-level provenance: sha256, page count, fonts).
+
+Loaded by `lotscope.provisions.loader` (`make load-phillycode`) into
+`code_provision` under ADR-0078. The loader is **QA-gated** — a title loads only
+if all three of its gates pass — and idempotent per title (upsert on
+`(market_code, id)`, prune ids absent from the artifact). Use `--title N` to load
+one title.
+
+Source version **May 25, 2026**: 29,297 provisions across 24 titles, of which
+**22,071 load** and Title 9 (7,226 provisions) is excluded by a gate-1 TOC
+failure. The exclusion is recorded as an explicit line in the load report and
+lifts automatically when the parser passes the title.
+
+Gotchas, all measured:
+
+- The two QA file shapes differ. `qa_summary.json` carries `gates` and
+  `gate_values` as dicts, calls the title field `title`, and rolls `anomalies` up
+  to kind→count. `qa_title_N.json` carries `gates` as a list of
+  `{name, passed, value, detail}`, calls the field `title_number`, and lists
+  `anomalies` as records of `{kind, page, text, detail}`. Each is parsed with its
+  own schema; a shape mismatch raises rather than skipping gates.
+- **`title_number` is not a field on provision records.** It is taken from the QA
+  file and cross-checked against `path[0]` on every record. It is a string —
+  the domain includes `4.1` and `4.2`.
+- The parser's `order` is stored as `ordinal` (SQL reserved word).
+- `source_file` reads `philadelphiahomerulecharter.pdf` on every Code provision:
+  the city publishes the Charter and the Code as one PDF, provisions run from
+  page 113 to 1318, and `doc` is `code` on every record. Stored verbatim.
+- 67 cites repeat legitimately, so `cite` is indexed but not unique; the 86
+  affected rows carry `~N` id suffixes. Look up by `id`, search by `cite`.
+
 ## Recorded documents
 
 DOR records system for deed / plat images — the OCR + RAG layer for restriction and easement extraction.
