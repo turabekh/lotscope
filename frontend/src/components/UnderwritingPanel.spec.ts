@@ -139,3 +139,30 @@ describe('UnderwritingPanel', () => {
     expect((await mountPanel(analysis())).text()).toContain('1 from your profile')
   })
 })
+
+describe('UnderwritingPanel infeasible cases', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('does not present a price for a case where the build does not pencil', async () => {
+    const data = analysis()
+    data.cases = data.cases.map((item) =>
+      item.case === 'downside'
+        ? { ...item, infeasible: true, max_allowable_offer: 0, margin: -0.2 }
+        : item,
+    )
+    const wrapper = await mountPanel(data)
+
+    expect(wrapper.get('[data-test="case-mao-downside"]').text()).toBe('No viable price')
+    expect(wrapper.get('[data-test="case-mao-downside"]').text()).not.toContain('$0')
+    expect(wrapper.text()).toContain('Build cost exceeds value')
+  })
+
+  it('still shows a price and margin for a feasible case', async () => {
+    const wrapper = await mountPanel(analysis())
+
+    expect(wrapper.get('[data-test="case-mao-downside"]').text()).not.toBe('No viable price')
+    expect(wrapper.text()).toContain('Margin')
+  })
+})

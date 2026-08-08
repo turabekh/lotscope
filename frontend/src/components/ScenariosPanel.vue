@@ -69,6 +69,9 @@ function marginClass(item: ScenarioItem): string {
               <span :class="item.by_right ? 'text-positive' : 'text-amber-8'">
                 {{ item.by_right ? 'by-right' : 'variance' }}
               </span>
+              <span v-if="item.infeasible" class="scn-infeasible" data-test="scenario-infeasible">
+                not economical
+              </span>
             </td>
             <td class="num">{{ formatCurrency(item.arv) }}</td>
             <td class="num">{{ formatCurrency(item.profit) }}</td>
@@ -121,6 +124,12 @@ function marginClass(item: ScenarioItem): string {
 .scn tr.rec td {
   background: var(--lot-accent-soft);
   font-weight: 600;
+}
+.scn-infeasible {
+  margin-left: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--lot-sev-high, #c62828);
 }
 .scn-note {
   font-size: 10.5px;
