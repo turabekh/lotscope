@@ -1,0 +1,41 @@
+{
+ "failed": [],
+ "passed_count": 2,
+ "titles": [
+  {
+   "anomalies": {},
+   "error": null,
+   "gate_values": {
+    "1_toc_reconciliation": "2 sections emitted, 2 listed in the title's TOC",
+    "2_coverage": "99.9800% of reference characters land in a node (threshold 99.5%)",
+    "3_numbering_sanity": "0 ordering failure(s)"
+   },
+   "gates": {
+    "1_toc_reconciliation": true,
+    "2_coverage": true,
+    "3_numbering_sanity": true
+   },
+   "passed": true,
+   "title": "7"
+  },
+  {
+   "anomalies": {
+    "no_sections": 1
+   },
+   "error": null,
+   "gate_values": {
+    "1_toc_reconciliation": "2 sections emitted, 2 listed in the title's TOC",
+    "2_coverage": "99.9800% of reference characters land in a node (threshold 99.5%)",
+    "3_numbering_sanity": "0 ordering failure(s)"
+   },
+   "gates": {
+    "1_toc_reconciliation": true,
+    "2_coverage": true,
+    "3_numbering_sanity": true
+   },
+   "passed": true,
+   "title": "8.1"
+  }
+ ],
+ "total": 2
+}
