@@ -4,6 +4,8 @@ import { ref } from 'vue'
 import { ApiError, api } from '@/lib/api'
 import { useFirstStepsStore } from '@/stores/firstSteps'
 import type {
+  DealOverrides,
+  UnderwritingAnalysis,
   AssemblageResult,
   AssessmentResult,
   DealResult,
@@ -39,6 +41,7 @@ export const useParcelStore = defineStore('parcel', () => {
   const comps = ref<ValuationResult | null>(null)
   const deal = ref<DealResult | null>(null)
   const dealLoading = ref(false)
+  const underwriting = ref<UnderwritingAnalysis | null>(null)
   const checklist = ref<ParcelChecklist | null>(null)
   const ownerPortfolio = ref<OwnerPortfolio | null>(null)
   const deedRestrictions = ref<DeedRestrictionsResponse | null>(null)
@@ -63,6 +66,7 @@ export const useParcelStore = defineStore('parcel', () => {
     marketContext.value = null
     comps.value = null
     deal.value = null
+    underwriting.value = null
     checklist.value = null
     ownerPortfolio.value = null
     deedRestrictions.value = null
@@ -207,16 +211,22 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
-  async function loadDeal(
-    parcelNumber: string,
-    overrides: { acquisitionPrice?: number | null; targetMargin?: number | null } = {},
-  ): Promise<void> {
+  async function loadDeal(parcelNumber: string, overrides: DealOverrides = {}): Promise<void> {
     dealLoading.value = true
     try {
-      const result = await api.getDeal(parcelNumber, overrides)
-      if (detail.value?.parcel_number === parcelNumber) deal.value = result
+      const [dealResult, underwritingResult] = await Promise.allSettled([
+        Promise.resolve().then(() => api.getDeal(parcelNumber, overrides)),
+        Promise.resolve().then(() => api.getUnderwriting(parcelNumber, overrides)),
+      ])
+      if (detail.value?.parcel_number !== parcelNumber) return
+      deal.value = dealResult.status === 'fulfilled' ? dealResult.value : null
+      underwriting.value =
+        underwritingResult.status === 'fulfilled' ? underwritingResult.value : null
     } catch {
-      if (detail.value?.parcel_number === parcelNumber) deal.value = null
+      if (detail.value?.parcel_number === parcelNumber) {
+        deal.value = null
+        underwriting.value = null
+      }
     } finally {
       dealLoading.value = false
     }
@@ -263,6 +273,7 @@ export const useParcelStore = defineStore('parcel', () => {
     marketContext.value = null
     comps.value = null
     deal.value = null
+    underwriting.value = null
     checklist.value = null
     ownerPortfolio.value = null
     deedRestrictions.value = null
@@ -290,6 +301,7 @@ export const useParcelStore = defineStore('parcel', () => {
     marketContext,
     comps,
     deal,
+    underwriting,
     dealLoading,
     checklist,
     ownerPortfolio,
