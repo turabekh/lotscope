@@ -9,8 +9,10 @@ from lotscope.provisions.service import (
     ancestors_of,
     children_of,
     find_by_cite,
+    find_mentioning,
     get_provision,
     refs_of,
+    search_ranked,
     siblings_of,
 )
 
@@ -90,3 +92,58 @@ async def test_refs_resolve_to_the_provisions_they_cite(loaded: AsyncSession) ->
 async def test_a_provision_with_no_refs_resolves_to_nothing(loaded: AsyncSession) -> None:
     assert await refs_of(loaded, "phl", "7-101(2)") == []
     assert await refs_of(loaded, "phl", "nope") == []
+
+
+async def test_lexical_lookup_finds_provisions_that_mention_a_term(loaded: AsyncSession) -> None:
+    hits = await find_mentioning(loaded, "phl", ["fixture subsection"])
+
+    assert [item.id for item in hits] == ["7-101(1)", "7-101(2)"]
+
+
+async def test_an_exact_cite_outranks_a_caption_that_merely_names_it(
+    loaded: AsyncSession,
+) -> None:
+    hits = await find_mentioning(loaded, "phl", ["7-102"])
+
+    assert hits[0].cite == "7-102"
+    assert "7-102#table1" in {item.id for item in hits}
+
+
+async def test_lexical_lookup_reaches_inside_table_data(loaded: AsyncSession) -> None:
+    hits = await find_mentioning(loaded, "phl", ["Single-Family"])
+
+    assert "7-102#table1" in {item.id for item in hits}
+
+
+async def test_lexical_lookup_can_be_scoped_to_titles(loaded: AsyncSession) -> None:
+    assert await find_mentioning(loaded, "phl", ["7-102"], title_numbers=["8.1"]) == []
+    assert await find_mentioning(loaded, "phl", ["7-102"], title_numbers=["7"]) != []
+
+
+async def test_lexical_lookup_with_no_terms_does_not_scan_the_corpus(
+    loaded: AsyncSession,
+) -> None:
+    assert await find_mentioning(loaded, "phl", []) == []
+
+
+async def test_ranked_search_puts_the_best_lexical_match_first(loaded: AsyncSession) -> None:
+    hits = await search_ranked(loaded, "phl", "fixture values table")
+
+    assert hits[0].id == "7-102#table1"
+
+
+async def test_ranked_search_matches_headings_and_captions_not_only_body(
+    loaded: AsyncSession,
+) -> None:
+    assert [h.id for h in await search_ranked(loaded, "phl", "repeated citation")] == ["7-101~2"]
+
+
+async def test_ranked_search_can_be_scoped_and_ignores_an_empty_query(
+    loaded: AsyncSession,
+) -> None:
+    assert await search_ranked(loaded, "phl", "   ") == []
+    assert await search_ranked(loaded, "phl", "repealed chapter", title_numbers=["7"]) == []
+    assert [
+        hit.id
+        for hit in await search_ranked(loaded, "phl", "repealed chapter", title_numbers=["8.1"])
+    ] == ["8.1-100"]
