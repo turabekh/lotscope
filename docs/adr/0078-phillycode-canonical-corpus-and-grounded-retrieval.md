@@ -124,9 +124,13 @@ Title 14 is derived: **4,096 documents from 5,935 provisions**, 83 table nodes e
 
 | question | correct provision | rank |
 |---|---|---|
-| dimensional standards for RSA-5 | `14-401(1)(a)(.1)#table1` (Table 14-401-1) | **37** |
-| maximum building height in CMX-3 | `14-701` Dimensional Standards | **12** |
+| dimensional standards for RSA-5 | `14-701(2)(b)[11]#table1` — Table 14-701-1 | **28** |
+| maximum building height in CMX-3 | `14-701(3)(a)[4]#table1` — Table 14-701-3 | **28** |
 | off-street parking for multi-family | `14-802` Motor Vehicle Parking Ratios | 2 |
+
+The first pass of this measurement named the wrong ground truth for two rows — `14-401(1)(a)(.1)#table1` is the district **name and map-symbol crosswalk**, not dimensional standards, and `14-701` is the section containing the tables rather than a table. The targets above were verified against their captions. The conclusion did not change; one rank got worse.
+
+Worth noting for §4: the *section* `14-701` ranks **12** even though its own tables rank 28. A hit on the section that expanded to its section window would reach the tables — which makes the case for small-to-big expansion from evidence rather than from first principles.
 
 Two of three fall outside any sane top-5 window. The incumbent Quick Guide corpus answers all three correctly at rank 1, because it holds one small hand-written document per district while the code holds the same facts in large tables.
 
