@@ -1,4 +1,5 @@
 import type {
+  DealOverrides,
   PolicyDocument,
   PolicySummary,
   CorrectionRecord,
@@ -477,8 +478,22 @@ export const api = {
       body: JSON.stringify(payload),
     })
   },
-  getUnderwriting(parcelNumber: string): Promise<UnderwritingAnalysis> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/underwriting`)
+  getUnderwriting(
+    parcelNumber: string,
+    overrides: DealOverrides = {},
+  ): Promise<UnderwritingAnalysis> {
+    const query = new URLSearchParams()
+    if (overrides.acquisitionPrice != null) {
+      query.set('acquisition_price', String(overrides.acquisitionPrice))
+    }
+    if (overrides.targetMargin != null) {
+      query.set('target_margin', String(overrides.targetMargin))
+    }
+    if (overrides.constructionCostPerSqft != null) {
+      query.set('construction_cost_per_sqft', String(overrides.constructionCostPerSqft))
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/underwriting${suffix}`)
   },
   getParcelFreshness(parcelNumber: string): Promise<SourceFreshness[]> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/freshness`)
