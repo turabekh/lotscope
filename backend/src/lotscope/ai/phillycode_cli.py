@@ -19,7 +19,12 @@ def render(report: DerivationRunReport) -> str:
         f"{'all accounted for' if report.reconciled else 'RECONCILIATION FAILED'}",
         f"  {report.table_documents} table nodes embedded as linearised rows",
     ]
+    if report.failed_titles:
+        lines.append(f"  FAILED titles (nothing committed for these): {report.failed_titles}")
     for result in report.results:
+        if result.error:
+            lines.append(f"  title {result.title_number}: FAILED — {result.error}")
+            continue
         pruned = f", {result.pruned} pruned" if result.pruned else ""
         skipped = (
             result.skipped_figures
