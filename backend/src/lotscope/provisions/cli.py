@@ -26,8 +26,21 @@ def render(report: LoadReport) -> str:
     for result in report.results:
         if result.loaded:
             pruned = f", {result.pruned_count} pruned" if result.pruned_count else ""
+            excepted = (
+                ", "
+                + str(len(result.exceptions))
+                + " TOC exception applied ("
+                + ", ".join(
+                    f"§{exception.cite}, Bill {exception.bill_number}"
+                    for exception in result.exceptions
+                )
+                + ")"
+                if result.exceptions
+                else ""
+            )
             lines.append(
-                f"  title {result.title_number}: loaded {result.provision_count} provisions{pruned}"
+                f"  title {result.title_number}: loaded {result.provision_count} "
+                f"provisions{pruned}{excepted}"
             )
         else:
             lines.append(
