@@ -395,7 +395,7 @@ def test_a_title_root_carrying_no_text_of_its_own_is_not_a_document() -> None:
     assert report.skipped_containers == 1
 
 
-def test_a_repealed_stub_title_keeps_its_root_because_nothing_else_survives() -> None:
+def test_a_repealed_stub_title_never_echoes_itself_as_live_law() -> None:
     documents, report = derive(
         [
             _provision(
@@ -419,7 +419,28 @@ def test_a_repealed_stub_title_keeps_its_root_because_nothing_else_survives() ->
         ]
     )
 
-    assert [document.provision_id for document in documents] == ["5"]
-    assert report.skipped_containers == 0
+    assert documents == []
+    assert report.skipped_containers == 1
     assert report.skipped_notes == 1
-    assert documents[0].body == "TITLE 5. FIRE PREVENTION CODE 1"
+    assert report.reconciles()
+
+
+def test_a_title_root_carrying_its_own_text_is_still_navigational_not_content() -> None:
+    documents, report = derive(
+        [
+            _provision(
+                "9",
+                kind="title",
+                heading="Title 9",
+                path=["9"],
+                text="TITLE 9. REGULATION OF BUSINESSES 1",
+                ordinal=0,
+            ),
+            _provision(
+                "9-3010", kind="section", parent="9", heading="Rentals", text=LONG, ordinal=1
+            ),
+        ]
+    )
+
+    assert [document.provision_id for document in documents] == ["9-3010"]
+    assert report.skipped_containers == 1

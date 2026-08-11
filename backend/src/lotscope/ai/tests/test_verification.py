@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.ai.derivation import DERIVATION_VERSION
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
 from lotscope.ai.phillycode import derive_corpus
 from lotscope.ai.verification import verify_derivation
@@ -61,7 +62,7 @@ async def test_a_fully_derived_title_reconciles_and_passes(db_session: AsyncSess
     await db_session.commit()
 
     report = await verify_derivation(
-        db_session, market_code="phl", derivation_version="d2", require_complete=True
+        db_session, market_code="phl", derivation_version=DERIVATION_VERSION, require_complete=True
     )
 
     assert [title.shortfall for title in report.titles] == [0]
@@ -81,7 +82,7 @@ async def test_a_missing_document_fails_a_title_the_ledger_claims_complete(
     await db_session.commit()
 
     report = await verify_derivation(
-        db_session, market_code="phl", derivation_version="d2", require_complete=False
+        db_session, market_code="phl", derivation_version=DERIVATION_VERSION, require_complete=False
     )
 
     assert report.titles[0].shortfall == 1
@@ -96,10 +97,10 @@ async def test_an_undelivered_title_is_silent_until_completeness_is_demanded(
     await _seed(db_session)
 
     lenient = await verify_derivation(
-        db_session, market_code="phl", derivation_version="d2", require_complete=False
+        db_session, market_code="phl", derivation_version=DERIVATION_VERSION, require_complete=False
     )
     strict = await verify_derivation(
-        db_session, market_code="phl", derivation_version="d2", require_complete=True
+        db_session, market_code="phl", derivation_version=DERIVATION_VERSION, require_complete=True
     )
 
     assert lenient.titles[0].actual == 0
@@ -123,7 +124,7 @@ async def test_a_stale_derivation_version_fails_even_when_counts_agree(
     await db_session.commit()
 
     report = await verify_derivation(
-        db_session, market_code="phl", derivation_version="d2", require_complete=False
+        db_session, market_code="phl", derivation_version=DERIVATION_VERSION, require_complete=False
     )
 
     assert report.titles[0].shortfall == 0
@@ -151,4 +152,4 @@ async def test_the_ledger_records_a_row_for_every_title_derived(db_session: Asyn
     assert rows[0].documents == 2
     assert rows[0].provisions_seen == 3
     assert rows[0].reconciled
-    assert rows[0].derivation_version == "d2"
+    assert rows[0].derivation_version == DERIVATION_VERSION
