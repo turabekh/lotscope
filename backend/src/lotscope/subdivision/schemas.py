@@ -18,6 +18,7 @@ class SubdivisionResult(BaseModel):
     lot_width_ft: float | None
     min_lot_area_sqft: float | None
     min_lot_width_ft: float | None
+    overlays: list[str]
     reasons: list[str]
     sources: list[dict[str, Any]]
     computed_at: datetime

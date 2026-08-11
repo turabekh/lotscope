@@ -53,7 +53,6 @@ def test_summary_combines_target_and_candidate_dimensions() -> None:
     assert summary.adjacent_count == 2
     assert summary.candidate_count == 1
     assert summary.combined_lot_area_sqft == 3200.0
-    assert summary.combined_frontage_ft == 36.0
     assert summary.has_vacant_neighbor is True
 
 

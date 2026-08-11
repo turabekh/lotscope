@@ -35,7 +35,6 @@ class AssemblageSummary:
     adjacent_count: int
     candidate_count: int
     combined_lot_area_sqft: float | None
-    combined_frontage_ft: float | None
     has_same_owner_neighbor: bool
     has_city_owned_neighbor: bool
     has_vacant_neighbor: bool
@@ -62,20 +61,14 @@ def is_candidate(signal: NeighborSignal) -> bool:
 def summarize(target: TargetLot, neighbors: list[NeighborSignal]) -> AssemblageSummary:
     candidates = [n for n in neighbors if is_candidate(n)]
     combined_area: float | None = None
-    combined_frontage: float | None = None
     if target.lot_area_sqft is not None:
         combined_area = round(
             target.lot_area_sqft + sum(n.lot_area_sqft or 0.0 for n in candidates), 1
-        )
-    if target.frontage_ft is not None:
-        combined_frontage = round(
-            target.frontage_ft + sum(n.frontage_ft or 0.0 for n in candidates), 1
         )
     return AssemblageSummary(
         adjacent_count=len(neighbors),
         candidate_count=len(candidates),
         combined_lot_area_sqft=combined_area,
-        combined_frontage_ft=combined_frontage,
         has_same_owner_neighbor=any(n.same_owner for n in neighbors),
         has_city_owned_neighbor=any(n.is_city_owned for n in neighbors),
         has_vacant_neighbor=any(n.is_vacant for n in neighbors),

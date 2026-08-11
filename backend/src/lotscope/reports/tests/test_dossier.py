@@ -79,7 +79,6 @@ def test_full_dossier_renders_all_sections() -> None:
             adjacent_count=2,
             candidate_count=2,
             combined_lot_area_sqft=3200,
-            combined_frontage_ft=36,
             by_right_units_current=3,
             by_right_units_combined=6,
             units_basis="per_unit",
