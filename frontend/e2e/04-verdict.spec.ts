@@ -19,9 +19,13 @@ test('flow 5 — the deal tab shows the offer the verdict is built on', async ({
 
   await page.getByRole('tab', { name: 'Deal' }).click()
 
-  await expect(page.getByText('Max allowable offer').first()).toBeVisible()
   await expect(page.getByText('Deal analysis').first()).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Show assumptions and formula' })).toBeVisible()
+  await expect(page.locator('[data-test="deal-hero"]')).toContainText('Offer up to')
+  await expect(page.locator('[data-test="deal-mao"]')).toBeVisible()
+  await expect(page.getByText('How this was computed')).toBeVisible()
+  await expect(
+    page.getByText('Informational only — not an appraisal, and not legal or financial advice.'),
+  ).toBeVisible()
 })
 
 test('flow 5 — a parcel with weak economics is not recommended', async ({ page }) => {

@@ -371,4 +371,18 @@ describe('DealCard — structure and controls', () => {
   it('explains itself when there is no deal to model', () => {
     expect(render(null, null).text()).toContain('Not enough zoning or comparable-sales data')
   })
+
+  it('seeds the offer letter from the max allowable offer the hero states', () => {
+    const dialog = render(deal()).findComponent({ name: 'GenerateOfferDialog' })
+
+    expect(dialog.props('maxAllowableOffer')).toBe(145000)
+  })
+
+  it('refuses to seed an offer letter on a deal that cannot clear its costs', () => {
+    const dialog = render(deal({ infeasible: true })).findComponent({
+      name: 'GenerateOfferDialog',
+    })
+
+    expect(dialog.props('maxAllowableOffer')).toBeNull()
+  })
 })

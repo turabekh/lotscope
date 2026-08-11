@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { Quasar } from 'quasar'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 
 import ParcelDossier from '@/components/ParcelDossier.vue'
 import type { DistressResult, DistressTier, ParcelDetail, VerdictResult } from '@/lib/types'
@@ -103,7 +104,8 @@ function mountDossier(detail: ParcelDetail, distress: DistressResult | null = nu
       stubs: {
         SnapshotPanel: true,
         ChecklistPanel: true,
-        DealPanel: true,
+        DealCard: true,
+        BuyersNearbyPanel: true,
         ScenariosPanel: true,
         CompsPanel: true,
         AssessmentPanel: true,
@@ -114,7 +116,6 @@ function mountDossier(detail: ParcelDetail, distress: DistressResult | null = nu
         PropertyFacts: true,
         DistressPanel: true,
         FreshnessPanel: true,
-        UnderwritingPanel: true,
         ReportCorrectionDialog: true,
         OwnerPortfolioPanel: true,
         ReportPanel: true,
@@ -184,5 +185,47 @@ describe('ParcelDossier seller-motivation surfacing', () => {
     const wrapper = mountDossier(vacant(), makeDistress('high', 72))
     expect(wrapper.findComponent({ name: 'DistressPanel' }).exists()).toBe(true)
     expect(wrapper.findComponent({ name: 'OwnerPortfolioPanel' }).exists()).toBe(false)
+  })
+})
+
+async function openDealTab(wrapper: ReturnType<typeof mountDossier>): Promise<void> {
+  const dealTab = wrapper.findAll('.dossier-tabs .q-tab').find((tab) => tab.text().includes('Deal'))
+  if (!dealTab) throw new Error('no Deal tab rendered')
+  await dealTab.trigger('click')
+  await nextTick()
+  await nextTick()
+}
+
+describe('ParcelDossier deal-tab composition', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+  })
+
+  const vacant = () => makeDetail({ land_use: 'VACANT LAND', is_vacant: true })
+
+  it('surfaces buyers alongside the verdict rather than inside the deal tab', () => {
+    const wrapper = mountDossier(vacant())
+    expect(wrapper.findComponent({ name: 'BuyersNearbyPanel' }).exists()).toBe(true)
+  })
+
+  it('gives the deal tab a single card in place of the two retired panels', async () => {
+    const wrapper = mountDossier(vacant())
+    await openDealTab(wrapper)
+
+    expect(wrapper.findComponent({ name: 'DealCard' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'DealPanel' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'UnderwritingPanel' }).exists()).toBe(false)
+  })
+
+  it('orders the deal tab card first, ahead of scenarios, comps and assessment', async () => {
+    const wrapper = mountDossier(vacant())
+    await openDealTab(wrapper)
+
+    const order = ['DealCard', 'ScenariosPanel', 'CompsPanel', 'AssessmentPanel'].map((name) =>
+      wrapper.html().indexOf(name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()),
+    )
+    expect(order.every((index) => index >= 0)).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
   })
 })

@@ -7,12 +7,12 @@ test('flow 6 — editing an assumption recomputes the deal', async ({ page }) =>
   await openDossier(page, SEEDED.bestMargin.number)
 
   await page.getByRole('tab', { name: 'Deal' }).click()
-  await page.getByRole('button', { name: /Model a scenario/ }).click()
+  await expect(page.locator('[data-test="deal-controls"]')).toBeVisible()
 
   const acquisition = page.getByRole('spinbutton', { name: 'Acquisition price ($)' })
   await expect(acquisition).toBeVisible()
   await acquisition.fill('40000')
-  await page.getByRole('button', { name: 'Recompute' }).click()
+  await page.getByRole('button', { name: 'Recompute', exact: true }).click()
 
   await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeEnabled()
 })
@@ -22,11 +22,36 @@ test('flow 6 — resetting returns the deal to market defaults', async ({ page }
   await openDossier(page, SEEDED.bestMargin.number)
 
   await page.getByRole('tab', { name: 'Deal' }).click()
-  await page.getByRole('button', { name: /Model a scenario/ }).click()
+  await expect(page.locator('[data-test="deal-controls"]')).toBeVisible()
 
   await page.getByRole('spinbutton', { name: 'Target margin (%)' }).fill('45')
-  await page.getByRole('button', { name: 'Recompute' }).click()
+  await page.getByRole('button', { name: 'Recompute', exact: true }).click()
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
 
   await expect(page.getByText('Assumptions: market default')).toBeVisible()
+})
+
+test('flow 6 — the deal card carries the whole loop from figure to offer', async ({ page }) => {
+  await registerAndSettle(page, 'deal-loop')
+  await openDossier(page, SEEDED.bestMargin.number)
+
+  await page.getByRole('tab', { name: 'Deal' }).click()
+
+  const hero = page.locator('[data-test="deal-mao"]')
+  const grid = page.locator('[data-test="heatmap"]')
+  await expect(hero).toBeVisible()
+  await expect(page.locator('[data-test="case-strip"]')).toBeVisible()
+  await expect(grid).toBeVisible()
+
+  const heroBefore = await hero.innerText()
+  const gridBefore = await grid.innerText()
+
+  await page.getByRole('spinbutton', { name: 'Construction ($/sqft)' }).fill('100')
+  await page.getByRole('button', { name: 'Recompute', exact: true }).click()
+
+  await expect(hero).not.toHaveText(heroBefore)
+  await expect(grid).not.toHaveText(gridBefore)
+
+  await page.locator('[data-test="deal-generate-offer"]').click()
+  await expect(page.getByText('Generate offer', { exact: true })).toBeVisible()
 })
