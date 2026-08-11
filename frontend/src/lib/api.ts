@@ -243,14 +243,13 @@ export const api = {
       .join('&')
     return request(`/parcels/compare?${query}`)
   },
-  getDeal(
-    parcelNumber: string,
-    params: { acquisitionPrice?: number | null; targetMargin?: number | null } = {},
-  ): Promise<DealResult> {
+  getDeal(parcelNumber: string, params: DealOverrides = {}): Promise<DealResult> {
     const query = new URLSearchParams()
     if (params.acquisitionPrice != null)
       query.set('acquisition_price', String(params.acquisitionPrice))
     if (params.targetMargin != null) query.set('target_margin', String(params.targetMargin))
+    if (params.constructionCostPerSqft != null)
+      query.set('construction_cost_per_sqft', String(params.constructionCostPerSqft))
     const qs = query.toString()
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/deal${qs ? `?${qs}` : ''}`)
   },
