@@ -35,6 +35,16 @@ _SEARCH_SQL = text(
     + "ORDER BY distance ASC "
     "LIMIT :limit"
 )
+_CITE_SQL = text(
+    "SELECT id, source, section, title, content, 0.0 AS distance "
+    "FROM document "
+    "WHERE embedding IS NOT NULL AND ((:source)::text IS NULL OR source = (:source)::text) "
+    + _MARKET_FILTER
+    + _TITLE_FILTER
+    + "AND section = ANY((:cites)::text[]) "
+    "ORDER BY array_position((:cites)::text[], section), id "
+    "LIMIT :limit"
+)
 _DISTRICT_SQL = text(
     "SELECT id, source, section, title, content, 0.0 AS distance "
     "FROM document "
@@ -157,6 +167,40 @@ async def embed_and_search(
     return await vector_search(
         session, vectors[0], limit=limit, source=source, market=market, titles=titles
     )
+
+
+async def fetch_documents_by_cite(
+    session: AsyncSession,
+    cites: list[str],
+    *,
+    limit: int = 6,
+    source: str | None = None,
+    market: str | None = None,
+    titles: list[str] | None = None,
+) -> list[RetrievedDocument]:
+    if not cites:
+        return []
+    rows = await session.execute(
+        _CITE_SQL,
+        {
+            "cites": list(cites),
+            "source": source,
+            "market": market,
+            "titles": list(titles) if titles else None,
+            "limit": limit,
+        },
+    )
+    return [
+        RetrievedDocument(
+            id=row.id,
+            source=row.source,
+            section=row.section,
+            title=row.title,
+            content=row.content,
+            distance=float(row.distance),
+        )
+        for row in rows
+    ]
 
 
 async def fetch_district_documents(
