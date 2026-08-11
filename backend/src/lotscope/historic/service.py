@@ -39,6 +39,7 @@ async def get_parcel_historic(session: AsyncSession, parcel_number: str) -> Hist
     in_district = row is not None
     return HistoricResult(
         parcel_number=parcel_number,
+        evaluated=bool(parcel.has_geometry),
         in_historic_district=in_district,
         district_name=row.name if row is not None else None,
         designated_date=row.designated_date if row is not None else None,

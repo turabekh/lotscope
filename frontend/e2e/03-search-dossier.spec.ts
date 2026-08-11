@@ -25,3 +25,14 @@ test('flow 4 — a dossier opens directly by parcel number', async ({ page }) =>
     await expect(page.getByRole('tab', { name: tab })).toBeVisible()
   }
 })
+
+test('the Land tab affirms what was checked, not just what was found', async ({ page }) => {
+  await registerAndSettle(page, 'landtab')
+
+  await openDossier(page, SEEDED.bestMargin.number)
+  await page.getByRole('tab', { name: 'Land' }).click()
+
+  await expect(page.getByText('Not in a designated historic district')).toBeVisible()
+  await expect(page.getByText('Assemblage candidates')).toBeVisible()
+  await expect(page.getByText('Buyable neighbors')).toHaveCount(0)
+})

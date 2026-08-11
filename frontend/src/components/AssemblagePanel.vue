@@ -65,8 +65,9 @@ function selectNeighbor(parcelNumber: string): void {
         <q-icon name="hub" size="18px" class="q-mr-xs" />Assemblage radar
         <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
         <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
-          Adjacent lots you might buy to build a larger project. Candidates are neighbors with the
-          same zoning that are vacant, city-owned, or share this owner.
+          Adjacent lots that could combine into a larger project. Candidates are neighbors with the
+          same zoning that are vacant, city-owned, or already share this owner — availability is not
+          implied.
         </q-tooltip>
         <q-space />
         <q-spinner v-if="assemblageLoading && !assemblage" color="primary" size="18px" />
@@ -91,7 +92,7 @@ function selectNeighbor(parcelNumber: string): void {
               <span class="unlock-add">+{{ unitUnlock.added }}</span>
             </div>
             <div class="unlock-sub">
-              Assembling the buyable neighbors could add about {{ unitUnlock.added }} more unit(s).
+              Assembling the candidate lots could add about {{ unitUnlock.added }} more unit(s).
               {{ unitUnlock.note }}
             </div>
           </div>
@@ -99,10 +100,12 @@ function selectNeighbor(parcelNumber: string): void {
 
         <div v-if="assemblage.summary.candidate_count > 0" class="row q-col-gutter-sm q-mt-xs">
           <div class="col-6 stat">
-            <div class="stat-label">Buyable neighbors</div>
+            <div class="stat-label">Assemblage candidates</div>
             <div class="stat-value">{{ assemblage.summary.candidate_count }}</div>
-            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-              Adjacent same-zoning lots that are vacant, city-owned, or share this owner.
+            <q-tooltip max-width="260px" anchor="top middle" self="bottom middle">
+              Adjacent same-zoning lots that are vacant, city-owned, or already share this owner.
+              Not all are for sale — lots you already own are counted here, and the rest depend on a
+              willing seller.
             </q-tooltip>
           </div>
           <div class="col-6 stat">
@@ -111,7 +114,7 @@ function selectNeighbor(parcelNumber: string): void {
               {{ formatSqft(assemblage.summary.combined_lot_area_sqft) }}
             </div>
             <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
-              This lot plus all buyable same-zoning neighbors. Approximate; confirm by-right
+              This lot plus all candidate same-zoning neighbors. Approximate; confirm by-right
               outcomes for the combined parcel.
             </q-tooltip>
           </div>

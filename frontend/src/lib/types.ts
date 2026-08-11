@@ -667,6 +667,7 @@ export interface MarketContext {
 
 export interface HistoricResult {
   parcel_number: string
+  evaluated: boolean
   in_historic_district: boolean
   district_name: string | null
   designated_date: string | null
@@ -689,6 +690,7 @@ export interface SubdivisionResult {
   lot_width_ft: number | null
   min_lot_area_sqft: number | null
   min_lot_width_ft: number | null
+  overlays: string[]
   reasons: string[]
   sources: unknown[]
   computed_at: string
@@ -777,7 +779,6 @@ export interface AssemblageSummary {
   adjacent_count: number
   candidate_count: number
   combined_lot_area_sqft: number | null
-  combined_frontage_ft: number | null
   by_right_units_current: number | null
   by_right_units_combined: number | null
   units_basis: 'per_unit' | 'far_estimate' | 'flat_cap' | null

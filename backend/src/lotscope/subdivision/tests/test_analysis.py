@@ -117,3 +117,39 @@ def test_single_known_constraint_uses_what_is_present() -> None:
     )
     assert result.max_lots == 3
     assert result.limiting_factor == "area"
+
+
+def test_frontage_derived_width_is_disclosed_in_the_reasons() -> None:
+    result = analyze_subdivision(_inputs(lot_width_from_frontage=True))
+
+    assert any("street frontage" in reason for reason in result.reasons)
+
+
+def test_frontage_disclosure_is_absent_when_width_did_not_come_from_frontage() -> None:
+    result = analyze_subdivision(_inputs())
+
+    assert not any("street frontage" in reason for reason in result.reasons)
+
+
+def test_frontage_disclosure_is_absent_when_width_is_unknown() -> None:
+    result = analyze_subdivision(_inputs(lot_width_ft=None, lot_width_from_frontage=True))
+
+    assert not any("street frontage" in reason for reason in result.reasons)
+
+
+def test_frontage_disclosure_changes_no_number() -> None:
+    plain = analyze_subdivision(_inputs())
+    disclosed = analyze_subdivision(_inputs(lot_width_from_frontage=True))
+
+    assert disclosed.max_lots == plain.max_lots
+    assert disclosed.can_subdivide == plain.can_subdivide
+    assert disclosed.is_conforming == plain.is_conforming
+    assert disclosed.limiting_factor == plain.limiting_factor
+    assert disclosed.min_lot_area_sqft == plain.min_lot_area_sqft
+
+
+def test_frontage_disclosure_reaches_the_small_lot_path_too() -> None:
+    result = analyze_subdivision(_small_lot_inputs(lot_width_from_frontage=True))
+
+    assert result.can_subdivide
+    assert any("street frontage" in reason for reason in result.reasons)
