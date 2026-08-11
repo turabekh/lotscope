@@ -124,7 +124,7 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
     {
         "code": "RSA-5",
         "permitted_uses": _SINGLE_FAMILY,
-        "min_lot_area_sqft": 1440,
+        "min_lot_area_sqft": 960,
         "min_lot_width_ft": 16,
         "max_height_ft": 38,
         "max_units": 1,

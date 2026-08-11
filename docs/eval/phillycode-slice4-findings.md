@@ -61,3 +61,13 @@ Local measurement understates the reach: only 8 of ~329 local RSA-5 parcels carr
 **The fix is not a single value change, which is why this needs its own slice.** The minimum is geography-dependent: the code's base table says 960, and council-district overlays (`14-520` Ninth, `14-524` Fourth, `14-514` Far Northeast) set 1,440 within their boundaries, while the Quick Guide states the inverse default. A scalar column cannot express a conditional standard, so the options are a corrected scalar plus a documented caveat, an overlay-aware resolution path, or a confidence/qualifier on the field — a decision with verdict-contract consequences.
 
 Recorded here rather than fixed: this slice's constraint is that it measures shipped behaviour, and a change to `zoning_standard` moves stored verdicts.
+
+### F4 resolution — the scalar corrected, the conditionality still unmodelled
+
+`seed.py` now carries RSA-5 at **960**, matching Table 14-701-1. The seeded value was an isolated transcription error, not a systematic inversion: of the eleven districts in that table, ten already matched exactly and only RSA-5 diverged — so the seed's own convention is to mirror the table, and 960 is what that convention requires. `test_seed_dimensional.py` pins all eleven against the printed table so the next divergence fails a test instead of reaching a verdict.
+
+**What this does not fix.** The minimum is geography-dependent and `zoning_standard` still holds one scalar. Before the change, every RSA-5 lot between 960 and 1,440 sqft was told it failed the minimum — a false negative everywhere. After it, lots in that band inside the Fourth District, Ninth District and Far Northeast overlays will be told they clear a minimum their overlay raises to 1,440 — a false positive, confined to those areas.
+
+That is a deliberate trade and worth stating plainly: false positives are the worse failure mode, because "you can build" on a lot that cannot carry the density is advice someone can act on and lose money against, where a false negative only costs a missed opportunity. The trade is defensible only because the false negatives were citywide and the false positives are confined to three overlays — it narrows the error, it does not eliminate it. Overlay-aware resolution remains the real fix and remains its own slice.
+
+**Production requires a verdict recompute.** Stored verdicts for RSA-5 parcels were computed against 1,440 and do not change by re-seeding alone.
