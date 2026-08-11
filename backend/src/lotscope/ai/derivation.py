@@ -3,9 +3,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 PHILLYCODE_SOURCE = "phillycode"
-DERIVATION_VERSION = "d2"
+DERIVATION_VERSION = "d3"
 
 TABLE_KIND = "table"
+TITLE_KIND = "title"
 SKIPPED_KINDS = frozenset({"figure"})
 FOLDABLE_KINDS = frozenset({"subsection"})
 FOLD_UNDER_CHARS = 120
@@ -142,6 +143,9 @@ def body_for(provision: SourceProvision, folded: list[SourceProvision]) -> str:
 
 
 def _emits_document(provision: SourceProvision, is_leaf: bool, report: DerivationReport) -> bool:
+    if provision.kind == TITLE_KIND:
+        report.skipped_containers += 1
+        return False
     if provision.kind == TABLE_KIND:
         table = provision.table_data or {}
         if table.get("continuation_of") or not linearise_table(table):

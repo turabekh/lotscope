@@ -379,3 +379,68 @@ def test_a_heading_loses_its_trailing_footnote_marker() -> None:
         "Fixing and Regulating Rates and Charges"
     )
     assert clean_heading("Title 14") is None
+
+
+def test_a_title_root_carrying_no_text_of_its_own_is_not_a_document() -> None:
+    documents, report = derive(
+        [
+            _provision("14", kind="title", heading="Title 14", path=["14"], ordinal=0),
+            _provision(
+                "14-800", kind="chapter", parent="14", heading="PARKING", text=LONG, ordinal=1
+            ),
+        ]
+    )
+
+    assert [document.provision_id for document in documents] == ["14-800"]
+    assert report.skipped_containers == 1
+
+
+def test_a_repealed_stub_title_never_echoes_itself_as_live_law() -> None:
+    documents, report = derive(
+        [
+            _provision(
+                "5",
+                kind="title",
+                heading="Title 5",
+                path=["5"],
+                text="TITLE 5. FIRE PREVENTION CODE 1",
+                ordinal=0,
+            ),
+            _provision(
+                "5#1",
+                kind="note",
+                parent="5",
+                ordinal=1,
+                text=(
+                    "Repealed, Bill No. 960588-A (approved March 26, 1997). This Title 5, "
+                    "which had been based on 1994 Ordinances, p. 930, was repealed in its entirety."
+                ),
+            ),
+        ]
+    )
+
+    assert documents == []
+    assert report.skipped_containers == 1
+    assert report.skipped_notes == 1
+    assert report.reconciles()
+
+
+def test_a_title_root_carrying_its_own_text_is_still_navigational_not_content() -> None:
+    documents, report = derive(
+        [
+            _provision(
+                "9",
+                kind="title",
+                heading="Title 9",
+                path=["9"],
+                text="TITLE 9. REGULATION OF BUSINESSES 1",
+                ordinal=0,
+            ),
+            _provision(
+                "9-3010", kind="section", parent="9", heading="Rentals", text=LONG, ordinal=1
+            ),
+        ]
+    )
+
+    assert [document.provision_id for document in documents] == ["9-3010"]
+    assert report.skipped_containers == 1

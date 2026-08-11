@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.ai.derivation import DERIVATION_VERSION
 from lotscope.ai.errors import EmbeddingError
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
 from lotscope.ai.phillycode import derive_corpus, derive_title
@@ -149,7 +150,7 @@ async def test_every_document_carries_its_provenance(db_session: AsyncSession) -
     assert metadata["kind"] == "section"
     assert metadata["path"] == ["14", "14-800", "14-802"]
     assert metadata["source_version"] == "May 25, 2026"
-    assert metadata["derivation_version"] == "d2"
+    assert metadata["derivation_version"] == DERIVATION_VERSION
     assert metadata["folded_provision_ids"] == ["14-802(1)"]
 
 
