@@ -1,6 +1,11 @@
+import asyncio
+import sys
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.config import get_settings
+from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -16,6 +21,10 @@ _REFRESH_SQL = text(
 )
 
 _CLEAR_SQL = text("DELETE FROM parcel_overlay WHERE market_code = :market_code")
+
+_MARKETS_WITH_OVERLAYS_SQL = text(
+    "SELECT DISTINCT market_code FROM zoning_overlay ORDER BY market_code"
+)
 
 _COUNT_SQL = text("SELECT count(*) FROM parcel_overlay WHERE market_code = :market_code")
 
@@ -50,3 +59,27 @@ async def parcel_overlay_divergence(
         _DIVERGENCE_SQL, {"market_code": market_code, "parcel_numbers": parcel_numbers}
     )
     return int(divergent or 0)
+
+
+async def refresh_all_parcel_overlays(session: AsyncSession) -> dict[str, int]:
+    markets = list((await session.execute(_MARKETS_WITH_OVERLAYS_SQL)).scalars().all())
+    return {market: await refresh_parcel_overlays(session, market) for market in markets}
+
+
+async def main() -> int:
+    session_factory = create_session_factory(create_engine(get_settings()))
+    async with session_factory() as session:
+        counts = await refresh_all_parcel_overlays(session)
+        await session.commit()
+    if not counts:
+        logger.warning("no_markets_have_overlays")
+        return 0
+    for market, rows in counts.items():
+        if rows == 0:
+            logger.error("parcel_overlay_empty_after_refresh", market=market)
+            return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(asyncio.run(main()))

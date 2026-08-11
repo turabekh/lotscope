@@ -41,7 +41,7 @@ from lotscope.ingestion.loaders.sheriff_civilview import (
 )
 from lotscope.ingestion.runner import run_loader
 from lotscope.markets.models import Market
-from lotscope.zoning.overlay_membership import refresh_parcel_overlays
+from lotscope.zoning.overlay_membership import refresh_all_parcel_overlays
 
 SessionFactory = async_sessionmaker[AsyncSession]
 Job = Callable[[SessionFactory, Settings], Awaitable[int]]
@@ -164,7 +164,7 @@ async def ingest_zoning_overlays(session_factory: SessionFactory, settings: Sett
         dataset=overlays.ZONING_OVERLAY_DATASET,
     )
     async with session_factory() as session:
-        await refresh_parcel_overlays(session, "phl")
+        await refresh_all_parcel_overlays(session)
         await session.commit()
     return total
 

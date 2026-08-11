@@ -247,20 +247,11 @@ v9 changes how zoning standards resolve (ADR-0080) and requires a full `phl` rec
 
 1. **Stop the app before Alembic.** `scripts/deploy.sh` takes a `pre-migration` backup automatically when migrations are pending; this deploy carries two (`e5b1c93a7d24` overlay_standard, `f3a71c8d0e59` parcel_overlay).
 2. **Migrate**, then **seed**: `make seed` writes the six `overlay_standard` rows, RSA-5 at 960, RM-1's provision and the industrial FARs. The base flip and the overlay rows must land together — 960 without the overlay layer is the 54,376-parcel false-positive window ADR-0080 exists to close.
-3. **Populate membership before traffic returns.** `parcel_overlay` starts empty and an empty membership table silently resolves every parcel to its base standard — which for RSA-5 is 960 everywhere, i.e. exactly the failure mode being prevented. Run the refresh as part of the deploy, not after:
+3. **Populate membership before traffic returns — now automatic.** `scripts/deploy.sh` runs `python -m lotscope.zoning.overlay_membership` between the seed and app start, and **exits nonzero if any market ends up with zero memberships**, which fails the deploy rather than serving a wrong standard. An empty `parcel_overlay` does not fail loudly on its own: it silently resolves every parcel to its base standard, which for RSA-5 is 960 everywhere — exactly the failure mode being prevented. To run it by hand:
    ```
-   cd backend && uv run python -c "
-   import asyncio
-   from lotscope.core.config import get_settings
-   from lotscope.core.db import create_engine, create_session_factory
-   from lotscope.zoning.overlay_membership import refresh_parcel_overlays
-   async def main():
-       sf = create_session_factory(create_engine(get_settings()))
-       async with sf() as s:
-           print(await refresh_parcel_overlays(s, 'phl')); await s.commit()
-   asyncio.run(main())"
+   cd backend && uv run python -m lotscope.zoning.overlay_membership
    ```
-   Measured locally: **1,487,536 rows in 57s**. Thereafter the nightly overlay ingest refreshes it automatically.
+   Measured locally: **phl 1,487,536 + wlm 14,777 rows in ~60s**. Thereafter the nightly overlay ingest refreshes it automatically. The refresh covers **every market with overlay polygons**, discovered from `zoning_overlay` rather than hardcoded — `wlm` has 7 polygons and would otherwise lose overlay display entirely.
 4. **Verify before traffic:** `make verify-zoning-standards` → `OK` (0.44s). Exits nonzero on divergence.
 5. **Start the app**, then **recompute**.
 

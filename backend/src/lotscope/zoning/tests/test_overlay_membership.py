@@ -24,3 +24,13 @@ def test_divergence_check_compares_the_live_join_against_the_materialized_table(
     assert "ST_Intersects" in body
     assert "EXCEPT" in body
     assert "parcel_overlay" in body
+
+
+def test_refresh_discovers_every_market_that_has_overlays() -> None:
+    from lotscope.zoning.overlay_membership import _MARKETS_WITH_OVERLAYS_SQL
+
+    body = str(_MARKETS_WITH_OVERLAYS_SQL)
+
+    assert "zoning_overlay" in body
+    assert "market_code" in body
+    assert "phl" not in body
