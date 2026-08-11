@@ -22,12 +22,16 @@ _PARCEL_DEED_SQL = text(
     "LIMIT :limit"
 )
 _MARKET_FILTER = "AND ((:market)::text IS NULL OR doc_metadata->>'market' = (:market)::text) "
+_TITLE_FILTER = (
+    "AND ((:titles)::text[] IS NULL OR doc_metadata->>'title_number' = ANY((:titles)::text[])) "
+)
 _SEARCH_SQL = text(
     "SELECT id, source, section, title, content, "
     "(embedding <=> (:embedding)::vector) AS distance "
     "FROM document "
     "WHERE embedding IS NOT NULL AND ((:source)::text IS NULL OR source = (:source)::text) "
     + _MARKET_FILTER
+    + _TITLE_FILTER
     + "ORDER BY distance ASC "
     "LIMIT :limit"
 )
@@ -112,6 +116,7 @@ async def vector_search(
     limit: int = 5,
     source: str | None = None,
     market: str | None = None,
+    titles: list[str] | None = None,
 ) -> list[RetrievedDocument]:
     rows = await session.execute(
         _SEARCH_SQL,
@@ -119,6 +124,7 @@ async def vector_search(
             "embedding": to_vector_literal(embedding),
             "source": source,
             "market": market,
+            "titles": list(titles) if titles else None,
             "limit": limit,
         },
     )
@@ -145,9 +151,12 @@ async def embed_and_search(
     limit: int = 5,
     source: str | None = None,
     market: str | None = None,
+    titles: list[str] | None = None,
 ) -> list[RetrievedDocument]:
     vectors = await embedder.embed([query])
-    return await vector_search(session, vectors[0], limit=limit, source=source, market=market)
+    return await vector_search(
+        session, vectors[0], limit=limit, source=source, market=market, titles=titles
+    )
 
 
 async def fetch_district_documents(
