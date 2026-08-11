@@ -22,13 +22,27 @@ _PARCEL_DEED_SQL = text(
     "LIMIT :limit"
 )
 _MARKET_FILTER = "AND ((:market)::text IS NULL OR doc_metadata->>'market' = (:market)::text) "
+_TITLE_FILTER = (
+    "AND ((:titles)::text[] IS NULL OR doc_metadata->>'title_number' = ANY((:titles)::text[])) "
+)
 _SEARCH_SQL = text(
     "SELECT id, source, section, title, content, "
     "(embedding <=> (:embedding)::vector) AS distance "
     "FROM document "
     "WHERE embedding IS NOT NULL AND ((:source)::text IS NULL OR source = (:source)::text) "
     + _MARKET_FILTER
+    + _TITLE_FILTER
     + "ORDER BY distance ASC "
+    "LIMIT :limit"
+)
+_CITE_SQL = text(
+    "SELECT id, source, section, title, content, 0.0 AS distance "
+    "FROM document "
+    "WHERE embedding IS NOT NULL AND ((:source)::text IS NULL OR source = (:source)::text) "
+    + _MARKET_FILTER
+    + _TITLE_FILTER
+    + "AND section = ANY((:cites)::text[]) "
+    "ORDER BY array_position((:cites)::text[], section), id "
     "LIMIT :limit"
 )
 _DISTRICT_SQL = text(
@@ -112,6 +126,7 @@ async def vector_search(
     limit: int = 5,
     source: str | None = None,
     market: str | None = None,
+    titles: list[str] | None = None,
 ) -> list[RetrievedDocument]:
     rows = await session.execute(
         _SEARCH_SQL,
@@ -119,6 +134,7 @@ async def vector_search(
             "embedding": to_vector_literal(embedding),
             "source": source,
             "market": market,
+            "titles": list(titles) if titles else None,
             "limit": limit,
         },
     )
@@ -145,9 +161,46 @@ async def embed_and_search(
     limit: int = 5,
     source: str | None = None,
     market: str | None = None,
+    titles: list[str] | None = None,
 ) -> list[RetrievedDocument]:
     vectors = await embedder.embed([query])
-    return await vector_search(session, vectors[0], limit=limit, source=source, market=market)
+    return await vector_search(
+        session, vectors[0], limit=limit, source=source, market=market, titles=titles
+    )
+
+
+async def fetch_documents_by_cite(
+    session: AsyncSession,
+    cites: list[str],
+    *,
+    limit: int = 6,
+    source: str | None = None,
+    market: str | None = None,
+    titles: list[str] | None = None,
+) -> list[RetrievedDocument]:
+    if not cites:
+        return []
+    rows = await session.execute(
+        _CITE_SQL,
+        {
+            "cites": list(cites),
+            "source": source,
+            "market": market,
+            "titles": list(titles) if titles else None,
+            "limit": limit,
+        },
+    )
+    return [
+        RetrievedDocument(
+            id=row.id,
+            source=row.source,
+            section=row.section,
+            title=row.title,
+            content=row.content,
+            distance=float(row.distance),
+        )
+        for row in rows
+    ]
 
 
 async def fetch_district_documents(

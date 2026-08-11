@@ -5,6 +5,14 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ai.client import StructuredGenerator
+from lotscope.ai.context import (
+    ContextBudget,
+    dedupe,
+    expand_refs,
+    expand_to_windows,
+    fit_to_budget,
+)
+from lotscope.ai.districts import district_anchor_cites
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.errors import GenerationError, UngroundedAnswerError
 from lotscope.ai.prompts import (
@@ -16,9 +24,11 @@ from lotscope.ai.prompts import (
     build_user_prompt,
     for_market,
 )
+from lotscope.ai.query_terms import extract_cites, extract_districts
 from lotscope.ai.retrieval import (
     embed_and_search,
     fetch_district_documents,
+    fetch_documents_by_cite,
     search_parcel_documents,
 )
 from lotscope.ai.schemas import (
@@ -27,6 +37,12 @@ from lotscope.ai.schemas import (
     ParcelReportResult,
     ParcelSummary,
     ParcelSummaryResult,
+    RetrievedDocument,
+)
+from lotscope.ai.scope import (
+    PHILLYCODE_SOURCE,
+    RetrievalScope,
+    zoning_retrieval_scope,
 )
 from lotscope.assessment.schemas import AssessmentResult
 from lotscope.assessment.service import analyze_parcel_assessment
@@ -39,16 +55,7 @@ from lotscope.verdict.schemas import VerdictResult
 from lotscope.verdict.service import get_verdict
 from lotscope.zoning.service import assess_parcel as assess_zoning
 
-TITLE_14_SOURCE = "title14"
-ZONING_SOURCE = "zoning"
 DEED_SOURCE = "deed"
-
-
-def zoning_retrieval_scope(market_code: str) -> tuple[str, str | None]:
-    if market_code == "phl":
-        return TITLE_14_SOURCE, None
-    return ZONING_SOURCE, market_code
-
 
 _HIGH_COVERAGE_MIN = 3
 _MEDIUM_COVERAGE_MIN = 2
@@ -271,6 +278,74 @@ async def draft_parcel_report(
     )
 
 
+async def _incumbent_context(
+    session: AsyncSession,
+    embedder: Embedder,
+    question: str,
+    *,
+    scope: RetrievalScope,
+    zoning_code: str | None,
+    document_limit: int,
+) -> list[RetrievedDocument]:
+    documents = await embed_and_search(
+        session,
+        embedder,
+        question,
+        limit=document_limit,
+        source=scope.source,
+        market=scope.market,
+    )
+    if not zoning_code:
+        return documents
+    pinned = await fetch_district_documents(
+        session, zoning_code, source=scope.source, market=scope.market
+    )
+    if not pinned:
+        return documents
+    seen = {document.id for document in pinned}
+    return (pinned + [d for d in documents if d.id not in seen])[: max(document_limit, len(pinned))]
+
+
+async def _canonical_context(
+    session: AsyncSession,
+    embedder: Embedder,
+    question: str,
+    *,
+    scope: RetrievalScope,
+    market_code: str,
+    zoning_code: str | None,
+    document_limit: int,
+) -> list[RetrievedDocument]:
+    anchor_cites = list(extract_cites(question))
+    for district in [*extract_districts(question), *([zoning_code] if zoning_code else [])]:
+        for cite in await district_anchor_cites(
+            session, district, market_code=market_code, titles=scope.titles
+        ):
+            if cite not in anchor_cites:
+                anchor_cites.append(cite)
+
+    anchors = await fetch_documents_by_cite(
+        session,
+        anchor_cites,
+        source=scope.source,
+        market=scope.market,
+        titles=scope.titles,
+    )
+    matched = await embed_and_search(
+        session,
+        embedder,
+        question,
+        limit=document_limit,
+        source=scope.source,
+        market=scope.market,
+        titles=scope.titles,
+    )
+    leads = dedupe(anchors + matched)
+    windows = await expand_to_windows(session, leads, market_code=market_code, scope=scope)
+    referenced = await expand_refs(session, leads, market_code=market_code, scope=scope)
+    return fit_to_budget(leads + windows + referenced, ContextBudget())
+
+
 async def ask_the_parcel(
     session: AsyncSession,
     parcel_number: str,
@@ -279,31 +354,34 @@ async def ask_the_parcel(
     embedder: Embedder,
     generator: StructuredGenerator,
     document_limit: int = 5,
+    source_override: str | None = None,
 ) -> ParcelAnswer | None:
     detail = await get_parcel_detail(session, parcel_number)
     if detail is None:
         return None
 
     verdict = await get_verdict(session, parcel_number)
-    zoning_source, zoning_market = zoning_retrieval_scope(detail.market_code)
-    documents = await embed_and_search(
-        session,
-        embedder,
-        question,
-        limit=document_limit,
-        source=zoning_source,
-        market=zoning_market,
-    )
+    scope = zoning_retrieval_scope(detail.market_code, source_override=source_override)
     zoning_code = detail.resolved_zoning_code or detail.base_zoning_code
-    if zoning_code:
-        pinned = await fetch_district_documents(
-            session, zoning_code, source=zoning_source, market=zoning_market
+    if scope.source == PHILLYCODE_SOURCE:
+        documents = await _canonical_context(
+            session,
+            embedder,
+            question,
+            scope=scope,
+            market_code=detail.market_code,
+            zoning_code=zoning_code,
+            document_limit=document_limit,
         )
-        if pinned:
-            seen = {document.id for document in pinned}
-            documents = (pinned + [d for d in documents if d.id not in seen])[
-                : max(document_limit, len(pinned))
-            ]
+    else:
+        documents = await _incumbent_context(
+            session,
+            embedder,
+            question,
+            scope=scope,
+            zoning_code=zoning_code,
+            document_limit=document_limit,
+        )
 
     deeds = await search_parcel_documents(
         session, embedder, question, parcel_number, source=DEED_SOURCE, limit=3
