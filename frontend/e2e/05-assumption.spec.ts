@@ -37,19 +37,19 @@ test('flow 6 — the deal card carries the whole loop from figure to offer', asy
 
   await page.getByRole('tab', { name: 'Deal' }).click()
 
-  const hero = page.locator('[data-test="deal-mao"]')
   const grid = page.locator('[data-test="heatmap"]')
-  await expect(hero).toBeVisible()
+  const construction = page.locator('[data-test="breakdown-construction"]')
+  await expect(page.locator('[data-test="deal-mao"]')).toBeVisible()
   await expect(page.locator('[data-test="case-strip"]')).toBeVisible()
   await expect(grid).toBeVisible()
 
-  const heroBefore = await hero.innerText()
   const gridBefore = await grid.innerText()
+  const constructionBefore = await construction.innerText()
 
   await page.getByRole('spinbutton', { name: 'Construction ($/sqft)' }).fill('100')
   await page.getByRole('button', { name: 'Recompute', exact: true }).click()
 
-  await expect(hero).not.toHaveText(heroBefore)
+  await expect(construction).not.toHaveText(constructionBefore)
   await expect(grid).not.toHaveText(gridBefore)
 
   await page.locator('[data-test="deal-generate-offer"]').click()

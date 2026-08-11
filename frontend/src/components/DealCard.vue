@@ -194,7 +194,9 @@ function reset(): void {
           </div>
           <div class="breakdown-row">
             <span>Construction</span
-            ><span class="lot-numeric">{{ money(deal.construction_cost) }}</span>
+            ><span class="lot-numeric" data-test="breakdown-construction">{{
+              money(deal.construction_cost)
+            }}</span>
           </div>
           <div class="breakdown-row">
             <span>ARV (finished)</span><span class="lot-numeric">{{ money(deal.arv) }}</span>
