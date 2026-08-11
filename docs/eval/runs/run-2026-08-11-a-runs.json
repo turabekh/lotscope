@@ -1,0 +1,2516 @@
+{
+  "run_id": "run-2026-08-11-a",
+  "cases": 30,
+  "runs": [
+    {
+      "arm": "title14",
+      "question_id": "dim-rsa5-lot-area",
+      "answer": "In the RSA-5 zoning district, the minimum lot area is **1,440 sq ft** in most locations. However, in Council Districts 1, 2, 3, 5, and 7, the minimum lot area is reduced to **960 sq ft**. Additionally, a lot of at least 1,600 sq ft may be subdivided into lots as small as **800 sq ft** under certain stated conditions.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSA-5)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSA-5)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RTA-1)",
+        "§ 14-701 / § 14-602 (RSD-1)",
+        "§ 14-701 / § 14-602 (RM-3)"
+      ],
+      "latency_seconds": 4.572,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-rsa5-lot-area",
+      "answer": "In the RSA-5 zoning district, the base minimum lot area is **960 sq. ft.** (subject to Note [2] in the code). However, this can vary depending on whether the parcel falls within a specific overlay district:\n\n- **Base RSA-5 district:** 960 sq. ft. (per Table 14-701-1)\n- **Center City Overlay (/CTR):** 1,080 sq. ft. (for RSA-5 lots)\n- **Far Northeast Overlay (/FNE), Ninth District Overlay (/NDO), Fourth District Overlay (/FDO), and Sixth District Overlay (/SIX):** 1,440 sq. ft. as a general minimum, with a potential exception allowing lots as small as 800 sq. ft. under specific subdivision conditions\n\nSince the parcel (phl:011000019) is zoned RSA-5 and no specific overlay district has been identified for it in the provided context, the baseline minimum lot area of **960 sq. ft.** applies per Table 14-701-1.",
+      "citations": [
+        {
+          "source": "phillycode 14-701(2)(b)[11]#table1",
+          "section": "Table 14-701-1"
+        },
+        {
+          "source": "phillycode 14-502(4)(c)(.1)",
+          "section": "14-502(4)(c)(.1)"
+        },
+        {
+          "source": "phillycode 14-514(5)(a)",
+          "section": "14-514(5)(a)"
+        },
+        {
+          "source": "phillycode 14-520(4)(a)",
+          "section": "14-520(4)(a)"
+        },
+        {
+          "source": "phillycode 14-524(2)(a)",
+          "section": "14-524(2)(a)"
+        },
+        {
+          "source": "phillycode 14-548(3)(a)(.3)",
+          "section": "14-548(3)(a)(.3)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-502(4)(c)(.1)",
+        "14-514(5)(a)",
+        "14-548(3)(a)(.3)",
+        "14-701(2)(b)[11]#table1",
+        "14-520(4)(a)",
+        "14-529(2)",
+        "14-524(2)(a)",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 18.076,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-rsa3-height",
+      "answer": "In the RSA-3 (Residential Single-Family Attached) zoning district, the maximum building height allowed is **38 feet**.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSA-3)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSA-3)",
+        "§ 14-701 / § 14-602 (SP-STA)",
+        "§ 14-701 / § 14-602 (SP-ENT)",
+        "§ 14-701 / § 14-602 (CMX-2.5)",
+        "§ 14-701 / § 14-602 (SP-AIR)"
+      ],
+      "latency_seconds": 2.992,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-rsa3-height",
+      "answer": "For this parcel zoned RSA-3, the maximum building height is **38 feet**, as specified in Table 14-701-1 (Dimensional Standards for Lower Density Residential Districts) under the RSA-3 column.\n\nAdditionally, certain structures may extend above this limit as exceptions:\n- Balustrades and parapet walls: up to 42 inches above the height limit\n- Solar collectors and related support structures: up to 9 feet above the height limit\n- Vegetated roof structures: up to 30 inches above the height limit\n- Other residential exceptions include monuments, belfries, cupolas, spires, chimneys, antennas, and roof decks (with associated railings and access structures), subject to specific conditions.",
+      "citations": [
+        {
+          "source": "phillycode 14-701(2)(b)[11]#table1",
+          "section": "Table 14-701-1: Dimensional Standards for Lower Density Residential Districts (RSA-3 Height Maximum)"
+        },
+        {
+          "source": "phillycode 14-701(6)#table1",
+          "section": "Table 14-701-6: Exceptions to Dimensional Standards — Exceptions to Height Limits"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-504(6)(c)(.1)(.a)",
+        "14-504(7.1)(a)",
+        "14-602(3)(a)[5]#table1",
+        "14-701(5)(c)(.4)(.b)",
+        "14-701(5)(c)(.7)(.c)",
+        "14-701(5)(c)(.7)(.b)",
+        "14-701(5)(c)(.8)(.b)",
+        "14-536(2)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)"
+      ],
+      "latency_seconds": 8.067,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-rsd1-lot-width",
+      "answer": "For parcel phl:091161600, which is zoned RSD-1 (Residential Single-Family Detached), the minimum lot width required is **75 feet**.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSD-1)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSD-1)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (CA-1)",
+        "§ 14-701 / § 14-602 (RM-3)",
+        "§ 14-701 / § 14-602 (RSD-3)"
+      ],
+      "latency_seconds": 3.761,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-rsd1-lot-width",
+      "answer": "For a parcel zoned **RSD-1**, the minimum lot width required is **75 feet**, as specified in Table 14-701-1: Dimensional Standards for Lower Density Residential Districts.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701(2)(b)[11]#table1"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-404(10)",
+        "14-533(3)(e)[3](.b)#table1",
+        "14-533(4)(a)[2]#table1",
+        "14-202(10)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(b)[1]",
+        "14-509(3)(e)",
+        "14-519(4)(b)(.1)",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 4.432,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-rsa5-occupancy",
+      "answer": "For your parcel (phl:011000019) zoned RSA-5, the maximum lot occupancy (occupied area) depends on your lot's position:\n\n- **Intermediate (interior) lot:** You may occupy up to **75%** of the lot area.\n- **Corner lot:** You may occupy up to **80%** of the lot area.\n\nAdditionally, a minimum rear yard depth of 9 ft is required, and a side yard of 5 ft applies. Please note that buildability is flagged as uncertain for this parcel, so further review may be warranted before proceeding.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSA-5)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSA-5)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RTA-2)",
+        "§ 14-701 / § 14-602 (RTA-1)",
+        "§ 14-701 / § 14-602 (RSA-3)"
+      ],
+      "latency_seconds": 9.66,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-rsa5-occupancy",
+      "answer": "For a parcel zoned RSA-5, the maximum occupied area as a percentage of the lot depends on the lot type:\n\n- **Intermediate lot**: 75% of the lot area\n- **Corner lot**: 80% of the lot area\n\nThese figures come directly from Table 14-701-1 (Dimensional Standards for Lower Density Residential Districts) for the RSA-5 district. Note that this is subject to table note [3], so you may want to review that footnote for any additional conditions.",
+      "citations": [
+        {
+          "source": "phillycode 14-701(2)(b)[11]#table1",
+          "section": "Table 14-701-1: Dimensional Standards for Lower Density Residential Districts — RSA-5 Max. Occupied Area"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-502(4)(c)(.1)",
+        "14-514(5)(a)",
+        "14-701(4)(a)[5](.a)",
+        "14-502(3)(l)(.2)",
+        "14-701(5)(b)(.1)(.b)",
+        "14-502(3)(m)(.2)",
+        "14-701(4)(a)[5](.b)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 13.745,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-rsa3-rear-yard",
+      "answer": "For this parcel zoned RSA-3, the minimum rear yard depth required is **15 feet** (for a single-family use).",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSA-3)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSA-3)",
+        "§ 14-701 / § 14-602 (RSD-2)",
+        "§ 14-701 / § 14-602 (RSA-2)",
+        "§ 14-701 / § 14-602 (RSD-1)",
+        "§ 14-701 / § 14-602 (RSD-3)"
+      ],
+      "latency_seconds": 3.727,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-rsa3-rear-yard",
+      "answer": "For an RSA-3 zoned parcel, the minimum rear yard depth required depends on the building type:\n\n- **Single-Family use: 15 ft.**\n- **Other uses: 20 ft.**\n\nThis is per Table 14-701-1 (Dimensional Standards for Lower Density Residential Districts), which lists RSA-3 under the \"Rear Yard – Min. Depth (ft.)\" row as \"Single-Family 15; other 20.\"\n\nFor reference, rear yard depth is measured from the rearmost portion of the structure to the closest point of the rear lot line (or nearest line of a street, shared driveway, easement, or alley), per § 14-202(25).",
+      "citations": [
+        {
+          "source": "phillycode 14-701(2)(b)[11]#table1",
+          "section": "Table 14-701-1: Rear Yard Min. Depth – RSA-3"
+        },
+        {
+          "source": "phillycode 14-202(25)",
+          "section": "14-202(25)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-504(6)(c)(.1)(.a)",
+        "14-504(7.1)(a)",
+        "14-602(3)(a)[5]#table1",
+        "14-548(3)(c)(.3)(.c)",
+        "14-515(3)(c)(.3)",
+        "14-202(25)",
+        "14-604(4)(d)(.3)",
+        "14-704(4)(c)(.2)(.d)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)"
+      ],
+      "latency_seconds": 8.452,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-rm1-lot-area",
+      "answer": "In the RM-1 (Residential Multi-Family) district, the minimum lot area is **1,440 square feet**.",
+      "citations": [
+        {
+          "source": "title14",
+          "section": "14-701 / 14-602 (RM-1)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RM-1)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RTA-1)",
+        "§ 14-701 / § 14-602 (RSD-1)",
+        "§ 14-701 / § 14-602 (RM-3)"
+      ],
+      "latency_seconds": 3.33,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-rm1-lot-area",
+      "answer": "For the RM-1 (Residential Multi-Family-1) zoning district, the minimum lot area is **1,440 sq. ft.** as specified in Table 14-701-2: Dimensional Standards for Higher Density Residential Districts. Note that footnote [1] applies to this figure, so there may be additional conditions or exceptions detailed in the notes to that table.",
+      "citations": [
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-701(2)(c)[9]#table1"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-502(4)(c)(.1)",
+        "14-502(4)(c)(.2)",
+        "14-548(3)(a)(.3)",
+        "14-701(2)(b)[11]#table1",
+        "14-520(4)(a)",
+        "14-529(2)",
+        "14-524(2)(a)",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 9.316,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-rm4-height",
+      "answer": "In the RM-4 zoning district, there is no fixed maximum height stated in feet. Instead, building height is governed by a maximum Floor Area Ratio (FAR) of 350%. This means the total floor area of a building cannot exceed 3.5 times the area of the lot. So the taller you build, the smaller each floor's footprint must be (and vice versa). The actual maximum achievable height will depend on the lot area and how the building is designed within that FAR envelope. Note that the buildability verdict for this parcel flags some uncertainty (can_build_by_right=False, risk_score=20), so further review may be warranted.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RM-4)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RTA-2)",
+        "§ 14-701 / § 14-602 (RSA-6)",
+        "§ 14-701 / § 14-602 (SP-AIR)",
+        "§ 14-701 / § 14-602 (RSA-3)"
+      ],
+      "latency_seconds": 6.074,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-rm4-height",
+      "answer": "Based on the Philadelphia Zoning Code, this parcel is zoned RM-4 (Residential Multi-Family-4). According to Table 14-701-2 (Dimensional Standards for Higher Density Residential Districts), the RM-4 district does **not have a specified maximum building height** — the height column for RM-4 in that table is blank (no limit listed).\n\nHowever, a few important caveats apply:\n\n1. **No stated maximum height in the base zoning table** — the RM-4 column under \"Height: Maximum (ft.)\" in Table 14-701-2 is blank, meaning no explicit cap is listed in the base district standards.\n\n2. **Floor Area Ratio (FAR) limit applies** — RM-4 has a maximum FAR of 350% of lot area, which will effectively constrain building bulk even if height itself is uncapped.\n\n3. **Sky Plane requirements** (§ 14-701(5)) may limit effective height depending on the width of the street(s) the lot fronts on.\n\n4. **Overlay districts** could impose additional height limits (e.g., /NCO, /NHO, /TOD, /VDO overlays each have their own height rules), but the context does not indicate which overlays, if any, apply to this specific parcel.\n\n5. **Buildability is flagged as uncertain** with `can_build_by_right=False` and 1 risk flag, so you should verify with the City's Zoning Board or L&I before relying on any height assumptions.\n\nIn summary: the RM-4 base zoning does not specify an explicit maximum height, but building size is constrained by a 350% FAR limit, sky plane rules, and any applicable overlay districts. A zoning attorney or licensed design professional should be consulted for a definitive determination.",
+      "citations": [
+        {
+          "source": "phillycode 14-701(2)(c)[9]#table1",
+          "section": "Table 14-701-2: Dimensional Standards for Higher Density Residential Districts (RM-4 column)"
+        },
+        {
+          "source": "phillycode 14-701(5)(b)(.1)(.h)#table1",
+          "section": "Table 14-701-5: Sky Plane Requirements by Street"
+        },
+        {
+          "source": "phillycode 14-701(6)#table1",
+          "section": "Table 14-701-6: Exceptions to Dimensional Standards"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-513(5)(b)(.2)(.a)",
+        "14-533(3)(b)(.1)(.b)(i)",
+        "14-504(11)(c)(.1)(.b)",
+        "14-504(11)(c)(.1)(.a)",
+        "14-406(4)",
+        "14-536(2)",
+        "14-529(6)(a)(.2)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 15.737,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-rmx2-lot-area-per-unit",
+      "answer": "The parcel at 1435 S 5TH ST is zoned **RMX-2** (Residential Mixed-Use). Based on the available source documents, the RMX-2 zoning standards do not specify a minimum lot area per dwelling unit. The RMX-2 dimensional standards reference a minimum district area of 1 acre, a maximum occupied area of 75%, and a maximum floor area ratio of 250%, subject to an approved master plan — but no per-unit lot area requirement is listed.\n\nFor comparison, the **RM-1** district (a different zone) does specify a dwelling-unit density standard: at least **360 sq ft of lot area per dwelling unit** for the first 1,440 sq ft of lot area, then at least **480 sq ft per unit** for lot area above 1,440 sq ft. However, this rule applies to RM-1, not RMX-2.\n\nSince the provided context does not include a specific lot-area-per-dwelling-unit requirement for the RMX-2 district, I do not have enough information to give a definitive answer for this parcel's zoning classification.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RMX-2)"
+        },
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RM-1)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RMX-2)",
+        "§ 14-701 / § 14-602 (RM-1)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RM-3)",
+        "§ 14-701 / § 14-602 (RSD-1)"
+      ],
+      "latency_seconds": 7.167,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-rmx2-lot-area-per-unit",
+      "answer": "For this parcel at 1435 S 5TH ST, zoned RMX-2, the lot area required per dwelling unit depends on the building height:\n\n1. **Buildings ≤ 45 ft. in height:** A minimum of **360 sq. ft. of lot area** is required per dwelling unit.\n2. **Buildings > 45 ft. in height:** A minimum of **270 sq. ft. of lot area** is required per dwelling unit.\n\nGiven that this parcel has a lot area of only **800 sq. ft.**, applying the 360 sq. ft. standard (for buildings ≤ 45 ft.) would yield a maximum of **2 dwelling units** (800 ÷ 360 = 2.22, rounded down to 2). At the 270 sq. ft. standard (for buildings > 45 ft.), the lot could support up to **2 dwelling units** as well (800 ÷ 270 = 2.96, rounded down to 2).",
+      "citations": [
+        {
+          "source": "phillycode 14-602(4)(a)[8](.a)",
+          "section": "14-602(4)(a)[8](.a)"
+        },
+        {
+          "source": "phillycode 14-602(4)(a)[8](.b)",
+          "section": "14-602(4)(a)[8](.b)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-304(3)(e)#table1",
+        "14-401(1)(a)(.1)#table1",
+        "14-401(5)",
+        "14-602(4)(a)[8](.a)",
+        "14-602(3)(a)[1]",
+        "14-548(3)(b)(.1)(.b)",
+        "14-602(4)(a)[8](.b)",
+        "14-529(2)(a)(.2)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 11.366,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-cmx3-height",
+      "answer": "In the CMX-3 zoning district, there is no fixed maximum building height cap. Instead, building height is governed by a maximum Floor Area Ratio (FAR) of 500% (with potential bonuses), rather than a specific height limit in feet or stories.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (CMX-3)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (CMX-3)",
+        "§ 14-701 / § 14-602 (SP-STA)",
+        "§ 14-701 / § 14-602 (SP-ENT)",
+        "§ 14-701 / § 14-602 (CMX-2.5)",
+        "§ 14-701 / § 14-602 (SP-AIR)"
+      ],
+      "latency_seconds": 4.477,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-cmx3-height",
+      "answer": "For this parcel zoned CMX-3, Table 14-701-3 (Dimensional Standards for Commercial Districts) shows that the maximum height column for CMX-3 is blank/not specified with a fixed foot limit in that table. However, the table does note a maximum Floor Area Ratio (FAR) of 500% for CMX-3, but no explicit numerical height cap is listed for CMX-3 in the standard table.\n\nThat said, the context does not provide a specific maximum building height figure for a general CMX-3 parcel. The height cell for CMX-3 in Table 14-701-3 appears to have no value listed (unlike CMX-1 at a note-based limit, CMX-2 at 38 ft, or CMX-2.5 at 55 ft). This suggests height in CMX-3 may not have a fixed universal cap under the base standard, but could be subject to additional bulk/massing controls or location-specific rules.\n\nThere are also specific location-based height rules cited (e.g., near Broad Street corridors or specific streets like Locust and Spruce), but without the parcel's street address, it cannot be determined whether those location-specific limits apply here.\n\nIn summary: The context does not specify a clear, single maximum building height for a standard CMX-3 parcel. The dimensional standards table leaves the CMX-3 height field blank, and the FAR is capped at 500%. Location-specific height rules may apply depending on exact location, but the parcel address is not available to confirm this.",
+      "citations": [
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-701(3)(a)[4]#table1"
+        },
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-701(5)(c)(.4)(.b)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-301(3)(c)(.1)(.l)",
+        "14-301(9)(b)(.4)",
+        "14-402(1)(a)(.1)#table1",
+        "14-402(1)(c)(.4)",
+        "14-701(5)(c)(.4)(.b)",
+        "14-701(5)(c)(.7)(.c)",
+        "14-701(5)(c)(.7)(.b)",
+        "14-701(5)(c)(.8)(.b)",
+        "14-536(2)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 18.55,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-cmx2-lot-area",
+      "answer": "No, there is no minimum lot area requirement in the CMX-2 district. The dimensional standards for CMX-2 explicitly state \"no minimum lot area,\" so any lot size is permissible from a minimum lot area standpoint.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (CMX-2)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (CMX-2)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RSD-1)",
+        "§ 14-701 / § 14-602 (RTA-1)",
+        "§ 14-701 / § 14-602 (RM-3)"
+      ],
+      "latency_seconds": 8.428,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-cmx2-lot-area",
+      "answer": "For the CMX-2 (Neighborhood Commercial Mixed-Use-2) district, Table 14-701-3 (Dimensional Standards for Commercial Districts) shows that the \"Min. Lot Area (sq. ft.)\" cell for CMX-2 is blank/not applicable. This means the Philadelphia Zoning Code does not impose a minimum lot area requirement for the CMX-2 district. By contrast, some other commercial districts do have minimums (e.g., CA-1 requires 5,000 sq. ft. and CA-2 requires 15,000 sq. ft.), but CMX-2 has no such requirement.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701(3)(a)[4]#table1"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-402(1)(a)(.1)#table1",
+        "14-402(1)(c)(.2)",
+        "14-402(1)(c)(.3)",
+        "14-402(1)(c)(.4)",
+        "14-548(3)(a)(.3)",
+        "14-529(2)",
+        "14-701(2)(b)[11]#table1",
+        "14-515(2)(c)",
+        "14-520(4)(a)",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 6.822,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-ca1-floor-area",
+      "answer": "The source documents do not specify a Floor Area Ratio (FAR) for the CA-1 zoning district that applies to this parcel. The dimensional standards for CA-1 (Table 14-701-3) are expressed in terms of maximum occupied area (60%), maximum height (38 ft), minimum lot area, and minimum yard setbacks — but no FAR figure is listed for CA-1. An FAR standard is noted in the provided context only for the RM-4 district (350% FAR), which does not apply to this parcel. Based on the available context, there is not enough information to state a specific floor area ratio for this CA-1 lot.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (CA-1)"
+        },
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RM-4)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (CA-1)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RSA-6)",
+        "§ 14-701 / § 14-602 (RSA-5)",
+        "§ 14-701 / § 14-602 (RM-1)"
+      ],
+      "latency_seconds": 8.773,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-ca1-floor-area",
+      "answer": "For parcel phl:411000105, which is zoned CA-1 (Auto-Oriented Commercial-1), Table 14-701-3 (Dimensional Standards for Commercial Districts) does not specify a maximum floor area ratio (FAR) for the CA-1 district. The FAR cell for CA-1 in that table is blank, meaning no FAR limit is established in the base zoning code for CA-1. By contrast, other commercial districts like CMX-3 (500%), CMX-4 (500%), and CMX-5 (1,200%) do have explicit FAR caps listed.\n\nIn short, the CA-1 district does not appear to impose a maximum FAR under the base dimensional standards. However, because the parcel's buildability is flagged as uncertain (risk score 60, can_build_by_right=False), you should consult the Philadelphia Department of Licenses and Inspections or a licensed professional to confirm whether any overlay district or other provision may impose additional FAR limits on this specific lot.",
+      "citations": [
+        {
+          "source": "phillycode 14-701(3)(a)[4]#table1",
+          "section": "Table 14-701-3: Dimensional Standards for Commercial Districts (CA-1 column, Floor Area Ratio row)"
+        },
+        {
+          "source": "phillycode 14-402(1)(c)(.7)",
+          "section": "14-402(1)(c)(.7)"
+        },
+        {
+          "source": "phillycode 14-203(131)",
+          "section": "14-203(131)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-402(1)(a)(.1)#table1",
+        "14-402(1)(c)(.7)",
+        "14-507(4)(c)(.1)",
+        "14-515(2)(a)",
+        "14-203(131)",
+        "14-528(4)(a)",
+        "14-515(3)",
+        "14-502(9)(a)(.1)",
+        "14-548(3)(c)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 13.548,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-i2-height",
+      "answer": "In the I-2 (Medium Industrial) district, the maximum height depends on adjacency:\n- **If abutting a Residential or SP-PO district:** the maximum height is **60 ft**.\n- **Otherwise (no abutting residential or SP-PO district):** there is **no height limit**.\n\nSo unless this parcel borders a residential or SP-PO zone, there is effectively no maximum height restriction.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (I-2)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (I-2)",
+        "§ 14-701 / § 14-602 (CMX-2.5)",
+        "§ 14-701 / § 14-602 (SP-STA)",
+        "§ 14-701 / § 14-602 (SP-PO-P)",
+        "§ 14-701 / § 14-602 (I-P)"
+      ],
+      "latency_seconds": 5.256,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-i2-height",
+      "answer": "For the I-2 (Medium Industrial) district, the maximum building height is:\n\n- **60 ft.** if the lot abuts a Residential or SP-PO district\n- **No limit** if the lot does not abut a Residential or SP-PO district\n\nSince this parcel (phl:062152500) is zoned I-2, you would need to determine whether it abuts a Residential or SP-PO district to know which rule applies. Additionally, note that certain building elements (e.g., chimneys, penthouses, mechanical equipment, flagpoles, etc.) may extend above the height limit as permitted encroachments in Industrial districts.",
+      "citations": [
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-701(4)(a)[5](.b)#table1"
+        },
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-701(6)#table1"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-304(5)(b)(.1)(.a)(ii)",
+        "14-403(1)(a)(.1)#table1",
+        "14-403(1)(c)(.4)",
+        "14-507(4)(b)(.1)",
+        "14-533(4)(b)[3]#table1",
+        "14-548(3)(a)(.2)",
+        "14-516(2)(b)(.2)(.a)",
+        "14-529(6)(a)(.2)(.b)",
+        "14-536(2)(b)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 8.593,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-icmx-setbacks",
+      "answer": "For parcel phl:011011310, zoned ICMX (Industrial Commercial Mixed-Use), the following setback/yard requirements apply based on the zoning code dimensional standards:\n\n- **Minimum Front Yard:** 0 ft (no front setback required)\n- **Minimum Side Yard:** 8 ft\n- **Minimum Rear Yard:** 8 ft\n\n**Important caveat:** If any side or rear yard is adjacent to a residential district, the required yard must follow the *larger* of the industrial or residential requirement. So if a neighboring property is residentially zoned, a greater setback may apply on that side.\n\nOther dimensional standards for reference:\n- Maximum height: 60 ft\n- Maximum occupied area: 100%\n- Maximum floor area ratio (FAR): 500%",
+      "citations": [
+        {
+          "source": "title14",
+          "section": "14-701 / 14-602 (ICMX)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (ICMX)",
+        "§ 14-701 / § 14-602 (RSD-3)",
+        "§ 14-701 / § 14-602 (RSD-1)",
+        "§ 14-701 / § 14-602 (RTA-1)",
+        "§ 14-701 / § 14-602 (RSD-2)"
+      ],
+      "latency_seconds": 7.919,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-icmx-setbacks",
+      "answer": "For parcel phl:011011310, zoned ICMX (Industrial Commercial Mixed-Use), the following setback/yard standards apply per Table 14-701-4:\n\n**Front Yard:** Minimum depth of 0 ft. (no front yard required), though note [3] applies.\n\n**Side Yard:** 8 ft. each side, *if used* (note [3] applies — meaning a side yard is not required, but if one is provided, it must be at least 8 ft.).\n\n**Rear Yard:** 8 ft. minimum depth, *if used* (again, note [3] applies — not required, but if provided, must be at least 8 ft.).\n\n**Maximum Lot Coverage:** 100% of lot area is permitted (no maximum occupied area restriction).\n\n**Maximum Height:** 60 ft.\n\nIn short, ICMX does not mandate any setbacks — front, side, or rear yards are all set at 0 ft. minimum required — but if a yard is voluntarily provided on the side or rear, it must be at least 8 ft. wide/deep.\n\nNote: Note [3] referenced throughout Table 14-701-4 may contain additional conditions or exceptions; you should review § 14-701(4)(a) in full for complete note details. Additionally, if this lot is subject to any overlay district or subdivision adjoining a park or watercourse, additional setback requirements could apply.",
+      "citations": [
+        {
+          "source": "phillycode 14-701(4)(a)[5](.b)#table1",
+          "section": "Table 14-701-4: Dimensional Standards for Industrial Districts (ICMX column)"
+        },
+        {
+          "source": "phillycode 14-708(6)(g)",
+          "section": "14-708(6)(g)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-403(1)(a)(.1)#table1",
+        "14-403(1)(a)(.2)(.a)",
+        "14-403(1)(c)(.2)",
+        "14-409(6)(c)",
+        "14-708(6)(g)",
+        "14-706(3)(b)",
+        "14-202(17)",
+        "14-509(3)(d)(.3)",
+        "14-704(2)(d)(.2)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 15.866,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "dim-irmx-occupancy",
+      "answer": "For parcel phl:881001047, which is zoned **IRMX (Industrial Residential Mixed-Use)**, the maximum occupied area is:\n\n- **75%** for an **intermediate (non-corner) lot**\n- **80%** for a **corner lot**\n\nNote: The lot area for this parcel is not available in the provided data, so the actual square footage of the maximum buildable footprint cannot be calculated at this time.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (IRMX)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (IRMX)",
+        "§ 14-701 / § 14-602 (RTA-2)",
+        "§ 14-701 / § 14-602 (RSA-5)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RM-1)"
+      ],
+      "latency_seconds": 12.462,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "dim-irmx-occupancy",
+      "answer": "For parcel phl:881001047, which is zoned IRMX (Industrial Residential Mixed-Use), the maximum occupied area as a percentage of the lot depends on the lot type:\n\n- **Intermediate lot:** 75% of the lot area\n- **Corner lot:** 80% of the lot area\n\nNote: The lot area for this parcel is not provided in the available data, so the actual square footage of the maximum occupied area cannot be calculated. If you have the lot area, you can multiply it by 75% (intermediate) or 80% (corner) to determine the maximum buildable footprint.\n\n\"Occupied area\" is defined as the aggregate area of the greatest outside horizontal dimensions of all structures (except fences and decks) above grade plane on the lot, as would be shown in a top-view plan.",
+      "citations": [
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-701(4)(a)[5](.b)#table1"
+        },
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-202(12)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-403(1)(a)(.1)#table1",
+        "14-403(1)(a)(.2)(.a)",
+        "14-403(1)(c)(.1)",
+        "14-409(6)(c)",
+        "14-701(4)(a)[5](.a)",
+        "14-533(4)(a)[2]#table1",
+        "14-202(12)",
+        "14-701(2)(b)[11]#table1",
+        "14-502(3)(l)(.2)",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 8.296,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "use-rsa5-single-family",
+      "answer": "A single-family house is the permitted use in RSA-5 zoning, but for this specific parcel (phl:011000019), buildability is flagged as **uncertain** rather than confirmed by right. Here's what the zoning code says and what the parcel verdict indicates:\n\n**What RSA-5 Allows:**\n- One single-family dwelling is permitted by right (attached, semi-detached, or detached building types).\n- Two-family and multi-family dwellings are prohibited.\n- Dimensional minimums: lot width ≥ 16 ft, lot area ≥ 1,440 sq ft (or 960 sq ft in certain Council Districts), max height 38 ft, max occupied area 75% (intermediate) or 80% (corner), rear yard ≥ 9 ft.\n\n**Parcel-Specific Concerns:**\n- The system verdict flags `can_build_by_right = False` with **2 risk flags** and a risk score of 20.0. This means that while the zoning theoretically allows a single-family home, something about this parcel introduces uncertainty — potentially related to lot size, lot width, or other dimensional requirements that cannot be confirmed because the lot area and other parcel details are not available in the current data.\n\n**Bottom Line:** The zoning district (RSA-5) does permit a single-family house by right, but this parcel has been flagged with risks that make buildability uncertain. You would need to verify the lot dimensions and consult with the City of Philadelphia's Department of Licenses & Inspections or a zoning attorney before proceeding.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSA-5)"
+        },
+        {
+          "source": "Parcel Verdict v8",
+          "section": "phl:011000019"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSA-5)",
+        "§ 14-701 / § 14-602 (RSD-1)",
+        "§ 14-701 / § 14-602 (RSA-1)",
+        "§ 14-701 / § 14-602 (RSA-3)",
+        "§ 14-701 / § 14-602 (RSA-6)"
+      ],
+      "latency_seconds": 11.127,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "use-rsa5-single-family",
+      "answer": "A single-family house is a permitted use in the RSA-5 (Residential Single-Family Attached-5) zoning district, but building one here **cannot be confirmed as by-right** due to 2 risk flags identified for this parcel. Here is what the code and parcel data show:\n\n**Use: Single-Family is Allowed in RSA-5**\n- Single-family household living is permitted (Y = Yes, as of right) in the RSA-5 district.\n- Building types allowed include Detached, Semi-Detached, and Attached structures.\n\n**Dimensional Requirements for RSA-5** (from Table 14-701-1):\n- Minimum lot width: **16 ft.**\n- Minimum lot area: **960 sq. ft.**\n- Maximum occupied area: **75% (intermediate lot); 80% (corner lot)**\n- Minimum rear yard depth: **9 ft.**\n- Maximum height: **38 ft.**\n\n**Key Uncertainty — Lot Area Not Available**\nThe parcel record does not include a lot area or lot width, so it is not possible to confirm whether this lot meets the minimum dimensional standards (960 sq. ft. lot area, 16 ft. width). This is likely a contributing factor to the \"buildability uncertain\" verdict and the risk flags.\n\n**Compliance Required**\nNo building may be erected without complying with all applicable zoning regulations and obtaining the necessary permits from L&I.\n\n**Bottom line:** Single-family use is permitted by the zoning code in RSA-5, but the system has flagged this parcel as having uncertain buildability (can_build_by_right = False) with 2 risk flags. You would need to verify the lot dimensions meet minimum standards and resolve the risk flags before proceeding. Consulting L&I or a zoning professional is strongly recommended.",
+      "citations": [
+        {
+          "source": "phillycode 14-602(3)(a)[5]#table1",
+          "section": "14-602(3)(a)[5]#table1"
+        },
+        {
+          "source": "phillycode 14-533(3)(e)[3](.b)#table1",
+          "section": "14-533(3)(e)[3](.b)#table1"
+        },
+        {
+          "source": "phillycode 14-701(2)(b)[11]#table1",
+          "section": "14-701(2)(b)[11]#table1"
+        },
+        {
+          "source": "phillycode 14-104(2)",
+          "section": "14-104(2)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-502(4)(c)(.1)",
+        "14-514(5)(a)",
+        "14-602(4)(a)[1](.b)",
+        "14-602(3)(a)[5]#table1",
+        "14-504(6)(c)(.1)",
+        "14-104(2)",
+        "14-533(3)(e)[3](.b)#table1",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)"
+      ],
+      "latency_seconds": 21.538,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "use-rsa3-duplex",
+      "answer": "No, a duplex (two-family dwelling) is **not permitted** on this lot. The parcel is zoned **RSA-3 (Residential Single-Family Attached)**, which allows only one single-family dwelling by right. Two-family and multi-family uses are explicitly prohibited in this zoning district. The parcel verdict also confirms that only 1 unit is permitted by right (can_build_by_right=False for anything beyond a single unit).",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSA-3)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSA-3)",
+        "§ 14-701 / § 14-602 (RTA-2)",
+        "§ 14-701 / § 14-602 (RSA-2)",
+        "§ 14-701 / § 14-602 (RSD-2)",
+        "§ 14-701 / § 14-602 (RSD-3)"
+      ],
+      "latency_seconds": 13.908,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "use-rsa3-duplex",
+      "answer": "Based on the Philadelphia Zoning Code, a duplex (two-family household living) is **not permitted by right** on this RSA-3 zoned lot. Here's why:\n\n1. **Use Table for Residential Districts**: The building types allowed table shows permitted building forms, and the parcel verdict confirms only 1 unit is permitted by right in RSA-3 (can_build_by_right=False; by_right_units=1).\n\n2. **Two-Family Use Restriction**: The Code states that if a lot is not adjacent to a residential district of a higher density type, two-family household living shall be prohibited and only single-family household living is permitted.\n\n3. **Building Type**: While semi-detached structures (commonly associated with two-family/duplex use) are listed as \"Y\" (permitted) in RSA-3 in the building types table, the use regulations and the parcel's verdict restrict the unit count to 1, meaning a duplex use is not permitted by right on this lot.\n\nIn summary, RSA-3 zoning limits this parcel to a single-family residential use by right. A duplex is not permitted without additional approvals, and the parcel assessment flags buildability as uncertain even for a single unit.",
+      "citations": [
+        {
+          "source": "phillycode 14-602",
+          "section": "14-602(3)(a)[5]#table1"
+        },
+        {
+          "source": "phillycode 14-602",
+          "section": "14-602(4)(a)[1](.b)"
+        },
+        {
+          "source": "Parcel Verdict",
+          "section": "phl:041031400 - RSA-3 Verdict v8"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-504(6)(c)(.1)(.a)",
+        "14-504(7.1)(a)",
+        "14-602(3)(a)[5]#table1",
+        "14-602(4)(a)[1](.b)",
+        "14-701(2)(b)[8](.b)",
+        "14-602(7)(c)(.1)",
+        "14-604(11)(d)(.2)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)"
+      ],
+      "latency_seconds": 22.019,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "use-rm1-multi-family",
+      "answer": "This parcel (phl:011449800) is zoned **RM-1 (Residential Multi-Family)**, which is intended for moderate- to high-density multi-unit residential buildings. Here's what the zoning code says about building a multi-family building here:\n\n**The Good News:**\n- Multi-family dwellings are **permitted by right** in RM-1, meaning the use itself is allowed without needing a special variance or exception.\n\n**The Caveats & Risk Flags:**\n- The system verdict flags **buildability as uncertain** with **2 risk flags** and a risk score of 20.0, and `can_build_by_right=False`. This means that while the *use* is permitted, there may be dimensional or other compliance issues that prevent straightforward by-right development.\n- **Lot area is unknown** for this parcel. This is critical because RM-1 requires a **minimum lot area of 1,440 sq ft**, and the number of units you can build is directly tied to lot size:\n  - First 1,440 sq ft: at least **360 sq ft of lot area per dwelling unit**\n  - Above 1,440 sq ft: at least **480 sq ft per unit**\n- Without knowing the lot area, it is impossible to confirm whether the parcel meets the minimum lot area requirement or how many units could be built.\n- Other dimensional standards also apply: minimum lot width of 16 ft, maximum height of 38 ft, maximum occupied area of 75% (interior lot) or 80% (corner lot), and minimum rear yard depth of 9 ft.\n\n**Bottom Line:** Multi-family use is permitted by right in RM-1, but the unknown lot area and 2 risk flags mean you cannot confirm by-right buildability without verifying the parcel's actual dimensions against the RM-1 standards. A licensed architect, zoning attorney, or the Philadelphia Department of Licenses & Inspections (L&I) should be consulted before proceeding.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RM-1)"
+        },
+        {
+          "source": "LotScope Verdict v8",
+          "section": "Parcel phl:011449800"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RM-1)",
+        "§ 14-701 / § 14-602 (RM-3)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RM-2)",
+        "§ 14-701 / § 14-602 (CMX-4)"
+      ],
+      "latency_seconds": 18.999,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "use-rm1-multi-family",
+      "answer": "Based on the available context, here is what we know about building a multi-family structure on parcel phl:011449800, zoned RM-1:\n\n**Multi-Family Use is Permitted in RM-1 — but NOT by right based on the verdict.**\n\n1. **RM-1 allows multi-family use**: The Philadelphia Code defines multi-family as \"the use of a lot as a residence for three or more families with each family occupying a single dwelling unit,\" and RM-1 (Residential Multi-Family-1) is specifically designed to accommodate this use type.\n\n2. **Building types allowed**: In RM-1, detached, semi-detached, and attached building types are all permitted as of right per Table 14-602-1.A.\n\n3. **However, the automated verdict flags uncertainty**: The parcel verdict shows `can_build_by_right=False` with a risk score of 20.0 and 2 risk flags. This means there are unresolved issues that prevent a clear by-right approval determination.\n\n4. **Key dimensional standards for RM-1** (from Table 14-701-2):\n   - Minimum lot width: 16 ft.\n   - Minimum lot area: 1,440 sq. ft.\n   - Maximum occupied area: 75% (intermediate lot) or 80% (corner lot)\n   - Maximum height: 38 ft.\n   - Minimum rear yard depth: 9 ft. (min. 144 sq. ft. area)\n   - No floor area ratio limit\n\n5. **Missing parcel data is a problem**: The lot area and lot width for this parcel are unknown (listed as \"None\"), so it cannot be confirmed whether this parcel meets the minimum lot area (1,440 sq. ft.) and minimum lot width (16 ft.) requirements for RM-1.\n\n6. **Potential overlay considerations**: If this parcel falls within the /MIN (Mixed Income Neighborhoods) Overlay District, multi-family use in RM-1 would be subject to additional conditions (noted as \"Y [1]\" in Table 14-533-1). If within the /CTR (Center City) Overlay, specific minimum lot size rules also apply.\n\n**Bottom line**: While RM-1 zoning generally permits multi-family buildings, the automated assessment flags this parcel as uncertain due to risk flags, and the missing lot data means compliance with dimensional minimums cannot be confirmed. You should consult the Philadelphia Department of Licenses & Inspections (L&I) or a licensed zoning professional before proceeding.",
+      "citations": [
+        {
+          "source": "phillycode 14-601(2)(a)(.3)",
+          "section": "14-601(2)(a)(.3)"
+        },
+        {
+          "source": "phillycode 14-401(1)(a)(.1)#table1",
+          "section": "14-401(1)(a)(.1)#table1"
+        },
+        {
+          "source": "phillycode 14-602(3)(a)[5]#table1",
+          "section": "14-602(3)(a)[5]#table1"
+        },
+        {
+          "source": "phillycode 14-701(2)(c)[9]#table1",
+          "section": "14-701(2)(c)[9]#table1"
+        },
+        {
+          "source": "phillycode 14-533(3)(e)[3](.b)#table1",
+          "section": "14-533(3)(e)[3](.b)#table1"
+        },
+        {
+          "source": "phillycode 14-502(4)(c)(.1)",
+          "section": "14-502(4)(c)(.1)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-502(4)(c)(.1)",
+        "14-502(4)(c)(.2)",
+        "14-504(6)(c)(.1)",
+        "14-602(4)(a)[1](.b)",
+        "14-602(3)(a)[5]#table1",
+        "14-601(2)(a)(.3)",
+        "14-533(3)(e)[3](.b)#table1",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)"
+      ],
+      "latency_seconds": 22.899,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "use-rm4-daycare",
+      "answer": "Based on the available context, the RM-4 district permits single-, two-, and multi-family dwellings by right. However, the provided source documents do not contain specific information about whether a **day care use** is allowed in the RM-4 district. The context only addresses residential dwelling types and dimensional standards for RM-4, and does not reference day care, child care, or similar institutional/accessory uses. Therefore, there is not enough information in the provided context to confirm whether a day care use is permitted, conditionally permitted, or prohibited in the RM-4 district. You would need to consult the Philadelphia Zoning Code's use regulations (typically found in Title 14, Use Tables for Residential districts) or contact the Philadelphia Department of Licenses & Inspections for a definitive answer.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RM-4)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (SP-CIV)",
+        "§ 14-701 / § 14-602 (SP-AIR)",
+        "§ 14-701 / § 14-602 (CMX-2)",
+        "§ 14-701 / § 14-602 (CMX-5)"
+      ],
+      "latency_seconds": 13.376,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "use-rm4-daycare",
+      "answer": "For the RM-4 zoning district, \"day care\" is covered under the Child Care use category in Philadelphia's zoning code. There are three subcategories, each with different treatment in RM-4:\n\n1. **Family Child Care**: ✅ Permitted by right (Y) in RM-4. This is limited to care for a maximum of 6 children (or up to 12 with special exception approval, subject to area-specific restrictions). Use-specific standards apply under § 14-603(5).\n\n2. **Group Child Care**: ⚠️ Requires Special Exception approval (S) in RM-4. Use-specific standards apply under § 14-603(5).\n\n3. **Child Care Center**: ❌ Not allowed (N) in RM-4.\n\nSo whether a day care use is allowed depends on the scale and type of operation. Small family-based day care is permitted by right; a larger group child care facility requires special exception approval; and a full child care center is prohibited in RM-4.",
+      "citations": [
+        {
+          "source": "phillycode 14-602(3)(a)[5]#table3",
+          "section": "Table 14-602-1: Uses Allowed in Residential Districts – RM-4 column, Child Care rows"
+        },
+        {
+          "source": "phillycode 14-601(4)(c)",
+          "section": "14-601(4)(c)"
+        },
+        {
+          "source": "phillycode 14-603(5)(a)(.2)",
+          "section": "14-603(5)(a)(.2)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-513(5)(b)(.2)(.a)",
+        "14-533(3)(b)(.1)(.b)(i)",
+        "14-602(3)(a)[5]#table3",
+        "14-601(4)(c)",
+        "14-603(5)(a)(.2)",
+        "14-602(6)(a)[5]#table1",
+        "14-602(4)(a)[8](.b)#table1",
+        "14-701(2)(b)[11]#table1"
+      ],
+      "latency_seconds": 17.672,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "use-cmx2-restaurant",
+      "answer": "Yes, you can likely operate a restaurant at this parcel. The zoning is CMX-2 (Commercial Mixed-Use), which is designed for neighborhood-serving retail and services. Commercial uses — which include restaurants — are permitted by right in CMX-2. This means no special exception or variance is typically required to open a restaurant here.\n\nA few things to keep in mind:\n- **By-right approval**: The parcel has been flagged as buildable by right, supporting this conclusion.\n- **Risk flags**: There are 2 risk flags noted for this parcel (risk score: 20.0), though the specific nature of those flags is not detailed in the available context. These could affect your plans and should be investigated further.\n- **Dimensional standards**: Any build-out or renovation must comply with CMX-2 standards — maximum height of 38 ft, maximum occupied area of 75% (intermediate lot) or 80% (corner lot), and a minimum rear yard of the greater of 9 ft or 10% of lot depth.\n\nThis is informational only and is not legal or zoning advice. You should consult the Philadelphia Department of Licenses & Inspections (L&I) and/or a zoning attorney to confirm restaurant use is permitted for this specific parcel.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (CMX-2)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (CMX-2)",
+        "§ 14-701 / § 14-602 (SP-ENT)",
+        "§ 14-701 / § 14-602 (RSA-6)",
+        "§ 14-701 / § 14-602 (RSA-5)",
+        "§ 14-701 / § 14-602 (SP-AIR)"
+      ],
+      "latency_seconds": 9.809,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "use-cmx2-restaurant",
+      "answer": "Based on the Philadelphia Zoning Code, here is what's allowed for eating and drinking establishments on this CMX-2 zoned parcel:\n\n**Sit-Down Restaurant: ✅ Permitted by right (Y)**\nA sit-down restaurant — defined as an establishment that primarily cooks food on premises and sells it for on-premise consumption — is permitted by right in the CMX-2 district.\n\n**Prepared Food Shop: ✅ Permitted by right (Y)**\nA prepared food shop is also permitted by right in CMX-2.\n\n**Take-Out Restaurant: ⚠️ Special exception required (S)**\nA take-out restaurant requires special exception approval in CMX-2 — it is not permitted by right.\n\n**Smoking Lounge: ❌ Not allowed (N)**\n\nSo if you're planning a standard sit-down restaurant, it is permitted by right in this CMX-2 district. If your concept is primarily take-out, you would need to seek special exception approval from the Zoning Board of Adjustment. Note that there are 2 risk flags on this parcel (risk score 20), so consulting with a zoning professional before proceeding is advisable.",
+      "citations": [
+        {
+          "source": "phillycode 14-602(4)(a)[8](.b)#table1",
+          "section": "Table 14-602-2: Uses Allowed in Commercial Districts"
+        },
+        {
+          "source": "phillycode 14-601(7)(f)(.3)",
+          "section": "14-601(7)(f)(.3) - Sit-Down Restaurant definition"
+        },
+        {
+          "source": "phillycode 14-402(1)(c)(.2)",
+          "section": "14-402(1)(c)(.2) - CMX-2 District Purpose"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-402(1)(a)(.1)#table1",
+        "14-402(1)(c)(.2)",
+        "14-402(1)(c)(.3)",
+        "14-402(1)(c)(.4)",
+        "14-602(6)(a)[5]",
+        "14-602(3)(a)[5]#table3",
+        "14-602(4)(a)[8](.b)#table1",
+        "14-601(7)(f)(.3)",
+        "14-602(6)(a)[5]#table1",
+        "14-701(2)(b)[11]#table1"
+      ],
+      "latency_seconds": 11.914,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "use-cmx3-retail",
+      "answer": "Based on the available context, CMX-3 (Commercial Mixed-Use) is described as a district intended for \"community- and region-serving mixed-use development\" where \"commercial uses are permitted by right.\" Retail sales is a standard commercial use, and given CMX-3's explicit designation as a commercial mixed-use district permitting commercial uses by right, retail sales would generally be considered a permitted use on this lot. However, the source documents do not enumerate a specific list of commercial use categories (e.g., a retail sales use table), so confirmation of the exact retail sales use type may require referencing the full Philadelphia Zoning Code use table for CMX-3.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (CMX-3)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (CMX-3)",
+        "§ 14-701 / § 14-602 (RTA-2)",
+        "§ 14-701 / § 14-602 (RTA-1)",
+        "§ 14-701 / § 14-602 (RSA-3)",
+        "§ 14-701 / § 14-602 (RSA-1)"
+      ],
+      "latency_seconds": 10.204,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "use-cmx3-retail",
+      "answer": "Yes, retail sales are permitted by right on this parcel. The lot is zoned CMX-3 (Community Commercial Mixed-Use), and according to Table 14-602-2 (Uses Allowed in Commercial Districts), the following Retail Sales uses are all permitted as of right (\"Y\") in the CMX-3 district:\n\n- **Building Supplies and Equipment** – Y (with use-specific standards per § 14-603(3))\n- **Consumer Goods** – Y\n- **Food, Beverages, and Groceries** – Y\n- **Pets and Pet Supplies** – Y\n- **Sundries, Pharmaceuticals, and Convenience Sales** – Y\n- **Wearing Apparel and Accessories** – Y\n- **Medical Marijuana Dispensary** – Y (with use-specific standards per § 14-603(20))\n\nNote: A few retail sub-uses are explicitly **not allowed** (N) in CMX-3, including Drug Paraphernalia Sales and Gun Shops. The CMX-3 district is specifically intended to accommodate \"community- and region-serving retail and service uses,\" so retail is a core permitted use.",
+      "citations": [
+        {
+          "source": "phillycode 14-602(4)(a)[8](.b)#table1",
+          "section": "Table 14-602-2: Uses Allowed in Commercial Districts"
+        },
+        {
+          "source": "phillycode 14-402(1)(c)(.4)",
+          "section": "14-402(1)(c)(.4)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-301(3)(c)(.1)(.l)",
+        "14-301(9)(b)(.4)",
+        "14-402(1)(a)(.1)#table1",
+        "14-402(1)(c)(.4)",
+        "14-602(3)(a)[5]#table3",
+        "14-602(4)(a)[8](.b)#table1",
+        "14-602(5)(a)[4]#table1"
+      ],
+      "latency_seconds": 9.573,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "use-i2-warehouse",
+      "answer": "Yes, this lot (zoned I-2 – Medium Industrial) can be used for warehousing/distribution. The I-2 district explicitly permits light-to-moderate-impact industrial uses including manufacturing, processing, and **distribution**, and the parcel has been assessed as buildable by-right. There is 1 risk flag noted (risk score: 20/100), so it is worth investigating that flag further before proceeding, but it does not prevent by-right use.\n\nKey dimensional standards to keep in mind for any warehouse development:\n- **Maximum occupied area:** 100%\n- **Minimum front yard:** 0 ft\n- **Minimum side yard:** 6 ft (if used); **rear yard:** 8 ft (if used)\n- **Maximum height:** 60 ft if abutting a Residential or SP-PO district; otherwise no limit\n- **Maximum FAR:** 500%\n\nNote: Housing is not permitted by right in this district.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (I-2)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (I-2)",
+        "§ 14-701 / § 14-602 (I-3)",
+        "§ 14-701 / § 14-602 (SP-AIR)",
+        "§ 14-701 / § 14-602 (I-P)",
+        "§ 14-701 / § 14-602 (I-1)"
+      ],
+      "latency_seconds": 13.775,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "use-i2-warehouse",
+      "answer": "Yes, this lot (zoned I-2, Medium Industrial) can be used for warehousing as a by-right use — meaning no special exception or variance is needed.\n\nHere are the key supporting facts:\n\n1. **Warehouse is permitted by-right (Y) in the I-2 district.** Table 14-602-3 in the Philadelphia Code explicitly lists \"Warehouse\" under the Wholesale, Distribution, and Storage Use Category with a \"Y\" (permitted as of right) in the I-2 column.\n\n2. **What counts as a Warehouse?** Per the Code, a warehouse is defined as a use engaged in long-term and short-term storage of goods (typically in containers such as boxes, barrels, or drums) within a completely-enclosed building — provided it does not meet the definition of a moving and storage facility.\n\n3. **The I-2 district is designed for this type of use.** The I-2 Medium Industrial district is primarily intended to accommodate light industrial uses, moderate-impact uses, and employment activities such as manufacturing, distribution, and processing.\n\n4. **The parcel verdict confirms by-right buildability** with a risk score of 20 (1 risk flag), so while warehousing is allowed by-right, you should investigate the specific risk flag before proceeding.",
+      "citations": [
+        {
+          "source": "phillycode 14-602(5)(a)[4]#table1",
+          "section": "Table 14-602-3: Uses Allowed in Industrial Districts"
+        },
+        {
+          "source": "phillycode 14-601(9)(c)",
+          "section": "14-601(9)(c)"
+        },
+        {
+          "source": "phillycode 14-403(1)(c)(.4)",
+          "section": "14-403(1)(c)(.4)"
+        },
+        {
+          "source": "phillycode 14-304(5)(b)(.1)(.a)(ii)",
+          "section": "14-304(5)(b)(.1)(.a)(ii)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-304(5)(b)(.1)(.a)(ii)",
+        "14-403(1)(a)(.1)#table1",
+        "14-403(1)(c)(.4)",
+        "14-507(4)(b)(.1)",
+        "14-601(9)(c)",
+        "14-602(5)(a)[4]#table1",
+        "14-601(9)"
+      ],
+      "latency_seconds": 15.117,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "use-icmx-light-manufacturing",
+      "answer": "This parcel is zoned ICMX (Industrial Commercial Mixed-Use). Based on the zoning code, ICMX is designed for **commercial and low-impact industrial uses**. Light manufacturing would generally fall under \"low-impact industrial,\" which aligns with the ICMX district's purpose. However, the code describes ICMX specifically as permitting \"commercial and low-impact industrial uses,\" so light manufacturing may be permitted depending on how it is classified — but this is not explicitly confirmed as a by-right use in the provided context. Residential dwellings are not permitted by right in this district. For a definitive determination on whether a specific light manufacturing use is permitted, you would need to consult the full Philadelphia Zoning Code use tables or the Philadelphia Department of Licenses and Inspections.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (ICMX)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (ICMX)",
+        "§ 14-701 / § 14-602 (I-2)",
+        "§ 14-701 / § 14-602 (I-1)",
+        "§ 14-701 / § 14-602 (I-3)",
+        "§ 14-701 / § 14-602 (IRMX)"
+      ],
+      "latency_seconds": 10.176,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "use-icmx-light-manufacturing",
+      "answer": "Yes, light manufacturing (classified as \"Limited Industrial\" in the Philadelphia Code) is allowed by right in the ICMX zoning district that applies to this parcel. According to Table 14-602-3, Limited Industrial uses — defined as uses that process, fabricate, assemble, treat, or package finished parts or products without explosive or petroleum materials, and with very limited external impacts — are permitted as of right (\"Y\") in the ICMX district. This aligns with the ICMX district's purpose of accommodating commercial and low-impact industrial uses.",
+      "citations": [
+        {
+          "source": "phillycode 14-602(5)(a)[4]#table1",
+          "section": "Table 14-602-3: Uses Allowed in Industrial Districts"
+        },
+        {
+          "source": "phillycode 14-601(10)(b)",
+          "section": "14-601(10)(b) - Limited Industrial definition"
+        },
+        {
+          "source": "phillycode 14-403(1)(c)(.2)",
+          "section": "14-403(1)(c)(.2) - ICMX District Purpose"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-403(1)(a)(.1)#table1",
+        "14-403(1)(a)(.2)(.a)",
+        "14-403(1)(c)(.2)",
+        "14-409(6)(c)",
+        "14-601(10)(b)",
+        "14-602(5)(a)[4]#table1",
+        "14-601(4)(a)(.12)",
+        "14-704(4)(c)(.2)(.e)(i)",
+        "14-602(6)(a)[5]#table1",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1"
+      ],
+      "latency_seconds": 14.336,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "park-residential-rm1",
+      "answer": "The provided context does not include specific off-street parking requirements for the RM-1 zoning district or for parcel phl:011449800. The source documents cover dimensional standards (lot area, height, yard requirements, density, etc.) for RM-1 and other districts, but do not detail minimum parking space requirements. To determine the exact number of parking spaces required, you would need to consult the Philadelphia Zoning Code's parking regulations (typically found in Title 14, Chapter 14-800 or similar sections), or speak with a licensed zoning/planning professional.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RM-1)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RM-1)",
+        "§ 14-701 / § 14-602 (CA-1)",
+        "§ 14-701 / § 14-602 (CA-2)",
+        "§ 14-701 / § 14-602 (RSA-6)",
+        "§ 14-701 / § 14-602 (SP-PO-P)"
+      ],
+      "latency_seconds": 5.837,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "park-residential-rm1",
+      "answer": "For your RM-1 zoned parcel, the Philadelphia Code does not specify a fixed, universal number of required parking spaces for residential uses in residential districts like RM-1 in the same way it does for commercial districts. The parking ratio tables in the context provided (Table 14-802-2) cover Commercial Districts (CMX-2, CMX-3, CMX-4/5, etc.), not RM-1.\n\nHowever, the context does not include a specific parking ratio table for RM-1 residential uses. To determine the exact number of required parking spaces for your RM-1 parcel, you would need to consult the parking ratio provisions specifically applicable to residential districts, which are not fully reproduced in the provided context.\n\nWhat the context **does** tell us about parking requirements in general:\n- **Accessible Spaces (Table 14-802-4):** Once you know your total parking spaces, at least 1 accessible space is required for lots with 1–5 spaces, scaling up from there.\n- **Reservoir Space (Table 14-803-2):** If you provide 1–50 parking spaces, 2 reservoir spaces (7 ft. × 15 ft.) are required.\n- **Electric Vehicle Spaces (Table 14-803-3):** EV parking is only required if you provide 20 or more total parking spaces (minimum 1 EV space for 20–29 spaces).\n\nAdditionally, the lot area for this parcel is listed as \"None,\" which is a key input for calculating parking requirements. Without knowing the proposed use, number of units, and gross floor area, a specific parking count cannot be determined from the available information alone.",
+      "citations": [
+        {
+          "source": "phillycode 14-802(5)(a)#table1",
+          "section": "Table 14-802-4"
+        },
+        {
+          "source": "phillycode 14-803(2)(c)#table1",
+          "section": "Table 14-803-2"
+        },
+        {
+          "source": "phillycode 14-803(6)#table1",
+          "section": "Table 14-803-3"
+        },
+        {
+          "source": "phillycode 14-802(3)(a)[1]#table1",
+          "section": "Table 14-802-2"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-502(4)(c)(.1)",
+        "14-502(4)(c)(.2)",
+        "14-803(2)(c)#table1",
+        "14-802(5)(a)#table1",
+        "14-802(7)(b)(.1)#table1",
+        "14-803(6)#table1",
+        "14-802(3)(a)[1]#table1",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 20.459,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "park-commercial-cmx2",
+      "answer": "The provided context for the CMX-2 zoning district does not include specific parking requirements for commercial uses. The source documents covering CMX-2 (§ 14-701 / § 14-602) only detail dimensional standards such as height limits, occupied area maximums, and yard setbacks — but do not specify minimum off-street parking ratios for commercial uses.\n\nTo find the applicable parking requirements, you would need to consult Philadelphia Zoning Code § 14-800 (Parking and Loading), which governs off-street parking minimums by use type and zoning district. That section is not included in the provided context, so I do not have enough information to give you a specific number.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (CMX-2)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (CMX-2)",
+        "§ 14-701 / § 14-602 (CA-1)",
+        "§ 14-701 / § 14-602 (CA-2)",
+        "§ 14-701 / § 14-602 (SP-CIV)",
+        "§ 14-701 / § 14-602 (SP-PO-P)"
+      ],
+      "latency_seconds": 5.943,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "park-commercial-cmx2",
+      "answer": "For this CMX-2 zoned parcel, the required parking for commercial uses varies by the specific type of use. Here is a summary from Table 14-802-2 for the CMX-2/2.5 column:\n\n**Office Use Category:**\n- All Office Uses: 0 spaces required\n\n**Retail Sales Use Category:**\n- All Retail Sales Uses: 0 spaces required\n\n**Commercial Services:**\n- Assembly and Entertainment: 1 space per 10 seats or 1 space per 1,000 sq. ft., whichever is greater\n- All Other Commercial Services Uses: 0 spaces required\n\n**Vehicle and Vehicular Equipment Sales and Services:**\n- Commercial Vehicle Repair and Maintenance: 2 per repair bay or per 300 sq. ft. of repair space, whichever is greater\n- Personal Vehicle Repair and Maintenance: 2 per repair bay or per 300 sq. ft. of repair space, whichever is greater\n- All Other Vehicle and Vehicular Equipment Sales and Services: 1 per 2,000 sq. ft.\n\n**Wholesale, Distribution, and Storage:**\n- All Uses: 1 per 1,500 sq. ft.\n\n**Industrial Uses (if applicable in CMX-2):**\n- Artist Studios and Artisan Manufacturing: None for the first 7,500 sq. ft., then 1 per 2,000 sq. ft.\n- Research and Development: None for the first 7,500 sq. ft., then 1 per 2,000 sq. ft.\n- All Other Industrial Uses: 1 per 800 sq. ft.\n\nIn short, for the most common commercial uses in CMX-2 (retail, office, and most commercial services), **no minimum parking is required**. Parking requirements only kick in for specific uses like assembly/entertainment, vehicle repair, storage, or industrial uses.",
+      "citations": [
+        {
+          "source": "phillycode 14-802(3)(a)[1]#table1",
+          "section": "Table 14-802-2: Required Parking in Commercial Districts (Except CMX-1, CA-1, and CA-2)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-402(1)(a)(.1)#table1",
+        "14-402(1)(c)(.2)",
+        "14-402(1)(c)(.3)",
+        "14-402(1)(c)(.4)",
+        "14-802(3)(a)[1]#table1",
+        "14-802(4)(a)[1]#table1",
+        "14-602(4)(a)[8](.b)#table1",
+        "14-509(3)(j)#table1",
+        "14-802(2)#table1",
+        "14-701(2)(b)[11]#table1"
+      ],
+      "latency_seconds": 23.26,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "park-accessible-cmx3",
+      "answer": "The provided context does not include any information about accessible parking space requirements for the CMX-3 zoning district or for parcel phl:041001605. The source documents only cover dimensional standards (lot area, height, occupied area, setbacks, etc.) for various zoning districts, but do not address parking requirements — accessible or otherwise. To find accessible parking requirements, you would need to consult the Philadelphia Zoning Code's parking regulations (typically found in Chapter 14-800) and applicable accessibility standards (such as the ADA or Pennsylvania accessibility codes), which are not included in the provided context.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (CMX-3)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (CMX-3)",
+        "§ 14-701 / § 14-602 (RSA-6)",
+        "§ 14-701 / § 14-602 (CA-1)",
+        "§ 14-701 / § 14-602 (CA-2)",
+        "§ 14-701 / § 14-602 (RSA-2)"
+      ],
+      "latency_seconds": 5.631,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "park-accessible-cmx3",
+      "answer": "The number of required accessible parking spaces depends on the **total number of off-street parking spaces provided** at the development. Per Table 14-802-4, the requirements scale as follows:\n\n| Total Parking Spaces Provided | Minimum Accessible Spaces |\n|-------------------------------|--------------------------|\n| 1 to 5 | 1 (need not be reserved for disabled) |\n| 6 to 25 | 1 |\n| 26 to 50 | 2 |\n| 51 to 75 | 3 |\n| 76 to 100 | 4 |\n| 101 to 150 | 5 |\n| 151 to 200 | 6 |\n| 201 to 300 | 7 |\n| 301 to 400 | 8 |\n| 401 to 500 | 9 |\n| 501 to 1,000 | 2% of total |\n| More than 1,000 | 20 plus 1 for each 100 over 1,000 |\n\nAdditionally:\n- **Van-accessible spaces**: For every 6 (or fraction of 6) accessible spaces required, at least one must be van-accessible per ICC/ANSI A117.1.\n- **Multi-family uses**: If the development includes multi-family units required by law to have accessible/adaptable dwelling units, 2% of parking spaces (but not less than 1) must be accessible.\n- **Location**: Accessible spaces must be on the shortest accessible route from parking to an accessible building entrance.\n- **Signage**: Each accessible space must have vertical signage conforming to federal standards and a \"Reserved Parking Penalties Sign\" per Pennsylvania Traffic Engineering provisions (Sign R7-8B).\n\nSince the lot area for this parcel (phl:041001605, CMX-3) is not provided in the context, the exact number of required accessible spaces cannot be determined without first knowing the total number of off-street parking spaces planned for the project.",
+      "citations": [
+        {
+          "source": "phillycode 14-802(5)(a)#table1",
+          "section": "14-802(5)(a)#table1"
+        },
+        {
+          "source": "phillycode 14-802(5)(a)",
+          "section": "14-802(5)(a)"
+        },
+        {
+          "source": "phillycode 14-802(5)(b)(.2)",
+          "section": "14-802(5)(b)(.2)"
+        },
+        {
+          "source": "phillycode 14-802(5)(c)",
+          "section": "14-802(5)(c)"
+        },
+        {
+          "source": "phillycode 14-802(5)(d)",
+          "section": "14-802(5)(d)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-301(3)(c)(.1)(.l)",
+        "14-301(9)(b)(.4)",
+        "14-402(1)(a)(.1)#table1",
+        "14-402(1)(c)(.4)",
+        "14-802(5)(a)#table1",
+        "14-802(5)(a)",
+        "14-802(5)(b)(.2)",
+        "14-802(5)(c)",
+        "14-802(5)(d)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 14.23,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "park-industrial-i2",
+      "answer": "The provided context documents cover dimensional standards for the I-2 (and other industrial) zoning districts but do not include specific parking requirements for industrial uses. The source documents address items such as maximum occupied area, yard setbacks, height limits, and floor area ratios for I-2, but parking ratios or parking minimums/maximums for industrial uses are not detailed in the context provided. To find the specific parking requirements applicable to industrial use in an I-2 district, you would need to consult the relevant parking provisions of the Philadelphia Zoning Code (typically found in Title 14, Chapter 14-800 or similar sections addressing off-street parking).",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (I-2)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (I-2)",
+        "§ 14-701 / § 14-602 (I-P)",
+        "§ 14-701 / § 14-602 (I-3)",
+        "§ 14-701 / § 14-602 (IRMX)",
+        "§ 14-701 / § 14-602 (CA-1)"
+      ],
+      "latency_seconds": 7.195,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "park-industrial-i2",
+      "answer": "For parcel phl:062152500, zoned **I-2 (Medium Industrial)**, the required parking for **industrial uses** under Table 14-802-3 is as follows (I-2/3 column):\n\n**Industrial Use Category:**\n- **All Industrial Uses (except as noted below):** 1 space per 800 sq. ft. of gross floor area\n- **Artist Studios and Artisan Manufacturing:** None for the first 5,000 sq. ft., then 1 space per 1,000 sq. ft.\n- **Research and Development:** None for the first 5,000 sq. ft., then 1 space per 1,000 sq. ft.\n- **Limited Industrial:** None for the first 5,000 sq. ft., then 1 space per 1,000 sq. ft.\n\n**Placement of Parking:**\nSurface parking lots or parking structures in the I-2 district may be located anywhere on the lot (there is no restriction to front yard placement, unlike in IRMX, ICMX, and I-1 districts).\n\n**Off-Street Loading (in addition to parking):**\nFor industrial uses in Industrial Districts (except IRMX), loading spaces are also required based on gross floor area:\n- 10,000–20,000 sq. ft.: 1 loading space\n- 20,001–40,000 sq. ft.: 2 loading spaces\n- 40,001–60,000 sq. ft.: 3 loading spaces\n- 60,001–80,000 sq. ft.: 4 loading spaces\n- 80,001–100,000 sq. ft.: 5 loading spaces\n- Over 100,000 sq. ft.: 1 additional space per each additional 50,000 sq. ft.",
+      "citations": [
+        {
+          "source": "phillycode 14-802(4)(a)[1]#table1",
+          "section": "Table 14-802-3: Required Parking in Industrial Districts"
+        },
+        {
+          "source": "phillycode 14-802(4)",
+          "section": "14-802(4)"
+        },
+        {
+          "source": "phillycode 14-803(1)(b)(.2)",
+          "section": "14-803(1)(b)(.2)"
+        },
+        {
+          "source": "phillycode 14-806(1)(a)[1]#table1",
+          "section": "Table 14-806-1: Off-Street Loading"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-304(5)(b)(.1)(.a)(ii)",
+        "14-403(1)(a)(.1)#table1",
+        "14-403(1)(c)(.4)",
+        "14-507(4)(b)(.1)",
+        "14-802(4)(a)[1]#table1",
+        "14-806(1)(a)[1]#table1",
+        "14-802(3)(a)[1]#table1",
+        "14-802(4)",
+        "14-803(1)(b)(.2)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1"
+      ],
+      "latency_seconds": 17.488,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "park-industrial-i1",
+      "answer": "The provided context for your I-1 (Light Industrial) zoned parcel does not include specific off-street parking requirements for industrial buildings. The source documents cover dimensional standards (occupied area, yard setbacks, height limits, and FAR) for the I-1 district, but do not detail parking minimums or requirements. You would need to consult the Philadelphia Zoning Code's parking regulations (typically found in a separate chapter, such as Title 14 Section 14-800 series) to determine the applicable off-street parking requirements for an industrial building in an I-1 district. I do not have enough information in the provided context to give you a definitive answer on this point.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (I-1)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (I-1)",
+        "§ 14-701 / § 14-602 (I-3)",
+        "§ 14-701 / § 14-602 (I-P)",
+        "§ 14-701 / § 14-602 (I-2)",
+        "§ 14-701 / § 14-602 (IRMX)"
+      ],
+      "latency_seconds": 10.756,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "park-industrial-i1",
+      "answer": "For an industrial building in the I-1 (Light Industrial) district, the Philadelphia Code does not require off-street **parking** spaces under the standard parking ratio tables (Table 14-802-3 covers required parking in Industrial Districts, but the context provided does not show a minimum parking ratio for general industrial uses in I-1 — the only I-1-relevant parking ratio cited is for Research and Development uses in I-3).\n\nHowever, off-street **loading** spaces ARE required in Industrial Districts (excluding IRMX). Per Table 14-806-1, for \"all other permitted uses\" in Industrial Districts (except IRMX), the required loading spaces are:\n- 10,000–20,000 sq ft gross floor area: 1 loading space\n- 20,001–40,000 sq ft: 2 loading spaces\n- 40,001–60,000 sq ft: 3 loading spaces\n- 60,001–80,000 sq ft: 4 loading spaces\n- 80,001–100,000 sq ft: 5 loading spaces\n- Over 100,000 sq ft: 1 additional space per each additional 50,000 sq ft\n\nAdditionally, Research and Development uses in Industrial Districts require 1 loading space for up to 100,000 sq ft, plus 1 additional space per each additional 200,000 sq ft.\n\nIf loading spaces are required, they must generally be located on the same lot as the principal use with adequate access to a street, per § 14-801(3).\n\nNote: The context does not include the full off-street **parking** ratio table for I-1 (Table 14-802-3), so a complete answer on the parking (as opposed to loading) requirement cannot be confirmed from the provided sources. You should consult the full Table 14-802-3 or a zoning professional for the parking ratio applicable to your specific industrial use.",
+      "citations": [
+        {
+          "source": "phillycode 14-806(1)(a)[1]#table1",
+          "section": "Table 14-806-1: Off-Street Loading — Industrial Districts except IRMX"
+        },
+        {
+          "source": "phillycode 14-802(4)(a)[1]",
+          "section": "14-802(4)(a)[1] — Table 14-802-3: Required Parking in Industrial Districts"
+        },
+        {
+          "source": "phillycode 14-801(3)",
+          "section": "14-801(3) — Location of required off-street parking and loading spaces"
+        },
+        {
+          "source": "phillycode 14-403(1)(c)(.3)",
+          "section": "14-403(1)(c)(.3) — I-1 Light Industrial District description"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-304(5)(b)(.1)(.a)(ii)",
+        "14-403(1)(a)(.1)#table1",
+        "14-403(1)(c)(.3)",
+        "14-409(6)(c)",
+        "14-806(1)(a)[1]#table1",
+        "14-509(3)(m)(.2)(.a)",
+        "14-509(3)(m)(.2)",
+        "14-802(4)(a)[1]",
+        "14-801(3)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 15.563,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "park-industrial-irmx",
+      "answer": "The provided context does not include specific parking requirements for the IRMX (Industrial Residential Mixed-Use) district. The source documents only cover dimensional standards such as maximum height, maximum occupied area, yard setbacks, and floor area ratio for IRMX. For detailed parking requirements, you would need to consult the Philadelphia Zoning Code directly — particularly the off-street parking regulations typically found in Title 14, Chapter 14-800 or similar sections.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (IRMX)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (IRMX)",
+        "§ 14-701 / § 14-602 (I-P)",
+        "§ 14-701 / § 14-602 (I-3)",
+        "§ 14-701 / § 14-602 (I-2)",
+        "§ 14-701 / § 14-602 (I-1)"
+      ],
+      "latency_seconds": 4.706,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "park-industrial-irmx",
+      "answer": "Here is a summary of the parking requirements for parcel phl:881001047, which is zoned **IRMX** (Industrial Residential Mixed-Use):\n\n---\n\n### 🚗 Required Motor Vehicle Parking (Table 14-802-3)\n\n**Residential Uses:**\n- Household Living / Multi-Family Building: **3 spaces per 10 units**\n- Caretaker Quarters: **0**\n- Group Living: **1 per 10 permanent beds**\n- Single-Room Residence: **1 per 20 sleeping units + 1 (min. 2)**\n\n**Office Uses:**\n- All Office Uses: **0** (no parking required)\n\n**Retail Sales:**\n- Adult-Oriented Merchandise: **1/1,000 sq. ft.**\n- Building Supplies and Equipment: **1/1,000 sq. ft.**\n- All Other Retail Sales: **0**\n\n**Commercial Services:**\n- Assembly & Entertainment: **1/10 seats or 1/1,000 sq. ft., whichever is greater**\n- Eating & Drinking Establishments: **0**\n- Personal Services: **0**\n- Visitor Accommodations: **1/3 rooms**\n- All Other Commercial Services: **0**\n\n**Industrial Uses:**\n- All Industrial Uses (general): **1/800 sq. ft.**\n- Artist Studios & Artisan Manufacturing: **None for first 7,500 sq. ft., then 1/2,000 sq. ft.**\n- Research & Development: **None for first 7,500 sq. ft., then 1/2,000 sq. ft.**\n- Limited Industrial: **None for first 7,500 sq. ft., then 1/2,000 sq. ft.**\n\n**Wholesale, Distribution & Storage:**\n- All Uses: **1/2,000 sq. ft.**\n\n**Vehicle & Vehicular Equipment:**\n- Commercial/Personal Vehicle Repair: **2 per repair bay or 300 sq. ft. of repair space, whichever is greater**\n- All Other Vehicle Sales/Services: **1/2,000 sq. ft.**\n\n**Urban Agriculture:**\n- Horticulture Nurseries & Greenhouses: **1/4,000 sq. ft.**\n\n---\n\n### 📦 Off-Street Loading (Table 14-806-1)\n\nFor **IRMX**, two tiers apply:\n\n- **Office, Hospital, Public/Civic/Institutional, Visitor Accommodation, or Residential:**\n  - 100,000–150,000 sq. ft. → 1 space\n  - 150,001–400,000 → 2 spaces\n  - Scaling up to 1 additional space per 350,000 sq. ft. over 1,300,000\n\n- **All other permitted uses (except non-accessory parking):**\n  - 20,000–40,000 sq. ft. → 1 space\n  - Scaling up to 1 additional space per 50,000 sq. ft. over 120,000\n\n---\n\n### 📍 Parking Location Rule\nSurface parking lots or structures in IRMX **may not be located in required front yards**.\n\n---\n\nThese requirements are specifically for the IRMX district and vary by use type. Since no lot area or floor area data is available for this parcel, the exact number of spaces cannot be calculated at this time.",
+      "citations": [
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-802(4)(a)[1]#table1"
+        },
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-802(4)"
+        },
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-806(1)(a)[1]#table1"
+        },
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-803(1)(b)(.2)"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-403(1)(a)(.1)#table1",
+        "14-403(1)(a)(.2)(.a)",
+        "14-403(1)(c)(.1)",
+        "14-409(6)(c)",
+        "14-802(4)(a)[1]#table1",
+        "14-802(4)",
+        "14-803(1)(b)(.2)",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-806(1)(a)[1]#table1",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)"
+      ],
+      "latency_seconds": 21.263,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "cite-14-303-12-e",
+      "answer": "The provided context does not contain any information about Philadelphia Zoning Code section 14-303(12)(e). The source documents supplied only cover base district standards for RSA-5, RM-3, RM-4, CMX-3, and CA-2 (under §§ 14-701/14-602). I do not have enough information to answer what 14-303(12)(e) requires.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSA-5)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSA-5)",
+        "§ 14-701 / § 14-602 (RM-3)",
+        "§ 14-701 / § 14-602 (CA-2)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (CMX-3)"
+      ],
+      "latency_seconds": 5.158,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "cite-14-303-12-e",
+      "answer": "Section 14-303(12)(e) of the Philadelphia Code is titled \"Neighborhood Meeting and Documentation Requirements.\" The context provided identifies this section by name but does not include the full text of its substantive requirements. However, related subsections provide some detail:\n\n- **§ 14-303(12)(e)(.1)(.a)(ii)**: Requires notice to each Registered Community Organization (RCO) whose boundaries include the applicant's property, as set forth in the notice provided by the Commission under § 14-303(12)(b).\n- **§ 14-303(12)(e)(.1)(.a)(iv)**: Requires notice to the owner, managing agent, or other responsible person at every property on the list provided to the applicant by the Commission under § 14-303(12)(b).\n\nIn summary, § 14-303(12)(e) deals with the requirements for neighborhood meetings and documentation, including notifying relevant RCOs and neighboring property owners/agents. However, the full text of § 14-303(12)(e) itself is not reproduced in the provided context, so a complete description of all its requirements cannot be given based solely on the available information.",
+      "citations": [
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-303(12)(e)"
+        },
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-303(12)(e)(.1)(.a)(ii)"
+        },
+        {
+          "source": "Philadelphia Code, Title 14",
+          "section": "14-303(12)(e)(.1)(.a)(iv)"
+        }
+      ],
+      "context": [
+        "14-303(12)(e)",
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-502(4)(c)(.1)",
+        "14-514(5)(a)",
+        "14-303(13)(e)",
+        "14-303(12)(c)",
+        "14-303(12)(e)(.1)(.a)(ii)",
+        "14-303(12)(e)(.1)(.a)(iv)",
+        "14-303",
+        "14-303(1)",
+        "14-303(2)",
+        "14-303(3)",
+        "14-303(4)",
+        "14-303(5)",
+        "14-303(6)",
+        "14-303(7)",
+        "14-303(8)",
+        "14-303(9)",
+        "14-303(10)",
+        "14-303(11)",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)"
+      ],
+      "latency_seconds": 22.195,
+      "error": null
+    },
+    {
+      "arm": "title14",
+      "question_id": "oob-charter",
+      "answer": "The provided context does not contain any information about the Philadelphia Home Rule Charter or its provisions regarding council districts. The available source documents only cover Philadelphia Zoning Code regulations for residential zoning districts (such as RSA-5, RM-4, RM-2, RTA-2, and RMX-2). The only mention of council districts in the context is a reference within the RSA-5 zoning standards, which notes that a reduced minimum lot area of 960 sq ft applies in Council Districts 1, 2, 3, 5, and 7 (versus the standard 1,440 sq ft). Beyond that zoning-specific reference, I do not have enough information from the provided context to answer questions about the Home Rule Charter and council districts.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-701 / 14-602 (RSA-5)"
+        }
+      ],
+      "context": [
+        "§ 14-701 / § 14-602 (RSA-5)",
+        "§ 14-701 / § 14-602 (RM-4)",
+        "§ 14-701 / § 14-602 (RM-2)",
+        "§ 14-701 / § 14-602 (RTA-2)",
+        "§ 14-701 / § 14-602 (RMX-2)"
+      ],
+      "latency_seconds": 11.218,
+      "error": null
+    },
+    {
+      "arm": "phillycode",
+      "question_id": "oob-charter",
+      "answer": "The provided context documents do not contain any information from the Philadelphia Home Rule Charter regarding council districts. All of the source documents provided are from Title 14 of the Philadelphia Code (Zoning Code), which covers zoning districts, dimensional standards, use regulations, and overlay districts — not the Home Rule Charter or council district boundaries. Therefore, I do not have enough information to answer your question about what the Philadelphia Home Rule Charter says about council districts.",
+      "citations": [
+        {
+          "source": "Title 14",
+          "section": "14-400"
+        }
+      ],
+      "context": [
+        "14-701",
+        "14-602",
+        "14-401(1)(a)(.1)#table1",
+        "14-502(4)(c)(.1)",
+        "14-514(5)(a)",
+        "14-401",
+        "14-602(4)(a)[8]",
+        "14-400",
+        "14-401(1)(a)",
+        "14-500",
+        "14-701(2)(b)[11]#table1",
+        "14-701(2)(c)[9]#table1",
+        "14-701(3)(a)[4]#table1",
+        "14-701(4)(a)[5](.b)#table1",
+        "14-701(5)(b)(.1)(.h)#table1",
+        "14-701(6)#table1",
+        "14-701(1)",
+        "14-602(3)(a)[5]#table1"
+      ],
+      "latency_seconds": 7.139,
+      "error": null
+    }
+  ],
+  "scores": [
+    {
+      "question_id": "dim-rsa5-lot-area",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 4.572,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-rsa5-lot-area",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.3333333333333333,
+      "retrieval_present": true,
+      "retrieval_position": 7,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 18.076,
+      "context_documents": 17
+    },
+    {
+      "question_id": "dim-rsa3-height",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 2.992,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-rsa3-height",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 11,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 8.067,
+      "context_documents": 17
+    },
+    {
+      "question_id": "dim-rsd1-lot-width",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 3.761,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-rsd1-lot-width",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 7,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 4.432,
+      "context_documents": 17
+    },
+    {
+      "question_id": "dim-rsa5-occupancy",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 9.66,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-rsa5-occupancy",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 11,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 13.745,
+      "context_documents": 18
+    },
+    {
+      "question_id": "dim-rsa3-rear-yard",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 3.727,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-rsa3-rear-yard",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.5,
+      "retrieval_present": true,
+      "retrieval_position": 11,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 8.452,
+      "context_documents": 17
+    },
+    {
+      "question_id": "dim-rm1-lot-area",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 3.33,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-rm1-lot-area",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 11,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 9.316,
+      "context_documents": 17
+    },
+    {
+      "question_id": "dim-rm4-height",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 6.074,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-rm4-height",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 12,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 15.737,
+      "context_documents": 18
+    },
+    {
+      "question_id": "dim-rmx2-lot-area-per-unit",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 7.167,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-rmx2-lot-area-per-unit",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": true,
+      "retrieval_position": 12,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 11.366,
+      "context_documents": 18
+    },
+    {
+      "question_id": "dim-cmx3-height",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 4.477,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-cmx3-height",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 14,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 18.55,
+      "context_documents": 19
+    },
+    {
+      "question_id": "dim-cmx2-lot-area",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 8.428,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-cmx2-lot-area",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 13,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 6.822,
+      "context_documents": 18
+    },
+    {
+      "question_id": "dim-ca1-floor-area",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 8.773,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-ca1-floor-area",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.3333333333333333,
+      "retrieval_present": true,
+      "retrieval_position": 14,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 13.548,
+      "context_documents": 19
+    },
+    {
+      "question_id": "dim-i2-height",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 5.256,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-i2-height",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 15,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 8.593,
+      "context_documents": 19
+    },
+    {
+      "question_id": "dim-icmx-setbacks",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 7.919,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-icmx-setbacks",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.5,
+      "retrieval_present": true,
+      "retrieval_position": 15,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 15.866,
+      "context_documents": 19
+    },
+    {
+      "question_id": "dim-irmx-occupancy",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 12.462,
+      "context_documents": 5
+    },
+    {
+      "question_id": "dim-irmx-occupancy",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 0.5,
+      "retrieval_present": true,
+      "retrieval_position": 14,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 8.296,
+      "context_documents": 18
+    },
+    {
+      "question_id": "use-rsa5-single-family",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.5,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 11.127,
+      "context_documents": 5
+    },
+    {
+      "question_id": "use-rsa5-single-family",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.25,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 21.538,
+      "context_documents": 17
+    },
+    {
+      "question_id": "use-rsa3-duplex",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 13.908,
+      "context_documents": 5
+    },
+    {
+      "question_id": "use-rsa3-duplex",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.6666666666666666,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 22.019,
+      "context_documents": 16
+    },
+    {
+      "question_id": "use-rm1-multi-family",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.5,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 18.999,
+      "context_documents": 5
+    },
+    {
+      "question_id": "use-rm1-multi-family",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.16666666666666666,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 22.899,
+      "context_documents": 17
+    },
+    {
+      "question_id": "use-rm4-daycare",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 13.376,
+      "context_documents": 5
+    },
+    {
+      "question_id": "use-rm4-daycare",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.3333333333333333,
+      "retrieval_present": true,
+      "retrieval_position": 6,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 17.672,
+      "context_documents": 11
+    },
+    {
+      "question_id": "use-cmx2-restaurant",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 9.809,
+      "context_documents": 5
+    },
+    {
+      "question_id": "use-cmx2-restaurant",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.3333333333333333,
+      "retrieval_present": true,
+      "retrieval_position": 9,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 11.914,
+      "context_documents": 12
+    },
+    {
+      "question_id": "use-cmx3-retail",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 10.204,
+      "context_documents": 5
+    },
+    {
+      "question_id": "use-cmx3-retail",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.5,
+      "retrieval_present": true,
+      "retrieval_position": 8,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 9.573,
+      "context_documents": 9
+    },
+    {
+      "question_id": "use-i2-warehouse",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 13.775,
+      "context_documents": 5
+    },
+    {
+      "question_id": "use-i2-warehouse",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.25,
+      "retrieval_present": true,
+      "retrieval_position": 8,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 15.117,
+      "context_documents": 9
+    },
+    {
+      "question_id": "use-icmx-light-manufacturing",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 10.176,
+      "context_documents": 5
+    },
+    {
+      "question_id": "use-icmx-light-manufacturing",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.3333333333333333,
+      "retrieval_present": true,
+      "retrieval_position": 8,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 14.336,
+      "context_documents": 16
+    },
+    {
+      "question_id": "park-residential-rm1",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 5.837,
+      "context_documents": 5
+    },
+    {
+      "question_id": "park-residential-rm1",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 20.459,
+      "context_documents": 18
+    },
+    {
+      "question_id": "park-commercial-cmx2",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 5.943,
+      "context_documents": 5
+    },
+    {
+      "question_id": "park-commercial-cmx2",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 7,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 23.26,
+      "context_documents": 12
+    },
+    {
+      "question_id": "park-accessible-cmx3",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 5.631,
+      "context_documents": 5
+    },
+    {
+      "question_id": "park-accessible-cmx3",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 7,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 14.23,
+      "context_documents": 19
+    },
+    {
+      "question_id": "park-industrial-i2",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 7.195,
+      "context_documents": 5
+    },
+    {
+      "question_id": "park-industrial-i2",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.75,
+      "retrieval_present": true,
+      "retrieval_position": 7,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 17.488,
+      "context_documents": 16
+    },
+    {
+      "question_id": "park-industrial-i1",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 10.756,
+      "context_documents": 5
+    },
+    {
+      "question_id": "park-industrial-i1",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.25,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 15.563,
+      "context_documents": 19
+    },
+    {
+      "question_id": "park-industrial-irmx",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 4.706,
+      "context_documents": 5
+    },
+    {
+      "question_id": "park-industrial-irmx",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 0.5,
+      "retrieval_present": true,
+      "retrieval_position": 7,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 21.263,
+      "context_documents": 17
+    },
+    {
+      "question_id": "cite-14-303-12-e",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 5.158,
+      "context_documents": 5
+    },
+    {
+      "question_id": "cite-14-303-12-e",
+      "arm": "phillycode",
+      "primary_hit": true,
+      "citation_precision": 1.0,
+      "retrieval_present": true,
+      "retrieval_position": 1,
+      "refusal_expected": false,
+      "refusal_correct": null,
+      "latency_seconds": 22.195,
+      "context_documents": 29
+    },
+    {
+      "question_id": "oob-charter",
+      "arm": "title14",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": true,
+      "refusal_correct": false,
+      "latency_seconds": 11.218,
+      "context_documents": 5
+    },
+    {
+      "question_id": "oob-charter",
+      "arm": "phillycode",
+      "primary_hit": false,
+      "citation_precision": 0.0,
+      "retrieval_present": false,
+      "retrieval_position": null,
+      "refusal_expected": true,
+      "refusal_correct": false,
+      "latency_seconds": 7.139,
+      "context_documents": 18
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "run_id": "run-2026-08-11-a",
+  "decision_base": {
+    "label": "shared (decision base)",
+    "n": 22,
+    "arms": {
+      "title14": {
+        "arm": "title14",
+        "cases": 22,
+        "primary_hit_rate": 0.0,
+        "citation_precision": 0.9545454545454546,
+        "refusal_correct_rate": null,
+        "retrieval_presence_rate": 0.0,
+        "latency_p50": 8.428,
+        "latency_p95": 13.908,
+        "divergences": {
+          "retrieved_but_uncited": [],
+          "cited_without_retrieval": []
+        }
+      },
+      "phillycode": {
+        "arm": "phillycode",
+        "cases": 22,
+        "primary_hit_rate": 0.2727272727272727,
+        "citation_precision": 0.5909090909090909,
+        "refusal_correct_rate": null,
+        "retrieval_presence_rate": 0.8636363636363636,
+        "latency_p50": 13.548,
+        "latency_p95": 22.019,
+        "divergences": {
+          "retrieved_but_uncited": [
+            "dim-rsa5-lot-area",
+            "dim-rsa3-height",
+            "dim-rsa5-occupancy",
+            "dim-rsa3-rear-yard",
+            "dim-rm4-height",
+            "dim-rmx2-lot-area-per-unit",
+            "dim-ca1-floor-area",
+            "dim-icmx-setbacks",
+            "use-rm4-daycare",
+            "use-cmx2-restaurant",
+            "use-cmx3-retail",
+            "use-i2-warehouse",
+            "use-icmx-light-manufacturing"
+          ],
+          "cited_without_retrieval": []
+        }
+      }
+    }
+  },
+  "full_set": {
+    "label": "all grounded cases",
+    "n": 30,
+    "arms": {
+      "title14": {
+        "arm": "title14",
+        "cases": 30,
+        "primary_hit_rate": 0.0,
+        "citation_precision": 0.7241379310344828,
+        "refusal_correct_rate": 0.0,
+        "retrieval_presence_rate": 0.0,
+        "latency_p50": 7.195,
+        "latency_p95": 13.908,
+        "divergences": {
+          "retrieved_but_uncited": [],
+          "cited_without_retrieval": []
+        }
+      },
+      "phillycode": {
+        "arm": "phillycode",
+        "cases": 30,
+        "primary_hit_rate": 0.3103448275862069,
+        "citation_precision": 0.6379310344827587,
+        "refusal_correct_rate": 0.0,
+        "retrieval_presence_rate": 0.8275862068965517,
+        "latency_p50": 14.336,
+        "latency_p95": 22.899,
+        "divergences": {
+          "retrieved_but_uncited": [
+            "dim-rsa5-lot-area",
+            "dim-rsa3-height",
+            "dim-rsa5-occupancy",
+            "dim-rsa3-rear-yard",
+            "dim-rm4-height",
+            "dim-rmx2-lot-area-per-unit",
+            "dim-ca1-floor-area",
+            "dim-icmx-setbacks",
+            "use-rm4-daycare",
+            "use-cmx2-restaurant",
+            "use-cmx3-retail",
+            "use-i2-warehouse",
+            "use-icmx-light-manufacturing",
+            "park-commercial-cmx2",
+            "park-industrial-i2"
+          ],
+          "cited_without_retrieval": []
+        }
+      }
+    }
+  },
+  "errors": []
+}
