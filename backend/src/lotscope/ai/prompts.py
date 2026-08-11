@@ -94,7 +94,9 @@ def build_user_prompt(
 ) -> str:
     if documents:
         document_lines = "\n".join(
-            f"[{f'{doc.source} {doc.section}'.strip()}] {doc.content}" for doc in documents
+            f"[{f'{doc.source} {doc.section}'.strip()}"
+            f"{f' · referenced by {doc.via}' if doc.via else ''}] {doc.content}"
+            for doc in documents
         )
     else:
         document_lines = "(no source documents retrieved)"

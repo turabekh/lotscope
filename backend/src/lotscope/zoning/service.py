@@ -254,6 +254,10 @@ async def _get_standard(
     )
 
 
+async def is_known_district(session: AsyncSession, code: str, market_code: str) -> bool:
+    return await _get_standard(session, code, market_code) is not None
+
+
 async def get_parcel_standard(session: AsyncSession, parcel_number: str) -> DistrictStandard | None:
     parcel = (await session.execute(_PARCEL_SQL, {"parcel_number": parcel_number})).one_or_none()
     if parcel is None:

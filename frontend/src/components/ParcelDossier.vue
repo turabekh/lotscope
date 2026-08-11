@@ -25,6 +25,7 @@ import RiskPanel from '@/components/RiskPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
 import SnapshotPanel from '@/components/SnapshotPanel.vue'
+import OverlayPanel from '@/components/OverlayPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import VerdictHero from '@/components/VerdictHero.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
@@ -515,6 +516,7 @@ async function toggleSave(): Promise<void> {
 
           <q-tab-panel name="land" class="tab-pane">
             <SubdivisionPanel />
+            <OverlayPanel />
             <AssemblagePanel />
             <HistoricPanel />
             <PropertyFacts :detail="detail" />

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class HistoricResult(BaseModel):
     parcel_number: str
+    evaluated: bool
     in_historic_district: bool
     district_name: str | None
     designated_date: date | None

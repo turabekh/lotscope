@@ -11,7 +11,11 @@ from lotscope.subdivision.analysis import (
     small_lot_provision_for,
 )
 from lotscope.subdivision.schemas import SubdivisionResult
-from lotscope.zoning.service import get_parcel_standard, get_unmodelled_overlays
+from lotscope.zoning.service import (
+    get_parcel_overlays,
+    get_parcel_standard,
+    get_unmodelled_overlays,
+)
 
 _ADJACENT_BOUNDARY_MIN_FT = 1.0
 
@@ -62,6 +66,9 @@ async def analyze_parcel_subdivision(
     district_code = standard.code if standard is not None else None
     provision = small_lot_provision_for(district_code)
 
+    overlays = await get_parcel_overlays(session, parcel_number)
+    lot_width_ft = _plausible_width(_as_float(parcel.frontage_ft), lot_area_sqft)
+
     adjacent_small_share: float | None = None
     has_overlay = False
     if (
@@ -80,7 +87,8 @@ async def analyze_parcel_subdivision(
         SubdivisionInputs(
             district_code=district_code,
             lot_area_sqft=lot_area_sqft,
-            lot_width_ft=_plausible_width(_as_float(parcel.frontage_ft), lot_area_sqft),
+            lot_width_ft=lot_width_ft,
+            lot_width_from_frontage=lot_width_ft is not None,
             min_lot_area_sqft=standard.min_lot_area_sqft if standard is not None else None,
             min_lot_width_ft=standard.min_lot_width_ft if standard is not None else None,
             small_lot_provision=provision,
@@ -105,6 +113,7 @@ async def analyze_parcel_subdivision(
         lot_width_ft=analysis.lot_width_ft,
         min_lot_area_sqft=analysis.min_lot_area_sqft,
         min_lot_width_ft=analysis.min_lot_width_ft,
+        overlays=overlays,
         reasons=analysis.reasons,
         sources=sources,
         computed_at=datetime.now(UTC),

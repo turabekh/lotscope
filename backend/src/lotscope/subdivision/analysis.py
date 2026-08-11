@@ -51,6 +51,7 @@ class SubdivisionInputs:
     small_lot_provision: SmallLotProvision | None = None
     adjacent_small_share: float | None = None
     has_overlay: bool = False
+    lot_width_from_frontage: bool = False
 
 
 @dataclass(frozen=True)
@@ -190,7 +191,24 @@ def _analyze_base(inputs: SubdivisionInputs) -> SubdivisionAnalysis:
     )
 
 
+FRONTAGE_AS_WIDTH_DISCLOSURE = (
+    "Lot width here is the recorded street frontage; a separately surveyed lot width may differ."
+)
+
+
+def _with_width_provenance(
+    analysis: SubdivisionAnalysis, inputs: SubdivisionInputs
+) -> SubdivisionAnalysis:
+    if not inputs.lot_width_from_frontage or analysis.lot_width_ft is None:
+        return analysis
+    return replace(analysis, reasons=[*analysis.reasons, FRONTAGE_AS_WIDTH_DISCLOSURE])
+
+
 def analyze_subdivision(inputs: SubdivisionInputs) -> SubdivisionAnalysis:
+    return _with_width_provenance(_analyze_subdivision(inputs), inputs)
+
+
+def _analyze_subdivision(inputs: SubdivisionInputs) -> SubdivisionAnalysis:
     base = _analyze_base(inputs)
     provision = inputs.small_lot_provision
     if (
