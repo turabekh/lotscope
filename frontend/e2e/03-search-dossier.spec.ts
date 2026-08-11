@@ -33,6 +33,7 @@ test('the Land tab affirms what was checked, not just what was found', async ({ 
   await page.getByRole('tab', { name: 'Land' }).click()
 
   await expect(page.getByText('Not in a designated historic district')).toBeVisible()
-  await expect(page.getByText('Assemblage candidates')).toBeVisible()
+  await expect(page.getByText('Not designated')).toBeVisible()
+  await expect(page.getByText('could not be checked')).toHaveCount(0)
   await expect(page.getByText('Buyable neighbors')).toHaveCount(0)
 })
