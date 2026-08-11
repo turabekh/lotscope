@@ -11,5 +11,6 @@ test('flow 14 — the core path works on a phone viewport', async ({ page }) => 
   await expect(page.getByText('Screening result')).toBeVisible()
 
   await page.getByRole('tab', { name: 'Deal' }).click()
-  await expect(page.getByText('Max allowable offer').first()).toBeVisible()
+  await expect(page.locator('[data-test="deal-hero"]')).toBeVisible()
+  await expect(page.locator('[data-test="deal-mao"]')).toBeVisible()
 })

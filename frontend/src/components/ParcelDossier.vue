@@ -11,7 +11,7 @@ import AssessmentPanel from '@/components/AssessmentPanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
 import DevelopmentProgramPanel from '@/components/DevelopmentProgramPanel.vue'
 import CompsPanel from '@/components/CompsPanel.vue'
-import DealPanel from '@/components/DealPanel.vue'
+import DealCard from '@/components/DealCard.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
 import ReportPanel from '@/components/ReportPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
@@ -24,7 +24,6 @@ import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import RiskPanel from '@/components/RiskPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
-import UnderwritingPanel from '@/components/UnderwritingPanel.vue'
 import SnapshotPanel from '@/components/SnapshotPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import VerdictHero from '@/components/VerdictHero.vue'
@@ -110,7 +109,12 @@ const developedNote = computed(() => {
 
 const dealEmpty = computed(
   () =>
-    !store.deal && !store.scenarios && !store.comps && !store.assessment && !store.marketContext,
+    !store.deal &&
+    !store.underwriting &&
+    !store.scenarios &&
+    !store.comps &&
+    !store.assessment &&
+    !store.marketContext,
 )
 
 const MOTIVATION_CHIP: Partial<
@@ -482,6 +486,7 @@ async function toggleSave(): Promise<void> {
             <DevelopmentProgramPanel />
             <DistressPanel />
             <ChecklistPanel />
+            <BuyersNearbyPanel />
             <div class="tab-foot">
               <q-btn
                 flat
@@ -497,11 +502,9 @@ async function toggleSave(): Promise<void> {
           </q-tab-panel>
 
           <q-tab-panel name="deal" class="tab-pane">
-            <DealPanel />
-            <UnderwritingPanel :parcel-number="detail.parcel_number" />
+            <DealCard />
             <ScenariosPanel />
             <CompsPanel />
-            <BuyersNearbyPanel />
             <AssessmentPanel />
             <MarketContextPanel />
             <div v-if="dealEmpty" class="tab-empty">

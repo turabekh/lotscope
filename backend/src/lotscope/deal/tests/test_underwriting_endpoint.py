@@ -1,8 +1,10 @@
+from typing import Any
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.deal.underwriting import build_underwriting
+from lotscope.deal.underwriting import UnderwritingAnalysis, build_underwriting
 
 pytestmark = pytest.mark.integration
 
@@ -119,3 +121,83 @@ async def test_a_users_profile_defaults_reach_their_own_analysis(
     target = next(i for i in analysis.assumptions if i["name"] == "target_margin")
     assert target["value"] == 0.35
     assert target["origin"] == "user_override"
+
+
+async def test_a_request_override_beats_the_user_profile(db_session: AsyncSession) -> None:
+    owner = await _user(db_session)
+    await _parcel(db_session)
+    await db_session.execute(
+        text(
+            "INSERT INTO underwriting_profile (owner_id, name, is_default, assumptions, "
+            "version) VALUES (:owner, 'default', true, "
+            "'{\"construction_cost_per_sqft\": 210.0}'::jsonb, 1)"
+        ),
+        {"owner": owner},
+    )
+    await db_session.flush()
+
+    from_profile = await build_underwriting(
+        db_session,
+        "phl:uw1",
+        owner_id=owner,
+        market_code="phl",
+        base_zoning_code="RSA-5",
+        market_value=150000.0,
+        buildability=None,
+        land_value=None,
+    )
+    from_request = await build_underwriting(
+        db_session,
+        "phl:uw1",
+        owner_id=owner,
+        market_code="phl",
+        base_zoning_code="RSA-5",
+        market_value=150000.0,
+        buildability=None,
+        land_value=None,
+        construction_cost_per_sqft=190.0,
+    )
+
+    def item(analysis: UnderwritingAnalysis, name: str) -> dict[str, Any]:
+        return next(entry for entry in analysis.assumptions if entry["name"] == name)
+
+    assert item(from_profile, "construction_cost_per_sqft")["value"] == 210.0
+    assert item(from_profile, "construction_cost_per_sqft")["origin"] == "user_override"
+    assert item(from_request, "construction_cost_per_sqft")["value"] == 190.0
+    assert item(from_request, "construction_cost_per_sqft")["origin"] == "scenario_override"
+
+
+async def test_supplying_no_overrides_is_value_neutral(db_session: AsyncSession) -> None:
+    owner = await _user(db_session)
+    await _parcel(db_session)
+
+    baseline = await build_underwriting(
+        db_session,
+        "phl:uw1",
+        owner_id=owner,
+        market_code="phl",
+        base_zoning_code="RSA-5",
+        market_value=150000.0,
+        buildability=None,
+        land_value=None,
+    )
+    explicit_none = await build_underwriting(
+        db_session,
+        "phl:uw1",
+        owner_id=owner,
+        market_code="phl",
+        base_zoning_code="RSA-5",
+        market_value=150000.0,
+        buildability=None,
+        land_value=None,
+        construction_cost_per_sqft=None,
+        soft_cost_pct=None,
+        selling_cost_pct=None,
+        target_margin=None,
+    )
+
+    assert baseline.mao == explicit_none.mao
+    assert baseline.assumptions == explicit_none.assumptions
+    assert [c.max_allowable_offer for c in baseline.cases.results] == [
+        c.max_allowable_offer for c in explicit_none.cases.results
+    ]

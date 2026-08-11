@@ -1,4 +1,5 @@
 import type {
+  DealOverrides,
   PolicyDocument,
   PolicySummary,
   CorrectionRecord,
@@ -242,14 +243,13 @@ export const api = {
       .join('&')
     return request(`/parcels/compare?${query}`)
   },
-  getDeal(
-    parcelNumber: string,
-    params: { acquisitionPrice?: number | null; targetMargin?: number | null } = {},
-  ): Promise<DealResult> {
+  getDeal(parcelNumber: string, params: DealOverrides = {}): Promise<DealResult> {
     const query = new URLSearchParams()
     if (params.acquisitionPrice != null)
       query.set('acquisition_price', String(params.acquisitionPrice))
     if (params.targetMargin != null) query.set('target_margin', String(params.targetMargin))
+    if (params.constructionCostPerSqft != null)
+      query.set('construction_cost_per_sqft', String(params.constructionCostPerSqft))
     const qs = query.toString()
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/deal${qs ? `?${qs}` : ''}`)
   },
@@ -477,8 +477,22 @@ export const api = {
       body: JSON.stringify(payload),
     })
   },
-  getUnderwriting(parcelNumber: string): Promise<UnderwritingAnalysis> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/underwriting`)
+  getUnderwriting(
+    parcelNumber: string,
+    overrides: DealOverrides = {},
+  ): Promise<UnderwritingAnalysis> {
+    const query = new URLSearchParams()
+    if (overrides.acquisitionPrice != null) {
+      query.set('acquisition_price', String(overrides.acquisitionPrice))
+    }
+    if (overrides.targetMargin != null) {
+      query.set('target_margin', String(overrides.targetMargin))
+    }
+    if (overrides.constructionCostPerSqft != null) {
+      query.set('construction_cost_per_sqft', String(overrides.constructionCostPerSqft))
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/underwriting${suffix}`)
   },
   getParcelFreshness(parcelNumber: string): Promise<SourceFreshness[]> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/freshness`)

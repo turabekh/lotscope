@@ -169,6 +169,24 @@ export interface UnderwritingCase {
   infeasible: boolean
 }
 
+export interface SensitivityCell {
+  exit_multiplier: number
+  cost_multiplier: number
+  margin: number | null
+  profit: number | null
+  infeasible: boolean
+}
+
+export interface SensitivityGrid {
+  available: boolean
+  unavailable_reason: string | null
+  row_label: string
+  column_label: string
+  exit_multipliers: number[]
+  cost_multipliers: number[]
+  cells: SensitivityCell[]
+}
+
 export interface UnderwritingAnalysis {
   parcel_number: string
   assumptions: UnderwritingAssumption[]
@@ -180,7 +198,14 @@ export interface UnderwritingAnalysis {
   }
   cases: UnderwritingCase[]
   case_version: string
+  sensitivity?: SensitivityGrid
   computed_at: string
+}
+
+export interface DealOverrides {
+  acquisitionPrice?: number | null
+  targetMargin?: number | null
+  constructionCostPerSqft?: number | null
 }
 
 export interface VerdictResult {

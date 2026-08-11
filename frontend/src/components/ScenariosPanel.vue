@@ -49,36 +49,52 @@ function marginClass(item: ScenarioItem): string {
         </q-chip>
       </div>
 
-      <table class="scn">
-        <thead>
-          <tr>
-            <th>Units</th>
-            <th>Path</th>
-            <th class="num">ARV</th>
-            <th class="num">Profit</th>
-            <th class="num">Margin</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in rows()" :key="item.units" :class="{ rec: isRecommended(item) }">
-            <td>
-              {{ item.units }}
-              <q-icon v-if="isRecommended(item)" name="star" size="12px" class="text-primary" />
-            </td>
-            <td>
-              <span :class="item.by_right ? 'text-positive' : 'text-amber-8'">
-                {{ item.by_right ? 'by-right' : 'variance' }}
-              </span>
-              <span v-if="item.infeasible" class="scn-infeasible" data-test="scenario-infeasible">
-                not economical
-              </span>
-            </td>
-            <td class="num">{{ formatCurrency(item.arv) }}</td>
-            <td class="num">{{ formatCurrency(item.profit) }}</td>
-            <td class="num" :class="marginClass(item)">{{ formatPercent(item.margin) }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="scn-scroll">
+        <table class="scn">
+          <thead>
+            <tr>
+              <th>Units</th>
+              <th>Path</th>
+              <th class="num">ARV</th>
+              <th class="num">
+                Max offer
+                <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
+                  The most you could pay for the lot at this unit count and still clear the target
+                  margin. The Deal analysis card states this figure for the modeled scenario.
+                </q-tooltip>
+              </th>
+              <th class="num">Profit</th>
+              <th class="num">Margin</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in rows()" :key="item.units" :class="{ rec: isRecommended(item) }">
+              <td>
+                {{ item.units }}
+                <q-icon v-if="isRecommended(item)" name="star" size="12px" class="text-primary" />
+              </td>
+              <td>
+                <span :class="item.by_right ? 'text-positive' : 'text-amber-8'">
+                  {{ item.by_right ? 'by-right' : 'variance' }}
+                </span>
+                <span v-if="item.infeasible" class="scn-infeasible" data-test="scenario-infeasible">
+                  not economical
+                </span>
+              </td>
+              <td class="num">{{ formatCurrency(item.arv) }}</td>
+              <td class="num" :data-test="`scenario-mao-${item.units}`">
+                {{ item.infeasible ? '—' : formatCurrency(item.max_allowable_offer) }}
+              </td>
+              <td class="num">{{ formatCurrency(item.profit) }}</td>
+              <td class="num" :class="marginClass(item)">{{ formatPercent(item.margin) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ul v-if="scenarios.reasons.length" class="scn-reasons" data-test="scenario-reasons">
+        <li v-for="(reason, index) in scenarios.reasons" :key="index">{{ reason }}</li>
+      </ul>
 
       <div class="scn-note">{{ scenarios.confidence }} confidence · not financial advice.</div>
     </q-card-section>
@@ -100,8 +116,12 @@ function marginClass(item: ScenarioItem): string {
   color: var(--lot-muted);
   margin-bottom: 6px;
 }
+.scn-scroll {
+  overflow-x: auto;
+}
 .scn {
   width: 100%;
+  min-width: 340px;
   border-collapse: collapse;
   font-size: 12.5px;
 }
@@ -130,6 +150,15 @@ function marginClass(item: ScenarioItem): string {
   font-size: 10.5px;
   font-weight: 600;
   color: var(--lot-sev-high, #c62828);
+}
+.scn-reasons {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--lot-muted);
+}
+.scn-reasons li {
+  margin-top: 2px;
 }
 .scn-note {
   font-size: 10.5px;
