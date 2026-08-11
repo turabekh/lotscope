@@ -62,12 +62,4 @@ Local measurement understates the reach: only 8 of ~329 local RSA-5 parcels carr
 
 Recorded here rather than fixed: this slice's constraint is that it measures shipped behaviour, and a change to `zoning_standard` moves stored verdicts.
 
-### F4 resolution — the scalar corrected, the conditionality still unmodelled
-
-`seed.py` now carries RSA-5 at **960**, matching Table 14-701-1. The seeded value was an isolated transcription error, not a systematic inversion: of the eleven districts in that table, ten already matched exactly and only RSA-5 diverged — so the seed's own convention is to mirror the table, and 960 is what that convention requires. `test_seed_dimensional.py` pins all eleven against the printed table so the next divergence fails a test instead of reaching a verdict.
-
-**What this does not fix.** The minimum is geography-dependent and `zoning_standard` still holds one scalar. Before the change, every RSA-5 lot between 960 and 1,440 sqft was told it failed the minimum — a false negative everywhere. After it, lots in that band inside the Fourth District, Ninth District and Far Northeast overlays will be told they clear a minimum their overlay raises to 1,440 — a false positive, confined to those areas.
-
-That is a deliberate trade and worth stating plainly: false positives are the worse failure mode, because "you can build" on a lot that cannot carry the density is advice someone can act on and lose money against, where a false negative only costs a missed opportunity. The trade is defensible only because the false negatives were citywide and the false positives are confined to three overlays — it narrows the error, it does not eliminate it. Overlay-aware resolution remains the real fix and remains its own slice.
-
-**Production requires a verdict recompute.** Stored verdicts for RSA-5 parcels were computed against 1,440 and do not change by re-seeding alone.
+**Where the fix went (added 2026-08-11).** F4 was briefly fixed on this branch and has been reverted, deliberately. A scalar correction alone converts ~58.5k false negatives into ~54.4k false positives, because six §14-500 overlays — not the three named above — restore the 1,440 minimum over 48% of the affected band. The correction now belongs to **verdict v9**, which pairs it with overlay-aware effective-standard resolution so the in-overlay parcels keep 1,440. See `docs/audit/zoning-standard-vs-title14.md` and `docs/v9-overlay-aware-standards-recon.md`. Do not re-fix it here: this slice measures shipped behaviour.
