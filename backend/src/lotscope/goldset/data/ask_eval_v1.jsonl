@@ -10,12 +10,17 @@
 #   14-602-3 industrial | 14-602-4 special purpose
 # Parking tables:      14-802-1 residential | 14-802-2 commercial | 14-802-3 industrial
 #
-# RSA-5 minimum lot area, settled 2026-08-11 against code_provision.table_data:
+# RSA-5 minimum lot area, settled 2026-08-11 against the printed page (PDF
+# philadelphiahomerulecharter.pdf p.951, read with pdfplumber independently of
+# the parser's table pipeline) and against code_provision.table_data, which agree:
 # Table 14-701-1 row 11 gives RSA-5 (column 9 of 12) = "960 [2]"; note [2] at
 # 14-701(2)(b)[2] is the 800 sq ft subdivision exception. The 1,440 figure lives
 # in OVERLAY sections -- 14-514 (/FNE), 14-520 (/NDO), 14-524 (/FDO) -- and is
 # not the citywide standard. Base RSA-5 is 960. The incumbent summary states
 # 1,440 while citing Table 14-701-1, which does not contain that figure.
+# Cell alignment cross-checks on the page itself: footnote [1] sits on RSA-4 and
+# 14-701(2)(b)[1] opens "In the RSA-4 district"; [2] sits on RSA-5 and
+# 14-701(2)(b)[2] opens "In the RSA-5 district". Shifted cells would misplace them.
 #
 # STATUS: 22 shared + 6 phillycode_only + 1 refusal = 29 of 42 grounded.
 # Remaining 13 (9 phillycode_only, 4 refusal) are listed in handoff 0043 §1.
