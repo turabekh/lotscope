@@ -118,10 +118,10 @@ async def _resolve_report(
     return result
 
 
-def _ask_cache_key(parcel_number: str, question: str) -> str:
+def _ask_cache_key(parcel_number: str, question: str, source: str) -> str:
     normalized = " ".join(question.lower().split())
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-    return f"ask:{parcel_number}:{digest}"
+    return f"ask:{parcel_number}:{source}:{digest}"
 
 
 class AskRequest(BaseModel):
@@ -646,8 +646,9 @@ async def ask_parcel(
     generator: Annotated[StructuredGenerator, Depends(get_generator)],
     redis: Annotated[Redis, Depends(get_redis)],
     current_user: Annotated[User, Depends(get_current_user)],
+    settings: SettingsDep,
 ) -> ParcelAnswer:
-    cache_key = _ask_cache_key(parcel_number, body.question)
+    cache_key = _ask_cache_key(parcel_number, body.question, settings.zoning_retrieval_source)
     try:
         cached = await redis.get(cache_key)
     except RedisError:
@@ -667,7 +668,12 @@ async def ask_parcel(
             )
 
     answer = await ask_the_parcel(
-        session, parcel_number, body.question, embedder=embedder, generator=generator
+        session,
+        parcel_number,
+        body.question,
+        embedder=embedder,
+        generator=generator,
+        source_override=settings.zoning_retrieval_source,
     )
     if answer is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
