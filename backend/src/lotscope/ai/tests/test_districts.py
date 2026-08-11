@@ -4,7 +4,11 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.ai.districts import GOVERNING_CITES, district_anchor_cites
+from lotscope.ai.districts import (
+    GOVERNING_CITES,
+    district_anchor_cites,
+    district_search_terms,
+)
 from lotscope.ai.query_terms import extract_districts
 
 pytestmark = pytest.mark.integration
@@ -116,3 +120,25 @@ async def test_supplements_never_duplicate_a_governing_table(db_session: AsyncSe
     cites = await district_anchor_cites(db_session, "RSA-5", market_code="phl")
 
     assert len(cites) == len(set(cites))
+
+
+def test_a_district_is_searched_in_both_the_written_and_stored_spellings() -> None:
+    assert district_search_terms("RSA5") == ["RSA-5", "RSA5"]
+    assert district_search_terms("RSA-5") == ["RSA-5", "RSA5"]
+    assert district_search_terms("cmx2.5") == ["CMX-2.5", "CMX2.5"]
+
+
+def test_a_district_with_no_number_is_searched_as_written() -> None:
+    assert district_search_terms("ICMX") == ["ICMX"]
+
+
+async def test_the_stored_unhyphenated_code_finds_the_same_supplements(
+    db_session: AsyncSession,
+) -> None:
+    await _seed(db_session)
+
+    hyphenated = await district_anchor_cites(db_session, "RSA-5", market_code="phl")
+    stored = await district_anchor_cites(db_session, "RSA5", market_code="phl")
+
+    assert stored == hyphenated
+    assert "14-514(5)(a)" in stored

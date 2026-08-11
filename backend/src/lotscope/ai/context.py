@@ -5,13 +5,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.ai.retrieval import fetch_documents_by_cite
 from lotscope.ai.schemas import RetrievedDocument
 from lotscope.ai.scope import RetrievalScope
-from lotscope.provisions.service import ancestors_of, children_of, refs_of
+from lotscope.provisions.service import (
+    ancestors_of,
+    children_of,
+    descendants_of,
+    get_provision,
+    refs_of,
+)
 
 MAX_CONTEXT_CHARS = 24_000
 MAX_WINDOWS = 3
-MAX_PROVISIONS_PER_WINDOW = 5
+MAX_PROVISIONS_PER_WINDOW = 12
 MAX_REFS_PER_HIT = 3
 SECTION_KINDS = frozenset({"section", "chapter", "title"})
+TABLE_KIND = "table"
 
 
 @dataclass(frozen=True)
@@ -51,17 +58,28 @@ async def section_window_cites(
     market_code: str,
     max_provisions: int = MAX_PROVISIONS_PER_WINDOW,
 ) -> list[str]:
-    chain = await ancestors_of(session, market_code, provision_id)
-    section = next((item for item in reversed(chain) if item.kind in SECTION_KINDS), None)
-    if section is None:
+    provision = await get_provision(session, market_code, provision_id)
+    if provision is None:
         return []
-    siblings = await children_of(session, market_code, section.id)
+    if provision.kind in SECTION_KINDS:
+        section = provision
+    else:
+        chain = await ancestors_of(session, market_code, provision_id)
+        found = next((item for item in reversed(chain) if item.kind in SECTION_KINDS), None)
+        if found is None:
+            return []
+        section = found
+
+    tables = await descendants_of(
+        session, market_code, section.id, kinds=[TABLE_KIND], limit=max_provisions
+    )
+    children = await children_of(session, market_code, section.id)
     cites = [section.cite]
-    for sibling in siblings:
-        if sibling.cite not in cites:
-            cites.append(sibling.cite)
+    for item in [*tables, *children]:
         if len(cites) >= max_provisions:
             break
+        if item.cite not in cites:
+            cites.append(item.cite)
     return cites
 
 

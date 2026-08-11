@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.provisions.service import find_mentioning
@@ -7,6 +9,17 @@ DIMENSIONAL_STANDARDS_CITE = "14-701"
 USE_TABLES_CITE = "14-602"
 GOVERNING_CITES = (DIMENSIONAL_STANDARDS_CITE, USE_TABLES_CITE)
 SUPPLEMENT_LIMIT = 4
+
+_SPLIT_RE = re.compile(r"^([A-Za-z]+)-?([0-9][0-9.]*)$")
+
+
+def district_search_terms(district_code: str) -> list[str]:
+    cleaned = district_code.strip().upper()
+    match = _SPLIT_RE.match(cleaned)
+    if match is None:
+        return [cleaned]
+    prefix, number = match.groups()
+    return [f"{prefix}-{number}", f"{prefix}{number}"]
 
 
 async def district_anchor_cites(
@@ -24,7 +37,7 @@ async def district_anchor_cites(
     supplements = await find_mentioning(
         session,
         market_code,
-        [district_code],
+        district_search_terms(district_code),
         title_numbers=titles,
         limit=supplement_limit,
     )

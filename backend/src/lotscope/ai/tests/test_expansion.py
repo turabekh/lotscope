@@ -134,3 +134,35 @@ async def test_a_hit_with_no_resolvable_section_expands_to_nothing(
     )
 
     assert documents == []
+
+
+async def test_a_window_reaches_the_tables_that_hold_the_answer(
+    db_session: AsyncSession,
+) -> None:
+    await _seed(db_session)
+    await db_session.execute(
+        _PROVISION,
+        {
+            "id": "14-500(2)(a)#table1",
+            "kind": "table",
+            "parent": "14-500(2)",
+            "ordinal": 20,
+            "path": json.dumps(["14", "14-500", "14-500(2)", "14-500(2)(a)#table1"]),
+        },
+    )
+    await db_session.commit()
+
+    cites = await section_window_cites(db_session, "14-500(2)", market_code="phl")
+
+    assert "14-500(2)(a)#table1" in cites
+
+
+async def test_a_section_hit_expands_from_itself_not_its_parent(
+    db_session: AsyncSession,
+) -> None:
+    await _seed(db_session)
+
+    cites = await section_window_cites(db_session, "14-500", market_code="phl")
+
+    assert cites[0] == "14-500"
+    assert "14-500(1)" in cites

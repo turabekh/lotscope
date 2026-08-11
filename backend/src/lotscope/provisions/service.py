@@ -86,6 +86,24 @@ async def ancestors_of(
     return list(reversed(chain))
 
 
+async def descendants_of(
+    session: AsyncSession,
+    market_code: str,
+    provision_id: str,
+    *,
+    kinds: list[str] | None = None,
+    limit: int = 50,
+) -> list[ProvisionRead]:
+    statement = select(CodeProvision).where(
+        CodeProvision.market_code == market_code,
+        CodeProvision.path.contains([provision_id]),
+        CodeProvision.id != provision_id,
+    )
+    if kinds:
+        statement = statement.where(CodeProvision.kind.in_(kinds))
+    return await _fetch(session, statement.order_by(CodeProvision.ordinal).limit(limit))
+
+
 async def siblings_of(
     session: AsyncSession, market_code: str, provision_id: str
 ) -> list[ProvisionRead]:
