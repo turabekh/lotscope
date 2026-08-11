@@ -11,6 +11,7 @@ class RetrievedDocument(BaseModel):
     title: str | None
     content: str
     distance: float
+    via: str | None = None
 
 
 class Citation(BaseModel):

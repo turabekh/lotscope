@@ -5,11 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.ai.retrieval import fetch_documents_by_cite
 from lotscope.ai.schemas import RetrievedDocument
 from lotscope.ai.scope import RetrievalScope
-from lotscope.provisions.service import ancestors_of, children_of
+from lotscope.provisions.service import ancestors_of, children_of, refs_of
 
 MAX_CONTEXT_CHARS = 24_000
 MAX_WINDOWS = 3
 MAX_PROVISIONS_PER_WINDOW = 5
+MAX_REFS_PER_HIT = 3
 SECTION_KINDS = frozenset({"section", "chapter", "title"})
 
 
@@ -62,6 +63,37 @@ async def section_window_cites(
         if len(cites) >= max_provisions:
             break
     return cites
+
+
+async def expand_refs(
+    session: AsyncSession,
+    hits: list[RetrievedDocument],
+    *,
+    market_code: str,
+    scope: RetrievalScope,
+    max_refs: int = MAX_REFS_PER_HIT,
+) -> list[RetrievedDocument]:
+    attribution: dict[str, str] = {}
+    for hit in hits:
+        if hit.section is None:
+            continue
+        referenced = await refs_of(session, market_code, hit.section)
+        for provision in referenced[:max_refs]:
+            attribution.setdefault(provision.cite, hit.section)
+    if not attribution:
+        return []
+    documents = await fetch_documents_by_cite(
+        session,
+        list(attribution),
+        limit=len(attribution),
+        source=scope.source,
+        market=scope.market,
+        titles=scope.titles,
+    )
+    return [
+        document.model_copy(update={"via": attribution.get(document.section or "")})
+        for document in documents
+    ]
 
 
 async def expand_to_windows(
