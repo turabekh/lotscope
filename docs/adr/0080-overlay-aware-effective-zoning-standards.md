@@ -57,7 +57,11 @@ No correction in v9 makes any parcel *less* buildable. The release cannot introd
 
 **A full phl recompute is required.** `VERDICT_VERSION` moves to v9; stored verdicts hold v8 values until recomputed. Scope to `market_code='phl'` — pgh, wlm, and hbg are untouched by every correction here.
 
-**Recompute cost rises.** Overlay resolution adds a live `ST_Intersects` per parcel; there is no materialized `parcel_overlay` table. Across ~313k RSA-5 parcels this is new work the v8 recompute did not do. **Benchmark before scheduling**; materialising overlay membership is the fallback if the projection is poor.
+**Recompute cost rises, and the benchmark decided how much.** Overlay resolution adds a per-parcel overlay lookup that v8 did not do. Measured (40-parcel `compute_verdict` samples, local): the live `ST_Intersects` cost **27.1 ms/parcel, 29% of `compute_verdict`**, taking a full phl recompute from 10.38 h to 15.30 h. Both GiST indexes already existed, so this was never a missing-index problem — it is the exact-intersection test against 193 polygons, paid 550,945 times.
+
+Membership is therefore **materialized** into `parcel_overlay`, refreshed by the overlay ingest job (1,487,536 rows in 57 s, one spatial pass). The hot path becomes a b-tree lookup: **27.1 ms → 1.5 ms**, `assess_parcel` 30.6 ms → 2.15 ms, recompute 15.30 h → **11.70 h**. v9's own overhead is +1.13 h over the v8 baseline. The live join is retained as `parcel_overlay_divergence`, so the query being replaced verifies its replacement.
+
+**This mattered more than a batch-job cost, because `get_or_compute_current_verdict` recomputes lazily on version mismatch** (`verdict/service.py:145`). Between deploy and recompute, every parcel view holding a v8 row pays a full `compute_verdict` on the request path — 95 ms unmitigated, 70 ms materialized. Rollout ordering is in `docs/runbook.md`.
 
 **RM-1 is modelled at its base provision only.** §14-502(4)(c)(.2) (**/CTR** Center City) sets a different trigger (1,600), a different floor (800), and a hard two-lot cap that `SmallLotProvision` has no field to express. Modelling it needs a schema change and is out of scope. §14-533(3)(e)[1] (**/MIN**) modifies RM-1's *lot area per dwelling unit* — a different field, also out of scope.
 
