@@ -2,6 +2,14 @@
 
 **Status:** Accepted · **Date:** 2026-08-11 · **Supersedes nothing; bumps `VERDICT_VERSION` v8 → v9**
 
+**Open at acceptance.** Accepted as the resolution design, with these known and unclosed — none blocks the decision, all are ledgered:
+
+1. **Overlay dimensional classification.** Suppression narrowing is correct but barely bites today: on a 3,000-parcel sample of RSA-5 lots above the small-lot trigger, *none* had only modelled overlays. `/NIS` (Narcotics Injection Sites) touches 2,825 of 3,000. Classifying all 193 overlays by whether they bear on dimensional standards is what would actually unlock small-lot analysis.
+2. **`[N/A]` overlay codes.** 1,817 of that sample touch overlays whose `code` is the literal string `[N/A]` — an ingest data-quality defect, not a v9 concern, but it degrades any code-keyed overlay logic.
+3. **`zoning_overlay.last_synced_at` is NULL on all 193 rows.** Materializing membership gives the layer a refresh cadence it did not have; the source layer still carries no freshness signal of its own.
+4. **/CTR's RM-1 variant** (§14-502(4)(c)(.2)) needs a lot-count cap `SmallLotProvision` cannot express.
+5. **Production recompute is unrun.** Wall-clock below is local; production hardware will differ.
+
 ## Context
 
 `docs/audit/zoning-standard-vs-title14.md` compared every seeded dimensional value in `TITLE_14_STANDARDS` against the parsed Title 14 tables in `code_provision.table_data`. 71 of 72 determinate values across 32 districts matched exactly. Four defects came out of it, and one of them cannot be fixed by changing a number.
