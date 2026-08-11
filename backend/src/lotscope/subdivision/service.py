@@ -11,7 +11,7 @@ from lotscope.subdivision.analysis import (
     small_lot_provision_for,
 )
 from lotscope.subdivision.schemas import SubdivisionResult
-from lotscope.zoning.service import get_parcel_overlays, get_parcel_standard
+from lotscope.zoning.service import get_parcel_standard, get_unmodelled_overlays
 
 _ADJACENT_BOUNDARY_MIN_FT = 1.0
 
@@ -72,7 +72,9 @@ async def analyze_parcel_subdivision(
         adjacent_small_share = await _adjacent_small_share(
             session, parcel_number, provision.adjacent_small_max_area_sqft
         )
-        has_overlay = bool(await get_parcel_overlays(session, parcel_number))
+        has_overlay = bool(
+            await get_unmodelled_overlays(session, parcel_number, district_code or "")
+        )
 
     analysis = analyze_subdivision(
         SubdivisionInputs(

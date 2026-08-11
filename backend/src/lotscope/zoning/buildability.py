@@ -23,6 +23,15 @@ class ParcelDimensions:
 
 
 @dataclass(frozen=True)
+class OverlayModification:
+    field_name: str
+    value: float
+    base_value: float | None
+    overlay_code: str
+    citation: str
+
+
+@dataclass(frozen=True)
 class DistrictStandard:
     code: str
     code_version: str
@@ -40,6 +49,7 @@ class DistrictStandard:
     side_setback_ft: float | None = None
     requires_master_plan: bool = False
     field_dispositions: dict[str, Any] = field(default_factory=dict)
+    overlay_modifications: list[OverlayModification] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
