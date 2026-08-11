@@ -159,3 +159,19 @@ Consequences for the remaining slices, which this measurement makes concrete rat
 - **No cross-title product features.** Title 19 abatement intelligence tied to distress, Title 4 buildability enrichment, and similar are explicitly out of scope; they are candidate features that require their own justification.
 - **No change to `zoning_standard` or the verdict contract.** The canonical corpus may *check* seeded values (§6); it does not replace them. Any future decision to derive standards from parsed tables is its own ADR.
 - **No LLM-facing changes to the citation contract.** The enforcement mechanism in `ai/service.py` is unchanged; only what it cites improves.
+## Addendum 2026-08-11 — the derivation was 25% complete, and the record said otherwise
+
+Verification against the database found `document` holding **5,473** phillycode rows where the deriver's own eligibility rules expect **21,516**. Eleven titles — 4, 6, 9, 10, 11, 12, 17, 19, 20, 21, 22 — had **zero** documents, 16,043 in total. Everything that did exist was clean: zero orphans, zero duplicates, zero null embeddings, complete metadata on every row, all four HNSW indexes valid.
+
+The written record was wrong in the product's favour twice over. It named titles 8, 7, 15 and 4 as the outstanding work; of those, 7, 8 and 15 had in fact completed in an unwatched retry, and 4 had not. More seriously, **ten of the eleven missing titles appeared nowhere in the account at all** — neither as done nor as outstanding. They were 15,639 of the 16,043 missing documents, and nothing in the repository would have revealed them.
+
+Two mechanisms let that happen, and both are now closed:
+
+- **The derivation report was stdout-only.** `DerivationReport` reconciled in-process and `phillycode_cli` printed it. Once the terminal scrolled, the only remaining answer to "what was derived" was a hand-written query nobody had. There is now a `derivation_run` ledger: one row per title per run carrying versions, the eligible/emitted counts, every per-rule skip count, timestamps and status, written as each title commits so a mid-run failure still leaves an accurate record.
+- **Completeness was a memory, not a query.** `make verify-derivation` now reconciles derived documents against expected counts and exits nonzero on any shortfall for a title the ledger claims complete, on any document not at the current `derivation_version`, and — under `--require-complete` — on any shortfall at all. It computes expected counts by running the real `derive()` over `code_provision` rather than reimplementing the eligibility rules, so the check cannot drift from the deriver it checks.
+
+**The stub-root asymmetry is resolved and is not a defect.** Titles 5, 8, 4.1 and 4.2 emit a document for their `kind='title'` root while Titles 1 and 14 do not, because the stub roots carry `text` of their own ("TITLE 5. FIRE PREVENTION CODE 1") and the container rule only skips a non-leaf whose text *and* cleaned heading are both empty. Both behaviors are correct as coded; the divergence is in the data. Eligibility is unchanged, so the 21,516 expectation stands. Both branches are now pinned by unit tests.
+
+That resolution did surface a separate quality question, recorded here rather than acted on. All four stub titles are **repealed**, and their repeal is stated in a note that `is_provenance_note` correctly skips. The only document each of those titles gets is therefore the root echo, which names the title as though it were live and never mentions that it was repealed in 1997. Four documents out of 21,516, and admitting them would mean changing a signed Slice 2a policy that governs the whole corpus — so it is flagged for decision, not fixed in passing.
+
+Production's `code_provision` and phillycode corpus remain intentionally empty pending the GCS artifact pipeline. Nothing here changes that.

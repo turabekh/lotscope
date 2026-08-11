@@ -1,8 +1,10 @@
 import asyncio
 import json
+from datetime import UTC, datetime
+from uuid import uuid4
 
 from pydantic import BaseModel
-from sqlalchemy import text
+from sqlalchemy import insert, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ai.derivation import (
@@ -14,6 +16,7 @@ from lotscope.ai.derivation import (
 )
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.errors import EmbeddingError
+from lotscope.ai.models import DerivationRun
 from lotscope.ai.retrieval import to_vector_literal
 from lotscope.core.logging import get_logger
 from lotscope.provisions.service import provisions_for_title, title_numbers
@@ -69,6 +72,7 @@ _PRUNE = text(
 class TitleDerivationResult(BaseModel):
     title_number: str
     error: str | None = None
+    source_version: str | None = None
     documents: int
     table_documents: int
     skipped_continuations: int
@@ -199,6 +203,7 @@ async def derive_title(
 
     return TitleDerivationResult(
         title_number=title_number,
+        source_version=rows[0].source_version if rows else None,
         documents=report.documents,
         table_documents=report.table_documents,
         skipped_continuations=report.skipped_continuations,
@@ -209,6 +214,41 @@ async def derive_title(
         pruned=len(stale),
         provisions_seen=report.provisions_seen,
         reconciled=report.reconciles(),
+    )
+
+
+async def _record_run(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    market_code: str,
+    derivation_version: str,
+    result: TitleDerivationResult,
+    started_at: datetime,
+) -> None:
+    await session.execute(
+        insert(DerivationRun).values(
+            run_id=run_id,
+            source=PHILLYCODE_SOURCE,
+            market_code=market_code,
+            title_number=result.title_number,
+            derivation_version=derivation_version,
+            source_version=result.source_version,
+            status="failed" if result.error else "succeeded",
+            error=result.error,
+            provisions_seen=result.provisions_seen,
+            documents=result.documents,
+            table_documents=result.table_documents,
+            skipped_continuations=result.skipped_continuations,
+            skipped_figures=result.skipped_figures,
+            skipped_notes=result.skipped_notes,
+            skipped_containers=result.skipped_containers,
+            folded_leaves=result.folded_leaves,
+            pruned=result.pruned,
+            reconciled=result.reconciled,
+            started_at=started_at,
+            finished_at=datetime.now(UTC),
+        )
     )
 
 
@@ -223,8 +263,10 @@ async def derive_corpus(
     pace_seconds: float = 0.0,
 ) -> DerivationRunReport:
     wanted = titles if titles is not None else await title_numbers(session, market_code)
+    run_id = str(uuid4())
     results: list[TitleDerivationResult] = []
     for title_number in wanted:
+        started_at = datetime.now(UTC)
         try:
             result = await derive_title(
                 session,
@@ -257,6 +299,15 @@ async def derive_corpus(
                 provisions_seen=0,
                 reconciled=False,
             )
+        await _record_run(
+            session,
+            run_id=run_id,
+            market_code=market_code,
+            derivation_version=derivation_version,
+            result=result,
+            started_at=started_at,
+        )
+        await session.commit()
         results.append(result)
     source_version = None
     for title_number in wanted:
