@@ -49,3 +49,15 @@ Valid from run-a: **retrieval presence for phillycode is 0.864** on the 22-case 
 The v1 hit rates (0.000 incumbent, 0.273 phillycode) are artifacts of vocabulary mismatch, not performance, and are superseded by the R1/R2 re-scoring.
 
 Latency baseline, both arms measured: incumbent p50 8.4s / p95 13.9s; phillycode p50 13.5s / p95 22.0s. Under the signed thresholds that is a **p50 fail** (13.5 > 12.6) and a p95 pass (22.0 < 27.8).
+
+## F4 — `zoning_standard` carries the inverted RSA-5 minimum, and buildability gates on it
+
+Checked directly: `zoning_standard` for `phl` / `RSA-5` holds `min_lot_area_sqft = 1440.00`, sourced from `title14-quickguide-2026-02`. Table 14-701-1 — verified at the printed page — sets it at **960**.
+
+`zoning/buildability.py` compares `dims.lot_area_sqft < standard.min_lot_area_sqft` and reports the lot as below "the 1440 sqft minimum for RSA-5". So an RSA-5 lot between 960 and 1,440 sqft is told it is not buildable when the code's base table says it meets the minimum. That is a false negative on the product's core question, in the city's most common residential district.
+
+Local measurement understates the reach: only 8 of ~329 local RSA-5 parcels carry a non-null `lot_area_sqft`, and 3 of those 8 fall in the affected band. The production proportion is the number that matters and is not measurable from here.
+
+**The fix is not a single value change, which is why this needs its own slice.** The minimum is geography-dependent: the code's base table says 960, and council-district overlays (`14-520` Ninth, `14-524` Fourth, `14-514` Far Northeast) set 1,440 within their boundaries, while the Quick Guide states the inverse default. A scalar column cannot express a conditional standard, so the options are a corrected scalar plus a documented caveat, an overlay-aware resolution path, or a confidence/qualifier on the field — a decision with verdict-contract consequences.
+
+Recorded here rather than fixed: this slice's constraint is that it measures shipped behaviour, and a change to `zoning_standard` moves stored verdicts.
