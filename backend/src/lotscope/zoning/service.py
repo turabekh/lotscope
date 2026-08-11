@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -6,9 +7,11 @@ from sqlalchemy import CursorResult, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.logging import get_logger
 from lotscope.markets.capabilities import zoning_citation_label
 from lotscope.zoning.buildability import (
     DistrictStandard,
+    OverlayModification,
     ParcelDimensions,
     UnitBasis,
     assess_buildability,
@@ -23,6 +26,8 @@ from lotscope.zoning.confidence import (
 )
 from lotscope.zoning.envelope import estimate_floors, representative_inset_ft
 from lotscope.zoning.schemas import BuildabilityResult, DistrictResolution, EnvelopeResult
+
+logger = get_logger(__name__)
 
 _PARCEL_SQL = text(
     "SELECT lot_area_sqft, frontage_ft, depth_ft, base_zoning_code, "
@@ -39,10 +44,9 @@ _SPATIAL_DISTRICT_SQL = text(
     "LIMIT 1"
 )
 _PARCEL_OVERLAYS_SQL = text(
-    "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
-    "JOIN zoning_overlay zo ON zo.market_code = p.market_code "
-    "AND ST_Intersects(zo.geom_local, p.geom_local) "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL AND zo.name IS NOT NULL"
+    "SELECT array_agg(DISTINCT po.overlay_name ORDER BY po.overlay_name) AS names "
+    "FROM parcel_overlay po "
+    "WHERE po.parcel_number = :parcel_number AND po.overlay_name IS NOT NULL"
 )
 
 
@@ -129,8 +133,94 @@ async def refresh_resolved_districts(session: AsyncSession, market_code: str) ->
     return result.rowcount or 0
 
 
+_UNMODELLED_OVERLAYS_SQL = text(
+    "SELECT array_agg(DISTINCT po.overlay_name ORDER BY po.overlay_name) AS names "
+    "FROM parcel_overlay po "
+    "WHERE po.parcel_number = :parcel_number AND po.overlay_name IS NOT NULL "
+    "AND NOT EXISTS (SELECT 1 FROM overlay_standard os "
+    "WHERE os.market_code = po.market_code AND os.code_section = po.code_section "
+    "AND upper(replace(os.district_code, '-', '')) = :district_code)"
+)
+
+
+async def get_unmodelled_overlays(
+    session: AsyncSession, parcel_number: str, district_code: str
+) -> list[str]:
+    names = await session.scalar(
+        _UNMODELLED_OVERLAYS_SQL,
+        {"parcel_number": parcel_number, "district_code": normalize_zoning_code(district_code)},
+    )
+    return list(names or [])
+
+
+def _apply_overlay_modifications(
+    standard: DistrictStandard,
+    modifications: list[tuple[str, float, str, str]],
+) -> DistrictStandard:
+    if not modifications:
+        return standard
+    applied: list[OverlayModification] = []
+    values: dict[str, Any] = {}
+    for field_name, value, overlay_code, citation in modifications:
+        if not hasattr(standard, field_name):
+            continue
+        if field_name in values and values[field_name] != value:
+            logger.warning(
+                "overlay_standard_conflict",
+                district=standard.code,
+                field=field_name,
+                kept=values[field_name],
+                discarded=value,
+                overlay=overlay_code,
+            )
+            continue
+        if field_name in values:
+            continue
+        values[field_name] = value
+        applied.append(
+            OverlayModification(
+                field_name=field_name,
+                value=value,
+                base_value=getattr(standard, field_name),
+                overlay_code=overlay_code,
+                citation=citation,
+            )
+        )
+    return replace(standard, overlay_modifications=applied, **values)
+
+
+_OVERLAY_MODIFICATIONS_SQL = text(
+    "SELECT DISTINCT os.field, os.value, os.overlay_code, os.citation "
+    "FROM parcel_overlay po "
+    "JOIN overlay_standard os ON os.market_code = po.market_code "
+    "AND os.code_section = po.code_section "
+    "AND upper(replace(os.district_code, '-', '')) = :district_code "
+    "WHERE po.parcel_number = :parcel_number "
+    "ORDER BY os.field, os.citation"
+)
+
+
+async def _overlay_modifications(
+    session: AsyncSession, parcel_number: str, district_code: str
+) -> list[tuple[str, float, str, str]]:
+    rows = (
+        await session.execute(
+            _OVERLAY_MODIFICATIONS_SQL,
+            {
+                "parcel_number": parcel_number,
+                "district_code": normalize_zoning_code(district_code),
+            },
+        )
+    ).all()
+    return [(row.field, float(row.value), row.overlay_code, row.citation) for row in rows]
+
+
 async def _get_standard(
-    session: AsyncSession, code: str, market_code: str
+    session: AsyncSession,
+    code: str,
+    market_code: str,
+    *,
+    parcel_number: str | None = None,
 ) -> DistrictStandard | None:
     row = (
         await session.execute(
@@ -139,7 +229,7 @@ async def _get_standard(
     ).one_or_none()
     if row is None:
         return None
-    return DistrictStandard(
+    standard = DistrictStandard(
         code=row.code,
         code_version=row.code_version,
         citation_label=zoning_citation_label(market_code),
@@ -156,6 +246,11 @@ async def _get_standard(
         side_setback_ft=_as_float(row.side_setback_ft),
         requires_master_plan=row.requires_master_plan,
         field_dispositions=dict(row.field_dispositions or {}),
+    )
+    if parcel_number is None:
+        return standard
+    return _apply_overlay_modifications(
+        standard, await _overlay_modifications(session, parcel_number, row.code)
     )
 
 
@@ -175,7 +270,9 @@ async def get_parcel_standard(session: AsyncSession, parcel_number: str) -> Dist
     )
     if resolution is None:
         return None
-    return await _get_standard(session, resolution.code, _market_of(parcel_number))
+    return await _get_standard(
+        session, resolution.code, _market_of(parcel_number), parcel_number=parcel_number
+    )
 
 
 async def assemblage_unit_estimate(
@@ -454,7 +551,9 @@ async def assess_parcel(session: AsyncSession, parcel_number: str) -> Buildabili
         return _unknown_result(
             parcel_number, computed_at, "Zoning district could not be resolved for this parcel."
         )
-    standard = await _get_standard(session, resolution.code, _market_of(parcel_number))
+    standard = await _get_standard(
+        session, resolution.code, _market_of(parcel_number), parcel_number=parcel_number
+    )
     if standard is None:
         return _no_standard_result(parcel_number, resolution, computed_at)
     return _build_result(parcel_number, parcel, resolution, standard, computed_at)

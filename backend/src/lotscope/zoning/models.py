@@ -108,3 +108,48 @@ class ZoningStandard(Base, TimestampMixin):
     requires_master_plan: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
+
+
+class OverlayStandard(Base, TimestampMixin):
+    __tablename__ = "overlay_standard"
+    __table_args__ = (
+        UniqueConstraint(
+            "market_code",
+            "code_section",
+            "district_code",
+            "field",
+            "code_version",
+            name="uq_overlay_standard_scope",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
+    code_section: Mapped[str] = mapped_column(String(60), index=True)
+    overlay_code: Mapped[str] = mapped_column(String(30))
+    district_code: Mapped[str] = mapped_column(String(20), index=True)
+    field: Mapped[str] = mapped_column(String(40))
+    value: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    citation: Mapped[str] = mapped_column(String(60))
+    code_version: Mapped[str] = mapped_column(String(40))
+
+
+class ParcelOverlay(Base, TimestampMixin):
+    __tablename__ = "parcel_overlay"
+    __table_args__ = (
+        UniqueConstraint(
+            "market_code", "parcel_number", "overlay_id", name="uq_parcel_overlay_membership"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
+    parcel_number: Mapped[str] = mapped_column(String(40), index=True)
+    overlay_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    overlay_code: Mapped[str | None] = mapped_column(String(30))
+    overlay_name: Mapped[str | None] = mapped_column(String(255))
+    code_section: Mapped[str | None] = mapped_column(String(60), index=True)

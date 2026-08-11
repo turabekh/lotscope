@@ -21,7 +21,15 @@ SMALL_LOT_PROVISIONS: dict[str, SmallLotProvision] = {
         min_lot_width_ft=16.0,
         adjacent_small_share=0.75,
         adjacent_small_max_area_sqft=1000.0,
-        citation="Title 14 Table 14-701-1 small-lot provision",
+        citation="Title 14 \u00a714-701(2)(b)[2]",
+    ),
+    "RM1": SmallLotProvision(
+        trigger_lot_area_sqft=1920.0,
+        min_child_lot_area_sqft=960.0,
+        min_lot_width_ft=16.0,
+        adjacent_small_share=0.75,
+        adjacent_small_max_area_sqft=1000.0,
+        citation="Title 14 \u00a714-701(2)(c)[1]",
     ),
 }
 
@@ -214,7 +222,7 @@ def _analyze_subdivision(inputs: SubdivisionInputs) -> SubdivisionAnalysis:
 
     if inputs.has_overlay:
         caveat = (
-            "A councilmanic overlay may modify or prohibit small-lot division here; verify the "
+            "An overlay district applies here whose small-lot terms are not modelled; verify the "
             "Title 14 §14-500 series. Showing the base-district result only."
         )
         return replace(base, reasons=[*base.reasons, caveat])

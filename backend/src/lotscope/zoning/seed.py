@@ -11,6 +11,7 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.zoning.models import ZoningStandard
 from lotscope.zoning.seed_hbg import seed_hbg_zoning_standards
+from lotscope.zoning.seed_overlay import seed_overlay_standards
 from lotscope.zoning.seed_pgh import seed_pgh_zoning_standards
 from lotscope.zoning.seed_wlm import seed_wlm_zoning_standards
 
@@ -124,7 +125,7 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
     {
         "code": "RSA-5",
         "permitted_uses": _SINGLE_FAMILY,
-        "min_lot_area_sqft": 1440,
+        "min_lot_area_sqft": 960,
         "min_lot_width_ft": 16,
         "max_height_ft": 38,
         "max_units": 1,
@@ -251,6 +252,7 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
         "code": "IRMX",
         "permitted_uses": _IND_MIXED,
         "max_height_ft": 60,
+        "max_floor_area_ratio_pct": 500,
         "max_occupancy_pct": 75,
         "front_setback_ft": 0,
         "rear_setback_ft": 0,
@@ -260,6 +262,7 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
         "code": "ICMX",
         "permitted_uses": _INDUSTRIAL,
         "max_height_ft": 60,
+        "max_floor_area_ratio_pct": 500,
         "max_occupancy_pct": 100,
         "front_setback_ft": 0,
         "rear_setback_ft": 8,
@@ -268,6 +271,7 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
     {
         "code": "I-1",
         "permitted_uses": _INDUSTRIAL,
+        "max_floor_area_ratio_pct": 500,
         "max_occupancy_pct": 100,
         "front_setback_ft": 0,
         "rear_setback_ft": 8,
@@ -276,6 +280,7 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
     {
         "code": "I-2",
         "permitted_uses": _INDUSTRIAL,
+        "max_floor_area_ratio_pct": 500,
         "max_occupancy_pct": 100,
         "front_setback_ft": 0,
         "rear_setback_ft": 8,
@@ -284,6 +289,7 @@ TITLE_14_STANDARDS: list[dict[str, Any]] = [
     {
         "code": "I-3",
         "permitted_uses": _INDUSTRIAL,
+        "max_floor_area_ratio_pct": 500,
         "max_occupancy_pct": 100,
         "front_setback_ft": 0,
         "rear_setback_ft": 8,
@@ -506,6 +512,7 @@ async def seed_zoning_standards(session: AsyncSession) -> int:
         constraint="uq_zoning_standard_market_code_version", set_=assignments
     )
     await session.execute(statement)
+    await seed_overlay_standards(session)
     return len(rows)
 
 

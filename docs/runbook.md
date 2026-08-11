@@ -238,3 +238,43 @@ docker compose exec -T worker python -m lotscope.verdict.jobs --market philadelp
 ```
 
 Market-scoped, so a bad Philadelphia recompute does not disturb pilots.
+
+## Verdict v9 rollout — overlay-aware zoning standards
+
+v9 changes how zoning standards resolve (ADR-0080) and requires a full `phl` recompute. **Order matters**, because `get_or_compute_current_verdict` recomputes lazily on version mismatch: between deploy and recompute, every parcel view of a v8 row pays a full `compute_verdict`.
+
+### Ordering
+
+1. **Stop the app before Alembic.** `scripts/deploy.sh` takes a `pre-migration` backup automatically when migrations are pending; this deploy carries two (`e5b1c93a7d24` overlay_standard, `f3a71c8d0e59` parcel_overlay).
+2. **Migrate**, then **seed**: `make seed` writes the six `overlay_standard` rows, RSA-5 at 960, RM-1's provision and the industrial FARs. The base flip and the overlay rows must land together — 960 without the overlay layer is the 54,376-parcel false-positive window ADR-0080 exists to close.
+3. **Populate membership before traffic returns — now automatic.** `scripts/deploy.sh` runs `python -m lotscope.zoning.overlay_membership` between the seed and app start, and **exits nonzero if any market ends up with zero memberships**, which fails the deploy rather than serving a wrong standard. An empty `parcel_overlay` does not fail loudly on its own: it silently resolves every parcel to its base standard, which for RSA-5 is 960 everywhere — exactly the failure mode being prevented. To run it by hand:
+   ```
+   cd backend && uv run python -m lotscope.zoning.overlay_membership
+   ```
+   Measured locally: **phl 1,487,536 + wlm 14,777 rows in ~60s**. Thereafter the nightly overlay ingest refreshes it automatically. The refresh covers **every market with overlay polygons**, discovered from `zoning_overlay` rather than hardcoded — `wlm` has 7 polygons and would otherwise lose overlay display entirely.
+4. **Verify before traffic:** `make verify-zoning-standards` → `OK` (0.44s). Exits nonzero on divergence.
+5. **Start the app**, then **recompute**.
+
+### Recompute
+
+```
+make recompute-verdicts          # python -m lotscope.verdict.jobs, batch size 500
+```
+
+**Scope to `phl`.** pgh (143,355), wlm (26,197) and hbg (19,502) are untouched by every v9 correction; recomputing them burns hours for no change.
+
+**Measured wall-clock**, sequential, local hardware (40-parcel samples, `compute_verdict`):
+
+| path | p50 | rate | full phl (550,945) |
+|---|---|---|---|
+| v8 baseline | 67.9 ms | 14.7/s | 10.38 h |
+| v9, live `ST_Intersects` | 95.0 ms | 10.0/s | 15.30 h |
+| **v9, materialized membership** | **70.2 ms** | **13.1/s** | **11.70 h** |
+
+v9's own overhead is **+1.13 h** over v8; the remaining ~10.5 h is pre-existing recompute cost. Production hardware will differ — treat these as ratios, not promises.
+
+**Recompute after the app is up, not before.** Post-materialization the lazy path costs ~70 ms per first view rather than ~95 ms, which is acceptable for the window it takes the batch job to catch up. Recomputing before traffic would gate the deploy on 11.7 h for no safety gain, since the effective standard is correct the moment step 3 completes.
+
+### Rollback
+
+`overlay_standard` and `parcel_overlay` are new tables; `CREATE TABLE` takes no lock on hot tables and `downgrade -1` twice drops them cleanly. Reverting the code without reverting the seed leaves RSA-5 at 960 with no overlay layer — **the unsafe state**. Roll back seed and code together, or re-seed from the previous revision.

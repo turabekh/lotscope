@@ -46,6 +46,9 @@ docker compose run --rm migrate
 echo "==> Seeding reference data (zoning standards)"
 docker compose run --rm --entrypoint python migrate -m lotscope.zoning.seed
 
+echo "==> Refreshing parcel-overlay membership"
+docker compose run --rm --entrypoint python migrate -m lotscope.zoning.overlay_membership
+
 echo "==> Starting app"
 docker compose --profile app up -d
 
