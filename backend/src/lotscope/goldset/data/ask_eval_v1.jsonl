@@ -16,8 +16,10 @@
 # Table 14-701-1 row 11 gives RSA-5 (column 9 of 12) = "960 [2]"; note [2] at
 # 14-701(2)(b)[2] is the 800 sq ft subdivision exception. The 1,440 figure lives
 # in OVERLAY sections -- 14-514 (/FNE), 14-520 (/NDO), 14-524 (/FDO) -- and is
-# not the citywide standard. Base RSA-5 is 960. The incumbent summary states
-# 1,440 while citing Table 14-701-1, which does not contain that figure.
+# not the citywide standard. Base RSA-5 is 960. The incumbent cites Table
+# 14-701-1 for 1,440, which that table does not contain -- but it also names 960
+# and 800 with geographic conditions, so it inverts the default rather than
+# inventing a figure. See docs/eval/phillycode-slice4-findings.md F2.
 # Cell alignment cross-checks on the page itself: footnote [1] sits on RSA-4 and
 # 14-701(2)(b)[1] opens "In the RSA-4 district"; [2] sits on RSA-5 and
 # 14-701(2)(b)[2] opens "In the RSA-5 district". Shifted cells would misplace them.
