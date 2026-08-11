@@ -41,6 +41,7 @@ from lotscope.ingestion.loaders.sheriff_civilview import (
 )
 from lotscope.ingestion.runner import run_loader
 from lotscope.markets.models import Market
+from lotscope.zoning.overlay_membership import refresh_parcel_overlays
 
 SessionFactory = async_sessionmaker[AsyncSession]
 Job = Callable[[SessionFactory, Settings], Awaitable[int]]
@@ -156,12 +157,16 @@ async def ingest_sheriff(session_factory: SessionFactory, settings: Settings) ->
 
 
 async def ingest_zoning_overlays(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_arcgis(
+    total = await _run_arcgis(
         session_factory,
         settings,
         loader=overlays.load_zoning_overlays,
         dataset=overlays.ZONING_OVERLAY_DATASET,
     )
+    async with session_factory() as session:
+        await refresh_parcel_overlays(session, "phl")
+        await session.commit()
+    return total
 
 
 async def ingest_rco(session_factory: SessionFactory, settings: Settings) -> int:

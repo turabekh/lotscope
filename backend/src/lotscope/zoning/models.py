@@ -134,3 +134,22 @@ class OverlayStandard(Base, TimestampMixin):
     value: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     citation: Mapped[str] = mapped_column(String(60))
     code_version: Mapped[str] = mapped_column(String(40))
+
+
+class ParcelOverlay(Base, TimestampMixin):
+    __tablename__ = "parcel_overlay"
+    __table_args__ = (
+        UniqueConstraint(
+            "market_code", "parcel_number", "overlay_id", name="uq_parcel_overlay_membership"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    market_code: Mapped[str] = mapped_column(
+        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+    )
+    parcel_number: Mapped[str] = mapped_column(String(40), index=True)
+    overlay_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    overlay_code: Mapped[str | None] = mapped_column(String(30))
+    overlay_name: Mapped[str | None] = mapped_column(String(255))
+    code_section: Mapped[str | None] = mapped_column(String(60), index=True)

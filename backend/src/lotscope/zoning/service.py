@@ -44,10 +44,9 @@ _SPATIAL_DISTRICT_SQL = text(
     "LIMIT 1"
 )
 _PARCEL_OVERLAYS_SQL = text(
-    "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
-    "JOIN zoning_overlay zo ON zo.market_code = p.market_code "
-    "AND ST_Intersects(zo.geom_local, p.geom_local) "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL AND zo.name IS NOT NULL"
+    "SELECT array_agg(DISTINCT po.overlay_name ORDER BY po.overlay_name) AS names "
+    "FROM parcel_overlay po "
+    "WHERE po.parcel_number = :parcel_number AND po.overlay_name IS NOT NULL"
 )
 
 
@@ -135,13 +134,11 @@ async def refresh_resolved_districts(session: AsyncSession, market_code: str) ->
 
 
 _UNMODELLED_OVERLAYS_SQL = text(
-    "SELECT array_agg(DISTINCT zo.name ORDER BY zo.name) AS names FROM parcel p "
-    "JOIN zoning_overlay zo ON zo.market_code = p.market_code "
-    "AND ST_Intersects(zo.geom_local, p.geom_local) "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL "
-    "AND zo.name IS NOT NULL "
+    "SELECT array_agg(DISTINCT po.overlay_name ORDER BY po.overlay_name) AS names "
+    "FROM parcel_overlay po "
+    "WHERE po.parcel_number = :parcel_number AND po.overlay_name IS NOT NULL "
     "AND NOT EXISTS (SELECT 1 FROM overlay_standard os "
-    "WHERE os.market_code = p.market_code AND os.code_section = zo.code_section "
+    "WHERE os.market_code = po.market_code AND os.code_section = po.code_section "
     "AND upper(replace(os.district_code, '-', '')) = :district_code)"
 )
 
@@ -194,13 +191,11 @@ def _apply_overlay_modifications(
 
 _OVERLAY_MODIFICATIONS_SQL = text(
     "SELECT DISTINCT os.field, os.value, os.overlay_code, os.citation "
-    "FROM parcel p "
-    "JOIN zoning_overlay zo ON zo.market_code = p.market_code "
-    "AND ST_Intersects(zo.geom_local, p.geom_local) "
-    "JOIN overlay_standard os ON os.market_code = p.market_code "
-    "AND os.code_section = zo.code_section "
+    "FROM parcel_overlay po "
+    "JOIN overlay_standard os ON os.market_code = po.market_code "
+    "AND os.code_section = po.code_section "
     "AND upper(replace(os.district_code, '-', '')) = :district_code "
-    "WHERE p.parcel_number = :parcel_number AND p.geom_local IS NOT NULL "
+    "WHERE po.parcel_number = :parcel_number "
     "ORDER BY os.field, os.citation"
 )
 
