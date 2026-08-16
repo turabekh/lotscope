@@ -3,6 +3,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from lotscope.verdict.composition import VERDICT_VERSION
+from lotscope.verdict.decision import DECISION_VERSION
 from lotscope.verdict.jobs import _parcel_numbers, recompute_all_verdicts
 from lotscope.verdict.models import ParcelVerdict
 
@@ -61,15 +62,18 @@ async def test_only_stale_skips_parcels_already_at_the_current_version(
     await db_session.execute(
         text(
             "INSERT INTO parcel (parcel_number, market_code) "
-            "VALUES ('stale-1','phl'), ('current-1','phl')"
+            "VALUES ('stale-1','phl'), ('stale-decision','phl'), ('current-1','phl')"
         )
     )
     await db_session.execute(
         text(
-            "INSERT INTO parcel_verdict (parcel_number, verdict_version, computed_at) "
-            "VALUES ('stale-1','v0', now()), ('current-1', :version, now())"
+            "INSERT INTO parcel_verdict "
+            "(parcel_number, verdict_version, decision_version, computed_at) "
+            "VALUES ('stale-1','v0', :decision, now()), "
+            "('stale-decision','v10','d0', now()), "
+            "('current-1', :version, :decision, now())"
         ),
-        {"version": VERDICT_VERSION},
+        {"version": VERDICT_VERSION, "decision": DECISION_VERSION},
     )
     await db_session.flush()
 
@@ -77,5 +81,6 @@ async def test_only_stale_skips_parcels_already_at_the_current_version(
     everything = await _parcel_numbers(db_session, vacant_only=False, market="phl")
 
     assert "stale-1" in stale
+    assert "stale-decision" in stale
     assert "current-1" not in stale
     assert {"stale-1", "current-1"} <= set(everything)

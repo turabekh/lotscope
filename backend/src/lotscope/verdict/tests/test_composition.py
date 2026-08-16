@@ -270,7 +270,7 @@ def test_infeasible_deal_replaces_mao_in_summary() -> None:
         _deal(infeasible=True, max_allowable_offer=0.0, is_underpriced=False),
         assessed_market_value=None,
     )
-    assert "new build not feasible" in verdict.summary
+    assert "no land price reaches the target margin" in verdict.summary
     assert "MAO $" not in verdict.summary
 
 

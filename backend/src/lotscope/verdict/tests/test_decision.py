@@ -73,8 +73,23 @@ def test_a_variance_path_is_entitlement_risk() -> None:
     assert result.recommendation == "high_entitlement_risk"
 
 
-def test_an_infeasible_build_is_unattractive() -> None:
-    assert _decide(deal_infeasible=True).recommendation == "economics_unattractive"
+def test_an_infeasible_build_with_no_margin_is_unattractive() -> None:
+    assert _decide(deal_infeasible=True, est_margin=None).recommendation == "economics_unattractive"
+
+
+def test_an_infeasible_build_below_the_viable_bar_is_unattractive() -> None:
+    result = _decide(deal_infeasible=True, est_margin=VIABLE_MARGIN - 0.02)
+
+    assert result.recommendation == "economics_unattractive"
+    assert "land price of $0" in result.reason
+
+
+def test_an_infeasible_build_that_still_clears_the_viable_bar_is_investigated() -> None:
+    result = _decide(deal_infeasible=True, est_margin=0.13)
+
+    assert result.recommendation == "worth_investigating"
+    assert "13%" in result.reason
+    assert "target margin at any land price" in result.reason
 
 
 def test_a_thin_margin_is_unattractive() -> None:
@@ -186,7 +201,7 @@ def test_a_clean_parcel_says_no_flags_rather_than_no_elevated_signal() -> None:
 
 
 def test_the_assessed_downgrade_does_not_override_an_earlier_rule() -> None:
-    infeasible = _decide(land_value_modelled=False, deal_infeasible=True)
+    infeasible = _decide(land_value_modelled=False, deal_infeasible=True, est_margin=None)
     assert infeasible.recommendation == "economics_unattractive"
 
     variance = _decide(land_value_modelled=False, can_build_by_right=False, needs_variance=True)
@@ -217,7 +232,9 @@ def test_local_land_value_still_earns_strong_candidate() -> None:
 
 
 def test_a_wide_area_estimate_cannot_rescue_infeasible_economics() -> None:
-    result = _decide(deal_infeasible=True, est_margin=0.55, land_value_is_wide_area=True)
+    result = _decide(
+        deal_infeasible=True, est_margin=VIABLE_MARGIN - 0.05, land_value_is_wide_area=True
+    )
 
     assert result.recommendation == "economics_unattractive"
 

@@ -11,12 +11,14 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.core.markets import market_argument
 from lotscope.verdict.composition import VERDICT_VERSION
+from lotscope.verdict.decision import DECISION_VERSION
 from lotscope.verdict.service import recompute_verdicts
 
 _STALE_ONLY_PREDICATE = (
     " AND NOT EXISTS (SELECT 1 FROM parcel_verdict v "
     "WHERE v.parcel_number = parcel.parcel_number "
-    "AND v.verdict_version = CAST(:version AS text))"
+    "AND v.verdict_version = CAST(:version AS text) "
+    "AND v.decision_version = CAST(:decision_version AS text))"
 )
 _DEFAULT_BATCH_SIZE = 500
 
@@ -44,6 +46,7 @@ async def _parcel_numbers(
     params: dict[str, str | None] = {"market": market}
     if only_stale:
         params["version"] = VERDICT_VERSION
+        params["decision_version"] = DECISION_VERSION
     result = await session.execute(statement, params)
     return [row[0] for row in result]
 

@@ -29,6 +29,7 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "send_deal_reminder_emails",
         "send_sales_week_emails",
         "snapshot_stats",
+        "check_verdict_invariants",
         "send_ops_health_digest",
         "send_ops_alerts",
     }

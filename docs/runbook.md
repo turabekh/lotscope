@@ -102,6 +102,20 @@ parser is fixed.
 
 Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006. Backlog ticket LR-B-033.
 
+## Cross-field invariants
+
+```
+make check-invariants                 # phl by default; ARGS="--market pgh" for another
+```
+
+Assertions about relationships that must hold between fields, rather than about particular values. Tests assert what someone thought of; invariants assert what must never happen, which is the class of defect that reaches production. They also run nightly (`check_verdict_invariants`, 10:30 UTC) and log `invariant_breached` per failure.
+
+The suite exists because five hand-written checks found a real bug in under a minute: 425 Philadelphia parcels recommended `economics_unattractive` while reporting a 13% margin and positive profit.
+
+**`value_range_stays_interpretable` is proportional, not absolute** — it tolerates wide ranges up to a tenth of valued parcels and only reports once that share is exceeded. An invariant that is permanently red teaches people to ignore the whole suite.
+
+Two breaches are expected until the v10 recompute completes, because they describe v9 rows: `viable_margin_is_not_called_unattractive` and `value_range_stays_interpretable`. Both should fall to zero as the sweep lands, which makes them a usable progress signal.
+
 ## Worker job timeouts — the 2026-08-16 silent ingestion outage
 
 **What happened.** Production ingestion stopped on 2026-06-27 and nobody was told for **50 days**. OPA, tax delinquency, L&I, RTT and zoning all sat between 43 and 49 days stale while the UI faithfully reported their age and no alert fired.

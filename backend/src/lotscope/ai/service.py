@@ -142,8 +142,9 @@ def _summary_facts(
     if verdict is not None:
         if _deal_is_infeasible(verdict):
             deal_read = (
-                "new construction is NOT economically feasible (estimated build cost exceeds "
-                "achievable finished value; do not present a negative offer or margin)"
+                "the modelled build does not reach the target margin at any land price, so "
+                "there is no acquisition price that hits the target (do not present a negative "
+                "offer; the deal may still show a positive margin at the modelled land price)"
             )
         else:
             deal_read = (
@@ -225,9 +226,8 @@ def _report_facts(
     if verdict is not None and verdict.arv is not None:
         if _deal_is_infeasible(verdict):
             facts += (
-                f"\nDeal model: ARV {verdict.arv}, but estimated build cost exceeds it — new "
-                "construction is not economically feasible here; do not cite a specific negative "
-                "profit or margin."
+                f"\nDeal model: ARV {verdict.arv}, but the build does not reach the target "
+                "margin at any land price; do not cite a negative max allowable offer."
             )
         else:
             facts += (

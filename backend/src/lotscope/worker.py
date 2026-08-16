@@ -4,6 +4,7 @@ from typing import Any, ClassVar
 
 from arq import cron, func
 from arq.connections import RedisSettings
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.admin.catalog import (
@@ -24,6 +25,7 @@ from lotscope.core.logging import configure_logging, get_logger
 from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS, ingest_market, markets
 from lotscope.ingestion.retention import sweep_retention
+from lotscope.markets.models import Market
 from lotscope.notifications.email import get_email_sender
 from lotscope.notifications.push import get_push_sender
 from lotscope.notifications.service import (
@@ -36,6 +38,7 @@ from lotscope.notifications.service import (
 )
 from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
 from lotscope.ops.gates import seed_market_gates
+from lotscope.ops.invariants import breaches, check_invariants
 from lotscope.ops.stats import snapshot_market_stats
 from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
@@ -122,6 +125,28 @@ async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
     count = await recompute_all_vacancy_confidence(ctx["session_factory"])
     _logger.info("recomputed_vacancy_confidence", count=count)
     return count
+
+
+async def check_verdict_invariants(ctx: dict[str, Any]) -> int:
+    async with ctx["session_factory"]() as session:
+        markets_checked = 0
+        breached_total = 0
+        codes = (await session.execute(select(Market.code).order_by(Market.code))).scalars()
+        for market in codes:
+            results = await check_invariants(session, market)
+            failed = breaches(results)
+            markets_checked += 1
+            breached_total += len(failed)
+            for result in failed:
+                _logger.error(
+                    "invariant_breached",
+                    market=market,
+                    invariant=result.invariant.name,
+                    violations=result.violations,
+                    claim=result.invariant.claim,
+                )
+    _logger.info("invariants_checked", markets=markets_checked, breached=breached_total)
+    return breached_total
 
 
 async def snapshot_stats(ctx: dict[str, Any]) -> int:
@@ -318,6 +343,7 @@ class WorkerSettings:
         func(recompute_assemblage, timeout=BULK_JOB_TIMEOUT),
         func(recompute_vacancy_confidence, timeout=BULK_JOB_TIMEOUT),
         snapshot_stats,
+        check_verdict_invariants,
         grant_investor_skiptrace_credits,
         grant_investor_packet_credits,
         send_weekly_digests,
@@ -343,6 +369,7 @@ class WorkerSettings:
         cron(recompute_assemblage, hour=8, minute=30),
         cron(recompute_buyers, hour=9, minute=0),
         cron(snapshot_stats, hour=9, minute=30),
+        cron(check_verdict_invariants, hour=10, minute=30),
         cron(send_ops_alerts, hour=5, minute=30),
         cron(send_ops_health_digest, hour=10, minute=0),
         cron(send_sales_week_emails, weekday="mon", hour=8, minute=0),

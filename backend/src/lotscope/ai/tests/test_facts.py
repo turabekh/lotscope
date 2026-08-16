@@ -51,14 +51,14 @@ def _verdict(**overrides: Any) -> VerdictResult:
 
 def test_infeasible_deal_is_narrated_not_quoted_as_negative() -> None:
     facts = _report_facts(_detail(), _verdict(), None, None, "RSA-5")
-    assert "not economically feasible" in facts.lower()
+    assert "target margin at any land price" in facts.lower()
     assert "-535041" not in facts
     assert "-5.4876" not in facts
 
 
 def test_infeasible_detected_from_legacy_negative_mao() -> None:
     facts = _summary_facts(_detail(), _verdict(max_allowable_offer=-532575.0), None, None)
-    assert "not economically feasible" in facts.lower()
+    assert "target margin at any land price" in facts.lower()
     assert "-532575" not in facts
 
 

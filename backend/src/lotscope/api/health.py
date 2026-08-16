@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.api.deps import get_redis, get_session
 from lotscope.core.config import Settings, get_settings
+from lotscope.ops.service import stale_automated_datasets
 
 router = APIRouter(tags=["health"])
 
@@ -23,6 +24,8 @@ class ReadinessResponse(BaseModel):
     status: Literal["ready", "degraded"]
     database: bool
     redis: bool
+    ingestion: bool
+    stale_datasets: list[str] = []
 
 
 @router.get("/health", response_model=LivenessResponse)
@@ -39,8 +42,25 @@ async def readiness(
 ) -> ReadinessResponse:
     database_ok = await _check_database(session)
     redis_ok = await _check_redis(redis)
-    status: Literal["ready", "degraded"] = "ready" if database_ok and redis_ok else "degraded"
-    return ReadinessResponse(status=status, database=database_ok, redis=redis_ok)
+    stale = await _stale_datasets(session) if database_ok else []
+    ingestion_ok = not stale
+    healthy = database_ok and redis_ok and ingestion_ok
+    status: Literal["ready", "degraded"] = "ready" if healthy else "degraded"
+    return ReadinessResponse(
+        status=status,
+        database=database_ok,
+        redis=redis_ok,
+        ingestion=ingestion_ok,
+        stale_datasets=stale,
+    )
+
+
+async def _stale_datasets(session: AsyncSession) -> list[str]:
+    try:
+        stale = await stale_automated_datasets(session)
+    except SQLAlchemyError:
+        return []
+    return [f"{item.market_code}/{item.dataset}: {item.reason}" for item in stale]
 
 
 async def _check_database(session: AsyncSession) -> bool:
