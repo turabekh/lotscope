@@ -64,8 +64,10 @@ WILMINGTON_DISTRESS_V1 = replace(
     PHILLY_DISTRESS_V1, profile_id="wilmington-distress-v1", market="wlm"
 )
 
+PHILLY_DISTRESS_V2 = replace(PHILLY_DISTRESS_V1, profile_id="philly-distress-v2")
+
 _REGISTRY: dict[str, DistressScoringProfile] = {
-    PHILLY_DISTRESS_V1.market: PHILLY_DISTRESS_V1,
+    PHILLY_DISTRESS_V2.market: PHILLY_DISTRESS_V2,
     HARRISBURG_DISTRESS_V1.market: HARRISBURG_DISTRESS_V1,
     PITTSBURGH_DISTRESS_V1.market: PITTSBURGH_DISTRESS_V1,
     WILMINGTON_DISTRESS_V1.market: WILMINGTON_DISTRESS_V1,

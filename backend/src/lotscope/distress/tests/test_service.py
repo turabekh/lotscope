@@ -156,7 +156,7 @@ async def test_leads_rank_and_exclude(db_session: AsyncSession) -> None:
     parcel = await assess_parcel_distress(db_session, "000000001")
     assert parcel is not None
     assert top.score == parcel.score  # precomputed lead score and live per-parcel scorer agree
-    assert parcel.profile_id == "philly-distress-v1"
+    assert parcel.profile_id == "philly-distress-v2"
     stored_profile = await db_session.scalar(
         text("SELECT profile_id FROM parcel_distress WHERE parcel_number = '000000001'")
     )
