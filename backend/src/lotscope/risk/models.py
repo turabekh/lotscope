@@ -27,6 +27,8 @@ class TaxStatus(Base, TimestampMixin, IngestionMixin):
         primary_key=True,
     )
     is_delinquent: Mapped[bool | None] = mapped_column(Boolean)
+    delinquency_owner: Mapped[str | None] = mapped_column(String(255))
+    snapshot_period: Mapped[str | None] = mapped_column(String(6))
     total_due: Mapped[float | None] = mapped_column(Numeric(14, 2))
     principal_due: Mapped[float | None] = mapped_column(Numeric(14, 2))
     years_owed: Mapped[int | None] = mapped_column(Integer)
@@ -83,6 +85,7 @@ class LiEvent(Base, TimestampMixin, IngestionMixin):
     external_id: Mapped[str | None] = mapped_column(String(60), index=True)
     event_type: Mapped[str | None] = mapped_column(String(60), index=True)
     status: Mapped[str | None] = mapped_column(String(60))
+    case_status: Mapped[str | None] = mapped_column(String(60))
     event_date: Mapped[date | None] = mapped_column(Date)
     description: Mapped[str | None] = mapped_column(Text)
     is_unsafe: Mapped[bool | None] = mapped_column(Boolean)

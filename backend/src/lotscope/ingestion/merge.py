@@ -32,11 +32,15 @@ _STAGING_JOIN_SQL = text(
 
 _UPSERT_CORE_SQL = text(
     "INSERT INTO tax_status "
-    "(parcel_number, is_delinquent, total_due, principal_due, years_owed, updated_at) "
-    "SELECT parcel_number, is_delinquent, total_due, principal_due, years_owed, now() "
+    "(parcel_number, is_delinquent, delinquency_owner, snapshot_period, total_due, "
+    "principal_due, years_owed, updated_at) "
+    "SELECT parcel_number, is_delinquent, delinquency_owner, snapshot_period, total_due, "
+    "principal_due, years_owed, now() "
     "FROM staging.tax WHERE ingest_run_id = :ingest_run_id "
     "ON CONFLICT (parcel_number) DO UPDATE SET "
-    "is_delinquent = excluded.is_delinquent, total_due = excluded.total_due, "
+    "is_delinquent = excluded.is_delinquent, "
+    "delinquency_owner = excluded.delinquency_owner, "
+    "snapshot_period = excluded.snapshot_period, total_due = excluded.total_due, "
     "principal_due = excluded.principal_due, years_owed = excluded.years_owed, "
     "updated_at = now()"
 )

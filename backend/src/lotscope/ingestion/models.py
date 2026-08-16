@@ -94,6 +94,8 @@ class StagingTax(Base):
     parcel_number: Mapped[str] = mapped_column(String(40), primary_key=True)
     ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
     is_delinquent: Mapped[bool | None] = mapped_column(Boolean)
+    delinquency_owner: Mapped[str | None] = mapped_column(String(255))
+    snapshot_period: Mapped[str | None] = mapped_column(String(6))
     total_due: Mapped[float | None] = mapped_column(Numeric(14, 2))
     principal_due: Mapped[float | None] = mapped_column(Numeric(14, 2))
     years_owed: Mapped[int | None] = mapped_column(Integer)

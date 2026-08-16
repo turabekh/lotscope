@@ -19,6 +19,8 @@ TAX_KEY_COLUMN = "cartodb_id"
 TAX_COLUMNS = (
     "cartodb_id",
     "opa_number",
+    "owner",
+    "year_month",
     "total_due",
     "principal_due",
     "num_years_owed",
@@ -27,6 +29,8 @@ TAX_COLUMNS = (
 
 class TaxRecord(BaseModel):
     opa_number: str | int | None = None
+    owner: str | None = None
+    year_month: str | None = None
     total_due: float | None = None
     principal_due: float | None = None
     num_years_owed: int | None = None
@@ -38,6 +42,8 @@ def to_tax_row(record: TaxRecord) -> dict[str, Any] | None:
         return None
     return {
         "parcel_number": parcel_number,
+        "delinquency_owner": record.owner,
+        "snapshot_period": record.year_month,
         "total_due": record.total_due,
         "principal_due": record.principal_due,
         "years_owed": record.num_years_owed,
