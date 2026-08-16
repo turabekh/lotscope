@@ -71,3 +71,22 @@ describe('FreshnessPanel', () => {
     expect(wrapper.find('[data-test="freshness-behind"]').text()).toContain('2 behind schedule')
   })
 })
+
+describe('FreshnessPanel when the source cannot be read', () => {
+  beforeEach(() => vi.restoreAllMocks())
+
+  it('says freshness is unknown rather than disappearing', async () => {
+    vi.spyOn(api, 'getParcelFreshness').mockRejectedValue(new Error('boom'))
+    const wrapper = mount(FreshnessPanel, {
+      props: { parcelNumber: 'phl:000000001' },
+      global: { plugins: [Quasar] },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-test="freshness-panel"]').exists()).toBe(true)
+    const note = wrapper.find('[data-test="freshness-unavailable"]')
+    expect(note.exists()).toBe(true)
+    expect(note.text()).toContain('not a statement that the data is current')
+  })
+})

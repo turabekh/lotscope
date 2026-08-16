@@ -1,6 +1,7 @@
 from unittest import mock
 
 import httpx
+from sqlalchemy.exc import SQLAlchemyError
 
 from lotscope.api.app import create_app
 from lotscope.api.deps import get_redis, get_session
@@ -61,3 +62,21 @@ async def test_readiness_is_ready_when_ingestion_is_current() -> None:
     assert body["status"] == "ready"
     assert body["ingestion"] is True
     assert body["stale_datasets"] == []
+
+
+async def test_readiness_does_not_call_unreadable_ingestion_healthy() -> None:
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: _StubSession()
+    app.dependency_overrides[get_redis] = lambda: _StubRedis()
+    with mock.patch(
+        "lotscope.api.health.stale_automated_datasets",
+        side_effect=SQLAlchemyError("connection reset"),
+    ):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/health/ready")
+
+    body = response.json()
+    assert body["status"] == "degraded"
+    assert body["ingestion"] is False
+    assert "unknown" in body["stale_datasets"][0]
