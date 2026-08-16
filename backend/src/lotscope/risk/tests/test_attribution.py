@@ -1,6 +1,10 @@
 from datetime import date
 
-from lotscope.risk.attribution import TransferAfterSnapshot, attribute_delinquency
+from lotscope.risk.attribution import (
+    DelinquencyAttribution,
+    TransferAfterSnapshot,
+    attribute_delinquency,
+)
 
 _SNAPSHOT = "202206"
 
@@ -13,7 +17,7 @@ _SHERIFF = TransferAfterSnapshot(
 )
 
 
-def _attribute(**overrides: object):
+def _attribute(**overrides: object) -> DelinquencyAttribution:
     kwargs: dict[str, object] = {
         "delinquency_owner": "MATUSOW JOSEPH",
         "current_owner": "SHLAYEN RACHEL",
