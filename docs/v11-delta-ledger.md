@@ -78,7 +78,38 @@ The remaining ~820k are mortgages, satisfactions, notary commissions and financi
 
 **Exclusions apply by construction.** Recovered rows land in `sale` and are read by the same `_COMPS_SQL`, so related-party (ADR-0032), package-deed (ADR-0049), future-sale and the v10 deed-type filter all apply without further work. Verified by reading the query, not assumed.
 
+### Where recovery concentrates (A1.1)
+
+**Uniform in time.** Recovered share by recording year tracks the attributed share within 0.8x-1.2x across 2005-2026. No era clustering, so this is not a one-off feed break being undone.
+
+**Concentrated in space.** Recovered share by ZIP, against the attributed baseline:
+
+| zip | recovered | share | attributed share | lift | area |
+|---|---|---|---|---|---|
+| 19106 | 6,275 | 11.2% | 1.1% | **10.4x** | Old City / Society Hill |
+| 19103 | 7,371 | 13.2% | 1.6% | **8.1x** | Rittenhouse |
+| 19107 | 3,806 | 6.8% | 1.0% | **6.6x** | Washington Sq West |
+| 19123 | 5,771 | 10.3% | 3.5% | 3.0x | Northern Liberties |
+| 19130 | 5,872 | 10.5% | 6.1% | 1.7x | Fairmount |
+| 19125 | 3,162 | 5.7% | 12.7% | 0.4x | Fishtown |
+| 19111 | 2,815 | 5.0% | 12.5% | 0.4x | Northeast |
+| 19121 | 2,734 | 4.9% | 13.6% | 0.4x | Strawberry Mansion |
+
+Every high-lift ZIP is Center City and condo-dense, which fits the mechanism: a unit deed carries no single OPA account, so the recorder's row has no parcel key.
+
+**Two consequences the ADR should state.** First, recovery is concentrated in the highest-value, least-vacant parts of the city - the opposite of where the vacant-land product does its work, so the comp-pool effect on our core inventory is smaller than the raw count suggests. Second, condo density means many recovered deeds share one street address, so the collision policy should absorb a large share of exactly this concentration and leave them unattributed. **That is a prediction; verify it against the backfill's collision count rather than assuming it.**
+
+Queries: recovered/attributed split on `rtt_summary` filtered to `document_type ILIKE '%DEED%' AND total_consideration > 0 AND recording_date >= '2005-01-01'`, grouped by `extract(year from recording_date)` and by `left(zip_code,5)` (ZIPs with >2,000 rows).
+
 **Still unmeasured:** how many recovered rows resolve to a parcel at all. Address-fallback collisions go unattributed by policy, so the realised comp-pool addition is a subset of 133,395. Measure after backfill.
+
+---
+
+## Predicate agreement (A1.2)
+
+All five open-violation call sites now resolve through the single `open_violation_sql` definition: both tired-landlord subqueries (`distress/service.py:48,61`), both distress counters (`:82,108`), and the risk service (`risk/service.py:48`). No hand-rolled `= 'OPEN'` predicate survives anywhere.
+
+The tired-landlord query had been correct all along, which is what made the bug survivable - a reader checking the file found a filter and moved on. Three near-identical predicates in two files is how the miss happened, and one definition is the structural fix.
 
 ---
 
