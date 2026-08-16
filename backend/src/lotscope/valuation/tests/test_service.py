@@ -239,3 +239,141 @@ async def test_value_parcel_without_comps_is_unknown(db_session: AsyncSession) -
 
 async def test_value_parcel_returns_none_when_missing(db_session: AsyncSession) -> None:
     assert await value_parcel(db_session, "999999999", since=_SINCE) is None
+
+
+async def _add_typed_comp(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    offset_ft: float,
+    area: float,
+    price: float,
+    document_type: str | None,
+) -> None:
+    geom = (
+        f"POLYGON(({offset_ft} 0,{offset_ft} 5,{offset_ft + 5} 5,{offset_ft + 5} 0,{offset_ft} 0))"
+    )
+    await session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, lot_area_sqft, is_vacant, geom_local) "
+            "VALUES (:pn, :area, TRUE, ST_GeomFromText(:geom, 2272))"
+        ),
+        {"pn": parcel_number, "area": area, "geom": geom},
+    )
+    await session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, document_id, document_type, sale_price, sale_date) "
+            "VALUES (:pn, :doc, :dtype, :price, '2025-01-01')"
+        ),
+        {
+            "pn": parcel_number,
+            "doc": f"DOC-{parcel_number}",
+            "dtype": document_type,
+            "price": price,
+        },
+    )
+
+
+async def test_sheriff_deeds_do_not_set_the_land_value(db_session: AsyncSession) -> None:
+    await _add_subject(db_session, "000000001", 1000)
+    for index in range(3):
+        await _add_typed_comp(
+            db_session,
+            f"00000002{index}",
+            offset_ft=50 * (index + 1),
+            area=1000,
+            price=100000,
+            document_type="DEED",
+        )
+    for index in range(3):
+        await _add_typed_comp(
+            db_session,
+            f"00000003{index}",
+            offset_ft=50 * (index + 1),
+            area=1000,
+            price=5000,
+            document_type="SHERIFF'S DEED",
+        )
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+
+    assert result is not None
+    assert {comp.parcel_number for comp in result.comps} == {
+        "000000020",
+        "000000021",
+        "000000022",
+    }
+    assert result.estimate == 100000.0
+    assert "SHERIFF'S DEED" in (result.sources[0]["excluded_document_types"] or [])
+
+
+async def test_nominal_transfer_deeds_are_excluded_but_ordinary_deeds_are_kept(
+    db_session: AsyncSession,
+) -> None:
+    await _add_subject(db_session, "000000001", 1000)
+    await _add_typed_comp(
+        db_session, "000000020", offset_ft=50, area=1000, price=100000, document_type="DEED"
+    )
+    await _add_typed_comp(
+        db_session, "000000021", offset_ft=60, area=1000, price=1000, document_type="DEED LAND BANK"
+    )
+    await _add_typed_comp(
+        db_session,
+        "000000022",
+        offset_ft=70,
+        area=1000,
+        price=1000,
+        document_type="DEED - DECEASED",
+    )
+    await _add_typed_comp(
+        db_session, "000000023", offset_ft=80, area=1000, price=120000, document_type=None
+    )
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+
+    assert result is not None
+    assert {comp.parcel_number for comp in result.comps} == {"000000020", "000000023"}
+
+
+async def test_comps_are_narrowed_to_lots_of_a_similar_size(db_session: AsyncSession) -> None:
+    await _add_subject(db_session, "000000001", 1000)
+    for index, area in enumerate((800.0, 1000.0, 1200.0)):
+        await _add_typed_comp(
+            db_session,
+            f"00000002{index}",
+            offset_ft=50 * (index + 1),
+            area=area,
+            price=50 * area,
+            document_type="DEED",
+        )
+    await _add_typed_comp(
+        db_session, "000000030", offset_ft=90, area=8000, price=800000, document_type="DEED"
+    )
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+
+    assert result is not None
+    assert "000000030" not in {comp.parcel_number for comp in result.comps}
+    assert result.sources[0]["size_similar_only"] is True
+
+
+async def test_a_dissimilar_comp_is_kept_when_dropping_it_would_starve_the_set(
+    db_session: AsyncSession,
+) -> None:
+    await _add_subject(db_session, "000000001", 1000)
+    await _add_typed_comp(
+        db_session, "000000020", offset_ft=50, area=1000, price=50000, document_type="DEED"
+    )
+    await _add_typed_comp(
+        db_session, "000000030", offset_ft=60, area=8000, price=400000, document_type="DEED"
+    )
+    await db_session.flush()
+
+    result = await value_parcel(db_session, "000000001", since=_SINCE)
+
+    assert result is not None
+    assert {comp.parcel_number for comp in result.comps} == {"000000020", "000000030"}
+    assert result.sources[0]["size_similar_only"] is False

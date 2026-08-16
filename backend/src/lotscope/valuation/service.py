@@ -11,9 +11,14 @@ from lotscope.valuation.avm import (
     is_related_party,
     land_use_class,
     price_per_sqft,
+    select_size_similar_comps,
     wide_area_use_classes,
 )
 from lotscope.valuation.fallback import wide_area_policy_for_market
+from lotscope.valuation.policy import (
+    comp_selection_policy_for_market,
+    excluded_document_types_for_market,
+)
 from lotscope.valuation.schemas import CompResult, ValuationResult
 
 DEFAULT_RADIUS_FT = 1500.0
@@ -49,6 +54,8 @@ _COMPS_SQL = text(
     "  AND " + future_sale_exclusion_sql("s") + " "
     "  AND " + package_deed_exclusion_sql("s") + " "
     "  AND (NOT :vacant_only OR cp.is_vacant IS TRUE) "
+    "  AND ((:excluded_document_types)::text[] IS NULL OR s.document_type IS NULL "
+    "       OR NOT (upper(btrim(s.document_type)) = ANY((:excluded_document_types)::text[]))) "
     "  AND ((:use_classes)::text[] IS NULL OR CASE left(upper(cp.base_zoning_code), 1) "
     "         WHEN 'R' THEN 'residential' WHEN 'C' THEN 'commercial' "
     "         WHEN 'I' THEN 'industrial' WHEN 'S' THEN 'special' ELSE NULL END "
@@ -75,6 +82,7 @@ async def find_comps(
     since: date | None = None,
     use_class: str | None = None,
     use_classes: list[str] | None = None,
+    excluded_document_types: list[str] | None = None,
 ) -> tuple[list[Comp], int]:
     cutoff = since if since is not None else date.today() - timedelta(days=365 * years)
     accepted = use_classes if use_classes is not None else ([use_class] if use_class else None)
@@ -88,6 +96,7 @@ async def find_comps(
             "radius_ft": radius_ft,
             "limit": limit,
             "use_classes": accepted,
+            "excluded_document_types": excluded_document_types,
         },
     )
     comps: list[Comp] = []
@@ -129,6 +138,9 @@ async def value_parcel(
 
     use_class = land_use_class(subject.base_zoning_code) if segment_by_use_class else None
     policy = wide_area_policy_for_market(subject.market_code)
+    selection = comp_selection_policy_for_market(subject.market_code)
+    excluded_document_types = excluded_document_types_for_market(subject.market_code)
+    subject_area = _as_float(subject.lot_area_sqft)
     comps: list[Comp] = []
     related_party_excluded = 0
     wide_area = False
@@ -141,6 +153,7 @@ async def value_parcel(
             vacant_only=vacant_only,
             since=since,
             use_class=use_class,
+            excluded_document_types=excluded_document_types,
         )
         if not comps and since is None and policy is not None:
             wide_area = True
@@ -151,13 +164,29 @@ async def value_parcel(
                 years=policy.years,
                 vacant_only=vacant_only,
                 use_classes=wide_area_use_classes(use_class),
+                excluded_document_types=excluded_document_types,
             )
 
+    size_narrowed = False
+    if selection is not None:
+        comps, size_narrowed = select_size_similar_comps(
+            comps,
+            subject_area,
+            ratio_min=selection.lot_area_ratio_min,
+            ratio_max=selection.lot_area_ratio_max,
+            min_similar_comps=selection.min_similar_comps,
+        )
+
     estimate = estimate_land_value(
-        _as_float(subject.lot_area_sqft),
+        subject_area,
         comps,
         related_party_excluded=related_party_excluded,
         wide_area=wide_area,
+        size_narrowed_to=(
+            (selection.lot_area_ratio_min, selection.lot_area_ratio_max)
+            if size_narrowed and selection is not None
+            else None
+        ),
     )
     return ValuationResult(
         parcel_number=parcel_number,
@@ -192,6 +221,9 @@ async def value_parcel(
                 "use_classes": wide_area_use_classes(use_class) if wide_area else None,
                 "comp_tier": "wide_area" if wide_area else "local",
                 "package_deeds_excluded": True,
+                "comp_selection_policy": selection.version if selection else None,
+                "excluded_document_types": excluded_document_types,
+                "size_similar_only": size_narrowed,
             }
         ],
         computed_at=computed_at,
