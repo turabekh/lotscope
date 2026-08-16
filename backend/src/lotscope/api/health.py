@@ -55,11 +55,14 @@ async def readiness(
     )
 
 
+_UNCHECKABLE = "ingestion freshness could not be read, so staleness is unknown"
+
+
 async def _stale_datasets(session: AsyncSession) -> list[str]:
     try:
         stale = await stale_automated_datasets(session)
     except SQLAlchemyError:
-        return []
+        return [_UNCHECKABLE]
     return [f"{item.market_code}/{item.dataset}: {item.reason}" for item in stale]
 
 

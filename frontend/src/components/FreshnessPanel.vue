@@ -8,6 +8,7 @@ const props = defineProps<{ parcelNumber: string | undefined }>()
 
 const rows = ref<SourceFreshness[]>([])
 const loading = ref(false)
+const failed = ref(false)
 
 const DAY_MS = 86_400_000
 
@@ -48,12 +49,14 @@ const loaded = computed(() => rows.value.filter((row) => row.as_of !== null).len
 
 async function load(parcelNumber: string | undefined): Promise<void> {
   rows.value = []
+  failed.value = false
   if (!parcelNumber) return
   loading.value = true
   try {
     rows.value = await api.getParcelFreshness(parcelNumber)
   } catch {
     rows.value = []
+    failed.value = true
   } finally {
     loading.value = false
   }
@@ -63,7 +66,13 @@ watch(() => props.parcelNumber, load, { immediate: true })
 </script>
 
 <template>
-  <q-card v-if="rows.length" flat bordered class="rounded-borders" data-test="freshness-panel">
+  <q-card
+    v-if="rows.length || failed"
+    flat
+    bordered
+    class="rounded-borders"
+    data-test="freshness-panel"
+  >
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="update" size="18px" class="q-mr-xs" />Source freshness
@@ -87,7 +96,12 @@ watch(() => props.parcelNumber, load, { immediate: true })
         >
       </div>
 
-      <div class="source-list">
+      <div v-if="failed" class="lot-text-muted text-caption" data-test="freshness-unavailable">
+        Source freshness could not be loaded, so the age of this parcel's data is unknown right now.
+        It is not a statement that the data is current.
+      </div>
+
+      <div v-else class="source-list">
         <div v-for="row in rows" :key="row.source_label" class="source-row">
           <span class="source-title">{{ row.title }}</span>
           <span class="source-age" :class="tone(row.as_of)">
