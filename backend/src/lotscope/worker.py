@@ -2,7 +2,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
-from arq import cron
+from arq import cron, func
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -89,8 +89,8 @@ async def sweep_ingestion_retention(ctx: dict[str, Any]) -> int:
 
 
 async def recompute_verdicts(ctx: dict[str, Any]) -> int:
-    count = await recompute_all_verdicts(ctx["session_factory"])
-    _logger.info("recomputed_verdicts", count=count)
+    count = await recompute_all_verdicts(ctx["session_factory"], only_stale=True)
+    _logger.info("recomputed_verdicts", count=count, only_stale=True)
     return count
 
 
@@ -298,17 +298,25 @@ async def send_ops_alerts(ctx: dict[str, Any]) -> int:
     return count
 
 
+_MINUTE = 60
+_HOUR = 60 * _MINUTE
+
+BULK_JOB_TIMEOUT = 36 * _HOUR
+INGEST_JOB_TIMEOUT = 12 * _HOUR
+DEFAULT_JOB_TIMEOUT = 30 * _MINUTE
+
+
 class WorkerSettings:
     functions: ClassVar = [
-        ingest_dataset,
-        ingest_all,
+        func(ingest_dataset, timeout=INGEST_JOB_TIMEOUT),
+        func(ingest_all, timeout=INGEST_JOB_TIMEOUT),
         run_admin_job,
         sweep_ingestion_retention,
-        recompute_verdicts,
-        recompute_vacant_verdicts,
-        recompute_distress,
-        recompute_assemblage,
-        recompute_vacancy_confidence,
+        func(recompute_verdicts, timeout=BULK_JOB_TIMEOUT),
+        func(recompute_vacant_verdicts, timeout=BULK_JOB_TIMEOUT),
+        func(recompute_distress, timeout=BULK_JOB_TIMEOUT),
+        func(recompute_assemblage, timeout=BULK_JOB_TIMEOUT),
+        func(recompute_vacancy_confidence, timeout=BULK_JOB_TIMEOUT),
         snapshot_stats,
         grant_investor_skiptrace_credits,
         grant_investor_packet_credits,
@@ -324,6 +332,7 @@ class WorkerSettings:
     ]
     on_startup = startup
     on_shutdown = shutdown
+    job_timeout = DEFAULT_JOB_TIMEOUT
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     cron_jobs: ClassVar = [
         cron(sweep_ingestion_retention, hour=2, minute=0),

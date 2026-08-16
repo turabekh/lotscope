@@ -50,11 +50,16 @@ async def test_recompute_vacant_verdicts_requests_vacant_only(
     assert captured["vacant_only"] is True
 
 
-async def test_recompute_verdicts_runs_full(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_scheduled_recompute_only_converges_parcels_off_the_current_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, Any] = {}
 
-    async def fake(session_factory: object, *, vacant_only: bool = False) -> int:
+    async def fake(
+        session_factory: object, *, vacant_only: bool = False, only_stale: bool = False
+    ) -> int:
         captured["vacant_only"] = vacant_only
+        captured["only_stale"] = only_stale
         return 4
 
     monkeypatch.setattr(worker, "recompute_all_verdicts", fake)
@@ -62,3 +67,4 @@ async def test_recompute_verdicts_runs_full(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert result == 4
     assert captured["vacant_only"] is False
+    assert captured["only_stale"] is True
