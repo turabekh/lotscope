@@ -23,6 +23,7 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.errors import NotFoundError
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.distress.jobs import recompute_all_distress
+from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS, ingest_market, markets
 from lotscope.ingestion.retention import sweep_retention
 from lotscope.markets.models import Market
@@ -39,6 +40,7 @@ from lotscope.notifications.service import (
 from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
 from lotscope.ops.gates import seed_market_gates
 from lotscope.ops.invariants import breaches, check_invariants
+from lotscope.ops.reconcile import reconcile_against_opa
 from lotscope.ops.stats import snapshot_market_stats
 from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
@@ -147,6 +149,27 @@ async def check_verdict_invariants(ctx: dict[str, Any]) -> int:
                 )
     _logger.info("invariants_checked", markets=markets_checked, breached=breached_total)
     return breached_total
+
+
+async def reconcile_upstream_sample(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    async with ctx["session_factory"]() as session, CartoClient(settings) as carto:
+        report = await reconcile_against_opa(session, carto)
+    if report.drifted or report.absent_upstream:
+        _logger.error(
+            "upstream_reconciliation_drift",
+            sampled=report.sampled,
+            compared=report.compared,
+            agreement=round(report.agreement, 4),
+            drifted_parcels=len(report.drifted_parcels),
+            absent_upstream=len(report.absent_upstream),
+            fields=sorted({item.field for item in report.drifted}),
+        )
+    else:
+        _logger.info(
+            "upstream_reconciliation_clean", sampled=report.sampled, compared=report.compared
+        )
+    return len(report.drifted_parcels)
 
 
 async def snapshot_stats(ctx: dict[str, Any]) -> int:
@@ -344,6 +367,7 @@ class WorkerSettings:
         func(recompute_vacancy_confidence, timeout=BULK_JOB_TIMEOUT),
         snapshot_stats,
         check_verdict_invariants,
+        reconcile_upstream_sample,
         grant_investor_skiptrace_credits,
         grant_investor_packet_credits,
         send_weekly_digests,
@@ -370,6 +394,7 @@ class WorkerSettings:
         cron(recompute_buyers, hour=9, minute=0),
         cron(snapshot_stats, hour=9, minute=30),
         cron(check_verdict_invariants, hour=10, minute=30),
+        cron(reconcile_upstream_sample, hour=11, minute=0),
         cron(send_ops_alerts, hour=5, minute=30),
         cron(send_ops_health_digest, hour=10, minute=0),
         cron(send_sales_week_emails, weekday="mon", hour=8, minute=0),

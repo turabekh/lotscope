@@ -102,6 +102,20 @@ parser is fixed.
 
 Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006. Backlog ticket LR-B-033.
 
+## Upstream reconciliation
+
+```
+make reconcile-opa              # 50 parcels by default; N=200 for a wider pass
+```
+
+Samples parcels we already store, asks Carto what OPA says about those same parcels **right now**, and diffs the two. Runs nightly at 11:00 UTC (`reconcile_upstream_sample`), logging `upstream_reconciliation_drift` with the fields that disagreed.
+
+Every other check in this repo asks whether the system agrees with itself. This is the only one that asks whether it agrees with Philadelphia, which is the question a user answers for themselves the first time they look up a parcel they already know.
+
+**What it does not cover.** It compares the five fields OPA is authoritative for — owner, address, zoning code, market value, lot area. It says nothing about derived output: zoning interpretation, comps, scoring, the verdict. And because the field pairs were written from the same mapping the loader uses, a systematic mis-mapping would agree with itself; a gross one would not. Ground truth for *judgement* is still the gold set.
+
+**Baseline:** 2026-08-16, 60 parcels, **100% agreement, 0 absent upstream**, taken immediately after a full refresh. Divergence is what matters, not the absolute number - a falling agreement rate means ingestion is drifting even while the freshness timestamps look fine.
+
 ## Cross-field invariants
 
 ```

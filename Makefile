@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin mailpit
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set gold-set-select recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 load-phillycode derive-phillycode verify-derivation verify-zoning-standards check-invariants demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set gold-set-select recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 load-phillycode derive-phillycode verify-derivation verify-zoning-standards check-invariants reconcile-opa demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -77,6 +77,9 @@ derive-phillycode: ## Derive and embed document rows from code_provision
 
 check-invariants: ## Assert the cross-field invariants hold (MARKET=phl by default)
 	cd $(BACKEND) && uv run python -m lotscope.ops.invariants_cli $(ARGS)
+
+reconcile-opa: ## Sample live OPA records and diff them against what we store (N=50 default)
+	cd $(BACKEND) && uv run python -m lotscope.ops.reconcile_cli $(N)
 
 verify-zoning-standards: ## Check seeded zoning standards against the printed tables and cited overlay sections
 	cd $(BACKEND) && uv run python -m lotscope.zoning.verify
