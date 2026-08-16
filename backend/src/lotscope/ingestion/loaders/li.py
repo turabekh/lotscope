@@ -138,6 +138,7 @@ def _staging_row(row: dict[str, Any], run_id: int, dataset: str) -> dict[str, An
         "ingest_run_id": run_id,
         "parcel_number": row["parcel_number"],
         "status": row.get("status"),
+        "case_status": row.get("case_status"),
         "event_date": row.get("event_date"),
         "description": row.get("description"),
         "is_unsafe": row.get("is_unsafe"),
