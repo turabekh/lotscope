@@ -55,7 +55,21 @@ The two "pending" counts are the guards, and they subtract from the two classes 
 
 **Provenance:** live OPA via Carto (`mailing_address_1` 9.9% populated vs `mailing_street` 99.4%), production `parcel`, 2026-08-16.
 
-`is_absentee` returns `False` whenever `mailing_address` is NULL, so today those parcels read as owner-occupied by absence of evidence. For vacant land the mailing address is almost never the property address, so most of the 29,001 will flip. **The realised count must be measured after backfill, not assumed at 29,001** — that figure is the population that gains data, not the population that flips.
+`is_absentee` returns `False` whenever `mailing_address` is NULL, so today those parcels read as owner-occupied by absence of evidence.
+
+### Backfill executed 2026-08-16
+
+| | |
+|---|---|
+| coverage before | 57,753 / 588,591 (**9.8%**) |
+| coverage after | 580,585 / 588,591 (**98.6%**) |
+| **addresses recovered** | **+522,832** |
+
+Scanned 583,681 upstream rows, 580,434 carried a usable address. The projection and the outcome agree to the row.
+
+**For the direct-mail engine this is the headline number**: reachable owners went from roughly one in ten to roughly ninety-nine in a hundred.
+
+The absentee *flip* count is still not the same as the coverage count and is measured at the v11 recompute, since `is_absentee` compares mailing to property address per parcel. The control parcel demonstrates why they differ: `phl:491313100`'s mailing address is its own property, so it gains coverage and no absentee signal.
 
 ---
 
@@ -101,7 +115,27 @@ Every high-lift ZIP is Center City and condo-dense, which fits the mechanism: a 
 
 Queries: recovered/attributed split on `rtt_summary` filtered to `document_type ILIKE '%DEED%' AND total_consideration > 0 AND recording_date >= '2005-01-01'`, grouped by `extract(year from recording_date)` and by `left(zip_code,5)` (ZIPs with >2,000 rows).
 
-**Still unmeasured:** how many recovered rows resolve to a parcel at all. Address-fallback collisions go unattributed by policy, so the realised comp-pool addition is a subset of 133,395. Measure after backfill.
+### Measured at backfill (2026-08-16, dry run against production)
+
+The prediction was that condo density would send much of the Center City concentration into the collision branch. It did.
+
+| outcome | deeds | share |
+|---|---|---|
+| resolved to a single parcel | **32,188** | 23.5% |
+| **collision — left unattributed** | **59,714** | **43.7%** |
+| no matching parcel in our data | 42,982 | 31.4% |
+| no street address on the deed | 1,874 | 1.4% |
+| scanned | 136,758 | |
+
+**Live run 2026-08-16:** 32,188 resolved, **27,037 newly inserted** — the 5,151 difference is `ON CONFLICT DO NOTHING` catching deeds already present under the same `(parcel_number, document_id)`, which is the dedup working at scale rather than a shortfall. The Fairhill deed that motivated D5 landed: `phl:191357500`, sheriff's deed, 2025-05-08, $29,100.
+
+Some recovered documents appear against two parcels. That is one deed conveying two parcels — a package deed — and `package_deed_exclusion_sql` filters them at query time, so they cannot reach comps.
+
+**The realised comp-pool addition is 32,188, not 133,395** — a quarter of the eligible pool, because the collision policy refuses to guess between units sharing a street address. That is the policy working as designed rather than a shortfall: 59,714 deeds we cannot place are 59,714 we do not place.
+
+It also settles the composition question at its final size. 32,188 additions against a `sale` table of ~788,000 is a ~4% enlargement, with a lower share of non-market instruments than the pool it joins.
+
+**Carried forward:** the 42,982 no-match deeds are addresses we hold no parcel for. Worth a look later — some will be recorder formatting we do not normalise, some genuinely outside our parcel set — but not this batch.
 
 ---
 

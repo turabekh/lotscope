@@ -98,9 +98,9 @@ Slice 0 kept only what nothing reads, and asserts it: a test greps every scoring
 | figure | produced by |
 |---|---|
 | in-window COMPLIED / IN VIOLATION count | Slice 0 deployed + delinquency re-ingest |
-| re-measured mailing coverage | mailing backfill |
+| ~~re-measured mailing coverage~~ | **CLOSED — 9.8% → 98.6%, +522,832 addresses** |
 | ~~control-fixture identity~~ | **CLOSED — `phl:491313100`** (KENNEDY PATRICIA, exact match, no transfer, owner-occupant mailing) |
-| final recovered-comp and collision counts | RTT recovery backfill |
+| ~~final recovered-comp and collision counts~~ | **CLOSED — 32,188 resolved, 27,037 inserted, 59,714 collisions unattributed** |
 
 ## Consequences
 
