@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -47,3 +47,4 @@ class SourceFreshness(BaseModel):
     datasets: list[str]
     freshness: Literal["green", "amber", "red"] | None = None
     freshness_reason: str | None = None
+    data_vintage: date | None = None

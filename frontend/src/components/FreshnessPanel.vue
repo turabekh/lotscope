@@ -41,6 +41,15 @@ function staleLabel(row: SourceFreshness): string {
   return row.freshness ? STALE_LABEL[row.freshness] : ''
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function vintageLabel(row: SourceFreshness): string {
+  if (!row.data_vintage) return 'vintage unknown'
+  const parsed = new Date(row.data_vintage)
+  if (Number.isNaN(parsed.getTime())) return 'vintage unknown'
+  return `data as of ${MONTHS[parsed.getUTCMonth()]} ${parsed.getUTCFullYear()}`
+}
+
 const behind = computed(() =>
   rows.value.filter((row) => row.freshness === 'red' || row.freshness === 'amber'),
 )
@@ -105,7 +114,15 @@ watch(() => props.parcelNumber, load, { immediate: true })
         <div v-for="row in rows" :key="row.source_label" class="source-row">
           <span class="source-title">{{ row.title }}</span>
           <span class="source-age" :class="tone(row.as_of)">
-            {{ ageLabel(row.as_of) }}
+            <span class="age-pair">
+              <span>{{ ageLabel(row.as_of) }}</span>
+              <span
+                class="vintage"
+                :class="{ 'vintage-unknown': !row.data_vintage }"
+                :data-test="`freshness-vintage-${row.source_label}`"
+                >{{ vintageLabel(row) }}</span
+              >
+            </span>
             <span
               v-if="staleLabel(row)"
               class="stale-flag"
@@ -164,6 +181,19 @@ watch(() => props.parcelNumber, load, { immediate: true })
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+.age-pair {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+.vintage {
+  font-size: 10.5px;
+  color: var(--lot-faint);
+}
+.vintage-unknown {
+  font-style: italic;
 }
 .stale-flag {
   font-size: 10px;

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -41,6 +41,7 @@ async def record_freshness(
     success: bool = False,
     row_count: int | None = None,
     detail: str | None = None,
+    data_vintage: date | None = None,
 ) -> None:
     row: dict[str, Any] = {
         "market_code": market_code,
@@ -56,6 +57,8 @@ async def record_freshness(
         row["detail"] = detail
     elif success:
         row["detail"] = None
+    if data_vintage is not None:
+        row["data_vintage"] = data_vintage
     await upsert(session, DatasetFreshness, [row], index_elements=["market_code", "dataset"])
 
 
@@ -97,9 +100,19 @@ async def source_freshness(
                 "datasets": datasets,
                 "freshness": verdict.status if verdict else None,
                 "freshness_reason": verdict.reason if verdict else None,
+                "data_vintage": _oldest_vintage(datasets, by_dataset),
             }
         )
     return surfaces
+
+
+def _oldest_vintage(datasets: list[str], by_dataset: dict[str, DatasetFreshness]) -> date | None:
+    vintages = [
+        row.data_vintage
+        for dataset in datasets
+        if (row := by_dataset.get(dataset)) is not None and row.data_vintage is not None
+    ]
+    return min(vintages) if vintages else None
 
 
 def _worst_verdict(
@@ -114,6 +127,7 @@ def _worst_verdict(
                 status=row.status,
                 last_success_at=row.last_success_at,
                 last_attempt_at=row.last_attempt_at,
+                data_vintage=row.data_vintage,
             ),
             cadence_for(market_code, dataset),
             now,

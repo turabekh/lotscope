@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Literal
 
 Status = Literal["green", "amber", "red"]
@@ -42,12 +42,14 @@ class FreshnessInput:
     status: str | None
     last_success_at: datetime | None
     last_attempt_at: datetime | None
+    data_vintage: date | None = None
 
 
 @dataclass(frozen=True)
 class FreshnessVerdict:
     status: Status
     reason: str
+    vintage_reason: str | None = None
 
 
 DEFAULT_CADENCE = Cadence("monthly")
@@ -128,7 +130,43 @@ def _describe_age(age: timedelta) -> str:
     return f"{days} days ago"
 
 
+_SEVERITY: dict[Status, int] = {"green": 0, "amber": 1, "red": 2}
+
+VINTAGE_UNKNOWN = "Vintage unknown - the source does not report what period its data covers."
+
+
+def _vintage_verdict(
+    row: FreshnessInput, cadence: Cadence, now: datetime
+) -> FreshnessVerdict | None:
+    if row.data_vintage is None or cadence.kind not in _INTERVAL:
+        return None
+    age = now.date() - row.data_vintage
+    covers = f"data as of {row.data_vintage.isoformat()}"
+    interval = _INTERVAL[cadence.kind]
+    if age > 2 * interval:
+        return FreshnessVerdict(
+            "red", f"Stale - {covers}, {_describe_age(age)} (expected {cadence.kind})."
+        )
+    if age > interval:
+        return FreshnessVerdict(
+            "amber", f"Overdue - {covers}, {_describe_age(age)} (expected {cadence.kind})."
+        )
+    return FreshnessVerdict("green", f"Fresh - {covers}.")
+
+
+def _worse(fetch: FreshnessVerdict, vintage: FreshnessVerdict | None) -> FreshnessVerdict:
+    if vintage is None:
+        return fetch
+    if _SEVERITY[vintage.status] > _SEVERITY[fetch.status]:
+        return FreshnessVerdict(vintage.status, vintage.reason, vintage_reason=vintage.reason)
+    return FreshnessVerdict(fetch.status, fetch.reason, vintage_reason=vintage.reason)
+
+
 def evaluate_freshness(row: FreshnessInput, cadence: Cadence, now: datetime) -> FreshnessVerdict:
+    return _worse(_evaluate_fetch(row, cadence, now), _vintage_verdict(row, cadence, now))
+
+
+def _evaluate_fetch(row: FreshnessInput, cadence: Cadence, now: datetime) -> FreshnessVerdict:
     if cadence.kind == "manual":
         if row.last_success_at is None:
             return FreshnessVerdict("amber", "Manual source — not yet loaded.")

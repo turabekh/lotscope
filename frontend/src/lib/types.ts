@@ -127,6 +127,7 @@ export interface SourceFreshness {
   datasets: string[]
   freshness: FreshnessStatus | null
   freshness_reason: string | null
+  data_vintage: string | null
 }
 
 export type CorrectionSection =

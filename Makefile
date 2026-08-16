@@ -103,8 +103,9 @@ test-unit: ## Run unit tests only (no Docker)
 test-integration: test-image ## Run integration tests only (requires Docker)
 	cd $(BACKEND) && uv run pytest -m integration
 
-lint: ## Lint (backend + frontend)
+lint: ## Lint (backend + frontend) - mirrors what CI runs
 	cd $(BACKEND) && uv run ruff check .
+	cd $(BACKEND) && uv run ruff format --check .
 	cd $(FRONTEND) && pnpm lint
 
 fmt: ## Format and autofix (backend + frontend)

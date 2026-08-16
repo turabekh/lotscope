@@ -25,6 +25,7 @@ LI_VIOLATIONS_COLUMNS = (
     "opa_account_num",
     "violationcodetitle",
     "violationstatus",
+    "casestatus",
     "violationdate",
 )
 LI_PERMITS_DATASET = "permits"
@@ -51,6 +52,7 @@ class ViolationRecord(BaseModel):
     opa_account_num: str | int | None = None
     violationcodetitle: str | None = None
     violationstatus: str | None = None
+    casestatus: str | None = None
     violationdate: str | None = None
 
 
@@ -96,6 +98,7 @@ def to_violation_event_row(record: ViolationRecord) -> dict[str, Any] | None:
     return {
         **_base_event(parcel_number, external_id, "violation", LI_VIOLATIONS_DATASET),
         "status": record.violationstatus,
+        "case_status": record.casestatus,
         "event_date": parse_iso_date(record.violationdate),
         "description": record.violationcodetitle,
         "is_unsafe": _contains(record.violationcodetitle, "UNSAFE"),

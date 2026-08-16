@@ -124,3 +124,20 @@ async def test_load_li_violations_emits_event_for_new_row_on_second_run(
         )
     ).all()
     assert [(e.code, e.ext) for e in events] == [("danger", "V-10")]
+
+
+def test_violation_event_carries_the_case_status_alongside_the_violation_status() -> None:
+    event = to_violation_event_row(
+        ViolationRecord(
+            violationnumber="VI-2025-044445",
+            opa_account_num="201133900",
+            violationcodetitle="VACANT STRUCTURE & LAND",
+            violationstatus="COMPLIED",
+            casestatus="CLOSED",
+            violationdate="2025-06-16",
+        )
+    )
+
+    assert event is not None
+    assert event["status"] == "COMPLIED"
+    assert event["case_status"] == "CLOSED"

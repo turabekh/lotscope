@@ -119,3 +119,27 @@ async def test_load_tax_emits_event_on_second_run_change(db_session: AsyncSessio
         .all()
     )
     assert codes == ["tax_up"]
+
+
+def test_to_tax_row_carries_the_debtor_name_and_snapshot_period() -> None:
+    row = to_tax_row(
+        TaxRecord(
+            opa_number=201133900,
+            owner="MATUSOW JOSEPH",
+            year_month="202206",
+            total_due=8975.26,
+            num_years_owed=44,
+        )
+    )
+
+    assert row is not None
+    assert row["delinquency_owner"] == "MATUSOW JOSEPH"
+    assert row["snapshot_period"] == "202206"
+
+
+def test_to_tax_row_tolerates_a_record_with_no_debtor_name() -> None:
+    row = to_tax_row(TaxRecord(opa_number=201133900, total_due=100.0))
+
+    assert row is not None
+    assert row["delinquency_owner"] is None
+    assert row["snapshot_period"] is None

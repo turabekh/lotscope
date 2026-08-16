@@ -102,6 +102,24 @@ parser is fixed.
 
 Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006. Backlog ticket LR-B-033.
 
+## Data vintage vs fetch recency
+
+`dataset_freshness` carries two different questions and answers both:
+
+- **`last_success_at`** — when we last downloaded the file successfully.
+- **`data_vintage`** — what period the data inside it actually covers.
+
+A source's displayed state is the **worse of the two**. The delinquency snapshot is the case that forced this: the nightly job re-downloads a June-2022 file every night and succeeds, so fetch-recency reported "Today" for four years while the contents never moved.
+
+**Derivation is per source and declared at load time**, because only the loader knows which column carries the period:
+
+| dataset | vintage |
+|---|---|
+| `real_estate_tax_delinquencies` | `max(year_month)` → first of month |
+| others | not yet derived — **displayed as "vintage unknown", never as fresh** |
+
+Sources with no derivation do **not** degrade to amber. An always-amber board teaches people to ignore it, which is how the ops alerting became furniture. They render "vintage unknown" so the gap is visible without being noisy — and adding a derivation is a one-line change in the loader.
+
 ## Upstream reconciliation
 
 ```
