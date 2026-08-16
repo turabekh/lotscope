@@ -16,7 +16,7 @@ const show = computed(() => overlays.value.length > 0)
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="layers" size="18px" class="q-mr-xs" />Zoning overlays
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
           Overlay districts layered on top of the base zoning. They can change dimensional standards
           such as the minimum lot area. Informational — the standards shown elsewhere on this tab
@@ -40,7 +40,7 @@ const show = computed(() => overlays.value.length > 0)
         </q-badge>
       </div>
 
-      <div class="text-caption text-grey-6 q-mt-sm">
+      <div class="text-caption lot-text-muted q-mt-sm">
         Overlay standards can override the base-district minimums shown above. Informational; not a
         zoning determination.
       </div>

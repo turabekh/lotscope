@@ -24,7 +24,7 @@
 
   --lot-ink: #0f172a;
   --lot-muted: #475569;
-  --lot-faint: #94a3b8;
+  --lot-faint: #5b6b82;
   --lot-on-accent: #ffffff;
 
   --lot-accent: #4f46e5;
@@ -67,7 +67,7 @@ body.body--dark {
 
   --lot-ink: #f1f5f9;
   --lot-muted: #9fb0c7;
-  --lot-faint: #64748b;
+  --lot-faint: #94a3b8;
   --lot-on-accent: #ffffff;
 
   --lot-accent: #818cf8;

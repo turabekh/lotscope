@@ -124,7 +124,7 @@ const dealKillers = computed(() => rankedDealKillers(props.verdict.risk_flags))
         <div v-if="screening" class="hero-label" :class="`text-${screening.tone}`">
           <q-icon :name="screening.icon" size="20px" class="q-mr-xs" />{{ screening.label }}
         </div>
-        <div v-else class="hero-label text-grey-6" data-test="no-recommendation">
+        <div v-else class="hero-label lot-text-muted" data-test="no-recommendation">
           Not yet screened
         </div>
         <div class="hero-summary">

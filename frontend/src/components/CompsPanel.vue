@@ -32,7 +32,7 @@ function pricePerSqft(comp: CompResult): string {
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="sell" size="18px" class="q-mr-xs" />Comparable sales
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
           Recorded land sales near this lot that back the value estimate. Informational; verify the
           recorded documents.

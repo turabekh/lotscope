@@ -87,7 +87,7 @@ async function draft(): Promise<void> {
 
       <div v-if="!isAuthenticated" class="signin-gate column items-center q-py-md">
         <q-icon name="lock" size="28px" color="grey-5" />
-        <div class="text-body2 text-grey-7 text-center q-my-sm">
+        <div class="text-body2 lot-text-muted text-center q-my-sm">
           Sign in to draft an AI investment memo for this parcel.
         </div>
         <q-btn unelevated no-caps color="primary" icon="login" label="Sign in" @click="goLogin" />
@@ -95,7 +95,7 @@ async function draft(): Promise<void> {
 
       <div v-else-if="!hasReportAccess" class="upgrade-gate column items-center q-py-md">
         <q-icon name="auto_awesome" size="28px" color="grey-5" />
-        <div class="text-body2 text-grey-7 text-center q-my-sm">
+        <div class="text-body2 lot-text-muted text-center q-my-sm">
           The AI investment report is a Pro feature — a full memo synthesizing buildability,
           valuation, deal math, and risks for this parcel.
         </div>
@@ -111,7 +111,7 @@ async function draft(): Promise<void> {
 
       <template v-else>
         <div v-if="!report && !loading" class="column items-start">
-          <div class="text-body2 text-grey-7 q-mb-sm">
+          <div class="text-body2 lot-text-muted q-mb-sm">
             Draft a multi-section memo — buildability, valuation, deal math, and risks — synthesized
             from this parcel's computed analysis.
           </div>
@@ -125,7 +125,7 @@ async function draft(): Promise<void> {
           />
         </div>
 
-        <div v-if="loading" class="row items-center q-py-md text-grey-7">
+        <div v-if="loading" class="row items-center q-py-md lot-text-muted">
           <q-spinner-dots size="24px" class="q-mr-sm" /> Drafting the report…
         </div>
 

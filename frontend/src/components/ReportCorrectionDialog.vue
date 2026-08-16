@@ -67,7 +67,7 @@ async function submit(): Promise<void> {
   <q-dialog v-model="open">
     <q-card class="correction-card">
       <div class="text-subtitle1 q-mb-xs">Report incorrect data</div>
-      <div class="text-body2 text-grey-7 q-mb-md">
+      <div class="text-body2 lot-text-muted q-mb-md">
         We record the verdict version, the field state, and the source age exactly as they were when
         you opened this parcel, so the report stays meaningful after the next recompute.
       </div>

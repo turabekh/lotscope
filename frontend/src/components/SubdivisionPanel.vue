@@ -50,7 +50,7 @@ const reason = computed(() => subdivision.value?.reasons[0] ?? '')
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="dashboard_customize" size="18px" class="q-mr-xs" />Subdivision potential
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
           Compares lot size to the district's minimum lot area and width to estimate how many
           conforming lots it could split into, or whether it needs consolidation. Informational;
@@ -62,13 +62,13 @@ const reason = computed(() => subdivision.value?.reasons[0] ?? '')
         </q-chip>
       </div>
 
-      <div v-if="reason" class="text-body2 text-grey-7 q-mt-xs">{{ reason }}</div>
+      <div v-if="reason" class="text-body2 lot-text-muted q-mt-xs">{{ reason }}</div>
 
-      <div v-if="unevaluated" class="text-caption text-grey-6 q-mt-xs">
+      <div v-if="unevaluated" class="text-caption lot-text-muted q-mt-xs">
         This is a gap in what we hold, not a finding about the lot.
       </div>
 
-      <div v-if="subdivision.district_code" class="text-caption text-grey-5 q-mt-sm">
+      <div v-if="subdivision.district_code" class="text-caption lot-text-muted q-mt-sm">
         {{ subdivision.district_code }} minimums: {{ subdivision.min_lot_area_sqft ?? '—' }} sq ft
         area, {{ subdivision.min_lot_width_ft ?? '—' }} ft width
       </div>

@@ -57,7 +57,7 @@ watch(() => props.parcelNumber, load)
         </q-chip>
       </div>
       <div class="text-body2 q-mt-xs">{{ summary.summary }}</div>
-      <div class="text-caption text-grey-5 q-mt-sm snapshot-foot">
+      <div class="text-caption lot-text-faint q-mt-sm snapshot-foot">
         AI-generated from LotScope's computed data · informational, not legal or financial advice.
         <span class="snapshot-prov lot-numeric"
           >Parcel {{ summary.parcel_number }} · verdict {{ summary.verdict_version }}</span

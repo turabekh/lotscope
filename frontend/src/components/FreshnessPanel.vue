@@ -27,7 +27,7 @@ function ageLabel(asOf: string | null): string {
 }
 
 function tone(asOf: string | null): string {
-  return asOf === null ? 'text-grey-6' : 'text-grey-8'
+  return asOf === null ? 'lot-text-faint' : 'lot-text-muted'
 }
 
 const loaded = computed(() => rows.value.filter((row) => row.as_of !== null).length)
@@ -53,14 +53,14 @@ watch(() => props.parcelNumber, load, { immediate: true })
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="update" size="18px" class="q-mr-xs" />Source freshness
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
           When each underlying source last loaded successfully for this market. A source shown as
           not loaded was never obtained, so anything depending on it is reported as unavailable
           rather than clear.
         </q-tooltip>
         <q-space />
-        <span class="text-caption text-grey-6">{{ loaded }}/{{ rows.length }} loaded</span>
+        <span class="text-caption lot-text-muted">{{ loaded }}/{{ rows.length }} loaded</span>
       </div>
 
       <div class="source-list">

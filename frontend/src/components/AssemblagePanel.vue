@@ -63,7 +63,7 @@ function selectNeighbor(parcelNumber: string): void {
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="hub" size="18px" class="q-mr-xs" />Assemblage radar
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
           Adjacent lots that could combine into a larger project. Candidates are neighbors with the
           same zoning that are vacant, city-owned, or already share this owner — availability is not
@@ -140,7 +140,7 @@ function selectNeighbor(parcelNumber: string): void {
               <div class="neighbor-meta">
                 {{ lot.base_zoning_code ?? 'No zoning' }} ·
                 {{ formatSqft(lot.lot_area_sqft) }}
-                <span v-if="!lot.same_zoning" class="text-grey-6">· different zoning</span>
+                <span v-if="!lot.same_zoning" class="lot-text-faint">· different zoning</span>
               </div>
             </div>
             <q-badge
@@ -152,7 +152,7 @@ function selectNeighbor(parcelNumber: string): void {
             </q-badge>
           </div>
         </div>
-        <div v-else class="text-body2 text-grey-6 q-mt-sm">
+        <div v-else class="text-body2 lot-text-muted q-mt-sm">
           No adjacent parcels detected for this lot.
         </div>
 
@@ -161,10 +161,10 @@ function selectNeighbor(parcelNumber: string): void {
         </ul>
       </template>
 
-      <div v-else-if="assemblageLoading" class="text-body2 text-grey-6">
+      <div v-else-if="assemblageLoading" class="text-body2 lot-text-muted">
         Scanning adjacent lots…
       </div>
-      <div v-else class="text-body2 text-grey-6">Adjacent-lot data is unavailable.</div>
+      <div v-else class="text-body2 lot-text-muted">Adjacent-lot data is unavailable.</div>
     </q-card-section>
   </q-card>
 </template>

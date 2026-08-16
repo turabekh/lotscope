@@ -94,7 +94,7 @@ const reason = computed(() => assessment.value?.reasons[0] ?? '')
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="account_balance" size="18px" class="q-mr-xs" />Assessment vs. market
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
           Compares the city's assessed market value against LotScope's comp-based estimate. An
           over-assessment may support a tax appeal. Informational, not tax advice.
@@ -121,9 +121,9 @@ const reason = computed(() => assessment.value?.reasons[0] ?? '')
         Est. appeal savings ~{{ formatCurrency(assessment.estimated_annual_tax_savings) }}/yr
       </div>
 
-      <div v-if="reason" class="text-body2 text-grey-7 q-mt-sm">{{ reason }}</div>
+      <div v-if="reason" class="text-body2 lot-text-muted q-mt-sm">{{ reason }}</div>
 
-      <div class="text-caption text-grey-5 q-mt-sm">
+      <div class="text-caption lot-text-faint q-mt-sm">
         {{ assessment.confidence }} confidence · {{ assessment.disclaimer }}
       </div>
 

@@ -19,7 +19,7 @@ function isRecommended(item: ScenarioItem): boolean {
 }
 
 function marginClass(item: ScenarioItem): string {
-  if (item.margin === null) return 'text-grey-5'
+  if (item.margin === null) return 'lot-text-faint'
   if (item.margin >= 0.2) return 'text-positive'
   if (item.margin >= 0) return 'text-amber-8'
   return 'text-negative'
@@ -31,7 +31,7 @@ function marginClass(item: ScenarioItem): string {
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="tune" size="18px" class="q-mr-xs" />Build scenarios
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
           Profit and margin modeled per unit count. Counts above the by-right maximum would need a
           variance. Informational; based on comp-derived ARV and default cost assumptions.

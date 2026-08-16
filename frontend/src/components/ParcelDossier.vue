@@ -559,14 +559,14 @@ async function toggleSave(): Promise<void> {
 
     <div v-else-if="error && !loading" class="empty-state">
       <q-icon name="error_outline" size="52px" color="grey-5" />
-      <div class="text-subtitle1 text-grey-8 q-mt-md">Could not load parcel</div>
-      <div class="text-body2 text-grey-7 q-mt-xs">{{ error }}</div>
+      <div class="text-subtitle1 lot-text-ink q-mt-md">Could not load parcel</div>
+      <div class="text-body2 lot-text-muted q-mt-xs">{{ error }}</div>
     </div>
 
     <div v-else-if="!loading" class="empty-state">
       <q-icon name="travel_explore" size="56px" color="grey-4" />
-      <div class="text-subtitle1 text-grey-7 q-mt-md">Find a parcel</div>
-      <div class="text-body2 text-grey-6">
+      <div class="text-subtitle1 lot-text-ink q-mt-md">Find a parcel</div>
+      <div class="text-body2 lot-text-muted">
         Search by address, owner, or parcel number — or click any lot on the map — to see its
         buildability, value, and risk verdict.
       </div>
