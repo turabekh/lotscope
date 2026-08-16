@@ -118,11 +118,15 @@ export interface FieldProvenance {
   default_origin: string | null
 }
 
+export type FreshnessStatus = 'green' | 'amber' | 'red'
+
 export interface SourceFreshness {
   source_label: string
   title: string
   as_of: string | null
   datasets: string[]
+  freshness: FreshnessStatus | null
+  freshness_reason: string | null
 }
 
 export type CorrectionSection =

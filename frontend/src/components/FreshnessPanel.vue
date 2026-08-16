@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 
 import { api } from '@/lib/api'
-import type { SourceFreshness } from '@/lib/types'
+import type { FreshnessStatus, SourceFreshness } from '@/lib/types'
 
 const props = defineProps<{ parcelNumber: string | undefined }>()
 
@@ -29,6 +29,20 @@ function ageLabel(asOf: string | null): string {
 function tone(asOf: string | null): string {
   return asOf === null ? 'lot-text-faint' : 'lot-text-muted'
 }
+
+const STALE_LABEL: Record<FreshnessStatus, string> = {
+  green: '',
+  amber: 'overdue',
+  red: 'stale',
+}
+
+function staleLabel(row: SourceFreshness): string {
+  return row.freshness ? STALE_LABEL[row.freshness] : ''
+}
+
+const behind = computed(() =>
+  rows.value.filter((row) => row.freshness === 'red' || row.freshness === 'amber'),
+)
 
 const loaded = computed(() => rows.value.filter((row) => row.as_of !== null).length)
 
@@ -60,13 +74,35 @@ watch(() => props.parcelNumber, load, { immediate: true })
           rather than clear.
         </q-tooltip>
         <q-space />
-        <span class="text-caption lot-text-muted">{{ loaded }}/{{ rows.length }} loaded</span>
+        <q-badge
+          v-if="behind.length"
+          color="warning"
+          text-color="black"
+          data-test="freshness-behind"
+        >
+          {{ behind.length }} behind schedule
+        </q-badge>
+        <span v-else class="text-caption lot-text-muted"
+          >{{ loaded }}/{{ rows.length }} loaded</span
+        >
       </div>
 
       <div class="source-list">
         <div v-for="row in rows" :key="row.source_label" class="source-row">
           <span class="source-title">{{ row.title }}</span>
-          <span class="source-age" :class="tone(row.as_of)">{{ ageLabel(row.as_of) }}</span>
+          <span class="source-age" :class="tone(row.as_of)">
+            {{ ageLabel(row.as_of) }}
+            <span
+              v-if="staleLabel(row)"
+              class="stale-flag"
+              :class="`stale-${row.freshness}`"
+              :data-test="`freshness-flag-${row.source_label}`"
+              >{{ staleLabel(row) }}</span
+            >
+            <q-tooltip v-if="row.freshness_reason" max-width="260px">
+              {{ row.freshness_reason }}
+            </q-tooltip>
+          </span>
         </div>
       </div>
     </q-card-section>
@@ -111,5 +147,24 @@ watch(() => props.parcelNumber, load, { immediate: true })
 .source-age {
   font-size: 12px;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.stale-flag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--lot-radius-pill);
+}
+.stale-red {
+  color: var(--lot-sev-high);
+  background: var(--lot-negative-soft);
+}
+.stale-amber {
+  color: var(--lot-sev-medium);
+  background: var(--lot-warning-soft);
 }
 </style>

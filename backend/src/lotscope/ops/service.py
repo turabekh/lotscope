@@ -1,4 +1,5 @@
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +31,7 @@ from lotscope.ops.schemas import (
 from lotscope.parcels.models import Parcel
 from lotscope.zoning.models import ZoningStandard
 
+_AUTOMATED_CADENCES = frozenset({"daily", "weekly"})
 _FAILED = "failed"
 _SHERIFF_COVERAGE_SAMPLE = 12
 
@@ -302,3 +304,44 @@ async def market_health(
         recent_jobs=await _recent_jobs(session, market_code, job_limit),
         generated_at=now,
     )
+
+
+@dataclass(frozen=True)
+class StaleDataset:
+    market_code: str
+    dataset: str
+    reason: str
+
+
+async def stale_automated_datasets(
+    session: AsyncSession, now: datetime | None = None
+) -> list[StaleDataset]:
+    moment = now or datetime.now(UTC)
+    rows = (
+        await session.execute(
+            select(DatasetFreshness).order_by(
+                DatasetFreshness.market_code, DatasetFreshness.dataset
+            )
+        )
+    ).scalars()
+    stale: list[StaleDataset] = []
+    for row in rows:
+        cadence = cadence_for(row.market_code, row.dataset)
+        if cadence.kind not in _AUTOMATED_CADENCES:
+            continue
+        verdict = evaluate_freshness(
+            FreshnessInput(
+                status=row.status,
+                last_success_at=row.last_success_at,
+                last_attempt_at=row.last_attempt_at,
+            ),
+            cadence,
+            moment,
+        )
+        if verdict.status == "red":
+            stale.append(
+                StaleDataset(
+                    market_code=row.market_code, dataset=row.dataset, reason=verdict.reason
+                )
+            )
+    return stale

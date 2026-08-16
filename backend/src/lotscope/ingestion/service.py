@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -7,6 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.core.provenance import datasets_for_source, oldest_as_of
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.ingestion.upsert import upsert
+from lotscope.ops.cadence import (
+    FreshnessInput,
+    FreshnessVerdict,
+    cadence_for,
+    evaluate_freshness,
+)
 
 
 async def dataset_last_success(session: AsyncSession, market_code: str) -> dict[str, datetime]:
@@ -48,6 +54,8 @@ async def record_freshness(
         row["row_count"] = row_count
     if detail is not None:
         row["detail"] = detail
+    elif success:
+        row["detail"] = None
     await upsert(session, DatasetFreshness, [row], index_elements=["market_code", "dataset"])
 
 
@@ -63,14 +71,56 @@ _FRESHNESS_SURFACES: tuple[tuple[str, str], ...] = (
 )
 
 
-async def source_freshness(session: AsyncSession, market_code: str) -> list[dict[str, Any]]:
+_WORST_FIRST: tuple[str, ...] = ("red", "amber", "green")
+
+
+async def source_freshness(
+    session: AsyncSession, market_code: str, now: datetime | None = None
+) -> list[dict[str, Any]]:
+    moment = now or datetime.now(UTC)
     last_success = await dataset_last_success(session, market_code)
-    return [
-        {
-            "source_label": label,
-            "title": title,
-            "as_of": source_as_of(label, last_success),
-            "datasets": list(datasets_for_source(label)),
-        }
-        for label, title in _FRESHNESS_SURFACES
+    rows = (
+        await session.execute(
+            select(DatasetFreshness).where(DatasetFreshness.market_code == market_code)
+        )
+    ).scalars()
+    by_dataset = {row.dataset: row for row in rows}
+    surfaces: list[dict[str, Any]] = []
+    for label, title in _FRESHNESS_SURFACES:
+        datasets = list(datasets_for_source(label))
+        verdict = _worst_verdict(market_code, datasets, by_dataset, moment)
+        surfaces.append(
+            {
+                "source_label": label,
+                "title": title,
+                "as_of": source_as_of(label, last_success),
+                "datasets": datasets,
+                "freshness": verdict.status if verdict else None,
+                "freshness_reason": verdict.reason if verdict else None,
+            }
+        )
+    return surfaces
+
+
+def _worst_verdict(
+    market_code: str,
+    datasets: list[str],
+    by_dataset: dict[str, DatasetFreshness],
+    now: datetime,
+) -> FreshnessVerdict | None:
+    verdicts = [
+        evaluate_freshness(
+            FreshnessInput(
+                status=row.status,
+                last_success_at=row.last_success_at,
+                last_attempt_at=row.last_attempt_at,
+            ),
+            cadence_for(market_code, dataset),
+            now,
+        )
+        for dataset in datasets
+        if (row := by_dataset.get(dataset)) is not None
     ]
+    if not verdicts:
+        return None
+    return min(verdicts, key=lambda verdict: _WORST_FIRST.index(verdict.status))
