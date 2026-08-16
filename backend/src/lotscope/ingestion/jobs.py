@@ -1,3 +1,4 @@
+from asyncio import CancelledError
 from collections.abc import Awaitable, Callable
 from datetime import date
 from pathlib import Path
@@ -10,6 +11,7 @@ from lotscope.core.logging import get_logger
 from lotscope.ingestion.arcgis import ArcGisClient
 from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.ckan import CkanDatastoreClient
+from lotscope.ingestion.errors import IngestionError
 from lotscope.ingestion.extract import ExtractClient
 from lotscope.ingestion.filters import li_events_where, rtt_sales_where, zba_appeals_where
 from lotscope.ingestion.loaders import (
@@ -742,6 +744,8 @@ INGEST_JOBS: dict[tuple[str, str], Job] = {
     **{("wlm", dataset): job for dataset, job in _WLM_JOBS.items()},
 }
 
+_logger = get_logger("ingestion.jobs")
+
 ParamJob = Callable[..., Awaitable[int]]
 
 PARAM_INGEST_JOBS: dict[tuple[str, str], ParamJob] = {
@@ -761,6 +765,18 @@ async def ingest_market(
     session_factory: SessionFactory, settings: Settings, market: str = "phl"
 ) -> int:
     total = 0
+    failed: list[str] = []
     for dataset in datasets_for_market(market):
-        total += await INGEST_JOBS[(market, dataset)](session_factory, settings)
+        try:
+            total += await INGEST_JOBS[(market, dataset)](session_factory, settings)
+        except CancelledError:
+            raise
+        except Exception as exc:
+            failed.append(dataset)
+            _logger.error("dataset_ingest_failed", market=market, dataset=dataset, error=str(exc))
+    if failed:
+        raise IngestionError(
+            f"{len(failed)} of {len(datasets_for_market(market))} {market} dataset(s) failed: "
+            + ", ".join(failed)
+        )
     return total

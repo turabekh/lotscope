@@ -1,9 +1,9 @@
 import pytest
 from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from lotscope.verdict.composition import VERDICT_VERSION
-from lotscope.verdict.jobs import recompute_all_verdicts
+from lotscope.verdict.jobs import _parcel_numbers, recompute_all_verdicts
 from lotscope.verdict.models import ParcelVerdict
 
 pytestmark = pytest.mark.integration
@@ -53,3 +53,29 @@ async def test_recompute_all_verdicts_persists_every_parcel(migrated_database: s
             )
             await session.commit()
         await engine.dispose()
+
+
+async def test_only_stale_skips_parcels_already_at_the_current_version(
+    db_session: AsyncSession,
+) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code) "
+            "VALUES ('stale-1','phl'), ('current-1','phl')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel_verdict (parcel_number, verdict_version, computed_at) "
+            "VALUES ('stale-1','v0', now()), ('current-1', :version, now())"
+        ),
+        {"version": VERDICT_VERSION},
+    )
+    await db_session.flush()
+
+    stale = await _parcel_numbers(db_session, vacant_only=False, market="phl", only_stale=True)
+    everything = await _parcel_numbers(db_session, vacant_only=False, market="phl")
+
+    assert "stale-1" in stale
+    assert "current-1" not in stale
+    assert {"stale-1", "current-1"} <= set(everything)

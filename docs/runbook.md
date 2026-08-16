@@ -102,6 +102,33 @@ parser is fixed.
 
 Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006. Backlog ticket LR-B-033.
 
+## Worker job timeouts — the 2026-08-16 silent ingestion outage
+
+**What happened.** Production ingestion stopped on 2026-06-27 and nobody was told for **50 days**. OPA, tax delinquency, L&I, RTT and zoning all sat between 43 and 49 days stale while the UI faithfully reported their age and no alert fired.
+
+**Root cause.** ARQ's default `job_timeout` is **300 seconds** and `WorkerSettings` never set one. `ingest_all` walks 17 `phl` datasets in registration order — `opa`, `pwd`, `rtt` first — and each of those takes longer than 90 s on its own. The nightly 04:00 job was killed inside the first two or three datasets every night, so datasets 4–17 were never reached at all.
+
+**Why it was silent.** ARQ cancels a timed-out job with `asyncio.CancelledError`, which inherits from `BaseException`. `run_loader` caught `Exception`, so the cancellation bypassed the failure-recording branch entirely. No `dataset_freshness` row moved to `failed`, no `ingest_run` row was written, nothing was logged as an error. The failure path existed and was simply never reached.
+
+**What changed.**
+
+- Per-job timeouts via `arq.func(...)`: `INGEST_JOB_TIMEOUT` 12 h, `BULK_JOB_TIMEOUT` 36 h, and a `DEFAULT_JOB_TIMEOUT` of 30 min replacing ARQ's 300 s for everything else.
+- `run_loader` catches `CancelledError` explicitly, records the dataset as `failed` with a timeout note, then re-raises.
+- `ingest_market` isolates each dataset so one failure no longer aborts the remaining sixteen, and raises a summary naming every dataset that failed.
+- The weekly `recompute_verdicts` cron now passes `only_stale=True`. Raising its timeout would otherwise have promoted a job that harmlessly died at 5 min into a ~29 h all-market sweep every Sunday.
+
+**The lesson worth carrying.** A framework default silently truncated a job the code had no idea was being truncated, and the one mechanism that would have reported it could not catch the exception type used to stop it. When a scheduled job's observability depends on catching an exception, verify which exception the scheduler actually raises.
+
+**Checking for a recurrence:**
+
+```sql
+select dataset, status, last_attempt_at, last_success_at, left(detail, 120)
+from dataset_freshness where market_code = 'phl'
+order by last_success_at nulls first;
+```
+
+Any `last_success_at` older than about two days means ingestion is broken again.
+
 ## What runs, and when
 
 `scripts/backup-db.sh` runs **on the VM** and dumps the production database to object storage.

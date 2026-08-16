@@ -1,3 +1,5 @@
+from asyncio import CancelledError
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -55,4 +57,26 @@ async def test_run_loader_records_failure_and_raises(migrated_database: str) -> 
             assert record.detail is not None
     finally:
         await _cleanup(session_factory, "ds_fail")
+        await engine.dispose()
+
+
+async def test_run_loader_records_a_cancelled_run_before_re_raising(
+    migrated_database: str,
+) -> None:
+    engine = create_async_engine(migrated_database)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def cancelled(session: AsyncSession) -> int:
+        raise CancelledError
+
+    try:
+        with pytest.raises(CancelledError):
+            await run_loader(session_factory, cancelled, dataset="ds_cancelled")
+        async with session_factory() as session:
+            record = await session.get(DatasetFreshness, ("phl", "ds_cancelled"))
+            assert record is not None
+            assert record.status == "failed"
+            assert "timeout" in (record.detail or "")
+    finally:
+        await _cleanup(session_factory, "ds_cancelled")
         await engine.dispose()
