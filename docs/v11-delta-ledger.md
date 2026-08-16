@@ -52,12 +52,24 @@ Distribution across 343,081 of 343,862 rows: CLOSED 232,558 · IN VIOLATION 72,6
 
 **Effect by class:**
 
-- **Sheriff's deed, grantor matches debtor** (≈2,282): risk downgrades to informational with provenance; distress drops `tax_delinquent` +15 and `severe_delinquency` +15.
-- **Ordinary post-snapshot sale, name mismatch** (≈12,937): risk keeps the flag with vintage and "verify" wording; distress drops the same 30.
-- **Nominal consideration ($0/$1)**: distress **retained**, ambiguity labelled. Count pending — needs `delinquency_owner` populated.
-- **Partial name match**: distress **retained**, ambiguity labelled. Count pending — same dependency.
+### Measured against the shipped rule, 2026-08-16
 
-The two "pending" counts are the guards, and they subtract from the two classes above. **Do not publish the 15,219 as the affected population without them.**
+The earlier ≈2,282 figure was an **upper bound** and should not be used. It counted any sheriff's deed recorded after the snapshot. The shipped rule is narrower on two counts: the **first** transfer after the snapshot month must be the sheriff's deed (that is the conveyance which moved title away from the debtor; later ones are subsequent owners), and the grantor must name-match the debtor.
+
+| class | parcels |
+|---|---|
+| delinquent with any post-snapshot transfer | 12,439 |
+| first transfer is a sheriff's deed, grantor **exactly** matches debtor | **764** |
+| …of those currently carrying deal-killer weight | **672** |
+| nominal consideration — **guard retains the distress signal** | 3,143 |
+
+764 is a lower bound: SQL can only test exact equality, while `match_parties` also accepts a two-shared-token partial. The true sheriff class sits between **764 and 2,282**.
+
+### Fourth movement class: risk scores, not just copy
+
+`info` severity carries weight **0.0**, so the sheriff-deed downgrade does not merely soften wording — it removes the flag's contribution to `risk_score`. **Up to 672 parcels lose deal-killer weighting**, which is a distinct movement from the three distress changes and belongs in the ADR's delta table as its own row.
+
+`phl:201133900` is the concrete instance: risk 70/100 and distress 45/100 should both fall visibly at step 12.
 
 ---
 
@@ -183,6 +195,12 @@ Both are pinned in `risk/tests/test_audited_parcels.py`. Ten assertions; the obs
 
 ---
 
+## Lead-surface inclusion gates (verified before step 8)
+
+Every surface reading `ts.total_due` is `FROM parcel_distress pd ... WHERE pd.score >= :min_score`. **Membership comes solely from the v2 distress score**; no surface gates on `is_delinquent` or `total_due` directly. A parcel whose debt belongs to a prior owner loses those points under v2 and never enters the list, so the mistargeting dies in scoring rather than surviving into ranking.
+
+**One residual, stated rather than glossed.** `ORDER BY pd.score DESC, coalesce(ts.total_due, 0) DESC` uses unattributed `total_due` as a **tiebreak within an already-qualified set**. It can reorder two parcels that both cleared the gate on other factors; it cannot admit one. Inclusion is clean, ordering keeps a cosmetic artifact. Fixing it would mean carrying the lateral join into the leads queries for a tiebreak — real cost, no change to who is contacted. Left as a named follow-up rather than silently accepted.
+
 ## Predicate agreement (A1.2)
 
 All five open-violation call sites now resolve through the single `open_violation_sql` definition: both tired-landlord subqueries (`distress/service.py:48,61`), both distress counters (`:82,108`), and the risk service (`risk/service.py:48`). No hand-rolled `= 'OPEN'` predicate survives anywhere.
@@ -207,4 +225,5 @@ Three specimens of one species — **a check whose failure is indistinguishable 
 
 1. **The self-confirming test.** Three decision tests pinned `deal_infeasible=True` with a 25% margin, arithmetically impossible. They looked like coverage and asserted nothing reachable.
 2. **The masked gate.** `make typecheck 2>&1 | tail -2 && git commit` takes `tail`'s exit code, so a mypy failure committed anyway. Structural fix: gates run bare, or under `set -o pipefail`. The real backstop is CI at PR time — which is why **branch protection remains the open CI-enforcement gap**.
-3. **The guard that dies when it fires** (above), if retired by deletion rather than inversion.
+3. **The guard that dies when it fires** — RESOLVED: inverted at step 6, not deleted.
+4. **The known trap that re-arms.** `CAST(:param AS date)` under asyncpg binds before the cast and fails at runtime. Hit twice in one day, an hour apart, in different files — a personal pattern rather than carelessness, and personal patterns outlive good intentions exactly as behavioural gate-fixes do. Countered structurally: `core/tests/test_sql_bind_traps.py` greps the SQL-bearing corpus and fails with file and line. Verified by reintroducing the trap. Different species from the success-reporting-failure family; same ledger.

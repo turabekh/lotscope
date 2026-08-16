@@ -86,7 +86,8 @@ Slice 0 kept only what nothing reads, and asserts it: a test greps every scoring
 |---|---|---|
 | lose `li_violations` +5 | **68,750 parcels** | prod `li_event`, violations present but none open |
 | gain `absentee` +10 | **≤29,001 of 37,706 vacant phl** | prod `parcel`; population gaining data, not confirmed flips |
-| delinquency leaves distress | name-mismatch subset of **15,219** | prod `tax_status` ⋈ `sale`; **2,282** by sheriff's deed |
+| delinquency leaves distress | name-mismatch subset of **12,439** post-snapshot transfers | prod `tax_status` ⋈ `sale` |
+| **risk score drops** (sheriff-deed downgrade to `info`, weight 0.0) | **672 parcels** lose deal-killer weight | exact-match lower bound; class is 764–2,282 |
 | comp pool | **133,395** eligible recovered deeds | live `rtt_summary` |
 
 **Comp-pool composition improves.** Non-market instruments are **2.5%** of the recovered pool against roughly **44%** of a typical pre-v10 comp set; the v10 deed-type filter (ADR-0081) applies by construction, as do related-party (ADR-0032), package-deed (ADR-0049) and future-sale exclusions. The Fairhill deed that motivated D5 is itself a sheriff's deed — recovered for the census, correctly invisible to valuation.
