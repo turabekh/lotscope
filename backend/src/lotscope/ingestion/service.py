@@ -106,9 +106,7 @@ async def source_freshness(
     return surfaces
 
 
-def _oldest_vintage(
-    datasets: list[str], by_dataset: dict[str, DatasetFreshness]
-) -> date | None:
+def _oldest_vintage(datasets: list[str], by_dataset: dict[str, DatasetFreshness]) -> date | None:
     vintages = [
         row.data_vintage
         for dataset in datasets
