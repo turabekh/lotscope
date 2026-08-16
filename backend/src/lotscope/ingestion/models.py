@@ -166,6 +166,7 @@ class StagingLiEvent(Base):
     ingest_run_id: Mapped[int] = mapped_column(Integer, nullable=False)
     parcel_number: Mapped[str] = mapped_column(String(40), nullable=False)
     status: Mapped[str | None] = mapped_column(String(60))
+    case_status: Mapped[str | None] = mapped_column(String(60))
     event_date: Mapped[date | None] = mapped_column(Date)
     description: Mapped[str | None] = mapped_column(Text)
     is_unsafe: Mapped[bool | None] = mapped_column(Boolean)

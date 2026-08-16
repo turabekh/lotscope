@@ -141,3 +141,46 @@ def test_violation_event_carries_the_case_status_alongside_the_violation_status(
     assert event is not None
     assert event["status"] == "COMPLIED"
     assert event["case_status"] == "CLOSED"
+
+
+async def test_case_status_survives_staging_and_the_merge(db_session: AsyncSession) -> None:
+    from lotscope.ingestion.merge import merge_li
+    from lotscope.ingestion.models import IngestRun, StagingLiEvent
+    from lotscope.ingestion.upsert import upsert
+
+    await db_session.execute(
+        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('phl:cs1', 'phl')")
+    )
+    run = IngestRun(dataset="violations")
+    db_session.add(run)
+    await db_session.flush()
+
+    row = to_violation_event_row(
+        ViolationRecord(
+            violationnumber="VI-CS-1",
+            opa_account_num="cs1",
+            violationcodetitle="VACANT STRUCTURE & LAND",
+            violationstatus="COMPLIED",
+            casestatus="IN VIOLATION",
+            violationdate="2025-06-16",
+        )
+    )
+    assert row is not None
+    staged = {k: v for k, v in row.items() if k != "source"}
+    staged["ingest_run_id"] = run.id
+    staged["parcel_number"] = "phl:cs1"
+    await upsert(db_session, StagingLiEvent, [staged], index_elements=["event_type", "external_id"])
+    await merge_li(db_session, run.id, "violation")
+    await db_session.flush()
+
+    stored = (
+        await db_session.execute(
+            text(
+                "SELECT status, case_status FROM li_event "
+                "WHERE event_type='violation' AND external_id='VI-CS-1'"
+            )
+        )
+    ).one()
+
+    assert stored.status == "COMPLIED"
+    assert stored.case_status == "IN VIOLATION"
