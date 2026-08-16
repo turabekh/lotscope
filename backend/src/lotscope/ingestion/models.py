@@ -29,6 +29,7 @@ class DatasetFreshness(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(30), nullable=False, server_default="unknown")
     last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    data_vintage: Mapped[date | None] = mapped_column(Date)
     row_count: Mapped[int | None] = mapped_column(Integer)
     detail: Mapped[str | None] = mapped_column(Text)
 

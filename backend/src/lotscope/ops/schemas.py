@@ -56,6 +56,8 @@ class DatasetHealth(BaseModel):
     ingest_status: str
     last_success_at: datetime | None
     last_attempt_at: datetime | None
+    data_vintage: date | None = None
+    vintage_reason: str | None = None
     row_count: int | None
 
 

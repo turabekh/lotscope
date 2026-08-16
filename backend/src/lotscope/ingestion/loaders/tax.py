@@ -12,6 +12,7 @@ from lotscope.ingestion.raw import write_raw
 from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
+from lotscope.ingestion.vintage import vintage_from_year_month
 from lotscope.parcels.models import Parcel
 
 TAX_DATASET = "real_estate_tax_delinquencies"
@@ -99,6 +100,8 @@ async def load_tax(
                 "parcel_number": row["parcel_number"],
                 "ingest_run_id": run.id,
                 "is_delinquent": row["is_delinquent"],
+                "delinquency_owner": row["delinquency_owner"],
+                "snapshot_period": row["snapshot_period"],
                 "total_due": row["total_due"],
                 "principal_due": row["principal_due"],
                 "years_owed": row["years_owed"],
@@ -109,6 +112,16 @@ async def load_tax(
         await write_raw(session, raw_rows)
         total += len(mapped)
 
+    vintage = vintage_from_year_month(
+        (
+            await session.execute(
+                text("SELECT snapshot_period FROM staging.tax WHERE ingest_run_id = :run_id"),
+                {"run_id": run.id},
+            )
+        )
+        .scalars()
+        .all()
+    )
     result = await merge_tax(session, run.id)
     run.status = "success"
     run.finished_at = datetime.now(UTC)
@@ -116,5 +129,12 @@ async def load_tax(
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count
     await session.flush()
-    await record_freshness(session, TAX_DATASET, status="success", success=True, row_count=total)
+    await record_freshness(
+        session,
+        TAX_DATASET,
+        status="success",
+        success=True,
+        row_count=total,
+        data_vintage=vintage,
+    )
     return total

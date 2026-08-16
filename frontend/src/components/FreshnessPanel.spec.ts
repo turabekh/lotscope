@@ -14,6 +14,7 @@ function source(overrides: Partial<SourceFreshness> = {}): SourceFreshness {
     datasets: ['opa_properties_public'],
     freshness: 'red',
     freshness_reason: 'Stale — last success 49 days ago (expected daily).',
+    data_vintage: '2022-06-01',
     ...overrides,
   }
 }
@@ -88,5 +89,24 @@ describe('FreshnessPanel when the source cannot be read', () => {
     const note = wrapper.find('[data-test="freshness-unavailable"]')
     expect(note.exists()).toBe(true)
     expect(note.text()).toContain('not a statement that the data is current')
+  })
+})
+
+describe('FreshnessPanel vintage', () => {
+  beforeEach(() => vi.restoreAllMocks())
+
+  it('shows the data vintage next to the fetch age', async () => {
+    const wrapper = await mountPanel([source()])
+
+    const vintage = wrapper.find('[data-test="freshness-vintage-opa_properties_public"]')
+    expect(vintage.text()).toBe('data as of Jun 2022')
+    expect(wrapper.text()).toContain('days ago')
+  })
+
+  it('says the vintage is unknown rather than implying it is current', async () => {
+    const wrapper = await mountPanel([source({ data_vintage: null })])
+
+    const vintage = wrapper.find('[data-test="freshness-vintage-opa_properties_public"]')
+    expect(vintage.text()).toBe('vintage unknown')
   })
 })

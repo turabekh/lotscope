@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from lotscope.ops.cadence import (
     Cadence,
@@ -107,3 +107,64 @@ def test_no_source_marked_green_by_accident() -> None:
     for cadence in (Cadence("daily"), Cadence("weekly"), Cadence("monthly"), Cadence("quarterly")):
         verdict = evaluate_freshness(_row(success_days_ago=None), cadence, _NOW)
         assert verdict.status != "green"
+
+
+def test_a_freshly_fetched_source_is_still_stale_when_its_data_is_four_years_old() -> None:
+    verdict = evaluate_freshness(
+        FreshnessInput(
+            status="success",
+            last_success_at=_NOW,
+            last_attempt_at=_NOW,
+            data_vintage=date(2022, 6, 1),
+        ),
+        Cadence("daily"),
+        _NOW,
+    )
+
+    assert verdict.status == "red"
+    assert "data as of 2022-06-01" in verdict.reason
+
+
+def test_the_worse_of_fetch_and_vintage_wins_when_the_fetch_is_the_problem() -> None:
+    verdict = evaluate_freshness(
+        FreshnessInput(
+            status="success",
+            last_success_at=_NOW - timedelta(days=40),
+            last_attempt_at=_NOW,
+            data_vintage=_NOW.date(),
+        ),
+        Cadence("daily"),
+        _NOW,
+    )
+
+    assert verdict.status == "red"
+    assert "last success" in verdict.reason
+    assert verdict.vintage_reason is not None
+
+
+def test_a_current_source_with_current_data_stays_green() -> None:
+    verdict = evaluate_freshness(
+        FreshnessInput(
+            status="success",
+            last_success_at=_NOW,
+            last_attempt_at=_NOW,
+            data_vintage=_NOW.date(),
+        ),
+        Cadence("daily"),
+        _NOW,
+    )
+
+    assert verdict.status == "green"
+
+
+def test_an_unknown_vintage_leaves_the_fetch_verdict_alone() -> None:
+    verdict = evaluate_freshness(
+        FreshnessInput(
+            status="success", last_success_at=_NOW, last_attempt_at=_NOW, data_vintage=None
+        ),
+        Cadence("daily"),
+        _NOW,
+    )
+
+    assert verdict.status == "green"
+    assert verdict.vintage_reason is None
