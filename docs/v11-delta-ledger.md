@@ -195,7 +195,9 @@ The tired-landlord query had been correct all along, which is what made the bug 
 
 `ops/tests/test_slice0_neutrality.py` fails if any scoring module references `delinquency_owner`, `snapshot_period` or `case_status`. Slice 3's wiring and 3b's absentee pickup will reference all three **legitimately**, at the gate.
 
-**It must be inverted at Slice 5, not deleted when it starts failing** — flipped to assert the references exist and that Philadelphia scores under `philly-distress-v2`. A guard that dies quietly at the moment it fires is worse than no guard, because its green history reads as evidence.
+**RESOLVED 2026-08-16 — inverted, not deleted.** It fired during step 6, exactly when the wiring made the references legitimate. It is now `ops/tests/test_batch_wiring.py` and asserts the opposite: that risk and distress *do* read `delinquency_owner` and `snapshot_period`, that the open-violation rule reads `case_status`, that `TaxSignal` carries an attribution, that `DistressSignals` distinguishes open from on-record violations, and that Philadelphia scores under `philly-distress-v2`. It also keeps the original claim where it still holds — valuation and verdict composition are asserted to have stayed out of this batch.
+
+The original wording, for the record: it must be inverted at Slice 5, not deleted when it starts failing — flipped to assert the references exist and that Philadelphia scores under `philly-distress-v2`. A guard that dies quietly at the moment it fires is worse than no guard, because its green history reads as evidence.
 
 ---
 

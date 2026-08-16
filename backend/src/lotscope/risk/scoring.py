@@ -2,6 +2,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Literal
 
+from lotscope.risk.attribution import DelinquencyAttribution
+
 Severity = Literal["high", "medium", "low", "info"]
 Confidence = Literal["high", "medium", "low"]
 
@@ -30,6 +32,7 @@ class TaxSignal:
     total_due: float | None
     years_owed: int | None
     in_sheriff_sale: bool | None
+    attribution: DelinquencyAttribution | None = None
 
 
 @dataclass(frozen=True)
@@ -123,9 +126,17 @@ def _tax_flags(tax: TaxSignal) -> list[RiskFlag]:
             or (tax.years_owed or 0) >= _TAX_HIGH_YEARS
             else "medium"
         )
-        flags.append(
-            RiskFlag("tax_delinquency", severity, "Tax delinquency", detail + ".", "tax_status")
-        )
+        title = "Tax delinquency"
+        if tax.attribution is not None:
+            detail += f". {tax.attribution.note}"
+            if tax.attribution.posture == "likely_discharged":
+                severity = "info"
+                title = "Tax delinquency recorded against a prior owner"
+            elif tax.attribution.posture == "verify":
+                severity = "medium"
+        else:
+            detail += "."
+        flags.append(RiskFlag("tax_delinquency", severity, title, detail, "tax_status"))
     return flags
 
 

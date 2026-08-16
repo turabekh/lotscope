@@ -40,15 +40,11 @@ def test_the_audited_parcels_closed_violation_is_not_open() -> None:
 
 def test_the_audited_parcel_loses_thirty_five_points_of_borrowed_distress() -> None:
     before = score_distress(
-        DistressSignals(
-            is_delinquent=True, total_due=8975.26, years_owed=44, open_violations=1
-        ),
+        DistressSignals(is_delinquent=True, total_due=8975.26, years_owed=44, open_violations=1),
         PHILLY_DISTRESS_V2,
     )
     after = score_distress(
-        DistressSignals(
-            is_delinquent=False, total_due=None, years_owed=None, open_violations=0
-        ),
+        DistressSignals(is_delinquent=False, total_due=None, years_owed=None, open_violations=0),
         PHILLY_DISTRESS_V2,
     )
 

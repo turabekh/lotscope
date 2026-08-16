@@ -274,3 +274,95 @@ async def test_next_sheriff_sale_none_when_no_sale(db_session: AsyncSession) -> 
     await db_session.execute(text("INSERT INTO parcel (parcel_number) VALUES ('000000042')"))
     await db_session.flush()
     assert await get_next_sheriff_sale(db_session, "000000042", today=date(2026, 7, 4)) is None
+
+
+async def _delinquent_parcel(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    owner: str,
+    debtor: str,
+    deed: tuple[str, str, date, float] | None = None,
+) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, owner, geom_local) VALUES "
+            "(:pn, 'phl', :owner, ST_GeomFromText('POLYGON((0 0,0 5,5 5,5 0,0 0))', 2272))"
+        ),
+        {"pn": parcel_number, "owner": owner},
+    )
+    await session.execute(
+        text(
+            "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
+            "delinquency_owner, snapshot_period) "
+            "VALUES (:pn, TRUE, 8975.26, 44, :debtor, '202206')"
+        ),
+        {"pn": parcel_number, "debtor": debtor},
+    )
+    if deed is not None:
+        doc, dtype, sale_date, price = deed
+        await session.execute(
+            text(
+                "INSERT INTO sale (parcel_number, document_id, document_type, sale_date, "
+                "sale_price, grantor) VALUES (:pn, :doc, :dt, :sd, :sp, :gr)"
+            ),
+            {
+                "pn": parcel_number,
+                "doc": doc,
+                "dt": dtype,
+                "sd": sale_date,
+                "sp": price,
+                "gr": debtor,
+            },
+        )
+    await session.flush()
+
+
+async def test_a_sheriff_sale_downgrades_the_prior_owners_debt(db_session: AsyncSession) -> None:
+    await _delinquent_parcel(
+        db_session,
+        "000000501",
+        owner="SHLAYEN RACHEL",
+        debtor="MATUSOW JOSEPH",
+        deed=("54321", "SHERIFF'S DEED", date(2025, 5, 8), 33900.0),
+    )
+
+    result = await assess_parcel_risk(db_session, "000000501")
+
+    assert result is not None
+    flag = next(f for f in result.flags if f.code == "tax_delinquency")
+    assert flag.severity == "info"
+    assert "MATUSOW JOSEPH" in flag.detail
+    assert "2025-05-08" in flag.detail
+
+
+async def test_a_debt_owed_by_the_current_owner_stays_a_deal_killer(
+    db_session: AsyncSession,
+) -> None:
+    await _delinquent_parcel(
+        db_session, "000000502", owner="KENNEDY PATRICIA", debtor="KENNEDY PATRICIA"
+    )
+
+    result = await assess_parcel_risk(db_session, "000000502")
+
+    assert result is not None
+    flag = next(f for f in result.flags if f.code == "tax_delinquency")
+    assert flag.severity == "high"
+    assert "against the current owner" in flag.detail
+
+
+async def test_an_ordinary_sale_keeps_the_flag_at_verify(db_session: AsyncSession) -> None:
+    await _delinquent_parcel(
+        db_session,
+        "000000503",
+        owner="NEW BUYER LLC",
+        debtor="OLD OWNER",
+        deed=("99", "DEED", date(2024, 3, 1), 120000.0),
+    )
+
+    result = await assess_parcel_risk(db_session, "000000503")
+
+    assert result is not None
+    flag = next(f for f in result.flags if f.code == "tax_delinquency")
+    assert flag.severity == "medium"
+    assert "liens run with the land" in flag.detail
