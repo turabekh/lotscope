@@ -74,9 +74,7 @@ def test_a_variance_path_is_entitlement_risk() -> None:
 
 
 def test_an_infeasible_build_with_no_margin_is_unattractive() -> None:
-    assert (
-        _decide(deal_infeasible=True, est_margin=None).recommendation == "economics_unattractive"
-    )
+    assert _decide(deal_infeasible=True, est_margin=None).recommendation == "economics_unattractive"
 
 
 def test_an_infeasible_build_below_the_viable_bar_is_unattractive() -> None:
