@@ -21,6 +21,10 @@ OPA_COLUMNS = (
     "zip_code",
     "owner_1",
     "mailing_address_1",
+    "mailing_address_2",
+    "mailing_street",
+    "mailing_city_state",
+    "mailing_zip",
     "category_code_description",
     "zoning",
     "market_value",
@@ -40,6 +44,10 @@ class OpaRecord(BaseModel):
     zip_code: str | None = None
     owner_1: str | None = None
     mailing_address_1: str | None = None
+    mailing_address_2: str | None = None
+    mailing_street: str | None = None
+    mailing_city_state: str | None = None
+    mailing_zip: str | None = None
     category_code_description: str | None = None
     zoning: str | None = None
     market_value: float | None = None
@@ -52,6 +60,18 @@ class OpaRecord(BaseModel):
     depth: float | None = None
 
 
+def mailing_address(record: OpaRecord) -> str | None:
+    street = (record.mailing_street or record.mailing_address_1 or "").strip()
+    if not street:
+        return None
+    tail = " ".join(
+        part
+        for part in ((record.mailing_city_state or "").strip(), (record.mailing_zip or "").strip())
+        if part
+    )
+    return f"{street} {tail}".strip() if tail else street
+
+
 def to_parcel_row(record: OpaRecord) -> dict[str, Any] | None:
     parcel_number = to_parcel_key(record.parcel_number)
     if parcel_number is None:
@@ -61,7 +81,7 @@ def to_parcel_row(record: OpaRecord) -> dict[str, Any] | None:
         "address": record.location,
         "zip_code": record.zip_code,
         "owner": record.owner_1,
-        "mailing_address": record.mailing_address_1,
+        "mailing_address": mailing_address(record),
         "land_use": record.category_code_description,
         "base_zoning_code": record.zoning,
         "market_value": record.market_value,

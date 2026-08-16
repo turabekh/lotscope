@@ -23,6 +23,7 @@ RTT_COLUMNS = (
     "document_type",
     "recording_date",
     "opa_account_num",
+    "street_address",
     "grantors",
     "grantees",
     "total_consideration",
@@ -31,6 +32,7 @@ RTT_COLUMNS = (
 
 class RttRecord(BaseModel):
     opa_account_num: str | int | None = None
+    street_address: str | None = None
     document_id: str | int | None = None
     document_type: str | None = None
     recording_date: str | None = None
