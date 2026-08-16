@@ -94,9 +94,7 @@ async def test_a_partial_run_resumes_without_duplicating(db_session: AsyncSessio
 async def test_two_parcels_on_one_address_leave_the_deed_unattributed(
     db_session: AsyncSession,
 ) -> None:
-    await _parcels(
-        db_session, [("phl:900001", "50 SHARED ST"), ("phl:900002", "50 Shared Street")]
-    )
+    await _parcels(db_session, [("phl:900001", "50 SHARED ST"), ("phl:900002", "50 Shared Street")])
 
     report = await recover_deeds(db_session, [_deed("D1", "50 SHARED ST")])
 

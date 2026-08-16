@@ -44,9 +44,7 @@ _ADDRESS_INDEX_SQL = text(
     "SELECT parcel_number, address FROM parcel WHERE market_code = :market AND address IS NOT NULL"
 )
 
-_EXISTING_DOCS_SQL = text(
-    "SELECT document_id FROM sale WHERE document_id = ANY(:document_ids)"
-)
+_EXISTING_DOCS_SQL = text("SELECT document_id FROM sale WHERE document_id = ANY(:document_ids)")
 
 _INSERT_SQL = text(
     "INSERT INTO sale (parcel_number, document_id, document_type, sale_date, sale_price, "
@@ -147,9 +145,7 @@ async def apply_mailing_updates(
     usable = [row for row in updates if row.get("mailing_address")]
     report.staged = len(usable)
     if dry_run or not usable:
-        _logger.info(
-            "mailing_backfill_dry_run", scanned=report.scanned, staged=report.staged
-        )
+        _logger.info("mailing_backfill_dry_run", scanned=report.scanned, staged=report.staged)
         return report
 
     before = await measure_mailing_coverage(session, market)

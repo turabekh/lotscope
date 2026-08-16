@@ -99,7 +99,7 @@ Slice 0 kept only what nothing reads, and asserts it: a test greps every scoring
 |---|---|
 | in-window COMPLIED / IN VIOLATION count | Slice 0 deployed + delinquency re-ingest |
 | re-measured mailing coverage | mailing backfill |
-| control-fixture identity | `delinquency_owner` populated |
+| ~~control-fixture identity~~ | **CLOSED — `phl:491313100`** (KENNEDY PATRICIA, exact match, no transfer, owner-occupant mailing) |
 | final recovered-comp and collision counts | RTT recovery backfill |
 
 ## Consequences

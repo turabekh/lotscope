@@ -105,6 +105,30 @@ Queries: recovered/attributed split on `rtt_summary` filtered to `document_type 
 
 ---
 
+## Pinned fixtures
+
+| role | parcel | why |
+|---|---|---|
+| regression | `phl:201133900` | 1943 N MARSHALL ST — changes on every axis |
+| **control** | **`phl:491313100`** | 4941 N HUTCHINSON ST — changes on none |
+
+**Control selected 2026-08-16**, after the delinquency re-ingest made `delinquency_owner` available. KENNEDY PATRICIA, $9,189.94 over 8 years, vacant RSA-5.
+
+It qualifies on every axis the batch touches, and is unchanged on all of them:
+
+- **Delinquency owner exact-matches the current OPA owner** (`match_parties` → `exact`), so the debt stays hers: flag unchanged, distress keeps +15/+15.
+- **Two violations, both `OPEN`**, so D4's predicate keeps its +5.
+- **Zero sales on record**, so there is no post-snapshot transfer to reason about.
+- **`mailing_street` equals the property address** — an owner-occupant — so the mailing backfill gives it no absentee signal.
+
+That last property was the reason for choosing it over the other candidates. A control that gains absentee +10 from a legitimate fix would still be *correct*, but it would stop being a control: "unchanged" has to mean unchanged, not unchanged-except-for-the-part-we-also-changed.
+
+The regression parcel is its mirror: prior-owner debt via sheriff's deed, a COMPLIED/CLOSED violation, and `mailing_street` 8319 CHILDS RD against a property at 1943 N MARSHALL ST — absentee, correctly.
+
+Both are pinned in `risk/tests/test_audited_parcels.py`. Ten assertions; the observed production facts are encoded as inputs so CI can verify the logic without reaching prod.
+
+---
+
 ## Predicate agreement (A1.2)
 
 All five open-violation call sites now resolve through the single `open_violation_sql` definition: both tired-landlord subqueries (`distress/service.py:48,61`), both distress counters (`:82,108`), and the risk service (`risk/service.py:48`). No hand-rolled `= 'OPEN'` predicate survives anywhere.
