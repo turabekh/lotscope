@@ -32,6 +32,7 @@ from lotscope.risk.scoring import (
     TitleSignal,
     assess_risk,
 )
+from lotscope.risk.violation_status import open_violation_sql
 
 _PARCEL_SQL = text(
     "SELECT is_city_owned, owner, (geom_local IS NOT NULL) AS has_geometry "
@@ -43,8 +44,9 @@ _TAX_SQL = text(
 )
 _LI_SQL = text(
     "SELECT count(*) FILTER (WHERE event_type = 'violation') AS violations, "
-    "count(*) FILTER (WHERE event_type = 'violation' AND upper(coalesce(status, '')) = 'OPEN') "
-    "AS open_violations, "
+    "count(*) FILTER (WHERE event_type = 'violation' AND "
+    + open_violation_sql("li_event")
+    + ") AS open_violations, "
     "coalesce(bool_or(coalesce(is_unsafe, false)), false) AS has_unsafe, "
     "coalesce(bool_or(coalesce(is_imminently_dangerous, false)), false) "
     "AS has_imminently_dangerous, "

@@ -22,6 +22,7 @@ from lotscope.distress.scoring import (
     is_absentee,
     score_distress,
 )
+from lotscope.risk.violation_status import open_violation_sql
 from lotscope.verdict.service import DealSignal, get_deal_signals
 
 _SOURCES: list[dict[str, Any]] = [
@@ -44,7 +45,7 @@ _TENURE_JOIN = (
 _TIRED_OWNERS_SUBQUERY = (
     "SELECT tp.owner_key FROM parcel tp "
     "LEFT JOIN (SELECT parcel_number, count(*) AS open_violations FROM li_event "
-    "WHERE event_type = 'violation' AND upper(coalesce(status, '')) = 'OPEN' "
+    "WHERE event_type = 'violation' AND " + open_violation_sql("li_event") + " "
     "GROUP BY parcel_number) tv ON tv.parcel_number = tp.parcel_number "
     "WHERE tp.owner_key IS NOT NULL "
     "GROUP BY tp.owner_key "
@@ -57,7 +58,7 @@ _ONE_OWNER_TIRED_SQL = text(
     "SELECT (count(*) >= 3 AND coalesce(sum(v.open_violations), 0) >= 5) AS tired "
     "FROM parcel p "
     "LEFT JOIN (SELECT parcel_number, count(*) AS open_violations FROM li_event "
-    "WHERE event_type = 'violation' AND upper(coalesce(status, '')) = 'OPEN' "
+    "WHERE event_type = 'violation' AND " + open_violation_sql("li_event") + " "
     "GROUP BY parcel_number) v ON v.parcel_number = p.parcel_number "
     "WHERE p.owner_key = :owner_key"
 )
@@ -67,7 +68,8 @@ _PARCEL_DISTRESS_SQL = text(
     "p.owner_key, "
     "ts.is_delinquent, ts.total_due, ts.years_owed, ts.lien_count, ts.in_sheriff_sale, "
     "coalesce(li.dangerous, false) AS dangerous, "
-    "coalesce(li.violations, 0) AS violations, "
+    "coalesce(li.open_violations, 0) AS open_violations, "
+    "coalesce(li.violations_on_record, 0) AS violations_on_record, "
     "coalesce(li.demolitions, 0) AS demolitions, "
     "(CURRENT_DATE - sl.last_sale_date)::float / 365.25 AS years_since_last_sale "
     "FROM parcel p "
@@ -76,7 +78,10 @@ _PARCEL_DISTRESS_SQL = text(
     "  SELECT parcel_number, "
     "  bool_or(coalesce(is_unsafe, false) OR coalesce(is_imminently_dangerous, false)) "
     "  AS dangerous, "
-    "  count(*) FILTER (WHERE event_type = 'violation') AS violations, "
+    "  count(*) FILTER (WHERE event_type = 'violation' AND "
+    + open_violation_sql("li_event")
+    + ") AS open_violations, "
+    "  count(*) FILTER (WHERE event_type = 'violation') AS violations_on_record, "
     "  count(*) FILTER (WHERE event_type = 'demolition') AS demolitions "
     "  FROM li_event WHERE parcel_number = :parcel_number GROUP BY parcel_number"
     ") li ON li.parcel_number = p.parcel_number "
@@ -89,7 +94,8 @@ _BULK_SIGNALS_SQL = text(
     "p.mailing_address, p.owner_key, "
     "ts.is_delinquent, ts.total_due, ts.years_owed, ts.lien_count, ts.in_sheriff_sale, "
     "coalesce(li.dangerous, false) AS dangerous, "
-    "coalesce(li.violations, 0) AS violations, "
+    "coalesce(li.open_violations, 0) AS open_violations, "
+    "coalesce(li.violations_on_record, 0) AS violations_on_record, "
     "coalesce(li.demolitions, 0) AS demolitions, "
     "(CURRENT_DATE - sl.last_sale_date)::float / 365.25 AS years_since_last_sale "
     "FROM parcel p "
@@ -98,7 +104,10 @@ _BULK_SIGNALS_SQL = text(
     "  SELECT parcel_number, "
     "  bool_or(coalesce(is_unsafe, false) OR coalesce(is_imminently_dangerous, false)) "
     "  AS dangerous, "
-    "  count(*) FILTER (WHERE event_type = 'violation') AS violations, "
+    "  count(*) FILTER (WHERE event_type = 'violation' AND "
+    + open_violation_sql("li_event")
+    + ") AS open_violations, "
+    "  count(*) FILTER (WHERE event_type = 'violation') AS violations_on_record, "
     "  count(*) FILTER (WHERE event_type = 'demolition') AS demolitions "
     "  FROM li_event WHERE parcel_number = ANY(:parcel_numbers) GROUP BY parcel_number"
     ") li ON li.parcel_number = p.parcel_number "
@@ -205,7 +214,8 @@ def _signals(row: Row[Any], tired_owner_keys: frozenset[str]) -> DistressSignals
         years_owed=row.years_owed,
         lien_count=row.lien_count,
         has_imminently_dangerous=bool(row.dangerous),
-        violations=row.violations,
+        open_violations=row.open_violations,
+        violations_on_record=row.violations_on_record,
         demolitions=row.demolitions,
         is_vacant=bool(row.is_vacant),
         is_absentee_owner=is_absentee(row.address, row.mailing_address),
