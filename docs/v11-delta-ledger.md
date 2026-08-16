@@ -20,7 +20,23 @@ Appended as each slice proves its own delta, so Slice 5's ADR consolidates measu
 
 Consequence, stated plainly: an owner with a live case whose individual line items have complied reads as having no open violation. The alternative — counting them open — would double-count complied line items inside open cases. Neither is wrong; this one was chosen because "COMPLIED means complied" is the reading a user would defend, and because the case-level signal is recoverable later from `case_status` now that it is ingested.
 
-The in-window count against our own filtered corpus is **not yet measurable** — `case_status` is populated only from Slice 0 onward. Measure after the Slice 0 backfill and append here before Slice 5.
+### Measured in-window, 2026-08-16, after `case_status` populated (99.8% coverage)
+
+| | rows |
+|---|---|
+| open under the old predicate (`violationstatus = 'OPEN'`) | 70,591 |
+| open under the shipped predicate (also requires case not closed) | **70,577** |
+| **`COMPLIED` on a live case** (the judgement call) | **13,836** |
+
+Two things this settles.
+
+**The case-status guard barely bites on the OPEN class** — 14 rows in the whole corpus are `OPEN` on the violation and `CLOSED` on the case. Reading both fields remains right, because the guard costs nothing and the fields demonstrably disagree elsewhere, but it is not where the delta comes from. The delta is the status filter itself.
+
+**The judgement call is worth 13,836 rows**, close to the 14,017 seen upstream. Those parcels have a live enforcement case whose line items complied, and under v11 they contribute no `li_violations` weight. That is the cost of reading "COMPLIED means complied", in numbers rather than in principle, and it is why the case-level signal is filed in `docs/feature-ledger.md` rather than discarded.
+
+Distribution across 343,081 of 343,862 rows: CLOSED 232,558 · IN VIOLATION 72,685 · IN VIOLATION - COURT 13,087 · COMPLIED, BALANCE DUE 12,428 · SVN ISSUED, BALANCE DUE 11,634 · UNDER INVESTIGATION 423 · CANCELLED 266.
+
+**Getting this number took three re-ingests and two fixes.** `case_status` had to survive four layers — loader, `_staging_row`, staging model, merge — and only the loader had it. Each ingest reported success. The column was read at the destination each time, which is the only reason the gap was visible at all.
 
 ---
 
@@ -110,6 +126,10 @@ The remaining ~820k are mortgages, satisfactions, notary commissions and financi
 | 19121 | 2,734 | 4.9% | 13.6% | 0.4x | Strawberry Mansion |
 
 Every high-lift ZIP is Center City and condo-dense, which fits the mechanism: a unit deed carries no single OPA account, so the recorder's row has no parcel key.
+
+**PREDICTION RESOLVED — validated.** Predicted: the collision policy would absorb much of this Center City concentration, because condo units share a street address. Measured at backfill: **59,714 of 136,758 deeds (43.7%) went unattributed on collision**, and the resolved set fell from a possible 133,395 to 32,188. Directionally and proportionally right.
+
+That is the second prediction this batch has resolved. The first went the other way: the concern that recovery would tilt comps toward distressed prices was **inverted** by measurement — non-market instruments are 2.5% of the recovered pool against roughly 44% of a typical pre-v10 set. Recording both directions is the point. A ledger that kept only the predictions that came true would be worth nothing.
 
 **Two consequences the ADR should state.** First, recovery is concentrated in the highest-value, least-vacant parts of the city - the opposite of where the vacant-land product does its work, so the comp-pool effect on our core inventory is smaller than the raw count suggests. Second, condo density means many recovered deeds share one street address, so the collision policy should absorb a large share of exactly this concentration and leave them unattributed. **That is a prediction; verify it against the backfill's collision count rather than assuming it.**
 

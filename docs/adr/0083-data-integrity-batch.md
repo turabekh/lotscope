@@ -4,7 +4,7 @@
 
 Recon: `docs/recon/data-integrity-batch-2026-08-16.md`. Measured delta with per-figure provenance: `docs/v11-delta-ledger.md`.
 
-**Open at acceptance.** Four figures are pending and each names the step that produces it — see *Pending figures*. The ADR is not accepted until they are filled.
+**All four pending figures are closed** as of 2026-08-16 — see *Pending figures*. Ready for acceptance review.
 
 ---
 
@@ -93,11 +93,11 @@ Slice 0 kept only what nothing reads, and asserts it: a test greps every scoring
 
 **Recovery is uniform in time and concentrated in space.** Year-over-year lift is 0.8x-1.2x across 2005-2026. By ZIP it concentrates sharply in Center City: 19106 **10.4x**, 19103 **8.1x**, 19107 **6.6x**, all condo-dense, consistent with unit deeds carrying no single OPA account. Two consequences: the effect lands in the least-vacant parts of the city, away from where the vacant-land product works; and condo density means many recovered deeds share a street address, so the collision policy should absorb much of that concentration. **The second is a prediction to verify against the backfill's collision count, not an assumption.**
 
-## Pending figures
+## Pending figures — all four closed
 
 | figure | produced by |
 |---|---|
-| in-window COMPLIED / IN VIOLATION count | Slice 0 deployed + delinquency re-ingest |
+| ~~in-window COMPLIED / IN VIOLATION count~~ | **CLOSED — 13,836 rows; open predicate 70,591 → 70,577** |
 | ~~re-measured mailing coverage~~ | **CLOSED — 9.8% → 98.6%, +522,832 addresses** |
 | ~~control-fixture identity~~ | **CLOSED — `phl:491313100`** (KENNEDY PATRICIA, exact match, no transfer, owner-occupant mailing) |
 | ~~final recovered-comp and collision counts~~ | **CLOSED — 32,188 resolved, 27,037 inserted, 59,714 collisions unattributed** |
