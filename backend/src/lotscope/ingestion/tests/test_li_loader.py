@@ -144,6 +144,7 @@ def test_violation_event_carries_the_case_status_alongside_the_violation_status(
 
 
 async def test_case_status_survives_staging_and_the_merge(db_session: AsyncSession) -> None:
+    from lotscope.ingestion.loaders.li import _staging_row
     from lotscope.ingestion.merge import merge_li
     from lotscope.ingestion.models import IngestRun, StagingLiEvent
     from lotscope.ingestion.upsert import upsert
@@ -166,9 +167,8 @@ async def test_case_status_survives_staging_and_the_merge(db_session: AsyncSessi
         )
     )
     assert row is not None
-    staged = {k: v for k, v in row.items() if k != "source"}
-    staged["ingest_run_id"] = run.id
-    staged["parcel_number"] = "phl:cs1"
+    row["parcel_number"] = "phl:cs1"
+    staged = _staging_row(row, run.id, "violations")
     await upsert(db_session, StagingLiEvent, [staged], index_elements=["event_type", "external_id"])
     await merge_li(db_session, run.id, "violation")
     await db_session.flush()
