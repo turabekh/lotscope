@@ -64,6 +64,26 @@ def wide_area_use_classes(use_class: str | None) -> list[str] | None:
     return [use_class]
 
 
+def select_size_similar_comps(
+    comps: list[Comp],
+    subject_area_sqft: float | None,
+    *,
+    ratio_min: float,
+    ratio_max: float,
+    min_similar_comps: int,
+) -> tuple[list[Comp], bool]:
+    if subject_area_sqft is None or subject_area_sqft <= 0:
+        return comps, False
+    similar = [
+        comp
+        for comp in comps
+        if comp.lot_area_sqft and ratio_min <= comp.lot_area_sqft / subject_area_sqft <= ratio_max
+    ]
+    if len(similar) < min_similar_comps:
+        return comps, False
+    return similar, len(similar) < len(comps)
+
+
 def price_per_sqft(sale_price: float, lot_area_sqft: float | None) -> float | None:
     if lot_area_sqft is None or lot_area_sqft <= 0:
         return None
@@ -114,6 +134,7 @@ def estimate_land_value(
     *,
     related_party_excluded: int = 0,
     wide_area: bool = False,
+    size_narrowed_to: tuple[float, float] | None = None,
 ) -> ValuationEstimate:
     if subject_area_sqft is None or subject_area_sqft <= 0:
         return _unknown(len(comps), "Subject lot area is unknown; cannot estimate land value.")
@@ -153,6 +174,11 @@ def estimate_land_value(
             0,
             "No land sales were found close by, so this estimate falls back on a wider "
             "search and is a rough guide rather than a market read.",
+        )
+    if size_narrowed_to is not None:
+        reasons.append(
+            f"Limited to lots between {size_narrowed_to[0]:.0%} and {size_narrowed_to[1]:.0%} "
+            "of the subject's area, because price per square foot varies with lot size."
         )
     if trimmed:
         reasons.append(

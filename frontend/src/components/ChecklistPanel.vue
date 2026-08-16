@@ -52,7 +52,7 @@ const headlineColor = computed(() => {
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="fact_check" size="18px" class="q-mr-xs" />Due-diligence checklist
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
           Auto-populated from this parcel's zoning, liens, L&I, flood, ownership, valuation, and
           deal signals. Informational — confirm each with the city and your own advisors.

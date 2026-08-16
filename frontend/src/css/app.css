@@ -55,6 +55,18 @@ body {
   margin-bottom: 8px;
 }
 
+.lot-text-ink {
+  color: var(--lot-ink);
+}
+
+.lot-text-muted {
+  color: var(--lot-muted);
+}
+
+.lot-text-faint {
+  color: var(--lot-faint);
+}
+
 .lot-elevate {
   transition:
     transform 0.16s ease,

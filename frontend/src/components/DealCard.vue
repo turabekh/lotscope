@@ -269,7 +269,7 @@ function reset(): void {
               @click="offerOpen = true"
             />
           </div>
-          <div class="text-caption text-grey-6 q-mt-sm">
+          <div class="text-caption lot-text-muted q-mt-sm">
             Assumptions:
             {{
               deal.assumptions_source === 'calibrated'
@@ -326,7 +326,7 @@ function reset(): void {
         />
       </template>
 
-      <div v-else-if="!dealLoading" class="text-body2 text-grey-6 q-mt-xs">
+      <div v-else-if="!dealLoading" class="text-body2 lot-text-muted q-mt-xs">
         {{
           deal?.reasons?.[0] ?? 'Not enough zoning or comparable-sales data to model a deal here.'
         }}

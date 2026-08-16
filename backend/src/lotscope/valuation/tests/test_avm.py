@@ -8,10 +8,15 @@ from lotscope.valuation.avm import (
     is_related_party,
     land_use_class,
     price_per_sqft,
+    select_size_similar_comps,
     trim_outlier_rates,
     wide_area_use_classes,
 )
 from lotscope.valuation.fallback import wide_area_policy_for_market
+from lotscope.valuation.policy import (
+    comp_selection_policy_for_market,
+    excluded_document_types_for_market,
+)
 
 
 @pytest.mark.parametrize(
@@ -225,3 +230,76 @@ def test_the_philadelphia_policy_matches_what_was_measured() -> None:
     assert policy is not None
     assert policy.radius_ft == 3000.0
     assert policy.years == 5
+
+
+def _sized_comp(area: float, rate: float = 50.0) -> Comp:
+    return Comp(
+        parcel_number=f"lot-{area:.0f}",
+        distance_ft=100.0,
+        sale_price=rate * area,
+        sale_date=date(2024, 1, 1),
+        lot_area_sqft=area,
+        price_per_sqft=rate,
+    )
+
+
+def test_size_similar_selection_keeps_only_comps_inside_the_ratio_band() -> None:
+    comps = [_sized_comp(area) for area in (700.0, 1000.0, 1500.0, 4000.0, 200.0)]
+
+    selected, narrowed = select_size_similar_comps(
+        comps, 1000.0, ratio_min=0.6, ratio_max=1.6, min_similar_comps=3
+    )
+
+    assert [comp.lot_area_sqft for comp in selected] == [700.0, 1000.0, 1500.0]
+    assert narrowed is True
+
+
+def test_size_similar_selection_widens_rather_than_starving_the_comp_set() -> None:
+    comps = [_sized_comp(area) for area in (4000.0, 5000.0, 200.0, 1000.0)]
+
+    selected, narrowed = select_size_similar_comps(
+        comps, 1000.0, ratio_min=0.6, ratio_max=1.6, min_similar_comps=3
+    )
+
+    assert selected == comps
+    assert narrowed is False
+
+
+def test_size_similar_selection_reports_no_narrowing_when_every_comp_qualifies() -> None:
+    comps = [_sized_comp(area) for area in (800.0, 1000.0, 1200.0)]
+
+    selected, narrowed = select_size_similar_comps(
+        comps, 1000.0, ratio_min=0.6, ratio_max=1.6, min_similar_comps=3
+    )
+
+    assert selected == comps
+    assert narrowed is False
+
+
+def test_size_similar_selection_is_skipped_when_the_subject_area_is_unknown() -> None:
+    comps = [_sized_comp(area) for area in (4000.0, 5000.0, 200.0)]
+
+    assert select_size_similar_comps(
+        comps, None, ratio_min=0.6, ratio_max=1.6, min_similar_comps=3
+    ) == (comps, False)
+    assert select_size_similar_comps(
+        comps, 0.0, ratio_min=0.6, ratio_max=1.6, min_similar_comps=3
+    ) == (comps, False)
+
+
+def test_only_measured_markets_get_a_comp_selection_policy() -> None:
+    assert comp_selection_policy_for_market("phl") is not None
+    assert comp_selection_policy_for_market("pgh") is None
+    assert comp_selection_policy_for_market("hbg") is None
+    assert comp_selection_policy_for_market("wlm") is None
+    assert comp_selection_policy_for_market(None) is None
+
+
+def test_sheriff_and_nominal_deeds_are_excluded_from_philadelphia_comps() -> None:
+    excluded = excluded_document_types_for_market("phl")
+
+    assert excluded is not None
+    assert "SHERIFF'S DEED" in excluded
+    assert "DEED LAND BANK" in excluded
+    assert "DEED" not in excluded
+    assert excluded_document_types_for_market("pgh") is None

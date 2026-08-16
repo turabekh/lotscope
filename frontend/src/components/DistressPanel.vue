@@ -28,7 +28,7 @@ const tierStyle = computed(() => (distress.value ? TIER[distress.value.tier] : T
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="sell" size="18px" class="q-mr-xs" />Motivated seller
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
           A distress index from tax delinquency, sheriff sale, liens, L&I, vacancy, and absentee
           ownership. Higher means the owner is more likely a motivated seller. Informational.
@@ -49,7 +49,7 @@ const tierStyle = computed(() => (distress.value ? TIER[distress.value.tier] : T
           <span class="factor-weight">+{{ factor.weight }}</span>
         </div>
       </div>
-      <div v-else class="text-body2 text-grey-6 q-mt-xs">
+      <div v-else class="text-body2 lot-text-muted q-mt-xs">
         No tax, L&I, vacancy, or absentee-owner distress signals on record.
       </div>
     </q-card-section>

@@ -57,7 +57,7 @@ watch(() => detail.value?.parcel_number, load, { immediate: true })
 
   <div v-else-if="result && !result.available" class="panel unavailable">
     <q-icon name="lock" size="20px" color="grey-6" />
-    <span class="text-caption text-grey-7">{{ result.note }}</span>
+    <span class="text-caption lot-text-muted">{{ result.note }}</span>
   </div>
 
   <div v-else-if="result && topBuyers.length" class="panel">

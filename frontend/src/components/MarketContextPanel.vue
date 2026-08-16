@@ -36,7 +36,7 @@ const stats = computed<Stat[]>(() => {
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="insights" size="18px" class="q-mr-xs" />Market context
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
           Recent activity within {{ formatNumber(marketContext.radius_ft) }} ft over the last
           {{ marketContext.years }} years: sales velocity, development permits, and vacancy around

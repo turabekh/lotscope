@@ -32,7 +32,7 @@ const style = computed(() => {
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="account_balance" size="18px" class="q-mr-xs" />Historic district
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
           Whether the parcel sits in a Philadelphia Register historic district. Informational —
           confirm scope with the Historical Commission.
@@ -44,25 +44,27 @@ const style = computed(() => {
       </div>
 
       <template v-if="inDistrict">
-        <div class="text-body2 text-weight-medium text-grey-9">
+        <div class="text-body2 text-weight-medium lot-text-ink">
           {{ historic.district_name }}
-          <span v-if="historic.designated_date" class="text-grey-6 text-caption">
+          <span v-if="historic.designated_date" class="lot-text-faint text-caption">
             · designated {{ historic.designated_date }}
           </span>
         </div>
 
-        <div v-if="historic.note" class="text-body2 text-grey-7 q-mt-xs">{{ historic.note }}</div>
+        <div v-if="historic.note" class="text-body2 lot-text-muted q-mt-xs">
+          {{ historic.note }}
+        </div>
       </template>
 
-      <div v-else-if="checkedAndClear" class="text-body2 text-grey-7">
+      <div v-else-if="checkedAndClear" class="text-body2 lot-text-muted">
         Not in a designated historic district.
       </div>
 
       <template v-else>
-        <div class="text-body2 text-grey-7">
+        <div class="text-body2 lot-text-muted">
           Historic district status could not be checked for this lot.
         </div>
-        <div class="text-caption text-grey-6 q-mt-xs">
+        <div class="text-caption lot-text-muted q-mt-xs">
           This is a gap in what we hold, not a finding about the lot.
         </div>
       </template>

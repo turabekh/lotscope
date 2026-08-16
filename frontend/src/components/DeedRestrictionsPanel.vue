@@ -82,7 +82,7 @@ function restrictions(): DeedRestrictionItem[] {
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="gavel" size="18px" class="q-mr-xs" />Deed restrictions
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="280px" anchor="bottom middle" self="top middle">
           Restrictions, easements, and covenants extracted from recorded deeds by AI. Informational
           only — not a title determination. Confirm with the recorded document, a title company, or
@@ -116,13 +116,13 @@ function restrictions(): DeedRestrictionItem[] {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <q-icon name="description" size="16px" class="q-mr-xs text-blue-grey-5" />
+            <q-icon name="description" size="16px" class="q-mr-xs lot-text-faint" />
             <span class="record-type">{{ deed.document_type ?? 'Document' }}</span>
             <span v-if="deed.recording_date" class="record-date">{{ deed.recording_date }}</span>
             <span v-if="deed.sale_price" class="record-price">{{
               formatCurrency(deed.sale_price)
             }}</span>
-            <q-icon name="open_in_new" size="13px" class="q-ml-xs text-blue-grey-4" />
+            <q-icon name="open_in_new" size="13px" class="q-ml-xs lot-text-faint" />
           </a>
           <q-space />
           <q-badge v-if="deed.analyzed" color="positive" text-color="white" class="q-ml-sm">

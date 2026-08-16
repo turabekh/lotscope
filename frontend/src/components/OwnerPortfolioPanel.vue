@@ -84,7 +84,7 @@ function selectParcel(parcelNumber: string): void {
     <q-card-section class="q-py-sm">
       <div class="section-title">
         <q-icon name="account_balance_wallet" size="18px" class="q-mr-xs" />Owner portfolio
-        <q-icon name="info" size="14px" class="q-ml-xs text-grey-5" />
+        <q-icon name="info" size="14px" class="q-ml-xs lot-text-faint" />
         <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
           Other Philadelphia parcels held by the same owner of record — an assemblage and
           motivated-seller signal. Owner names are matched as recorded, so spelling variants may
@@ -116,7 +116,7 @@ function selectParcel(parcelNumber: string): void {
           </div>
           <div
             v-if="!traceResult.contacts.phones.length && !traceResult.contacts.emails.length"
-            class="trace-line text-grey-6"
+            class="trace-line lot-text-muted"
           >
             No contact info on record.
           </div>
@@ -163,7 +163,7 @@ function selectParcel(parcelNumber: string): void {
         </div>
       </div>
 
-      <div v-if="moreCount > 0" class="text-caption text-grey-6 q-mt-xs">
+      <div v-if="moreCount > 0" class="text-caption lot-text-faint q-mt-xs">
         + {{ moreCount }} more parcel{{ moreCount === 1 ? '' : 's' }} held by this owner.
       </div>
     </q-card-section>

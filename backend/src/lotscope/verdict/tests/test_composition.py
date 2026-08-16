@@ -117,14 +117,84 @@ def test_full_compose_maps_all_dimensions() -> None:
     assert len(verdict.sources) == 3
 
 
-def test_opportunity_score_blends_buildability_and_risk() -> None:
-    verdict = compose_verdict(
+def test_opportunity_score_scales_the_blend_by_the_deal_economics() -> None:
+    strong = compose_verdict(
         _buildability(buildability_score=80.0),
         _valuation(),
         _risk(score=20.0),
+        _deal(margin=0.25, profit=150000.0),
         assessed_market_value=None,
     )
-    assert verdict.opportunity_score == 80.0
+    assert strong.opportunity_score == 80.0
+
+
+def test_an_unprofitable_deal_cannot_score_as_an_opportunity() -> None:
+    losing = compose_verdict(
+        _buildability(buildability_score=80.0),
+        _valuation(),
+        _risk(score=20.0),
+        _deal(margin=-0.15, profit=-90000.0),
+        assessed_market_value=None,
+    )
+    assert losing.opportunity_score == 32.0
+
+
+def test_an_infeasible_deal_scores_at_the_economics_floor() -> None:
+    infeasible = compose_verdict(
+        _buildability(buildability_score=80.0),
+        _valuation(),
+        _risk(score=20.0),
+        _deal(infeasible=True, margin=None, profit=None),
+        assessed_market_value=None,
+    )
+    assert infeasible.opportunity_score == 32.0
+
+
+def test_unknown_economics_is_treated_as_just_viable_not_as_strong() -> None:
+    unknown = compose_verdict(
+        _buildability(buildability_score=80.0),
+        _valuation(),
+        _risk(score=20.0),
+        None,
+        assessed_market_value=None,
+    )
+    strong = compose_verdict(
+        _buildability(buildability_score=80.0),
+        _valuation(),
+        _risk(score=20.0),
+        _deal(margin=0.25, profit=150000.0),
+        assessed_market_value=None,
+    )
+    losing = compose_verdict(
+        _buildability(buildability_score=80.0),
+        _valuation(),
+        _risk(score=20.0),
+        _deal(margin=-0.15, profit=-90000.0),
+        assessed_market_value=None,
+    )
+
+    assert losing.opportunity_score < unknown.opportunity_score < strong.opportunity_score
+    assert unknown.opportunity_score == 56.0
+
+
+def test_a_pass_recommendation_never_outranks_an_investigate_one() -> None:
+    unattractive = compose_verdict(
+        _buildability(buildability_score=95.0),
+        _valuation(),
+        _risk(score=5.0),
+        _deal(margin=-0.20, profit=-120000.0),
+        assessed_market_value=None,
+    )
+    investigate = compose_verdict(
+        _buildability(buildability_score=60.0),
+        _valuation(),
+        _risk(score=40.0),
+        _deal(margin=0.22, profit=140000.0),
+        assessed_market_value=None,
+    )
+
+    assert unattractive.recommendation == "economics_unattractive"
+    assert unattractive.opportunity_score < investigate.opportunity_score
 
 
 def test_summary_reads_naturally() -> None:
@@ -158,7 +228,7 @@ def test_missing_dimensions_are_none() -> None:
     assert verdict.risk_score is None
     assert verdict.risk_flags == []
     assert verdict.summary == "Insufficient data for a verdict."
-    assert verdict.opportunity_score == 40.0
+    assert verdict.opportunity_score == 28.0
 
 
 def test_gap_requires_estimate_and_assessment() -> None:

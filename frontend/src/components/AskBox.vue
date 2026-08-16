@@ -86,7 +86,7 @@ function askSuggestion(text: string): void {
 
       <div v-if="!isAuthenticated" class="signin-gate column items-center q-py-md">
         <q-icon name="lock" size="28px" color="grey-5" />
-        <div class="text-body2 text-grey-7 text-center q-my-sm">
+        <div class="text-body2 lot-text-muted text-center q-my-sm">
           Sign in to ask the AI about zoning, height, units, and allowed uses for this parcel.
         </div>
         <q-btn
@@ -148,10 +148,10 @@ function askSuggestion(text: string): void {
             >
               {{ answer.confidence }} confidence
             </q-chip>
-            <span class="text-caption text-grey-6 q-ml-sm">Informational only</span>
+            <span class="text-caption lot-text-faint q-ml-sm">Informational only</span>
           </div>
           <div v-if="answer.citations.length" class="q-mt-sm">
-            <div class="text-caption text-grey-7 q-mb-xs">Sources</div>
+            <div class="text-caption lot-text-muted q-mb-xs">Sources</div>
             <div class="q-gutter-xs">
               <q-chip
                 v-for="(citation, index) in answer.citations"
