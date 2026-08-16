@@ -104,13 +104,14 @@ _LI_TYPE_SEEN_SQL = text("SELECT EXISTS (SELECT 1 FROM li_event WHERE event_type
 
 _UPSERT_LI_SQL = text(
     "INSERT INTO li_event "
-    "(parcel_number, external_id, event_type, status, event_date, description, "
+    "(parcel_number, external_id, event_type, status, case_status, event_date, description, "
     "is_unsafe, is_imminently_dangerous, source, created_at, updated_at) "
-    "SELECT parcel_number, external_id, event_type, status, event_date, description, "
-    "is_unsafe, is_imminently_dangerous, source, now(), now() "
+    "SELECT parcel_number, external_id, event_type, status, case_status, event_date, "
+    "description, is_unsafe, is_imminently_dangerous, source, now(), now() "
     "FROM staging.li_event WHERE ingest_run_id = :ingest_run_id "
     "ON CONFLICT (event_type, external_id) DO UPDATE SET "
-    "status = excluded.status, event_date = excluded.event_date, "
+    "status = excluded.status, case_status = excluded.case_status, "
+    "event_date = excluded.event_date, "
     "description = excluded.description, is_unsafe = excluded.is_unsafe, "
     "is_imminently_dangerous = excluded.is_imminently_dangerous, updated_at = now()"
 )
