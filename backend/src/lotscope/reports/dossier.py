@@ -362,8 +362,8 @@ def render_dossier_pdf(
                 0,
                 4,
                 _s(
-                    "Estimated build cost exceeds achievable finished value; new construction is "
-                    "not economical here at current pricing."
+                    "Build cost does not leave the target margin even at a land price of $0; "
+                    "no acquisition price reaches the target as modelled."
                 ),
                 align="L",
                 new_x=XPos.LMARGIN,

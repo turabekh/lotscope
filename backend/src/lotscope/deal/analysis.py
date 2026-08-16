@@ -177,8 +177,9 @@ def analyze_deal(inputs: DealInputs, assumptions: DealAssumptions) -> DealAnalys
     ]
     if infeasible:
         reasons.append(
-            "Estimated build cost exceeds achievable finished value; new construction is not "
-            "economical here at any land price (max allowable offer floored to $0)."
+            f"Build cost does not leave a {assumptions.target_margin:.0%} margin even at a "
+            "land price of $0, so there is no acquisition price that reaches the target "
+            "(max allowable offer floored to $0)."
         )
     else:
         reasons.append(

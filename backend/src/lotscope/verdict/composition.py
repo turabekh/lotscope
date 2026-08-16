@@ -148,7 +148,7 @@ def _summary(
         parts.append(f"{len(risk.flags)} risk flag(s)" if risk.flags else "no major risk flags")
 
     if deal is not None and deal.infeasible:
-        parts.append("new build not feasible (build cost exceeds value)")
+        parts.append("no land price reaches the target margin")
     elif deal is not None and deal.max_allowable_offer is not None:
         mao = f"MAO ${deal.max_allowable_offer:,.0f}"
         parts.append(f"{mao} (underpriced)" if deal.is_underpriced else mao)

@@ -138,7 +138,7 @@ def test_infeasible_build_floors_mao_at_zero_and_flags() -> None:
     assert result.arv == 97_500.0
     assert result.construction_cost is not None
     assert result.construction_cost > result.arv
-    assert any("not economical" in reason for reason in result.reasons)
+    assert any("land price of $0" in reason for reason in result.reasons)
 
 
 def test_infeasible_build_is_never_underpriced() -> None:

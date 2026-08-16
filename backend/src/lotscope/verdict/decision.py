@@ -114,11 +114,11 @@ def decide(
             "this parcel can be developed as modelled.",
         )
 
-    if deal_infeasible:
+    if deal_infeasible and (est_margin is None or est_margin < VIABLE_MARGIN):
         return ScreeningDecision(
             recommendation="economics_unattractive",
-            reason="Modelled build cost exceeds the finished value, so the deal does not carry "
-            "itself under current assumptions.",
+            reason="Even at a land price of $0 the modelled build does not reach the target "
+            "margin, so there is no acquisition price that makes this work as modelled.",
         )
 
     if est_margin is not None and est_margin < VIABLE_MARGIN:
@@ -160,6 +160,16 @@ def decide(
             reason=(
                 f"Appears dimensionally eligible with a projected margin of {est_margin:.0%} "
                 f"and {_risk_clause(risk_score, risk_flag_count)}."
+            ),
+        )
+
+    if deal_infeasible and est_margin is not None:
+        return ScreeningDecision(
+            recommendation="worth_investigating",
+            reason=(
+                f"Projected margin of {est_margin:.0%} clears the {VIABLE_MARGIN:.0%} screening "
+                "threshold at the modelled land price, but the build does not reach the target "
+                "margin at any land price - the headroom comes from the price paid, not the build."
             ),
         )
 
