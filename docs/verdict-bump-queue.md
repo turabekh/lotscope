@@ -7,7 +7,9 @@ Current `VERDICT_VERSION`: **v10**.
 **Shipped since this file was last accurate.** It read `v8` while `v9` was already live, and described a "v9 batch" that is not what v9 became — recorded here so the drift is not repeated:
 
 - **v9** — overlay-aware effective zoning standards (ADR-0080). Not the batch proposed below.
-- **v10** — market-only comparable sales: sheriff's and nominal-transfer deeds excluded, soft lot-size similarity band (ADR-0081). Philadelphia only; other markets' selection unchanged.
+- **v10** — two changes batched behind one bump:
+  - market-only comparable sales: sheriff's and nominal-transfer deeds excluded, soft lot-size similarity band (ADR-0081). Philadelphia only; other markets' selection unchanged.
+  - `opportunity_score` scaled by deal economics, so it can no longer rank an `economics_unattractive` parcel above one recommended for investigation (ADR-0082).
 
 **The v10 recompute is owed and unrun** by owner instruction. Reads recompute lazily on version mismatch; stored rows stay v9 until the batch runs, so leads and saved-search filters are mixed-version in the meantime.
 

@@ -7,7 +7,12 @@ from lotscope.deal.schemas import DealResult
 from lotscope.risk.schemas import RiskResult
 from lotscope.valuation.confidence import CONFIDENCE_SCORE
 from lotscope.valuation.schemas import ValuationResult
-from lotscope.verdict.decision import DECISION_VERSION, decide
+from lotscope.verdict.decision import (
+    DECISION_VERSION,
+    STRONG_MARGIN,
+    VIABLE_MARGIN,
+    decide,
+)
 from lotscope.verdict.trust import compose_field_trust
 from lotscope.zoning.schemas import BuildabilityResult
 
@@ -15,6 +20,9 @@ VERDICT_VERSION = "v10"
 
 _BUILDABILITY_WEIGHT = 0.6
 _RISK_WEIGHT = 0.4
+
+_ECONOMICS_FLOOR = 0.4
+_ECONOMICS_CEILING = 1.0
 
 
 @dataclass(frozen=True)
@@ -47,9 +55,32 @@ class ComposedVerdict:
     decision_version: str = DECISION_VERSION
 
 
-def _opportunity_score(buildability_score: float, risk_score: float) -> float:
+def economics_factor(est_margin: float | None, deal_infeasible: bool) -> float:
+    if deal_infeasible:
+        return _ECONOMICS_FLOOR
+    if est_margin is None:
+        return _margin_factor(VIABLE_MARGIN)
+    return _margin_factor(est_margin)
+
+
+def _margin_factor(margin: float) -> float:
+    if margin <= 0.0:
+        return _ECONOMICS_FLOOR
+    if margin >= STRONG_MARGIN:
+        return _ECONOMICS_CEILING
+    span = _ECONOMICS_CEILING - _ECONOMICS_FLOOR
+    return _ECONOMICS_FLOOR + span * (margin / STRONG_MARGIN)
+
+
+def _opportunity_score(
+    buildability_score: float,
+    risk_score: float,
+    est_margin: float | None,
+    deal_infeasible: bool,
+) -> float:
     blended = _BUILDABILITY_WEIGHT * buildability_score + _RISK_WEIGHT * (100.0 - risk_score)
-    return round(max(0.0, min(100.0, blended)), 1)
+    scaled = blended * economics_factor(est_margin, deal_infeasible)
+    return round(max(0.0, min(100.0, scaled)), 1)
 
 
 def _assessment_market_gap(
@@ -137,7 +168,11 @@ def compose_verdict(
 ) -> ComposedVerdict:
     buildability_score = buildability.buildability_score if buildability is not None else None
     risk_score = risk.risk_score if risk is not None else None
-    opportunity_score = _opportunity_score(buildability_score or 0.0, risk_score or 0.0)
+    est_margin = deal.margin if deal is not None else None
+    deal_infeasible = deal.infeasible if deal is not None else False
+    opportunity_score = _opportunity_score(
+        buildability_score or 0.0, risk_score or 0.0, est_margin, deal_infeasible
+    )
     assessment_market_gap = _assessment_market_gap(valuation, assessed_market_value)
 
     field_trust = compose_field_trust(
@@ -154,8 +189,8 @@ def compose_verdict(
         requires_master_plan=(
             buildability.requires_master_plan if buildability is not None else False
         ),
-        est_margin=deal.margin if deal is not None else None,
-        deal_infeasible=deal.infeasible if deal is not None else False,
+        est_margin=est_margin,
+        deal_infeasible=deal_infeasible,
         risk_score=risk_score,
         land_value_modelled=valuation is not None and valuation.estimate is not None,
         land_value_is_wide_area=valuation is not None
