@@ -19,6 +19,12 @@ Distress splits: `assess_parcel_distress` scores **live** from raw signals on ev
 
 ## Queued
 
+### Party-name normalisation (from the v11 verify-posture packet)
+- **Source:** `docs/decisions/verify-posture-name-mismatch.md`, measured 2026-08-18.
+- **Change:** join single-letter runs so `VENUS L P` normalises to `VENUS LP`, and treat placeholder debtor names (`'not available'`, 22 parcels) as `unknown_debtor` rather than a failed match.
+- **Why it needs a bump:** both move parcels from `verify` to `current_owner`, which changes `counts_toward_distress` and risk severity. Stored verdicts would stay stamped `v11` while the engine computed something else, and lazy recompute fires only on version mismatch — so nothing would ever detect the disagreement.
+- **Trap:** the fix belongs in `party_match`, **not** `normalize_party_key`. The latter has a SQL twin (`normalized_name_sql`) and `parcel.owner_key` is a generated column built from it; the buyer census joins one against the other. Changing the Python side alone desynchronises the mailing join.
+
 ### Condemned / Demolished → risk scoring
 - **Source:** Harrisburg field-test batch (2026-07-06), repository list carries `hbg_city_status` (Demolished / Condemned) per the City Codes Administrator.
 - **Now (no bump):** stored + displayed as an **unscored parcel fact** with provenance (Slice 3).
