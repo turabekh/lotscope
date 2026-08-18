@@ -195,6 +195,38 @@ Both are pinned in `risk/tests/test_audited_parcels.py`. Ten assertions; the obs
 
 ---
 
+## Step 7 — the buyer census over the recovered deeds
+
+**Measured against production 2026-08-18.** The census rebuild had already happened: the nightly buyer job (revived by PR #146) ran 2026-08-17 09:00 and produced 121 Philadelphia profiles, 115 of them carrying a mailing address. Both step-7 expectations were checked against that run rather than a fresh one.
+
+| expectation | production read | state |
+|---|---|---|
+| the audited owner's mailing resolves | `8319 CHILDS RD WYNDMOOR PA 19038` | **met** |
+| 6 purchases, including 2138 N Fairhill | `purchases_window` = 6, `phl:191357500` present | **met** |
+| $143,700 total consideration | **$114,600** | **short by $29,100** |
+
+SHLAYEN RACHEL has eight deeds in the 24-month window; two convey for $1.00 and fall below `BUYER_MIN_PRICE`, which is what makes the count 6 rather than 8. The recovered Fairhill deed is one of the six, so D5 is closed at the census.
+
+### A third defect, found by the shortfall
+
+The missing $29,100 is exactly the Fairhill deed. `derive_buyers` summed `total_consideration` over the **vacant-lot subset** while reporting `purchases_window` over all qualifying purchases — so the count said six and the money said five.
+
+The field is presented unqualified. `BuyerProfilePage.vue` labels it "Total consideration" beside "Vacant lots (24mo)", "All purchases (24mo)" and "Median lot price" — every neighbour carries its scope, and this one does not. `BuyersPage.vue` sorts the roster by it under **"Largest spend"**. Both surfaces read it as the buyer's total outlay.
+
+**Decision: `total_consideration` covers every qualifying in-window purchase; `median_price` stays lot-only, as its label says.** No existing test pinned the lot-only sum, so the narrower scope was never a decision — it was `prices` computed once for the median and reused for the total.
+
+Fairhill fell out of the money because its `parcel.is_vacant` is NULL: it is not in the city's Vacant Property Indicators set, and `bool(None)` is False. **90 of the 121 Philadelphia profiles have `purchases_window > lot_purchases_window`**, so their totals rise at the next recompute.
+
+**Not fixed here, and named:** 2138 N FAIRHILL ST reads `land_use = 'VACANT LAND - RESIDENTIAL'` with zero improvement value, and still `is_vacant` is NULL. Philadelphia's vacancy comes from the city model by design — `derive_vacancy` covers only `hbg` and `pgh` — so a land-use fallback for `phl` would move the vacant-lot universe itself, and with it tiles, verdicts and every count in this ledger. That is an ADR, not a step-7 edit.
+
+### Pins
+
+`buyers/tests/test_service.py::test_the_audited_buyers_census_counts_the_recovered_deed_and_its_money` drives all eight real deeds — document ids, prices, dates, grantors and the two NULL-vacancy parcels — through the real `recompute_buyer_profiles`, and asserts 6 purchases, 5 lots, $143,700, the resolved mailing address, and Fairhill's presence in the purchase list. `buyers/tests/test_derivation.py::test_total_consideration_covers_every_purchase_not_only_the_vacant_ones` pins the rule itself.
+
+Both were verified to **fail** when the one-line fix is reverted.
+
+---
+
 ## Lead-surface inclusion gates (verified before step 8)
 
 Every surface reading `ts.total_due` is `FROM parcel_distress pd ... WHERE pd.score >= :min_score`. **Membership comes solely from the v2 distress score**; no surface gates on `is_delinquent` or `total_due` directly. A parcel whose debt belongs to a prior owner loses those points under v2 and never enters the list, so the mistargeting dies in scoring rather than surviving into ranking.
