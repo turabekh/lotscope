@@ -233,6 +233,40 @@ First 6,000 rows verified sane: `risk_score` and `recommendation` populated on a
 
 Verdict reads self-heal lazily on version mismatch, so users see current verdicts throughout.
 
+### The fourth movement class was three, and two were never counted
+
+The ledger predicted **672 parcels** losing deal-killer weight through the sheriff downgrade. Measured against a 25.06% sample (147,500 rows), risk drops project to **~15,547 citywide**. The prediction was not wrong so much as partial: `risk/scoring.py` has **three** paths that lower the tax-delinquency flag, and the ledger counted one.
+
+| path | severity move | sample | citywide est. | predicted |
+|---|---|---|---|---|
+| name-matched sheriff's deed → `likely_discharged` | high → `info` (40 → 0) | 561 | ~2,239 | 764–2,282 ✓ |
+| ordinary post-snapshot transfer → `verify` | high → medium (40 → 20) | 1,496 | ~5,970 | **not counted** |
+| **name mismatch with no transfer at all → `verify`** | high → medium (40 → 20) | 1,546 | ~6,169 | **not counted** |
+| sheriff variants (medium → `info`, and non-matching) | 20 → 0 | 258 | ~1,030 | partly |
+
+The sheriff class itself lands inside its stated 764–2,282 band, so that figure held. What the delta table missed is that `verify` does not only reword the flag — `elif tax.attribution.posture == "verify": severity = "medium"` **halves the weight** of any delinquency that was `high`, and `verify` is reached by two populations, not one.
+
+**A correction earlier in this file follows from that.** The classification of delinquent Philadelphia parcels is 41,962 with no post-snapshot transfer, 10,167 with an ordinary transfer, 2,272 with a sheriff transfer; of those, 26,409 / 5,859 / 1,964 would score `high`. The `verify` posture reaches the second and third groups **and** the name-mismatch subset of the first.
+
+**One judgement worth an owner's eye, stated rather than buried.** D3's stated principle is that liens run with the land, so a parcel-level flag never silently disappears on an unconfirmed settlement. It does not disappear — but for roughly **6,169 parcels its weight is halved on a name mismatch alone**, with no deed of any kind to explain it, against a snapshot frozen in June 2022. A mismatch there can be a spelling variant, an estate, or a name format `match_parties` does not handle, and the lien on the parcel has not changed at all. That is a product decision rather than a defect, and it was not in the ADR's delta.
+
+### Pinned parcels, measured mid-sweep
+
+| parcel | risk | distress | tier |
+|---|---|---|---|
+| `phl:201133900` (audited) | **70 → 30** | **55 → 20** | medium → low |
+| `phl:491313100` (control) | 100 → 100 | 55 → 55 | medium → medium |
+
+Both pins hold. **Correction:** this file records the audited parcel's distress baseline as 45/100; the measured baseline was **55**. The fall is real; the stated starting figure was not.
+
+### Two defects found while the sweep ran
+
+**Scheduled jobs never got the timeouts they declare.** arq resolves a cron job's timeout from the `cron()` entry, not the `func()` registration, and all six long-running jobs carried theirs on the `func()` side only — so every one ran on its schedule under the thirty-minute worker default. `cron(recompute_verdicts, weekday="sun")` is among them: an ~11.5h job under a thirty-minute cap, cancelled every Sunday since it was scheduled. **This is a large part of why v9 and v10 were never swept.** Found because OPA failed at 04:30:01, thirty minutes and one second after its 04:00 cron, with this sweep saturating the box. Fixed in #155 with a guard comparing the two registries — a guard that was itself vacuous twice before it worked, because `cron()` prefixes `"cron:"` and the two name sets never intersected.
+
+**Leads displayed the debt as well as ranking on it.** Filed as a cosmetic ordering artifact; both lead queries also *rendered* `"$X owed"` from raw `ts.total_due`, so a lead card could show a prior owner's debt as the owner's. `parcel_distress.debt_counts` now persists the attribution decision and both queries read through it (#155).
+
+**The one red row on the ops board was an orphan.** `tax_restore` had a `dataset_freshness` row and no loader anywhere in the repo, so nothing could ever clear it — two months of permanent red on a board whose value depends on red meaning something. Row deleted. A registry-based filter was written and reverted: `dataset_freshness` stores upstream table names while the registry holds short keys, so it would have emptied the entire board and traded one silent failure for a worse one.
+
 ---
 
 ## Pinned fixtures
