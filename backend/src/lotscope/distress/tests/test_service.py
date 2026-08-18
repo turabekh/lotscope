@@ -92,13 +92,24 @@ async def _tax(
     due: float = 0,
     years: int = 0,
     sheriff: bool = False,
+    delinquency_owner: str | None = None,
+    snapshot_period: str | None = None,
 ) -> None:
     await session.execute(
         text(
             "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
-            "in_sheriff_sale) VALUES (:pn, :d, :due, :yrs, :sh)"
+            "in_sheriff_sale, delinquency_owner, snapshot_period) "
+            "VALUES (:pn, :d, :due, :yrs, :sh, :downer, :period)"
         ),
-        {"pn": parcel_number, "d": delinquent, "due": due, "yrs": years, "sh": sheriff},
+        {
+            "pn": parcel_number,
+            "d": delinquent,
+            "due": due,
+            "yrs": years,
+            "sh": sheriff,
+            "downer": delinquency_owner,
+            "period": snapshot_period,
+        },
     )
 
 
@@ -333,3 +344,52 @@ async def test_leads_long_held_factor_is_profile_driven(db_session: AsyncSession
     old = next(f for f in leads["000000020"].top_factors if f.startswith("Long-held"))
     assert old
     assert all(not f.startswith("Long-held") for f in leads["000000021"].top_factors)
+
+
+async def test_leads_never_show_or_rank_on_a_debt_the_owner_does_not_owe(
+    db_session: AsyncSession,
+) -> None:
+    await _parcel(
+        db_session,
+        "000000901",
+        address="1 OWED ST",
+        mailing="99 ELSEWHERE AVE, NEW YORK NY",
+        owner="KENNEDY PATRICIA",
+    )
+    await _tax(
+        db_session,
+        "000000901",
+        delinquent=True,
+        due=500,
+        delinquency_owner="KENNEDY PATRICIA",
+        snapshot_period="202206",
+    )
+    await _parcel(
+        db_session,
+        "000000902",
+        address="2 STRANGER ST",
+        mailing="99 ELSEWHERE AVE, NEW YORK NY",
+        owner="SHLAYEN RACHEL",
+        is_vacant=True,
+    )
+    await _tax(
+        db_session,
+        "000000902",
+        delinquent=True,
+        due=999999,
+        delinquency_owner="MATUSOW JOSEPH",
+        snapshot_period="202206",
+    )
+    await _open_violation(db_session, "000000902", "v-902")
+    await db_session.flush()
+
+    await recompute_distress(db_session, ["000000901", "000000902"])
+    leads = {lead.parcel_number: lead for lead in await find_leads(db_session, limit=50)}
+
+    assert leads["000000901"].total_due == 500
+    assert leads["000000902"].total_due is None
+    assert not any("owed" in factor for factor in leads["000000902"].top_factors)
+
+    ordered = [lead.parcel_number for lead in await find_leads(db_session, limit=50)]
+    assert leads["000000901"].score == leads["000000902"].score
+    assert ordered.index("000000901") < ordered.index("000000902")

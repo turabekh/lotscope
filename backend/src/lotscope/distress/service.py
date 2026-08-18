@@ -136,10 +136,13 @@ _BULK_SIGNALS_SQL = text(
     + " WHERE p.parcel_number = ANY(:parcel_numbers)"
 )
 
+_ATTRIBUTED_DUE_SQL = "CASE WHEN pd.debt_counts THEN ts.total_due END"
+
 _LEADS_SQL = text(
     "SELECT p.parcel_number, p.address, p.mailing_address, p.owner, "
     "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
-    "p.is_vacant, p.market_value, ts.total_due, ts.in_sheriff_sale, pd.score, "
+    "p.is_vacant, p.market_value, " + _ATTRIBUTED_DUE_SQL + " AS total_due, "
+    "ts.in_sheriff_sale, pd.score, "
     "(tired.owner_key IS NOT NULL) AS is_tired_landlord, "
     "(SELECT (CURRENT_DATE - max(s.sale_date))::float / 365.25 FROM sale s "
     "WHERE s.parcel_number = p.parcel_number AND s.sale_date IS NOT NULL "
@@ -155,14 +158,15 @@ _LEADS_SQL = text(
     "AND coalesce(p.is_city_owned, false) = false "
     "AND (NOT CAST(:vacant_only AS boolean) OR coalesce(p.is_vacant, false)) "
     "AND (CAST(:zip_code AS text) IS NULL OR p.zip_code = CAST(:zip_code AS text)) "
-    "ORDER BY pd.score DESC, coalesce(ts.total_due, 0) DESC, p.parcel_number "
+    "ORDER BY pd.score DESC, coalesce(" + _ATTRIBUTED_DUE_SQL + ", 0) DESC, p.parcel_number "
     "LIMIT CAST(:limit AS integer)"
 )
 
 _LEADS_EXPORT_SQL = text(
     "SELECT p.parcel_number, p.address, p.owner, p.mailing_address, p.zip_code, "
     "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
-    "p.is_vacant, p.market_value, ts.total_due, ts.in_sheriff_sale, pd.score "
+    "p.is_vacant, p.market_value, " + _ATTRIBUTED_DUE_SQL + " AS total_due, "
+    "ts.in_sheriff_sale, pd.score "
     "FROM parcel_distress pd "
     "JOIN parcel p ON p.parcel_number = pd.parcel_number "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
@@ -171,7 +175,7 @@ _LEADS_EXPORT_SQL = text(
     "AND coalesce(p.is_city_owned, false) = false "
     "AND (NOT CAST(:vacant_only AS boolean) OR coalesce(p.is_vacant, false)) "
     "AND (CAST(:zip_code AS text) IS NULL OR p.zip_code = CAST(:zip_code AS text)) "
-    "ORDER BY pd.score DESC, coalesce(ts.total_due, 0) DESC, p.parcel_number "
+    "ORDER BY pd.score DESC, coalesce(" + _ATTRIBUTED_DUE_SQL + ", 0) DESC, p.parcel_number "
     "LIMIT CAST(:limit AS integer)"
 )
 
@@ -323,7 +327,8 @@ async def recompute_distress(
         if profile is None:
             profile = profile_for_market(row.market_code)
             profiles[row.market_code] = profile
-        assessment = score_distress(_signals(row, tired_owner_keys), profile)
+        signals = _signals(row, tired_owner_keys)
+        assessment = score_distress(signals, profile)
         values.append(
             {
                 "parcel_number": row.parcel_number,
@@ -332,6 +337,7 @@ async def recompute_distress(
                 "version": DISTRESS_VERSION,
                 "profile_id": profile.profile_id,
                 "sources": _SOURCES,
+                "debt_counts": signals.is_delinquent,
                 "computed_at": now,
             }
         )
@@ -344,6 +350,7 @@ async def recompute_distress(
             "version": statement.excluded.version,
             "profile_id": statement.excluded.profile_id,
             "sources": statement.excluded.sources,
+            "debt_counts": statement.excluded.debt_counts,
             "computed_at": statement.excluded.computed_at,
         },
     )
