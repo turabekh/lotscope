@@ -5,6 +5,7 @@ import pytest
 from lotscope.distress.profiles import (
     HARRISBURG_DISTRESS_V1,
     PHILLY_DISTRESS_V1,
+    PHILLY_DISTRESS_V2,
     PITTSBURGH_DISTRESS_V1,
     WILMINGTON_DISTRESS_V1,
     DistressScoringProfile,
@@ -31,7 +32,7 @@ def _legacy_score(s: DistressSignals) -> tuple[int, str, list[_LegacyFactor]]:
         factors.append(("liens", f"{s.lien_count} tax lien(s)", 10))
     if s.has_imminently_dangerous or s.has_unsafe:
         factors.append(("li_dangerous", "Unsafe or dangerous structure (L&I)", 15))
-    elif s.violations > 0:
+    elif s.open_violations > 0:
         factors.append(("li_violations", "Open L&I violations", 5))
     if s.demolitions > 0:
         factors.append(("demolition", "Demolition on record", 5))
@@ -63,8 +64,8 @@ _MATRIX: dict[str, DistressSignals] = {
     "vacant_only": DistressSignals(is_vacant=True),
     "absentee_only": DistressSignals(is_absentee_owner=True),
     "demolition_only": DistressSignals(demolitions=1),
-    "violations_only": DistressSignals(violations=3),
-    "dangerous_suppresses_violations": DistressSignals(has_unsafe=True, violations=3),
+    "violations_only": DistressSignals(open_violations=3),
+    "dangerous_suppresses_violations": DistressSignals(has_unsafe=True, open_violations=3),
     "unsafe_flag": DistressSignals(has_imminently_dangerous=True),
     "portfolio_distress": DistressSignals(is_tired_landlord=True),
     "severe_due_exactly_10000": DistressSignals(is_delinquent=True, total_due=10000.0),
@@ -139,7 +140,7 @@ def test_clones_are_identical_to_philly_except_id_and_market() -> None:
 
 
 def test_registry_resolves_each_market() -> None:
-    assert profile_for_market("phl") is PHILLY_DISTRESS_V1
+    assert profile_for_market("phl") is PHILLY_DISTRESS_V2
     assert profile_for_market("hbg") is HARRISBURG_DISTRESS_V1
     assert profile_for_market("pgh") is PITTSBURGH_DISTRESS_V1
     assert profile_for_market("wlm") is WILMINGTON_DISTRESS_V1
@@ -148,3 +149,27 @@ def test_registry_resolves_each_market() -> None:
 def test_unknown_market_raises() -> None:
     with pytest.raises(UnknownMarketProfileError):
         profile_for_market("zzz")
+
+
+def test_philadelphia_now_scores_under_the_second_profile_version() -> None:
+    assert profile_for_market("phl").profile_id == "philly-distress-v2"
+
+
+def test_the_second_version_changes_which_signals_reach_it_not_the_weights() -> None:
+    v1_weights = {
+        field: getattr(PHILLY_DISTRESS_V1, field)
+        for field in PHILLY_DISTRESS_V1.__dataclass_fields__
+        if field != "profile_id"
+    }
+    v2_weights = {
+        field: getattr(PHILLY_DISTRESS_V2, field)
+        for field in PHILLY_DISTRESS_V2.__dataclass_fields__
+        if field != "profile_id"
+    }
+
+    assert v1_weights == v2_weights
+
+
+def test_every_market_still_has_a_registered_profile() -> None:
+    for market in ("phl", "hbg", "pgh", "wlm"):
+        assert profile_for_market(market) is not None

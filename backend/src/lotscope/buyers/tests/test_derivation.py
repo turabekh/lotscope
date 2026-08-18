@@ -116,3 +116,17 @@ def test_display_name_uses_latest_purchase_spelling() -> None:
         _row("OLD NAME LLC", parcel="phl:c", when=date(2026, 1, 1)),
     ]
     assert derive_buyers(rows)[0].display_name == "OLD NAME LLC"
+
+
+def test_total_consideration_covers_every_purchase_not_only_the_vacant_ones() -> None:
+    rows = [
+        *_n("SPEND LLC", 3, price=10000.0),
+        _row("SPEND LLC", parcel="phl:house", price=90000.0, vacant=False),
+    ]
+
+    b = derive_buyers(rows)[0]
+
+    assert b.purchases_window == 4
+    assert b.lot_purchases_window == 3
+    assert b.total_consideration == 120000.0
+    assert b.median_price == 10000.0

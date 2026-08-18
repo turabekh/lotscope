@@ -62,14 +62,15 @@ def test_mild_delinquency_is_not_severe() -> None:
 
 def test_vacant_and_absentee_is_medium() -> None:
     result = score_distress(
-        DistressSignals(is_vacant=True, is_absentee_owner=True, violations=2), PHILLY_DISTRESS_V1
+        DistressSignals(is_vacant=True, is_absentee_owner=True, open_violations=2),
+        PHILLY_DISTRESS_V1,
     )
     assert result.score == 25
     assert result.tier == "low"
 
 
 def test_dangerous_outranks_plain_violations() -> None:
-    result = score_distress(DistressSignals(has_unsafe=True, violations=5), PHILLY_DISTRESS_V1)
+    result = score_distress(DistressSignals(has_unsafe=True, open_violations=5), PHILLY_DISTRESS_V1)
     codes = {f.code for f in result.factors}
     assert "li_dangerous" in codes
     assert "li_violations" not in codes
@@ -120,3 +121,18 @@ def test_is_absentee_heuristic() -> None:
     assert is_absentee("123 MAIN ST", "456 ELSEWHERE AVE, NEW YORK NY") is True
     assert is_absentee("123 MAIN ST", "123 Main St, Philadelphia PA 19100") is False
     assert is_absentee("123 MAIN ST", None) is False
+
+
+def test_a_complied_and_closed_violation_earns_no_distress() -> None:
+    profile = PHILLY_DISTRESS_V1
+    scored = score_distress(DistressSignals(open_violations=0, violations_on_record=1), profile)
+
+    assert [factor.code for factor in scored.factors] == []
+
+
+def test_only_genuinely_open_violations_earn_the_weight() -> None:
+    profile = PHILLY_DISTRESS_V1
+    scored = score_distress(DistressSignals(open_violations=1, violations_on_record=4), profile)
+
+    codes = [factor.code for factor in scored.factors]
+    assert "li_violations" in codes

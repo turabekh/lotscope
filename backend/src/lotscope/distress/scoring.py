@@ -17,7 +17,8 @@ class DistressSignals:
     lien_count: int | None = None
     has_unsafe: bool = False
     has_imminently_dangerous: bool = False
-    violations: int = 0
+    open_violations: int = 0
+    violations_on_record: int = 0
     demolitions: int = 0
     is_vacant: bool = False
     is_absentee_owner: bool = False
@@ -91,7 +92,7 @@ def score_distress(signals: DistressSignals, profile: DistressScoringProfile) ->
                 "li_dangerous", "Unsafe or dangerous structure (L&I)", profile.dangerous_weight
             )
         )
-    elif signals.violations > 0:
+    elif signals.open_violations > 0:
         factors.append(
             DistressFactor("li_violations", "Open L&I violations", profile.violation_weight)
         )

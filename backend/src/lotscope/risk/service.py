@@ -9,6 +9,7 @@ from lotscope.markets.capabilities import (
     forced_sale_surface_label,
     sale_calendar_state,
 )
+from lotscope.risk.attribution import TransferAfterSnapshot, attribute_delinquency
 from lotscope.risk.schemas import (
     NextSheriffSale,
     RepositoryEntry,
@@ -32,19 +33,32 @@ from lotscope.risk.scoring import (
     TitleSignal,
     assess_risk,
 )
+from lotscope.risk.violation_status import open_violation_sql
 
 _PARCEL_SQL = text(
     "SELECT is_city_owned, owner, (geom_local IS NOT NULL) AS has_geometry "
     "FROM parcel WHERE parcel_number = :parcel_number"
 )
 _TAX_SQL = text(
-    "SELECT is_delinquent, total_due, years_owed, in_sheriff_sale "
-    "FROM tax_status WHERE parcel_number = :parcel_number"
+    "SELECT ts.is_delinquent, ts.total_due, ts.years_owed, ts.in_sheriff_sale, "
+    "ts.delinquency_owner, ts.snapshot_period, p.owner AS current_owner, "
+    "d.grantor, d.document_type, d.document_id, d.sale_date, d.sale_price "
+    "FROM tax_status ts "
+    "JOIN parcel p ON p.parcel_number = ts.parcel_number "
+    "LEFT JOIN LATERAL ("
+    "  SELECT s.grantor, s.document_type, s.document_id, s.sale_date, s.sale_price "
+    "  FROM sale s WHERE s.parcel_number = ts.parcel_number "
+    "  AND ts.snapshot_period IS NOT NULL "
+    "  AND s.sale_date >= (to_date(ts.snapshot_period, 'YYYYMM') + interval '1 month')::date "
+    "  ORDER BY s.sale_date ASC LIMIT 1"
+    ") d ON TRUE "
+    "WHERE ts.parcel_number = :parcel_number"
 )
 _LI_SQL = text(
     "SELECT count(*) FILTER (WHERE event_type = 'violation') AS violations, "
-    "count(*) FILTER (WHERE event_type = 'violation' AND upper(coalesce(status, '')) = 'OPEN') "
-    "AS open_violations, "
+    "count(*) FILTER (WHERE event_type = 'violation' AND "
+    + open_violation_sql("li_event")
+    + ") AS open_violations, "
     "coalesce(bool_or(coalesce(is_unsafe, false)), false) AS has_unsafe, "
     "coalesce(bool_or(coalesce(is_imminently_dangerous, false)), false) "
     "AS has_imminently_dangerous, "
@@ -126,11 +140,28 @@ async def _tax_signal(session: AsyncSession, parcel_number: str) -> TaxSignal | 
     row = (await session.execute(_TAX_SQL, {"parcel_number": parcel_number})).one_or_none()
     if row is None:
         return None
+    transfer = (
+        TransferAfterSnapshot(
+            grantor=row.grantor,
+            document_type=row.document_type,
+            document_id=row.document_id,
+            sale_date=row.sale_date,
+            sale_price=_as_float(row.sale_price),
+        )
+        if row.document_id is not None
+        else None
+    )
     return TaxSignal(
         is_delinquent=row.is_delinquent,
         total_due=_as_float(row.total_due),
         years_owed=row.years_owed,
         in_sheriff_sale=row.in_sheriff_sale,
+        attribution=attribute_delinquency(
+            delinquency_owner=row.delinquency_owner,
+            current_owner=row.current_owner,
+            snapshot_period=row.snapshot_period,
+            transfer=transfer,
+        ),
     )
 
 

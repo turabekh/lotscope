@@ -88,7 +88,7 @@ def derive_buyers(
         lot_rows = [r for r in buyer_rows if r.is_vacant]
         if len(lot_rows) < min_lot_purchases:
             continue
-        prices = [r.sale_price for r in lot_rows]
+        lot_prices = [r.sale_price for r in lot_rows]
         located = [r for r in lot_rows if r.centroid_x is not None and r.centroid_y is not None]
         xs = [r.centroid_x for r in located if r.centroid_x is not None]
         ys = [r.centroid_y for r in located if r.centroid_y is not None]
@@ -100,8 +100,8 @@ def derive_buyers(
                 purchases_window=len(buyer_rows),
                 lot_purchases_window=len(lot_rows),
                 last_purchase_at=max(r.sale_date for r in lot_rows),
-                median_price=float(median(prices)),
-                total_consideration=float(sum(prices)),
+                median_price=float(median(lot_prices)),
+                total_consideration=float(sum(r.sale_price for r in buyer_rows)),
                 centroid_x=fmean(xs) if xs else None,
                 centroid_y=fmean(ys) if ys else None,
                 srid=srid,

@@ -22,6 +22,8 @@ from lotscope.distress.scoring import (
     is_absentee,
     score_distress,
 )
+from lotscope.risk.attribution import TransferAfterSnapshot, attribute_delinquency
+from lotscope.risk.violation_status import open_violation_sql
 from lotscope.verdict.service import DealSignal, get_deal_signals
 
 _SOURCES: list[dict[str, Any]] = [
@@ -44,7 +46,7 @@ _TENURE_JOIN = (
 _TIRED_OWNERS_SUBQUERY = (
     "SELECT tp.owner_key FROM parcel tp "
     "LEFT JOIN (SELECT parcel_number, count(*) AS open_violations FROM li_event "
-    "WHERE event_type = 'violation' AND upper(coalesce(status, '')) = 'OPEN' "
+    "WHERE event_type = 'violation' AND " + open_violation_sql("li_event") + " "
     "GROUP BY parcel_number) tv ON tv.parcel_number = tp.parcel_number "
     "WHERE tp.owner_key IS NOT NULL "
     "GROUP BY tp.owner_key "
@@ -57,7 +59,7 @@ _ONE_OWNER_TIRED_SQL = text(
     "SELECT (count(*) >= 3 AND coalesce(sum(v.open_violations), 0) >= 5) AS tired "
     "FROM parcel p "
     "LEFT JOIN (SELECT parcel_number, count(*) AS open_violations FROM li_event "
-    "WHERE event_type = 'violation' AND upper(coalesce(status, '')) = 'OPEN' "
+    "WHERE event_type = 'violation' AND " + open_violation_sql("li_event") + " "
     "GROUP BY parcel_number) v ON v.parcel_number = p.parcel_number "
     "WHERE p.owner_key = :owner_key"
 )
@@ -66,17 +68,31 @@ _PARCEL_DISTRESS_SQL = text(
     "SELECT p.market_code, p.is_vacant, p.is_city_owned, p.address, p.mailing_address, "
     "p.owner_key, "
     "ts.is_delinquent, ts.total_due, ts.years_owed, ts.lien_count, ts.in_sheriff_sale, "
+    "ts.delinquency_owner, ts.snapshot_period, p.owner AS current_owner, "
+    "d.grantor, d.document_type, d.document_id, d.sale_date, d.sale_price, "
     "coalesce(li.dangerous, false) AS dangerous, "
-    "coalesce(li.violations, 0) AS violations, "
+    "coalesce(li.open_violations, 0) AS open_violations, "
+    "coalesce(li.violations_on_record, 0) AS violations_on_record, "
     "coalesce(li.demolitions, 0) AS demolitions, "
     "(CURRENT_DATE - sl.last_sale_date)::float / 365.25 AS years_since_last_sale "
     "FROM parcel p "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
+    "LEFT JOIN LATERAL ("
+    "  SELECT s.grantor, s.document_type, s.document_id, s.sale_date, s.sale_price "
+    "  FROM sale s WHERE s.parcel_number = p.parcel_number "
+    "  AND ts.snapshot_period IS NOT NULL "
+    "  AND s.sale_date >= (to_date(ts.snapshot_period, 'YYYYMM') "
+    "      + interval '1 month')::date "
+    "  ORDER BY s.sale_date ASC LIMIT 1"
+    ") d ON TRUE "
     "LEFT JOIN ("
     "  SELECT parcel_number, "
     "  bool_or(coalesce(is_unsafe, false) OR coalesce(is_imminently_dangerous, false)) "
     "  AS dangerous, "
-    "  count(*) FILTER (WHERE event_type = 'violation') AS violations, "
+    "  count(*) FILTER (WHERE event_type = 'violation' AND "
+    + open_violation_sql("li_event")
+    + ") AS open_violations, "
+    "  count(*) FILTER (WHERE event_type = 'violation') AS violations_on_record, "
     "  count(*) FILTER (WHERE event_type = 'demolition') AS demolitions "
     "  FROM li_event WHERE parcel_number = :parcel_number GROUP BY parcel_number"
     ") li ON li.parcel_number = p.parcel_number "
@@ -88,17 +104,31 @@ _BULK_SIGNALS_SQL = text(
     "SELECT p.parcel_number, p.market_code, p.is_vacant, p.is_city_owned, p.address, "
     "p.mailing_address, p.owner_key, "
     "ts.is_delinquent, ts.total_due, ts.years_owed, ts.lien_count, ts.in_sheriff_sale, "
+    "ts.delinquency_owner, ts.snapshot_period, p.owner AS current_owner, "
+    "d.grantor, d.document_type, d.document_id, d.sale_date, d.sale_price, "
     "coalesce(li.dangerous, false) AS dangerous, "
-    "coalesce(li.violations, 0) AS violations, "
+    "coalesce(li.open_violations, 0) AS open_violations, "
+    "coalesce(li.violations_on_record, 0) AS violations_on_record, "
     "coalesce(li.demolitions, 0) AS demolitions, "
     "(CURRENT_DATE - sl.last_sale_date)::float / 365.25 AS years_since_last_sale "
     "FROM parcel p "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
+    "LEFT JOIN LATERAL ("
+    "  SELECT s.grantor, s.document_type, s.document_id, s.sale_date, s.sale_price "
+    "  FROM sale s WHERE s.parcel_number = p.parcel_number "
+    "  AND ts.snapshot_period IS NOT NULL "
+    "  AND s.sale_date >= (to_date(ts.snapshot_period, 'YYYYMM') "
+    "      + interval '1 month')::date "
+    "  ORDER BY s.sale_date ASC LIMIT 1"
+    ") d ON TRUE "
     "LEFT JOIN ("
     "  SELECT parcel_number, "
     "  bool_or(coalesce(is_unsafe, false) OR coalesce(is_imminently_dangerous, false)) "
     "  AS dangerous, "
-    "  count(*) FILTER (WHERE event_type = 'violation') AS violations, "
+    "  count(*) FILTER (WHERE event_type = 'violation' AND "
+    + open_violation_sql("li_event")
+    + ") AS open_violations, "
+    "  count(*) FILTER (WHERE event_type = 'violation') AS violations_on_record, "
     "  count(*) FILTER (WHERE event_type = 'demolition') AS demolitions "
     "  FROM li_event WHERE parcel_number = ANY(:parcel_numbers) GROUP BY parcel_number"
     ") li ON li.parcel_number = p.parcel_number "
@@ -197,15 +227,36 @@ def _yes_no(value: Any) -> str:
     return "Yes" if value else "No"
 
 
+def _delinquency_counts(row: Row[Any]) -> bool:
+    transfer = (
+        TransferAfterSnapshot(
+            grantor=row.grantor,
+            document_type=row.document_type,
+            document_id=row.document_id,
+            sale_date=row.sale_date,
+            sale_price=_as_float(row.sale_price),
+        )
+        if row.document_id is not None
+        else None
+    )
+    return attribute_delinquency(
+        delinquency_owner=row.delinquency_owner,
+        current_owner=row.current_owner,
+        snapshot_period=row.snapshot_period,
+        transfer=transfer,
+    ).counts_toward_distress
+
+
 def _signals(row: Row[Any], tired_owner_keys: frozenset[str]) -> DistressSignals:
     return DistressSignals(
         in_sheriff_sale=bool(row.in_sheriff_sale),
-        is_delinquent=bool(row.is_delinquent),
+        is_delinquent=bool(row.is_delinquent) and _delinquency_counts(row),
         total_due=_as_float(row.total_due),
         years_owed=row.years_owed,
         lien_count=row.lien_count,
         has_imminently_dangerous=bool(row.dangerous),
-        violations=row.violations,
+        open_violations=row.open_violations,
+        violations_on_record=row.violations_on_record,
         demolitions=row.demolitions,
         is_vacant=bool(row.is_vacant),
         is_absentee_owner=is_absentee(row.address, row.mailing_address),

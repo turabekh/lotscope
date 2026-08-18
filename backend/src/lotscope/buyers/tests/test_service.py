@@ -23,7 +23,7 @@ async def _parcel(
     y: float,
     *,
     market: str = "phl",
-    vacant: bool = True,
+    vacant: bool | None = True,
     owner: str | None = None,
     mailing: str | None = None,
 ) -> None:
@@ -176,3 +176,45 @@ async def test_near_parcel_ranks_by_proximity(db_session: AsyncSession) -> None:
     keys = [b.buyer_key for b in nearby.buyers]
     assert keys == ["NEAR LLC"]
     assert nearby.buyers[0].distance_ft < 2640.0
+
+
+_AUDITED_BUYER = "SHLAYEN RACHEL"
+_AUDITED_MAILING = "8319 CHILDS RD WYNDMOOR PA 19038"
+
+_AUDITED_DEEDS = (
+    ("phl:362363700", "54336921", 32100.0, "2024-08-29", True, "CONNOR JOHN J"),
+    ("phl:492125600", "54374145", 1.0, "2024-12-18", None, "REDDING SAMUEL"),
+    ("phl:243037700", "54398054", 26900.0, "2025-03-04", True, "ASBELL WILLIAM"),
+    ("phl:243169100", "54398055", 16600.0, "2025-03-04", True, "SMITH WILLIAM WILKER"),
+    ("phl:062284300", "54402338", 5100.0, "2025-03-17", True, "ANDERSON AUGUSTINE JR"),
+    ("phl:201133900", "54420482", 33900.0, "2025-05-08", True, "MATUSOW JOSEPH"),
+    ("phl:191357500", "54420480", 29100.0, "2025-05-08", None, "ADAMS THOMAS"),
+    ("phl:592306600", "54422377", 1.0, "2025-05-13", None, "GORDON MARIE"),
+)
+
+
+async def test_the_audited_buyers_census_counts_the_recovered_deed_and_its_money(
+    db_session: AsyncSession,
+) -> None:
+    for offset, (pn, doc, price, when, vacant, grantor) in enumerate(_AUDITED_DEEDS):
+        await _parcel(
+            db_session,
+            pn,
+            1000.0 + offset,
+            2000.0 + offset,
+            vacant=vacant,
+            owner=_AUDITED_BUYER,
+            mailing=_AUDITED_MAILING,
+        )
+        await _sale(db_session, pn, _AUDITED_BUYER, doc, grantor=grantor, price=price, when=when)
+    await db_session.flush()
+
+    await recompute_buyer_profiles(db_session, now=_NOW)
+    profile = await get_buyer(db_session, "phl", _AUDITED_BUYER)
+
+    assert profile is not None
+    assert profile.purchases_window == 6
+    assert profile.lot_purchases_window == 5
+    assert profile.total_consideration == 143700.0
+    assert profile.mailing_address == _AUDITED_MAILING
+    assert "phl:191357500" in {purchase.parcel_number for purchase in profile.purchases}
