@@ -102,6 +102,20 @@ parser is fixed.
 
 Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006. Backlog ticket LR-B-033.
 
+## Refreshing a local database from production
+
+`./scripts/pull-prod-db.sh --confirm` dumps production and restores it over the local database. Use it instead of re-running a sweep locally — the Philadelphia verdict sweep takes ~11.5 hours and the distress sweep depends on it.
+
+It reads production and never writes to it. It **destroys the local database**, including seeded accounts and any test data, which is why it refuses to run without `--confirm` and aborts if the dump comes back implausibly small rather than restoring from a truncated file.
+
+**Two consequences worth knowing before you run it.**
+
+The copy carries **real owner PII and real user accounts**. Treat the local database as sensitive under §13 and drop it when you are finished; delete the dump from `/tmp` too.
+
+Your local seed accounts are gone afterwards — the restore brings production's user table with it, so local login needs a production credential or a freshly registered account. That surprises people who rely on a seeded test login.
+
+Overrides, all optional: `PROD_HOST`, `PROD_USER`, `PROD_KEY`, `PROD_DIR`, `DB_USER`, `DB_NAME`, `DUMP_DIR`.
+
 ## Data vintage vs fetch recency
 
 `dataset_freshness` carries two different questions and answers both:
