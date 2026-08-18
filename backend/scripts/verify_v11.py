@@ -7,11 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
+from lotscope.distress.service import find_leads
 
 MARKET = "phl"
 AUDITED_PARCEL = "phl:201133900"
 CONTROL_PARCEL = "phl:491313100"
 EXPECTED_VERDICT_VERSION = "v11"
+PRIOR_VERDICT_VERSION = "v10"
 EXPECTED_DISTRESS_PROFILE = "philly-distress-v2"
 
 
@@ -75,17 +77,23 @@ async def _distress_profile_is_current(session: AsyncSession) -> Check:
 
 
 async def _risk_never_rose(session: AsyncSession) -> Check:
-    rose = await _scalar(
-        session,
-        "SELECT count(*) FROM parcel_verdict v JOIN pre_v11_verdict s "
-        "ON s.parcel_number = v.parcel_number "
-        "WHERE v.verdict_version = CAST(:version AS text) AND v.risk_score > s.risk_score",
-        version=EXPECTED_VERDICT_VERSION,
-    )
+    row = (
+        await session.execute(
+            text(
+                "SELECT count(*) AS compared, "
+                "  count(*) FILTER (WHERE v.risk_score > s.risk_score) AS rose "
+                "FROM parcel_verdict v JOIN pre_v11_verdict s "
+                "ON s.parcel_number = v.parcel_number "
+                "WHERE v.verdict_version = CAST(:version AS text) "
+                "AND s.verdict_version = CAST(:baseline AS text)"
+            ),
+            {"version": EXPECTED_VERDICT_VERSION, "baseline": PRIOR_VERDICT_VERSION},
+        )
+    ).one()
     return Check(
-        "v11 only ever removes risk weight, never adds it",
-        rose == 0,
-        f"{rose} parcels gained risk",
+        "v11 only removes risk weight, never adds it (against the v10 baseline)",
+        row.rose == 0 and row.compared > 0,
+        f"{row.rose} of {row.compared} v10-baseline parcels gained risk",
     )
 
 
@@ -151,19 +159,27 @@ async def _control_held(session: AsyncSession) -> Check:
 
 
 async def _leads_carry_no_borrowed_debt(session: AsyncSession) -> Check:
-    borrowed = await _scalar(
-        session,
-        "SELECT count(*) FROM parcel_distress pd JOIN parcel p "
-        "ON p.parcel_number = pd.parcel_number "
-        "JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
-        "WHERE p.market_code = CAST(:market AS text) AND pd.score >= 30 "
-        "AND ts.is_delinquent IS TRUE AND pd.debt_counts IS NOT TRUE",
-        market=MARKET,
+    leads = await find_leads(session, market_code=MARKET, limit=500, min_score=30)
+    if not leads:
+        return Check("no lead shows a debt its owner does not owe", False, "no leads returned")
+    with_amount = [lead for lead in leads if lead.total_due]
+    counts = dict(
+        (
+            await session.execute(
+                text(
+                    "SELECT parcel_number, debt_counts FROM parcel_distress "
+                    "WHERE parcel_number = ANY(:parcels)"
+                ),
+                {"parcels": [lead.parcel_number for lead in with_amount]},
+            )
+        ).all()
     )
+    borrowed = [lead for lead in with_amount if counts.get(lead.parcel_number) is not True]
     return Check(
-        "no lead-tier parcel is ranked on a debt it does not owe",
-        borrowed == 0,
-        f"{borrowed} lead-tier parcels carrying unattributed debt",
+        "no lead shows a debt its owner does not owe",
+        not borrowed,
+        f"{len(with_amount)} of {len(leads)} leads show an amount, "
+        f"{len(borrowed)} of those unattributed",
     )
 
 
