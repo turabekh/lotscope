@@ -1,10 +1,10 @@
 # ADR-0083 — Whose debt, which violations, and the records we were dropping (verdict v11)
 
-**Status:** DRAFT — pending Slice 5 figures and owner acceptance · **Date:** 2026-08-__ · **Bumps `VERDICT_VERSION` v10 → v11 and the Philadelphia distress profile `philly-distress-v1` → `philly-distress-v2`**
+**Status:** Accepted · **Date:** 2026-08-18 · **Bumps `VERDICT_VERSION` v10 → v11 and the Philadelphia distress profile `philly-distress-v1` → `philly-distress-v2`**
 
 Recon: `docs/recon/data-integrity-batch-2026-08-16.md`. Measured delta with per-figure provenance: `docs/v11-delta-ledger.md`.
 
-**All four pending figures are closed** as of 2026-08-16 — see *Pending figures*. Ready for acceptance review.
+**All four pending figures are closed** as of 2026-08-16 — see *Pending figures*. **Accepted by the owner on 2026-08-18**, which opened step 11: the version bump and the coordinated recompute.
 
 ---
 

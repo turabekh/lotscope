@@ -16,7 +16,7 @@ from lotscope.verdict.decision import (
 from lotscope.verdict.trust import compose_field_trust
 from lotscope.zoning.schemas import BuildabilityResult
 
-VERDICT_VERSION = "v10"
+VERDICT_VERSION = "v11"
 
 _BUILDABILITY_WEIGHT = 0.6
 _RISK_WEIGHT = 0.4
