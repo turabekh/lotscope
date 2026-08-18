@@ -2,7 +2,7 @@
 
 Methodology changes that alter verdict outputs are **batched** into the next `VERDICT_VERSION` bump rather than shipped piecemeal (per the invariant). Data corrections (field mappings, new facts) recompute without a bump. This file collects queued items until the next batched bump.
 
-Current `VERDICT_VERSION`: **v10**.
+Current `VERDICT_VERSION`: **v11**.
 
 **Shipped since this file was last accurate.** It read `v8` while `v9` was already live, and described a "v9 batch" that is not what v9 became — recorded here so the drift is not repeated:
 
@@ -11,7 +11,11 @@ Current `VERDICT_VERSION`: **v10**.
   - market-only comparable sales: sheriff's and nominal-transfer deeds excluded, soft lot-size similarity band (ADR-0081). Philadelphia only; other markets' selection unchanged.
   - `opportunity_score` scaled by deal economics, so it can no longer rank an `economics_unattractive` parcel above one recommended for investigation (ADR-0082).
 
-**The v10 recompute is owed and unrun** by owner instruction. Reads recompute lazily on version mismatch; stored rows stay v9 until the batch runs, so leads and saved-search filters are mixed-version in the meantime.
+- **v11** — the data-integrity batch (ADR-0083), accepted 2026-08-18: delinquency attributed to the owner who actually owes it, `case_status` read alongside `violationstatus` so a complied violation stops counting as open, recovered keyless deeds in `sale`, and the mailing column OPA actually publishes feeding `is_absentee`. Bumps the Philadelphia distress profile to `philly-distress-v2` in the same batch, so **v11 is the first bump requiring a distress sweep as well as a verdict sweep**.
+
+**The v10 sweep was deliberately abandoned at 10.3% and discarded**; v11 overwrites every stored row in one pass, so nothing is owed from it. Verdict reads recompute lazily on version mismatch, so any parcel a user opens carries a current verdict while the sweep runs.
+
+Distress splits: `assess_parcel_distress` scores **live** from raw signals on every read, so the parcel detail surface is current the moment the code deploys. The stored `parcel_distress` table has no such path, and it is what leads, saved-search matching, feed and spatial search filter on (`pd.score >= :min_score`). Those surfaces carry v1 scores — a prior owner's debt still admitting parcels to lead lists — until the distress sweep runs. **Distress is therefore swept before verdicts, and it is the sweep that actually changes who gets contacted.**
 
 ## Queued
 
