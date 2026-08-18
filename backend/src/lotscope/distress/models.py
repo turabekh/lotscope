@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -17,3 +17,4 @@ class ParcelDistress(Base, TimestampMixin, ProvenanceMixin):
     tier: Mapped[str] = mapped_column(String(20), nullable=False)
     version: Mapped[str] = mapped_column(String(20), nullable=False, server_default="v2")
     profile_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    debt_counts: Mapped[bool | None] = mapped_column(Boolean, nullable=True)

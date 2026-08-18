@@ -171,6 +171,70 @@ It also settles the composition question at its final size. 32,188 additions aga
 
 ---
 
+## Step 11 — the sweep, measured (2026-08-18)
+
+ADR-0083 accepted 2026-08-18. `VERDICT_VERSION` v10 → v11 deployed to production as `8fa8c87`; drift guard confirmed prod serving it, and the running API reports `VERDICT v11` / `PROFILE philly-distress-v2`. No migrations were pending, so `deploy.sh` correctly skipped the pre-migration backup. A per-parcel baseline was captured first into `pre_v11_distress` (588,591 rows) and `pre_v11_verdict` (551,168 rows) so every movement class could be measured rather than estimated.
+
+### Distress sweep — complete
+
+588,591 Philadelphia parcels in **~4 minutes**, all now `philly-distress-v2`.
+
+| movement | parcels |
+|---|---|
+| unchanged | 509,875 |
+| fell | **78,711** |
+| rose | 5 |
+
+| delta | parcels | reading |
+|---|---|---|
+| −5 | 62,655 | loses `li_violations` only |
+| −15 | 4,983 | loses `tax_delinquent` |
+| −20 | 927 | loses `tax_delinquent` + `li_violations` |
+| −30 | 7,952 | loses `tax_delinquent` + `severe_delinquency` |
+| −35 | 2,178 | loses both delinquency factors + `li_violations` |
+| −10 | 16 | |
+| +5 | 5 | |
+
+**Against prediction.** Parcels losing `li_violations` total **65,760** (62,655 + 927 + 2,178) against a predicted 68,750 — 4.3% under. Parcels losing delinquency total **16,040** (2,178 + 7,952 + 927 + 4,983) against a predicted name-mismatch subset of 12,439 — 29% over. Both predictions were computed on 2026-08-16 and two nightly ingests have run since, so the populations moved underneath them. Recorded as measured, not reconciled.
+
+**Tier migration — this is the part that changes who gets contacted.**
+
+| before → after | parcels |
+|---|---|
+| low → none | 26,071 |
+| medium → low | 8,299 |
+| medium → none | 3,726 |
+| high → medium | 723 |
+| high → low | 31 |
+
+No parcel rose a tier. **12,056 parcels leave the medium-or-high band entirely** and with it the lead surfaces, which is the mistargeting this batch existed to stop.
+
+### The absentee class had already shipped — through data, not code
+
+The ledger predicted **≤29,001 of 37,706 vacant parcels gaining absentee +10**. Measured population is **30,119**, slightly above that ceiling — and **every one of them already carried the points before this sweep ran**. Only 5 parcels rose at all, none by 10.
+
+`is_absentee` is unconditional in `score_distress`, and this batch never touched it — what changed was the `mailing_address` data it reads. The backfill went into production on 2026-08-16 as a step-5 "data operation", and `cron(recompute_distress, hour=8, minute=0)` scored it that night. The class reached production roughly two days before the gate opened.
+
+The reasoning is closed rather than inferred: if the points had not already been applied, all 30,119 would have gained +10 in this sweep, because the scoring code is identical before and after. Zero did.
+
+**The gate held the code and the data walked in.** ADR-0083 reclassified the mailing fix as a scoring change and moved it behind the v11 gate — but what was gated was `ingestion/loaders`, while the score is a function of `parcel.mailing_address`, which a backfill wrote directly. A version gate on a derived-score pipeline only holds if the inputs are gated too, and a nightly recompute cron is enough to publish an ungated input on its own schedule.
+
+Nothing here is wrong in the output — the absentee scoring is the correct scoring, and it is what v11 would have produced anyway. What failed is the claim that nothing scoring-related was live.
+
+### Verdict sweep — running
+
+Four shards on `abs(hashtext(parcel_number)) % 4`, re-verified disjoint and exhaustive against production: 146,480 / 147,819 / 146,961 / 147,331 = 588,591.
+
+**The ~4h projection was wrong.** Measured throughput is **~14 parcels/s across all four shards**, giving **~11.5 hours**, a 1.3× speedup over the sequential estimate rather than 4×. `top` shows four postgres backends at 76–100% CPU with **0.0% idle and 0.0% iowait** — the box is fully saturated at four shards, so more shards cannot help. The earlier "DB 85% of one core, three idle" reading was taken of a sequential run and did not survive contact with four.
+
+**Production is not degraded.** End-to-end latency of 0.76s decomposes as three round-trips at a 247ms RTT; server processing is ~16ms.
+
+First 6,000 rows verified sane: `risk_score` and `recommendation` populated on all, mean risk 22.27 → 22.14, 39 risk drops, zero rises. Extrapolated that is ~3,825 risk drops against a predicted sheriff class of 764–2,282 — expected to exceed it, because `risk/service.py` also reads `open_violation_sql`, so violation-status corrections drop risk scores alongside the sheriff downgrades. To be confirmed at completion.
+
+Verdict reads self-heal lazily on version mismatch, so users see current verdicts throughout.
+
+---
+
 ## Pinned fixtures
 
 | role | parcel | why |
