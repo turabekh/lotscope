@@ -23,6 +23,6 @@ class JobRun(Base, TimestampMixin):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     result_count: Mapped[int | None] = mapped_column(Integer)
     error: Mapped[str | None] = mapped_column(Text)
-    triggered_by: Mapped[int] = mapped_column(
-        ForeignKey("app_user.id", ondelete="CASCADE"), nullable=False
+    triggered_by: Mapped[int | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="CASCADE"), nullable=True
     )

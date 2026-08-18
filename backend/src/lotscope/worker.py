@@ -1,3 +1,4 @@
+from asyncio import CancelledError
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any, ClassVar
@@ -14,6 +15,7 @@ from lotscope.admin.catalog import (
     RECOMPUTE_KIND,
     parse_params,
 )
+from lotscope.admin.models import JobRun
 from lotscope.admin.service import mark_job_finished, mark_job_running
 from lotscope.appeal.jobs import grant_investor_appeal_packets
 from lotscope.assemblage.jobs import recompute_all_assemblage
@@ -354,6 +356,81 @@ INGEST_JOB_TIMEOUT = 12 * _HOUR
 DEFAULT_JOB_TIMEOUT = 30 * _MINUTE
 
 
+async def _open_cron_run(
+    session_factory: async_sessionmaker[AsyncSession], name: str
+) -> int | None:
+    try:
+        async with session_factory() as session:
+            run = JobRun(
+                job_id=f"cron:{name}",
+                label=name,
+                kind="cron",
+                status="running",
+                started_at=datetime.now(UTC),
+                triggered_by=None,
+            )
+            session.add(run)
+            await session.commit()
+            return run.id
+    except Exception as exc:
+        _logger.warning("cron_run_not_recorded", job=name, error=str(exc))
+        return None
+
+
+async def _close_cron_run(
+    session_factory: async_sessionmaker[AsyncSession],
+    run_id: int | None,
+    *,
+    status: str,
+    error: str | None,
+) -> None:
+    if run_id is None:
+        return
+    try:
+        async with session_factory() as session:
+            run = await session.get(JobRun, run_id)
+            if run is None:
+                return
+            run.status = status
+            run.finished_at = datetime.now(UTC)
+            run.error = error
+            await session.commit()
+    except Exception as exc:
+        _logger.warning("cron_run_not_closed", run_id=run_id, error=str(exc))
+
+
+def recorded(coroutine: Callable[[dict[str, Any]], Awaitable[Any]]) -> Any:
+    async def run(ctx: dict[str, Any]) -> Any:
+        name = coroutine.__name__
+        run_id = await _open_cron_run(ctx["session_factory"], name)
+        started = datetime.now(UTC)
+        try:
+            result = await coroutine(ctx)
+        except BaseException as exc:
+            elapsed = (datetime.now(UTC) - started).total_seconds()
+            _logger.error(
+                "cron_job_ended_early",
+                job=name,
+                elapsed_seconds=round(elapsed, 1),
+                error_type=type(exc).__name__,
+            )
+            await _close_cron_run(
+                ctx["session_factory"],
+                run_id,
+                status="cancelled" if isinstance(exc, CancelledError) else "failed",
+                error=f"{type(exc).__name__}: {exc}",
+            )
+            raise
+        elapsed = (datetime.now(UTC) - started).total_seconds()
+        _logger.info("cron_job_finished", job=name, elapsed_seconds=round(elapsed, 1))
+        await _close_cron_run(ctx["session_factory"], run_id, status="success", error=None)
+        return result
+
+    run.__name__ = coroutine.__name__
+    run.__qualname__ = coroutine.__qualname__
+    return run
+
+
 class WorkerSettings:
     functions: ClassVar = [
         func(ingest_dataset, timeout=INGEST_JOB_TIMEOUT),
@@ -385,26 +462,28 @@ class WorkerSettings:
     job_timeout = DEFAULT_JOB_TIMEOUT
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     cron_jobs: ClassVar = [
-        cron(sweep_ingestion_retention, hour=2, minute=0),
-        cron(ingest_all, hour=4, minute=0, timeout=INGEST_JOB_TIMEOUT),
-        cron(recompute_vacancy_confidence, hour=6, minute=30, timeout=BULK_JOB_TIMEOUT),
-        cron(recompute_vacant_verdicts, hour=7, minute=0, timeout=BULK_JOB_TIMEOUT),
-        cron(recompute_distress, hour=8, minute=0, timeout=BULK_JOB_TIMEOUT),
-        cron(recompute_assemblage, hour=8, minute=30, timeout=BULK_JOB_TIMEOUT),
-        cron(recompute_buyers, hour=9, minute=0),
-        cron(snapshot_stats, hour=9, minute=30),
-        cron(check_verdict_invariants, hour=10, minute=30),
-        cron(reconcile_upstream_sample, hour=11, minute=0),
-        cron(send_ops_alerts, hour=5, minute=30),
-        cron(send_ops_health_digest, hour=10, minute=0),
-        cron(send_sales_week_emails, weekday="mon", hour=8, minute=0),
-        cron(grant_investor_skiptrace_credits, day=1, hour=5, minute=0),
-        cron(grant_investor_packet_credits, day=1, hour=5, minute=10),
-        cron(recompute_verdicts, weekday="sun", hour=5, minute=0, timeout=BULK_JOB_TIMEOUT),
-        cron(send_push_notifications, hour=12, minute=0),
-        cron(send_daily_digests, hour=13, minute=0),
-        cron(send_weekly_digests, weekday="mon", hour=13, minute=30),
-        cron(send_saved_search_match_alerts, hour=9, minute=0),
-        cron(send_feed_digest_emails, hour=13, minute=15),
-        cron(send_deal_reminder_emails, hour=13, minute=45),
+        cron(recorded(sweep_ingestion_retention), hour=2, minute=0),
+        cron(recorded(ingest_all), hour=4, minute=0, timeout=INGEST_JOB_TIMEOUT),
+        cron(recorded(recompute_vacancy_confidence), hour=6, minute=30, timeout=BULK_JOB_TIMEOUT),
+        cron(recorded(recompute_vacant_verdicts), hour=7, minute=0, timeout=BULK_JOB_TIMEOUT),
+        cron(recorded(recompute_distress), hour=8, minute=0, timeout=BULK_JOB_TIMEOUT),
+        cron(recorded(recompute_assemblage), hour=8, minute=30, timeout=BULK_JOB_TIMEOUT),
+        cron(recorded(recompute_buyers), hour=9, minute=0),
+        cron(recorded(snapshot_stats), hour=9, minute=30),
+        cron(recorded(check_verdict_invariants), hour=10, minute=30),
+        cron(recorded(reconcile_upstream_sample), hour=11, minute=0),
+        cron(recorded(send_ops_alerts), hour=5, minute=30),
+        cron(recorded(send_ops_health_digest), hour=10, minute=0),
+        cron(recorded(send_sales_week_emails), weekday="mon", hour=8, minute=0),
+        cron(recorded(grant_investor_skiptrace_credits), day=1, hour=5, minute=0),
+        cron(recorded(grant_investor_packet_credits), day=1, hour=5, minute=10),
+        cron(
+            recorded(recompute_verdicts), weekday="sun", hour=5, minute=0, timeout=BULK_JOB_TIMEOUT
+        ),
+        cron(recorded(send_push_notifications), hour=12, minute=0),
+        cron(recorded(send_daily_digests), hour=13, minute=0),
+        cron(recorded(send_weekly_digests), weekday="mon", hour=13, minute=30),
+        cron(recorded(send_saved_search_match_alerts), hour=9, minute=0),
+        cron(recorded(send_feed_digest_emails), hour=13, minute=15),
+        cron(recorded(send_deal_reminder_emails), hour=13, minute=45),
     ]
