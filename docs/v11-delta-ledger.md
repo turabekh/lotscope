@@ -444,3 +444,84 @@ $1,454,500 + $143,700 = $1,598,200 — exact, so the twelve we hold match OPA's 
 The fourteenth holding is a different class again — a 2025 deed OPA has not processed, so OPA itself still names the 1947 owner. Neither residual is a defect in the batch.
 
 **Provenance:** production `parcel`, 2026-08-20; Carto `opa_properties_public` live, same day.
+
+---
+
+## Defect fix: multi-party grantor matching (2026-08-20)
+
+**Not a version bump.** `VERDICT_VERSION` stays **v11** and the distress profile stays `philly-distress-v2`. [ADR-0083](adr/0083-verdict-v11-whose-debt-is-it.md) specifies that a delinquency naming the grantor of a post-snapshot sheriff's deed is the prior owner's and informational. The methodology was right; the implementation could not read a multi-party grantor string. This entry records a correction *within* the declared methodology.
+
+### The defect
+
+`_tokens` splits on whitespace, and RTT delimits multi-party fields with `;`. So `ASBELL WILLIAM;ASBELL DORA` yields the token `WILLIAM;ASBELL`, which matches nothing, and a debtor named on the deed failed the grantor test and fell through to `verify` at `medium` severity.
+
+```
+'ASBELL WILLIAM' vs 'ASBELL WILLIAM;ASBELL DORA'                            -> none
+'MCNAIR KENNETH' vs 'CONNOR JOHN J;CONNOR JOHN J ESTATE OF;MCNAIR KENNETH'  -> none
+'MATUSOW JOSEPH' vs 'MATUSOW JOSEPH;MUTNSON JOSEPH'                         -> partial
+```
+
+The cases that passed did so by luck: enough of their tokens happened to fall clear of a semicolon to reach `_MIN_SHARED_TOKENS`. The fix splits both sides on the delimiter and matches per party, taking the strongest result — a clean match against any one listed grantor is a full match, not a partial.
+
+### Delimiter inventory — semicolon only, on evidence
+
+Checked against the upstream corpus before touching anything. Of **5,133,119** grantor strings in `rtt_summary`:
+
+| form | count | verdict |
+|---|---|---|
+| `;` | **1,925,903** (37.5%) | **separator** |
+| ` AND ` | 130,802 | name-internal — `EASTERN GAS AND FUEL ASSOCIATES`, `SECRETARY OF HOUSING AND URBAN DEVELOPMENT`, `J REICHER AND SON` |
+| ` & ` | 68,596 | name-internal — `K & K INVESTMENT CO`, `MARSHALL BUILDING & CONSTRUCTION CORPORATION`, `D & V BUILDERS INC` |
+| `/` | 13,891 | name-internal — `MAHON/WHITELEY ASSOCIATES`, `RADNOR/PIER 5 PARTNERSHIP`, `A/C` |
+| `,` | 5,238 | name-internal — `BAKER,ROTHSCHILD,INC` |
+
+Splitting on any of the latter four would shred entity names, so **semicolon only**, and a test pins each name-internal form against being split. The debtor side carries **zero** semicolons across 54,399 rows; its ` AND ` / ` & ` / `,` occurrences are entity names (`STARR & JORDAN LLC`, `CW REALTY AND PROPERTY MANAGEM`). Splitting it is a symmetric no-op today and correct if upstream ever changes.
+
+**Provenance:** Carto `rtt_summary` aggregate and samples, 2026-08-20; production `tax_status` for the debtor side.
+
+### Affected class, measured
+
+Measured on production after deploy by comparing each stored verdict's `tax_delinquency` severity against the fixed engine.
+
+| | |
+|---|---|
+| delinquent phl parcels with a stored verdict and a tax flag | 54,401 |
+| **stored severity disagrees with the fixed engine** | **299** |
+| `medium` → `info` (intended) | **297** |
+| `info` → `medium` (reversals, §below) | **2** |
+| vacant among the affected | **202** |
+| `counts_toward_distress` changes | **0** — unchanged on all 299 |
+
+**Correction to the session's estimate.** The batch prompt expected "a meaningful slice of the 2,282 sheriff-deed parcels". The measured figure is **299 — 13.1% of 2,282**, not the larger fraction the multi-party-is-normal reasoning suggested. Multi-party grantors are indeed common (37.5% of the corpus), but most of those parcels never reach the grantor test: they either match the current owner first, carry no delinquency, or have no post-snapshot transfer.
+
+### Residual class: upstream duplicate-party-with-typos — 2 parcels
+
+```
+phl:232331100  debtor 'TANGHE CECELIA'
+  grantor 'TANGHE CECLIA MARY;TANGUE CECELIA MARY;HOGELAND ROSALIE C'
+phl:221167100  debtor 'JINKS GLORIA'
+  grantor 'JINKS PAUL;JENKS GLORIA C;JONES REGINA D'
+```
+
+Upstream recorded the same person two or three times with different misspellings. **The old matcher was lucky, not right**: it reached `partial` by pooling tokens across *different* parties — `TANGHE` from party 1 with `CECELIA` from party 2; `JINKS` from Paul with `GLORIA` from the misspelled `JENKS`. It matched a name present in no single party, via exactly the cross-party mechanism this fix removes.
+
+Both now read `verify` at `medium`, and both rose 40 → 60 on risk. `counts_toward_distress` is `False` on both sides, so distress is untouched. The direction is conservative — it raises caution rather than suppressing a real debt — and `verify` is the honest posture for a record upstream spelled two ways.
+
+Recovering them would require fuzzy name matching, which is an excluded scoring-rule change. Filed in `docs/feature-ledger.md` at 0-of-3.
+
+### Recompute and invalidation
+
+Targeted, not a sweep: `recompute_verdicts(session, parcel_numbers)` already accepts any sequence, so the 299 went through the same code path as a full run.
+
+| | |
+|---|---|
+| recomputed | **299 of 299**, in **58 seconds** |
+| `verdict_version` after | **v11** — unchanged, as intended |
+| risk fell / rose / unchanged | **296 / 3 / 0** |
+| `tax_delinquency` still `medium` in the set | **2** — exactly the reversals |
+
+**The third riser is not this fix.** `phl:062126700` moved 30 → 70 while its tax flag correctly went to `info`; its flags now include `unsafe_structure`, an L&I designation that landed in the 08-19/08-20 ingests after the v11 sweep. A targeted recompute re-evaluates every dimension, so a parcel can move for reasons unrelated to the change that triggered it. Worth expecting, not worth alarm.
+
+**Cache invalidation.** Neither the verdict version nor the prompt version moves in this fix, so every cached snapshot for the affected parcels would have served its old medium-severity text until its seven-day TTL. `SCAN` + `DEL` over `summary:*:{parcel}:*` and `report:*:{parcel}:*` for exactly the 299 removed **2** cached summaries — the cache only holds parcels someone has actually opened. Regeneration proven at the serving layer on `phl:362363700`, which now reads *"A prior owner's $7,839 tax debt … was likely discharged at the 2024 sheriff's sale."*
+
+The lesson is now a rule in `CLAUDE.md` §12: a within-version data correction must invalidate the derived-artifact caches for the affected keys as part of the same step.

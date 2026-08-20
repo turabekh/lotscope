@@ -67,3 +67,19 @@ Not a feature; recorded here only as a pointer. `normalize_party_key` does not s
 **Why it is not built now.** No named request yet, and the honest version is not a string match on `owner`: PHDC, the Land Bank, the Redevelopment Authority and the City hold parcels under several names and dispose of them under different rules. A derivation that conflates them would be worse than the current NULL, which at least does not assert.
 
 **What it would cost.** Small if it is a name-based derivation over `owner` at merge time; larger if it means ingesting the Land Bank / PHDC inventory as its own dataset, which is the version worth having.
+
+---
+
+## Fuzzy name matching for delinquency attribution
+
+**Filed:** 2026-08-20 · **Status:** available, unbuilt · **Requests:** 0 of 3
+
+Upstream records the same person more than once with different misspellings, and exact-per-party matching cannot see through it.
+
+**The signal.** Two parcels are known: `phl:232331100` (`TANGHE CECELIA` against `TANGHE CECLIA MARY;TANGUE CECELIA MARY;…`) and `phl:221167100` (`JINKS GLORIA` against `JINKS PAUL;JENKS GLORIA C;…`). In both, the debtor is almost certainly the grantor, and in both the recorded spellings differ by one or two characters across duplicate party entries. They currently read `verify`/`medium` — the honest "cannot explain this" posture.
+
+**Why it is not built now.** It is a scoring-rule change, not a tokenization repair. Edit-distance matching on party names decides whose debt a parcel carries, and a false positive there tells a buyer that someone else's lien is discharged. The population is two parcels; the blast radius of a loose threshold is the whole delinquent corpus.
+
+**What would change the decision.** Three named ICP requests, or evidence that the duplicate-party-with-typos class is materially larger than two — the measurement is cheap and would come first.
+
+**What it would cost.** Small in code, expensive in judgement: the threshold, whether it applies only within the sheriff-deed class, and whether a fuzzy match may ever reach `likely_discharged` or only `verify` with a softer note. That design is the work, not the matcher.
