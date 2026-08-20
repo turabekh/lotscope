@@ -184,3 +184,48 @@ async def test_case_status_survives_staging_and_the_merge(db_session: AsyncSessi
 
     assert stored.status == "COMPLIED"
     assert stored.case_status == "IN VIOLATION"
+
+
+@pytest.mark.integration
+async def test_load_li_violations_records_the_latest_event_date_as_the_vintage(
+    db_session: AsyncSession,
+) -> None:
+    from datetime import date
+
+    from lotscope.ingestion.loaders.li import load_li_violations
+
+    older = _violation(1, "V-V1")
+    newer = _violation(2, "V-V2")
+    newer["violationdate"] = "2026-08-19"
+
+    handler = _RowsHandler([[older, newer]])
+    async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
+        await load_li_violations(db_session, carto, page_size=500)
+    await db_session.flush()
+
+    fresh = await db_session.get(DatasetFreshness, ("phl", "violations"))
+    assert fresh is not None
+    assert fresh.data_vintage == date(2026, 8, 19)
+
+
+@pytest.mark.integration
+async def test_a_future_dated_violation_cannot_pass_as_the_li_vintage(
+    db_session: AsyncSession,
+) -> None:
+    from datetime import date, timedelta
+
+    from lotscope.ingestion.loaders.li import load_li_violations
+
+    real = _violation(1, "V-V3")
+    real["violationdate"] = "2026-08-19"
+    bogus = _violation(2, "V-V4")
+    bogus["violationdate"] = (date.today() + timedelta(days=400)).isoformat()
+
+    handler = _RowsHandler([[real, bogus]])
+    async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
+        await load_li_violations(db_session, carto, page_size=500)
+    await db_session.flush()
+
+    fresh = await db_session.get(DatasetFreshness, ("phl", "violations"))
+    assert fresh is not None
+    assert fresh.data_vintage == date(2026, 8, 19)
