@@ -260,3 +260,13 @@ def test_summary_prompt_forbids_calling_a_complied_violation_active() -> None:
 def test_summary_prompt_forbids_reading_a_named_signal_as_absence() -> None:
     assert "ADDS to the score" in SUMMARY_SYSTEM_PROMPT
     assert "Never describe a named signal as evidence of low distress" in SUMMARY_SYSTEM_PROMPT
+
+
+def test_summary_prompt_forbids_prescribing_professional_action() -> None:
+    assert "never prescribe an action" in SUMMARY_SYSTEM_PROMPT
+    assert "not a title search to order" in SUMMARY_SYSTEM_PROMPT
+    assert "engaging any professional" in SUMMARY_SYSTEM_PROMPT
+
+
+def test_summary_prompt_still_reports_a_source_carried_caveat() -> None:
+    assert "report it as the source states it" in SUMMARY_SYSTEM_PROMPT
