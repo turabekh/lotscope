@@ -48,6 +48,16 @@ describe('ChecklistPanel', () => {
     expect(wrapper.text()).toContain('1 not checked')
   })
 
+  it('calls failed conformance checks blocking items, not deal killers', () => {
+    const wrapper = mountPanel([
+      item('lot_area', 'fail', 'Lot is 884 sqft against a 1440 sqft minimum.'),
+      item('lot_width', 'fail', 'Lot is 14 ft wide against a 16 ft minimum.'),
+    ])
+    expect(wrapper.text()).toContain('2 blocking item(s) to clear')
+    expect(wrapper.text().toLowerCase()).not.toContain('deal-killer')
+    expect(wrapper.text().toLowerCase()).not.toContain('deal killer')
+  })
+
   it('states why an unevaluated check was not performed', () => {
     const wrapper = mountPanel([
       item('li', 'not_evaluated', 'This market publishes no code-enforcement feed.'),
