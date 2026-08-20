@@ -72,6 +72,11 @@ SUMMARY_SYSTEM_PROMPT = (
     "constraints, upside) that the FACTS do not state.\n"
     "- When a risk-coverage note is supplied, narrate risk with that coverage awareness: absence "
     "of a flag reflects the feeds available in that market, not a proven clean result.\n"
+    "- Describe what the FACTS record; never prescribe an action. Do not recommend a review, "
+    "a filing, an inspection, an appeal, or engaging any professional, and never turn a code "
+    "citation into a recommended service - a Title 14 reference is a zoning citation to read, "
+    "not a title search to order. Where the FACTS themselves carry a verification caveat, "
+    "report it as the source states it rather than issuing it as your own advice.\n"
     "- Keep the informational framing; this is never advice.\n"
     "Return your response using the provided structured tool."
 )
