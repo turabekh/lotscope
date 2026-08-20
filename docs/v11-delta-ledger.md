@@ -400,6 +400,20 @@ So the sweep valued this parcel on today's set minus exactly one high comp. The 
 | a filter behaving differently | **excluded** | valuation, assessment and parcel code are byte-identical between the sweep SHA `8fa8c87` and prod `07e72f9`; package-deed sibling groups for all four candidates were last written 2026-08-16, before the sweep |
 | an unrelated data refresh | **excluded** | on the 2026-08-18 database copy, **zero** `sale` rows and **zero** `parcel` rows inside the 1,500 ft pool carry an `updated_at` after the sweep read. The rolling three-year cutoff is not it either: cutoffs 2023-08-18 and 2023-08-20 both return $62,363 |
 
+**Addendum, 2026-08-20 (second pass) — the in-flight-ingest hypothesis is now positively excluded, not merely absent.** The 2026-08-18 database copy shows `sale` was written twice that day, at 04:01 (11,768 rows) and 04:14 (17,344 rows) — both *after* the flagship's 03:56:40Z compute, and the only writes to `sale` between the 08-16 ingest and the copy. They are not Philadelphia rows:
+
+| burst | market | rows |
+|---|---|---|
+| 2026-08-18 04:01Z | `hbg` | 11,768 |
+| 2026-08-18 04:14Z | `pgh` | 17,344 |
+| | **`phl`** | **0** |
+
+The nearest touched parcel carrying geometry sits **484,530 ft (~92 miles)** from the subject. Nothing that committed to `sale` on the day of the sweep could reach a 1,500 ft comp pool.
+
+**Provenance:** `select p.market_code, count(*) from sale s join parcel p using (parcel_number) where s.updated_at >= '2026-08-18' group by 1`, and the `ST_Distance` minimum over the same set, against the 2026-08-18 production copy — the only instrument that can answer this, because the nightly RTT merge bumps `updated_at` on every row it touches and production therefore reads 08-20 for the entire pool.
+
+**Why $62,363 is the settled number.** It is what the code returns from the data, today and on the 08-18 copy alike, under the parameters the stored verdict itself records. $53,986 is not a competing reading of the comp set; it is a value with no reproducible input state behind it. The settled number is settled because it is the only one that can be re-derived.
+
 **Finding, not explanation.** Same code, same recorded inputs, two different answers. The stored valuation is not reproducible from the inputs its own provenance names, and the remaining explanation lies inside the sweep run itself — four shards at 0.0% idle — not in the data. Per the diligence brief this is reported and stopped at; no valuation logic was changed.
 
 ### The consequence that reaches a user

@@ -50,3 +50,20 @@ Signals and capabilities that are *available* but deliberately unbuilt. An entry
 **Filed:** 2026-08-20 · **Status:** defect, queued behind a version bump — see `docs/verdict-bump-queue.md` · **Requests:** n/a
 
 Not a feature; recorded here only as a pointer. `normalize_party_key` does not split grantor lists on `;`, so a sheriff-sale buyer's own grantor can fail to match and the debt is narrated as unexplained rather than discharged. 297 Philadelphia parcels (201 vacant) flip from `verify` to `likely_discharged` when the list is split. It moves risk severity and therefore `opportunity_score`, so it must ride a verdict bump. Evidence in `docs/preflight/trial-user-preflight-2026-08-20.md` §1.4.
+
+
+---
+
+## Flag city-owned parcels in Philadelphia
+
+**Filed:** 2026-08-20 · **Status:** available, unbuilt · **Requests:** 0 of 3
+
+`parcel.is_city_owned` is populated by loaders for `pgh`, `hbg` and `wlm`. There is no `phl` loader that sets it.
+
+**Measured, production 2026-08-20:** **1** of 588,591 phl parcels carries `is_city_owned = true`; 588,586 are NULL. Meanwhile **11,956** phl parcels have an owner string reading `CITY OF PHILA`, Land Bank, or PHDC.
+
+**What it costs today.** The assemblage panel reports `acquirability: "vacant"` and `has_city_owned_neighbor: false` for City-held lots — `1935 N MARSHALL ST`, owner `CITY OF PHILA`, is presented as an ordinary private vacant lot. For a buyer those are different worlds: a private negotiation versus a Land Bank / PHDC disposition with its own queue, pricing and eligibility rules. The domain glossary already promises "Land Bank / PHDC — flags city-owned lots"; for the flagship market it is not delivered.
+
+**Why it is not built now.** No named request yet, and the honest version is not a string match on `owner`: PHDC, the Land Bank, the Redevelopment Authority and the City hold parcels under several names and dispose of them under different rules. A derivation that conflates them would be worse than the current NULL, which at least does not assert.
+
+**What it would cost.** Small if it is a name-based derivation over `owner` at merge time; larger if it means ingesting the Land Bank / PHDC inventory as its own dataset, which is the version worth having.
