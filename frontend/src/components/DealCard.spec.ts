@@ -206,7 +206,8 @@ describe('DealCard — hero and provenance', () => {
   it('composes provenance from real fields', () => {
     const text = render(deal()).find('[data-test="deal-provenance"]').text()
 
-    expect(text).toContain('based on 7 comps')
+    expect(text).toContain('ARV from 7 improved-sale comps')
+    expect(text).not.toContain('based on 7 comps')
     expect(text).toContain('20% target margin')
   })
 

@@ -71,7 +71,7 @@ const heroSentence = computed(() => {
 const provenance = computed(() => {
   const parts: string[] = []
   const comps = deal.value?.comp_count
-  if (comps != null) parts.push(`based on ${comps} comp${comps === 1 ? '' : 's'}`)
+  if (comps != null) parts.push(`ARV from ${comps} improved-sale comp${comps === 1 ? '' : 's'}`)
   const origins = new Set(assumptions.value.map((a) => a.origin))
   if (origins.has('scenario_override')) parts.push('costs you set for this scenario')
   else if (origins.has('user_override')) parts.push('your profile costs')
