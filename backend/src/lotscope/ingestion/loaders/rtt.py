@@ -13,6 +13,7 @@ from lotscope.ingestion.raw import write_raw
 from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
+from lotscope.ingestion.vintage import vintage_from_dates
 from lotscope.parcels.models import Parcel
 
 RTT_DATASET = "rtt_summary"
@@ -121,6 +122,16 @@ async def load_rtt(
         await write_raw(session, raw_rows)
         total += len(mapped)
 
+    vintage = vintage_from_dates(
+        (
+            await session.execute(
+                text("SELECT sale_date FROM staging.rtt WHERE ingest_run_id = :run_id"),
+                {"run_id": run.id},
+            )
+        )
+        .scalars()
+        .all()
+    )
     result = await merge_rtt(session, run.id)
     run.status = "success"
     run.finished_at = datetime.now(UTC)
@@ -128,5 +139,12 @@ async def load_rtt(
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count
     await session.flush()
-    await record_freshness(session, RTT_DATASET, status="success", success=True, row_count=total)
+    await record_freshness(
+        session,
+        RTT_DATASET,
+        status="success",
+        success=True,
+        row_count=total,
+        data_vintage=vintage,
+    )
     return total

@@ -17,7 +17,11 @@ from lotscope.accounts.usage import (
 )
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
-from lotscope.ai.prompts import SUMMARY_PROMPT_VERSION
+from lotscope.ai.prompts import (
+    PROMPT_VERSION,
+    REPORT_PROMPT_VERSION,
+    SUMMARY_PROMPT_VERSION,
+)
 from lotscope.ai.schemas import ParcelAnswer, ParcelReportResult, ParcelSummaryResult
 from lotscope.ai.service import ask_the_parcel, draft_parcel_report, summarize_parcel
 from lotscope.api.deps import (
@@ -100,10 +104,12 @@ async def _resolve_report(
     *,
     redis: Redis,
     generator: StructuredGenerator,
+    model: str,
 ) -> ParcelReportResult | None:
     verdict = await get_verdict(session, parcel_number)
     version = verdict.verdict_version if verdict is not None else "none"
-    cache_key = f"report:{parcel_number}:{version}"
+    scope = _generation_scope(REPORT_PROMPT_VERSION, model)
+    cache_key = f"report:{scope}:{parcel_number}:{version}"
 
     with contextlib.suppress(RedisError):
         cached = await redis.get(cache_key)
@@ -119,10 +125,15 @@ async def _resolve_report(
     return result
 
 
-def _ask_cache_key(parcel_number: str, question: str, source: str) -> str:
+def _generation_scope(prompt_version: str, model: str) -> str:
+    return f"{prompt_version}:{model}"
+
+
+def _ask_cache_key(parcel_number: str, question: str, source: str, model: str) -> str:
     normalized = " ".join(question.lower().split())
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-    return f"ask:{parcel_number}:{source}:{digest}"
+    scope = _generation_scope(PROMPT_VERSION, model)
+    return f"ask:{scope}:{parcel_number}:{source}:{digest}"
 
 
 class AskRequest(BaseModel):
@@ -303,7 +314,8 @@ async def parcel_summary(
 
     verdict = await get_verdict(session, parcel_number)
     version = verdict.verdict_version if verdict is not None else "none"
-    cache_key = f"summary:{SUMMARY_PROMPT_VERSION}:{parcel_number}:{version}"
+    scope = _generation_scope(SUMMARY_PROMPT_VERSION, settings.anthropic_summary_model)
+    cache_key = f"summary:{scope}:{parcel_number}:{version}"
 
     with contextlib.suppress(RedisError):
         cached = await redis.get(cache_key)
@@ -335,7 +347,13 @@ async def parcel_report(
     if not settings.anthropic_api_key:
         raise NotFoundError("The AI report is not available.")
 
-    result = await _resolve_report(session, parcel_number, redis=redis, generator=generator)
+    result = await _resolve_report(
+        session,
+        parcel_number,
+        redis=redis,
+        generator=generator,
+        model=settings.anthropic_model,
+    )
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result
@@ -516,7 +534,13 @@ async def parcel_dossier(
 ) -> Response:
     report = None
     if settings.anthropic_api_key and report_access(current_user.tier):
-        report = await _resolve_report(session, parcel_number, redis=redis, generator=generator)
+        report = await _resolve_report(
+            session,
+            parcel_number,
+            redis=redis,
+            generator=generator,
+            model=settings.anthropic_model,
+        )
     pdf = await build_parcel_dossier(session, parcel_number, report=report)
     if pdf is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
@@ -649,7 +673,9 @@ async def ask_parcel(
     current_user: Annotated[User, Depends(get_current_user)],
     settings: SettingsDep,
 ) -> ParcelAnswer:
-    cache_key = _ask_cache_key(parcel_number, body.question, settings.zoning_retrieval_source)
+    cache_key = _ask_cache_key(
+        parcel_number, body.question, settings.zoning_retrieval_source, settings.anthropic_model
+    )
     try:
         cached = await redis.get(cache_key)
     except RedisError:

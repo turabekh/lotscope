@@ -14,6 +14,7 @@ from lotscope.ingestion.raw import write_raw
 from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
+from lotscope.ingestion.vintage import vintage_from_dates
 from lotscope.parcels.models import Parcel
 
 LI_KEY_COLUMN = "cartodb_id"
@@ -204,6 +205,19 @@ async def _run_li_loader(
         await write_raw(session, raw_rows)
         total += len(mapped)
 
+    vintage = vintage_from_dates(
+        (
+            await session.execute(
+                text(
+                    "SELECT event_date FROM staging.li_event "
+                    "WHERE ingest_run_id = :run_id AND event_type = :event_type"
+                ),
+                {"run_id": run.id, "event_type": event_type},
+            )
+        )
+        .scalars()
+        .all()
+    )
     result = await merge_li(session, run.id, event_type)
     run.status = "success"
     run.finished_at = datetime.now(UTC)
@@ -211,7 +225,14 @@ async def _run_li_loader(
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count
     await session.flush()
-    await record_freshness(session, dataset, status="success", success=True, row_count=total)
+    await record_freshness(
+        session,
+        dataset,
+        status="success",
+        success=True,
+        row_count=total,
+        data_vintage=vintage,
+    )
     return total
 
 

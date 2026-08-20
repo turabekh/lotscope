@@ -81,6 +81,8 @@ def build_summary_prompt(parcel_facts: str) -> str:
     return f"FACTS:\n{parcel_facts}\n"
 
 
+REPORT_PROMPT_VERSION = "parcel-report-v1"
+
 REPORT_SYSTEM_PROMPT = (
     "You are LotScope's parcel analyst for {market} real estate.\n"
     "Draft a concise investment memo for the parcel, using ONLY the FACTS provided.\n"

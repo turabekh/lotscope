@@ -141,3 +141,48 @@ async def test_load_rtt_emits_new_deed_for_new_document(db_session: AsyncSession
         )
     ).all()
     assert [(e.code, e.doc) for e in events] == [("new_deed", "DOC-2")]
+
+
+@pytest.mark.integration
+async def test_load_rtt_records_the_latest_recording_date_as_the_vintage(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.ingestion.loaders.rtt import load_rtt
+
+    older = _rtt_row(1, "DOC-V1", 100000.0)
+    newer = _rtt_row(2, "DOC-V2", 120000.0)
+    newer["recording_date"] = "2026-07-14"
+    newer["opa_account_num"] = "7654321"
+
+    handler = _RowsHandler([[older, newer]])
+    async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
+        await load_rtt(db_session, carto, page_size=500)
+    await db_session.flush()
+
+    fresh = await db_session.get(DatasetFreshness, ("phl", "rtt_summary"))
+    assert fresh is not None
+    assert fresh.data_vintage == date(2026, 7, 14)
+
+
+@pytest.mark.integration
+async def test_a_future_dated_deed_cannot_pass_as_the_rtt_vintage(
+    db_session: AsyncSession,
+) -> None:
+    from datetime import timedelta
+
+    from lotscope.ingestion.loaders.rtt import load_rtt
+
+    real = _rtt_row(1, "DOC-V3", 100000.0)
+    real["recording_date"] = "2026-07-14"
+    bogus = _rtt_row(2, "DOC-V4", 100000.0)
+    bogus["recording_date"] = (date.today() + timedelta(days=400)).isoformat()
+    bogus["opa_account_num"] = "7654321"
+
+    handler = _RowsHandler([[real, bogus]])
+    async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
+        await load_rtt(db_session, carto, page_size=500)
+    await db_session.flush()
+
+    fresh = await db_session.get(DatasetFreshness, ("phl", "rtt_summary"))
+    assert fresh is not None
+    assert fresh.data_vintage == date(2026, 7, 14)

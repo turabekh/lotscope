@@ -10,6 +10,8 @@ from lotscope.ai.schemas import ParcelAnswer
 from lotscope.ai.service import ask_the_parcel
 from lotscope.api.parcels import _ask_cache_key
 
+_MODEL = "claude-sonnet-4-6"
+
 pytestmark = pytest.mark.integration
 
 
@@ -132,14 +134,50 @@ async def test_the_parcels_own_district_anchors_the_canonical_context(
 
 
 def test_the_two_arms_cannot_read_each_others_cached_answers() -> None:
-    incumbent = _ask_cache_key("phl:1", "how tall?", "title14")
-    canonical = _ask_cache_key("phl:1", "how tall?", "phillycode")
+    incumbent = _ask_cache_key("phl:1", "how tall?", "title14", _MODEL)
+    canonical = _ask_cache_key("phl:1", "how tall?", "phillycode", _MODEL)
 
     assert incumbent != canonical
 
 
 def test_the_incumbent_cache_key_still_identifies_the_same_question() -> None:
-    first = _ask_cache_key("phl:1", "How  TALL?", "title14")
-    second = _ask_cache_key("phl:1", "how tall?", "title14")
+    first = _ask_cache_key("phl:1", "How  TALL?", "title14", _MODEL)
+    second = _ask_cache_key("phl:1", "how tall?", "title14", _MODEL)
 
     assert first == second
+
+
+def test_every_ai_cache_key_carries_its_prompt_version_and_model() -> None:
+    from lotscope.ai.prompts import PROMPT_VERSION, REPORT_PROMPT_VERSION, SUMMARY_PROMPT_VERSION
+    from lotscope.api.parcels import _generation_scope
+
+    summary = _generation_scope(SUMMARY_PROMPT_VERSION, "model-a")
+    report = _generation_scope(REPORT_PROMPT_VERSION, "model-a")
+    ask = _generation_scope(PROMPT_VERSION, "model-a")
+
+    assert summary != report != ask
+    for scope, version in (
+        (summary, SUMMARY_PROMPT_VERSION),
+        (report, REPORT_PROMPT_VERSION),
+        (ask, PROMPT_VERSION),
+    ):
+        assert version in scope
+        assert "model-a" in scope
+
+
+def test_a_model_swap_invalidates_a_cached_answer() -> None:
+    from lotscope.api.parcels import _ask_cache_key
+
+    incumbent = _ask_cache_key("phl:1", "how tall?", "title14", "claude-sonnet-4-6")
+    swapped = _ask_cache_key("phl:1", "how tall?", "title14", "claude-opus-5")
+
+    assert incumbent != swapped
+
+
+def test_a_prompt_bump_invalidates_a_cached_summary() -> None:
+    from lotscope.api.parcels import _generation_scope
+
+    before = _generation_scope("parcel-summary-v2", "model-a")
+    after = _generation_scope("parcel-summary-v3", "model-a")
+
+    assert before != after
