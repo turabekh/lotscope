@@ -45,7 +45,7 @@ function pricePerSqft(comp: CompResult): string {
 
       <div class="estimate">
         <span class="estimate-value">{{ formatRange(comps.low, comps.high) }}</span>
-        <span class="estimate-sub">est. land value · {{ comps.comp_count }} comps</span>
+        <span class="estimate-sub">est. land value · {{ comps.comp_count }} vacant-land comps</span>
       </div>
 
       <div class="comp-list">
