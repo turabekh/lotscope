@@ -33,7 +33,7 @@ function styleFor(item: ChecklistItem): StatusStyle {
 const headline = computed(() => {
   const summary = checklist.value?.summary
   if (!summary) return ''
-  if (summary.failures > 0) return `${summary.failures} deal-killer(s) to clear`
+  if (summary.failures > 0) return `${summary.failures} blocking item(s) to clear`
   if (summary.warnings > 0) return `${summary.warnings} item(s) need a closer look`
   return 'No blocking issues found'
 })
