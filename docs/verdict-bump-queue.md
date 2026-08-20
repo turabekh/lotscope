@@ -48,3 +48,25 @@ queued for whichever bump takes them. One ADR, one version bump, one coordinated
 
 ## Not queued (verified as non-defects during recon)
 - **Bug-1 zoning split** — the buildability scorer correctly sets `needs_variance=None` on unknown conformance (`buildability.py:203`); composition correctly yields "buildability uncertain". No methodology change; the fix is reader-side only.
+
+---
+
+## Multi-party grantor lists are never split on `;`
+
+**Filed:** 2026-08-20 · Third defect in the same family as the two above.
+
+`normalize_party_key` leaves semicolons in place, so `_tokens()` splits on whitespace and emits fused tokens (`WILLIAM;ASBELL`, `OF;MCNAIR`). A delinquency debtor who *is* named on the sheriff's deed can therefore fail `match_parties`, and `attribute_delinquency` falls through to `verify` instead of `likely_discharged`.
+
+```
+'ASBELL WILLIAM' vs 'ASBELL WILLIAM;ASBELL DORA'                            -> none
+'MCNAIR KENNETH' vs 'CONNOR JOHN J;CONNOR JOHN J ESTATE OF;MCNAIR KENNETH'  -> none
+'MATUSOW JOSEPH' vs 'MATUSOW JOSEPH;MUTNSON JOSEPH'                         -> partial
+```
+
+The passing cases pass by luck — enough tokens happen to fall clear of a semicolon to reach `_MIN_SHARED_TOKENS`.
+
+**Measured scope (production, 2026-08-20).** 1,077 phl parcels are delinquent with a multi-party-grantor sheriff's deed as their first post-snapshot transfer; **297** (201 vacant) flip `verify` → `likely_discharged` once the list is split.
+
+**Why it rides a bump.** `counts_toward_distress` is `False` on both sides, so distress does not move — but severity moves `info` ↔ `medium`, which moves `risk_score` and `opportunity_score`. Lazy recompute fires only on version mismatch, so shipping it quietly would leave stored verdicts disagreeing with the engine.
+
+**Same trap as the entries above:** the fix belongs in `party_match` (split each side's parties before matching), **not** in `normalize_party_key`, which has a SQL twin backing `parcel.owner_key`.

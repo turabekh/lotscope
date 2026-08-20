@@ -357,3 +357,76 @@ Three specimens of one species — **a check whose failure is indistinguishable 
 2. **The masked gate.** `make typecheck 2>&1 | tail -2 && git commit` takes `tail`'s exit code, so a mypy failure committed anyway. Structural fix: gates run bare, or under `set -o pipefail`. The real backstop is CI at PR time — which is why **branch protection remains the open CI-enforcement gap**.
 3. **The guard that dies when it fires** — RESOLVED: inverted at step 6, not deleted.
 4. **The known trap that re-arms.** `CAST(:param AS date)` under asyncpg binds before the cast and fails at runtime. Hit twice in one day, an hour apart, in different files — a personal pattern rather than carelessness, and personal patterns outlive good intentions exactly as behavioural gate-fixes do. Countered structurally: `core/tests/test_sql_bind_traps.py` greps the SQL-bearing corpus and fails with file and line. Verified by reintroducing the trap. Different species from the success-reporting-failure family; same ledger.
+
+---
+
+## Diligence: the flagship parcel's valuation move (2026-08-20)
+
+The claim under test was the ledger's own — that *values move where recovery lands*. `phl:201133900` looked like a counterexample: North Philadelphia, no recovered-deed geography, and yet its market estimate moved $62,363 → $53,986 (−13%), flipping the assessment read from fairly assessed to over-assessed. It is a counterexample, and a stronger one than expected: **nothing in its comp pool moved at all.**
+
+### What the two numbers actually are
+
+Neither number is stored as "market estimate". The assessment surface computes it live on every read, from `sale`; the verdict stores a snapshot of the same computation taken during the sweep, as `assessment_market_gap`.
+
+| | value | source |
+|---|---|---|
+| assessed market value | $66,800 | `parcel.market_value` |
+| **stored** `assessment_market_gap` | **−$12,814** | `parcel_verdict`, computed 2026-08-18 03:56:40Z |
+| implied stored market estimate | **$53,986** | 66,800 − 12,814 |
+| **live** market estimate, prod, 2026-08-20 | **$62,363** | `analyze_parcel_assessment` |
+| live gap | −$4,437 | fairly assessed |
+
+The stored verdict's own provenance records the sweep-time comp set: **`comp_count: 22`**, `radius_ft 1500`, `years 3`, `use_class residential`, `comp_selection_policy phl-comp-selection-v1`, package deeds excluded, size-similar only. A live run today returns **23** comps under byte-identical parameters.
+
+**Provenance:** `select sources from parcel_verdict where parcel_number='phl:201133900'`; live figures from `value_parcel` / `analyze_parcel_assessment` run inside the production `api` container.
+
+### The delta reconstructed exactly
+
+Leave-one-out over today's 23-comp set: dropping any one of four high-$/sqft comps reproduces the stored estimate **$53,986** and low **$25,975** to the dollar, and two of them also reproduce the stored high **$124,889** exactly —
+
+| dropped comp | sale | $/sqft |
+|---|---|---|
+| `phl:202073400` 2146 N FRANKLIN ST | 2025-09-11, $150,000, 991 sqft | $151.36 |
+| `phl:202160300` 2123 N 9TH ST | 2025-08-25, $125,000, 847 sqft | $147.58 |
+
+So the sweep valued this parcel on today's set minus exactly one high comp. The whole −13% is one comparable.
+
+### Classification: none of the four candidate causes
+
+| candidate cause | verdict | evidence |
+|---|---|---|
+| recovered rows entering the set | **excluded** | zero `sale` rows within 1,500 ft created after the sweep read |
+| prior members displaced by ranking | **excluded** | no distance tie straddles the `LIMIT 25` boundary (rn 25 = 1071.72 ft, rn 26 = 1076.43 ft) |
+| a filter behaving differently | **excluded** | valuation, assessment and parcel code are byte-identical between the sweep SHA `8fa8c87` and prod `07e72f9`; package-deed sibling groups for all four candidates were last written 2026-08-16, before the sweep |
+| an unrelated data refresh | **excluded** | on the 2026-08-18 database copy, **zero** `sale` rows and **zero** `parcel` rows inside the 1,500 ft pool carry an `updated_at` after the sweep read. The rolling three-year cutoff is not it either: cutoffs 2023-08-18 and 2023-08-20 both return $62,363 |
+
+**Finding, not explanation.** Same code, same recorded inputs, two different answers. The stored valuation is not reproducible from the inputs its own provenance names, and the remaining explanation lies inside the sweep run itself — four shards at 0.0% idle — not in the data. Per the diligence brief this is reported and stopped at; no valuation logic was changed.
+
+### The consequence that reaches a user
+
+Two live surfaces now disagree on this parcel by $8,377:
+
+- `VerdictPanel` and `WhyScoreDrawer` render the **stored** `assessment_market_gap` — −$12,814, over-assessed.
+- `AssessmentPanel` calls `/assessment` and renders the **live** computation — −$4,437, fairly assessed.
+
+The paid appeal-packet CTA hangs off the live path (`estimated_annual_tax_savings`, currently null), so **the CTA is not showing on this parcel today**. It was reachable at sweep values. A stored snapshot of a live-computed number, rendered beside the live number, is the defect class — not the arithmetic.
+
+**Latent, noted not fixed:** `_COMPS_SQL` orders by `distance_ft` alone and cuts at `LIMIT 25`. Two sales of the same parcel carry identical distances, so ties are routine; the cut is only stable while no tie straddles row 25. A deterministic tiebreak would make the comp set reproducible by construction. Not the cause here — it was checked and excluded.
+
+---
+
+## Residual: the owner-portfolio count is short by one (2026-08-20)
+
+Class: **`owner_2` matching**, not nightly-refresh lag. Explicitly out of scope per the batch ADR's non-goals; recorded, not fixed.
+
+| | parcels | value |
+|---|---|---|
+| LotScope owner portfolio (`owner_key = 'SHLAYEN RACHEL'`) | 12 | $1,454,500 |
+| OPA live, `owner_1 = 'SHLAYEN RACHEL'` **or** `owner_2 = 'SHLAYEN RACHEL'` | 13 | $1,598,200 |
+| the missing parcel: `651279700` 7216 HEGERMAN ST, `owner_1 = SHLAYEN LEONID`, `owner_2 = SHLAYEN RACHEL` | 1 | $143,700 |
+
+$1,454,500 + $143,700 = $1,598,200 — exact, so the twelve we hold match OPA's twelve `owner_1` rows to the dollar and **refresh lag is arithmetically excluded**. `owners/service.py` matches on `owner_key`, a generated column derived from `owner_1` alone; `owner_2` is never consulted, so any parcel where the subject is the second-named owner is invisible to the portfolio panel.
+
+The fourteenth holding is a different class again — a 2025 deed OPA has not processed, so OPA itself still names the 1947 owner. Neither residual is a defect in the batch.
+
+**Provenance:** production `parcel`, 2026-08-20; Carto `opa_properties_public` live, same day.
