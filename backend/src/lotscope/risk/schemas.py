@@ -46,6 +46,12 @@ class RiskFlagSchema(BaseModel):
     source: str
 
 
+class ViolationPosture(BaseModel):
+    parcel_number: str
+    violations_on_record: int
+    open_violations: int
+
+
 class RiskResult(BaseModel):
     parcel_number: str
     risk_score: float

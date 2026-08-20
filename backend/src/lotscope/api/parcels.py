@@ -17,6 +17,7 @@ from lotscope.accounts.usage import (
 )
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
+from lotscope.ai.prompts import SUMMARY_PROMPT_VERSION
 from lotscope.ai.schemas import ParcelAnswer, ParcelReportResult, ParcelSummaryResult
 from lotscope.ai.service import ask_the_parcel, draft_parcel_report, summarize_parcel
 from lotscope.api.deps import (
@@ -302,7 +303,7 @@ async def parcel_summary(
 
     verdict = await get_verdict(session, parcel_number)
     version = verdict.verdict_version if verdict is not None else "none"
-    cache_key = f"summary:{parcel_number}:{version}"
+    cache_key = f"summary:{SUMMARY_PROMPT_VERSION}:{parcel_number}:{version}"
 
     with contextlib.suppress(RedisError):
         cached = await redis.get(cache_key)
