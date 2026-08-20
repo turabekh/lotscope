@@ -19,6 +19,7 @@ from lotscope.risk.schemas import (
     RiskResult,
     SheriffSaleCalendar,
     SheriffSaleItem,
+    ViolationPosture,
 )
 from lotscope.risk.scoring import (
     STREET_ACCESS_MAX_FT,
@@ -175,6 +176,15 @@ async def _li_signal(session: AsyncSession, parcel_number: str) -> LiSignal:
         demolitions=row.demolitions,
         open_violations=row.open_violations,
         violation_types=tuple(types),
+    )
+
+
+async def get_violation_posture(session: AsyncSession, parcel_number: str) -> ViolationPosture:
+    signal = await _li_signal(session, parcel_number)
+    return ViolationPosture(
+        parcel_number=parcel_number,
+        violations_on_record=signal.violations,
+        open_violations=signal.open_violations,
     )
 
 

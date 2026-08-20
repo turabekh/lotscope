@@ -51,6 +51,8 @@ from lotscope.distress.service import assess_parcel_distress
 from lotscope.markets.capabilities import market_display_name, risk_coverage_note
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
+from lotscope.risk.schemas import ViolationPosture
+from lotscope.risk.service import get_violation_posture
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.verdict.service import get_verdict
 from lotscope.zoning.service import assess_parcel as assess_zoning
@@ -125,11 +127,70 @@ def _assessed_value_fact(detail: ParcelDetail) -> str:
     return f"Assessed value: {detail.market_value}."
 
 
+_RISK_FLAG_LIMIT = 4
+_DISTRESS_FACTOR_LIMIT = 4
+
+_SEVERITY_READING = {
+    "info": "informational context, not a live burden on the current owner",
+    "low": "low severity",
+    "medium": "medium severity",
+    "high": "high severity",
+}
+
+
+def _risk_flag_lines(risk_flags: list[dict[str, Any]]) -> list[str]:
+    shown = risk_flags[:_RISK_FLAG_LIMIT]
+    header = (
+        f"Risk flags ({len(shown)} of {len(risk_flags)} shown), each as severity - label - detail:"
+        if len(risk_flags) > len(shown)
+        else f"Risk flags (all {len(risk_flags)}), each as severity - label - detail:"
+    )
+    lines = [header]
+    for flag in shown:
+        severity = str(flag.get("severity", "")).strip()
+        reading = _SEVERITY_READING.get(severity, severity or "unrated")
+        lines.append(f"- {reading} - {flag.get('label', '')} - {flag.get('detail', '')}".rstrip())
+    return lines
+
+
+def _violation_posture_fact(posture: ViolationPosture) -> str:
+    if posture.violations_on_record == 0:
+        return "L&I violations: none on record."
+    if posture.open_violations == 0:
+        return (
+            f"L&I violations: {posture.violations_on_record} on record, "
+            "0 currently open - every violation on record has been complied with or closed. "
+            "This is history, not an active violation."
+        )
+    return (
+        f"L&I violations: {posture.violations_on_record} on record, "
+        f"{posture.open_violations} currently open and unresolved."
+    )
+
+
+def _distress_fact(distress: DistressResult) -> str:
+    shown = distress.factors[:_DISTRESS_FACTOR_LIMIT]
+    named = ", ".join(f"{factor.label} (+{factor.weight})" for factor in shown)
+    if len(shown) < len(distress.factors):
+        completeness = (
+            f"These are the {len(shown)} largest of {len(distress.factors)} signals present."
+        )
+    else:
+        completeness = "No other distress signal was found on this parcel."
+    return (
+        f"Distress score {distress.score}/100 ({distress.tier}). The score is the sum of the "
+        f"distress signals PRESENT on this parcel, and each signal listed here ADDS to it: "
+        f"{named}. {completeness} The score is {distress.score} because these are the only "
+        "signals found, not because the listed signals are absent."
+    )
+
+
 def _summary_facts(
     detail: ParcelDetail,
     verdict: VerdictResult | None,
     distress: DistressResult | None,
     assessment: AssessmentResult | None,
+    violations: ViolationPosture | None = None,
 ) -> str:
     lines = [
         f"Address: {detail.address or 'unknown'}; parcel {detail.parcel_number}.",
@@ -158,18 +219,18 @@ def _summary_facts(
             f"{verdict.value_estimate_low}-{verdict.value_estimate_high}; "
             f"{deal_read}; risk score {verdict.risk_score}."
         )
-        flags = [str(flag.get("label", "")) for flag in verdict.risk_flags][:4]
-        if flags:
-            lines.append(f"Top risk flags: {', '.join(flags)}.")
+        if verdict.risk_flags:
+            lines.extend(_risk_flag_lines(verdict.risk_flags))
         coverage = risk_coverage_note(detail.market_code)
         if coverage is not None:
             lines.append(
                 f"Risk coverage: the risk read is {coverage}; some feeds present in other "
                 "markets are absent here, so no flags does not prove a clean parcel."
             )
+    if violations is not None:
+        lines.append(_violation_posture_fact(violations))
     if distress is not None and distress.factors:
-        factors = ", ".join(factor.label for factor in distress.factors[:4])
-        lines.append(f"Distress score {distress.score}/100 ({distress.tier}): {factors}.")
+        lines.append(_distress_fact(distress))
     if assessment is not None and assessment.status != "unknown":
         lines.append(
             f"Assessment: {assessment.status.replace('_', ' ')}; modeled market value "
@@ -193,7 +254,9 @@ async def summarize_parcel(
     distress = await assess_parcel_distress(session, parcel_number)
     assessment = await analyze_parcel_assessment(session, parcel_number)
 
-    facts = _summary_facts(detail, verdict, distress, assessment)
+    violations = await get_violation_posture(session, parcel_number)
+
+    facts = _summary_facts(detail, verdict, distress, assessment, violations)
     raw = await generator.generate(
         system=for_market(SUMMARY_SYSTEM_PROMPT, market_display_name(detail.market_code)),
         user=build_summary_prompt(facts),
@@ -221,8 +284,9 @@ def _report_facts(
     distress: DistressResult | None,
     assessment: AssessmentResult | None,
     cited_section: str | None,
+    violations: ViolationPosture | None = None,
 ) -> str:
-    facts = _summary_facts(detail, verdict, distress, assessment)
+    facts = _summary_facts(detail, verdict, distress, assessment, violations)
     if verdict is not None and verdict.arv is not None:
         if _deal_is_infeasible(verdict):
             facts += (
@@ -255,7 +319,9 @@ async def draft_parcel_report(
     buildability = await assess_zoning(session, parcel_number)
     cited_section = buildability.cited_section if buildability is not None else None
 
-    facts = _report_facts(detail, verdict, distress, assessment, cited_section)
+    violations = await get_violation_posture(session, parcel_number)
+
+    facts = _report_facts(detail, verdict, distress, assessment, cited_section, violations)
     raw = await generator.generate(
         system=for_market(REPORT_SYSTEM_PROMPT, market_display_name(detail.market_code)),
         user=build_report_prompt(facts),

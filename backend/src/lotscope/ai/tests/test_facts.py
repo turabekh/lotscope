@@ -133,3 +133,130 @@ def test_assessed_value_fact_labels_base_year_market() -> None:
     assert "5690" in hbg or "5691" in hbg
     phl = _assessed_value_fact(_detail(market_value=510000.0, assessment_ratio=1.0))
     assert phl == "Assessed value: 510000.0."
+
+
+def _flagship_flags() -> list[dict[str, Any]]:
+    return [
+        {
+            "code": "tax_delinquency",
+            "severity": "info",
+            "label": "Tax delinquency recorded against a prior owner",
+            "detail": (
+                "$8,975 owed over 44 year(s). Recorded as of 2022-06 against MATUSOW JOSEPH, "
+                "the prior owner named as grantor on the 2025-05-08 sheriff's deed "
+                "(doc 54420482). Debt predates the current owner and is likely discharged at "
+                "sheriff sale — verify with the Dept. of Revenue."
+            ),
+            "source": "tax_status",
+        },
+        {
+            "code": "li_violations",
+            "severity": "low",
+            "label": "L&I violations on record",
+            "detail": "1 violation(s) on record — Vacant Structure & Land.",
+            "source": "li_event",
+        },
+    ]
+
+
+def test_snapshot_payload_carries_flag_severity_and_detail() -> None:
+    from lotscope.ai.service import _summary_facts
+
+    facts = _summary_facts(_detail(), _verdict(risk_flags=_flagship_flags()), None, None)
+
+    assert "informational context, not a live burden on the current owner" in facts
+    assert "the prior owner named as grantor on the 2025-05-08 sheriff's deed" in facts
+    assert "1 violation(s) on record" in facts
+
+
+def test_snapshot_payload_splits_open_from_on_record_violations() -> None:
+    from lotscope.ai.service import _summary_facts
+    from lotscope.risk.schemas import ViolationPosture
+
+    complied = _summary_facts(
+        _detail(),
+        _verdict(risk_flags=_flagship_flags()),
+        None,
+        None,
+        ViolationPosture(parcel_number="000000001", violations_on_record=1, open_violations=0),
+    )
+    assert "1 on record, 0 currently open" in complied
+    assert "complied with or closed" in complied
+    assert "This is history, not an active violation." in complied
+
+    live = _summary_facts(
+        _detail(),
+        _verdict(risk_flags=_flagship_flags()),
+        None,
+        None,
+        ViolationPosture(parcel_number="000000001", violations_on_record=3, open_violations=2),
+    )
+    assert "3 on record, 2 currently open and unresolved" in live
+    assert "history" not in live.lower()
+
+
+def test_snapshot_payload_names_distress_signals_as_present_and_additive() -> None:
+    from lotscope.ai.service import _summary_facts
+    from lotscope.distress.schemas import DistressFactor, DistressResult
+
+    distress = DistressResult(
+        parcel_number="000000001",
+        score=20,
+        tier="low",
+        version="v2",
+        profile_id="philly-distress-v2",
+        factors=[
+            DistressFactor(code="vacant", label="Vacant lot — owner unlikely to occupy", weight=10),
+            DistressFactor(
+                code="absentee", label="Absentee owner (out-of-area mailing address)", weight=10
+            ),
+        ],
+        sources=[],
+        computed_at=_NOW,
+    )
+    facts = _summary_facts(_detail(), _verdict(), distress, None)
+
+    assert "Distress score 20/100 (low)" in facts
+    assert "Vacant lot — owner unlikely to occupy (+10)" in facts
+    assert "Absentee owner (out-of-area mailing address) (+10)" in facts
+    assert "No other distress signal was found on this parcel." in facts
+    assert "signals PRESENT on this parcel" in facts
+
+
+def test_snapshot_payload_is_honest_when_distress_factors_are_truncated() -> None:
+    from lotscope.ai.service import _DISTRESS_FACTOR_LIMIT, _summary_facts
+    from lotscope.distress.schemas import DistressFactor, DistressResult
+
+    factors = [
+        DistressFactor(code=f"c{index}", label=f"Signal {index}", weight=5)
+        for index in range(_DISTRESS_FACTOR_LIMIT + 2)
+    ]
+    distress = DistressResult(
+        parcel_number="000000001",
+        score=30,
+        tier="medium",
+        version="v2",
+        profile_id="philly-distress-v2",
+        factors=factors,
+        sources=[],
+        computed_at=_NOW,
+    )
+    facts = _summary_facts(_detail(), _verdict(), distress, None)
+
+    assert f"largest of {len(factors)} signals present" in facts
+    assert "No other distress signal was found" not in facts
+
+
+def test_summary_prompt_forbids_calling_a_complied_violation_active() -> None:
+    assert "ONLY when the FACTS state a non-zero count of currently-open violations" in (
+        SUMMARY_SYSTEM_PROMPT
+    )
+    assert "since complied" in SUMMARY_SYSTEM_PROMPT
+    assert "a prior owner's delinquency, likely discharged at the sheriff sale" in (
+        SUMMARY_SYSTEM_PROMPT
+    )
+
+
+def test_summary_prompt_forbids_reading_a_named_signal_as_absence() -> None:
+    assert "ADDS to the score" in SUMMARY_SYSTEM_PROMPT
+    assert "Never describe a named signal as evidence of low distress" in SUMMARY_SYSTEM_PROMPT

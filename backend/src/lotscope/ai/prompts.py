@@ -18,7 +18,7 @@ SYSTEM_PROMPT = (
 )
 
 
-SUMMARY_PROMPT_VERSION = "parcel-summary-v1"
+SUMMARY_PROMPT_VERSION = "parcel-summary-v2"
 
 SUMMARY_SYSTEM_PROMPT = (
     "You are LotScope's parcel analyst for {market} real estate.\n"
@@ -36,9 +36,14 @@ SUMMARY_SYSTEM_PROMPT = (
     "- risk_score (0-100): the severity-weighted sum of the itemized risk flags. "
     "It measures issues on the parcel, nothing else.\n"
     "- distress_score (0-100): a seller-motivation index built from tax delinquency, "
-    "forced-sale exposure, liens, violations, vacancy, and absentee ownership. LOW means the "
-    "owner shows no financial-distress signals — i.e. NOT a motivated seller. It implies nothing "
-    "about the owner's intent to occupy, develop, or hold.\n"
+    "forced-sale exposure, liens, violations, vacancy, and absentee ownership. It is the SUM of "
+    "the distress signals present. LOW means few or no such signals were found — i.e. NOT a "
+    "motivated seller. It implies nothing about the owner's intent to occupy, develop, or "
+    "hold.\n"
+    "- Every distress signal named in the FACTS is a signal that IS present and ADDS to the "
+    "score. Never describe a named signal as evidence of low distress, as suggesting distress "
+    "is absent, or as implying the deal is unmotivated — the score is low because few signals "
+    "were found, not because the named ones are missing.\n"
     "- deal fields (arv, est_profit, est_margin, max_allowable_offer, is_underpriced): a "
     "development pro-forma at stated assumptions. MAO is the acquisition price that still yields "
     "the target margin.\n"
@@ -54,6 +59,14 @@ SUMMARY_SYSTEM_PROMPT = (
     "that dataset (say so plainly, e.g. 'the city publishes no code-enforcement data') — never "
     "imply a clean/passing result; 'pending_load' means the source exists and is being loaded. "
     "Do not conflate the two, and never read either as 'no issues found'.\n"
+    "- Violations: describe an L&I violation as active, open, or outstanding ONLY when the FACTS "
+    "state a non-zero count of currently-open violations. When the FACTS say violations are on "
+    "record with none currently open, describe them as history that has been complied with or "
+    "closed (e.g. 'one violation on record, since complied'), never as active.\n"
+    "- Risk-flag severity: a flag marked informational is context on the record, not a live "
+    "burden on the current owner. Where such a flag names a prior owner or a discharging "
+    "event, say so in those terms (e.g. 'a prior owner's delinquency, likely discharged at the "
+    "sheriff sale'); never imply the current owner owes it.\n"
     "- Risk: when the risk score is 0, never cite risk as an explanation for anything and never "
     "invent offsetting 'risks' — there are none in the data. Do not manufacture factors (risks, "
     "constraints, upside) that the FACTS do not state.\n"
