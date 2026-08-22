@@ -42,7 +42,7 @@ Title it **"Your lots — graded"**. Neutral, possessive, no verb that implies w
 
 Then `GET /watchlist` and count six. A 201 per call is not the check; the list read is.
 
-**Two of these carry a known wrong flag** — `phl:362363700` and `phl:243037700` show a medium-severity delinquency naming a party who is a grantor on her own deed (pre-flight §1.4). Seed them anyway; they are her lots and omitting them would be the more visible choice. Have the explanation ready (§5).
+**All six read correctly as of 2026-08-20.** Pre-flight §1.4 recorded `phl:362363700` and `phl:243037700` carrying a medium-severity delinquency that named a grantor on her own deed; the multi-party grantor fix (PR #168, deployed `c61181a`) cleared both. They now read `info` at risk 40, each naming her own deed's grantor. The pre-flight is a dated snapshot and still shows the old posture — nothing to seed around, and nothing to explain away.
 
 ---
 
@@ -102,7 +102,7 @@ Say it with the caveat attached, in one breath: *a thin comparable set, an order
 
 If she asks about her developed parcels: say plainly that LotScope models vacant and infill land, that the assessment read on a built property compares it to land sales, and that we do not stand behind those numbers yet.
 
-**The two flags to get ahead of.** On `phl:362363700` and `phl:243037700` she will see a medium-severity delinquency naming MCNAIR KENNETH and ASBELL WILLIAM respectively. Both are grantors on her own sheriff's deeds. The join fails to split multi-party grantor lists on `;`; it affects 297 Philadelphia parcels, 201 of them vacant; the debt is correctly kept out of the distress score in both cases. Tell her before she finds it.
+**The two flags that used to need getting ahead of are gone.** `phl:362363700` and `phl:243037700` once showed a medium-severity delinquency naming MCNAIR KENNETH and ASBELL WILLIAM — both grantors on her own sheriff's deeds — because the join failed to split multi-party grantor lists on `;`. Fixed in PR #168 and verified over HTTPS on production: 297 Philadelphia parcels moved from `medium` to `info`, and all six of her lots now name their own deed's grantor. **Do not raise it.** There is no defect left to disclose here, and volunteering a fixed one invites doubt about the five surfaces she has no reason to question.
 
 **The thing worth showing off.** `phl:191357500`'s deed is keyless upstream — RTT carries it with a null OPA account number, so the city's own transfer record cannot say which parcel it belongs to. We have it on the right parcel with the right grantor, price and date. That is one of her lots, and it is the clearest demonstration in the account that this is more than a data mirror.
 
