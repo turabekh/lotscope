@@ -1,6 +1,7 @@
 from asyncio import CancelledError
 
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from lotscope.ingestion.errors import IngestionError
@@ -136,4 +137,35 @@ async def test_a_failure_still_supersedes_a_success_from_before_the_run_started(
             assert record.last_success_at is not None
     finally:
         await _cleanup(session_factory, "ds_stale")
+        await engine.dispose()
+
+
+async def test_a_failure_does_not_overwrite_a_success_whose_run_started_first(
+    migrated_database: str,
+) -> None:
+    engine = create_async_engine(migrated_database)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    winner = session_factory()
+
+    async def fails_after_the_longer_run_commits(session: AsyncSession) -> int:
+        await record_freshness(winner, "ds_race_long", status="success", success=True, row_count=42)
+        await winner.commit()
+        raise ValueError("duplicate run lost the merge")
+
+    try:
+        await winner.execute(select(func.now()))
+
+        with pytest.raises(IngestionError):
+            await run_loader(
+                session_factory, fails_after_the_longer_run_commits, dataset="ds_race_long"
+            )
+
+        async with session_factory() as session:
+            record = await session.get(DatasetFreshness, ("phl", "ds_race_long"))
+            assert record is not None
+            assert record.status == "success"
+            assert record.row_count == 42
+    finally:
+        await winner.close()
+        await _cleanup(session_factory, "ds_race_long")
         await engine.dispose()

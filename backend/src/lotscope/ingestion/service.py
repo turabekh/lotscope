@@ -48,10 +48,10 @@ async def record_freshness(
         "market_code": market_code,
         "dataset": dataset,
         "status": status,
-        "last_attempt_at": func.now(),
+        "last_attempt_at": func.clock_timestamp(),
     }
     if success:
-        row["last_success_at"] = func.now()
+        row["last_success_at"] = func.clock_timestamp()
     if row_count is not None:
         row["row_count"] = row_count
     if detail is not None:
