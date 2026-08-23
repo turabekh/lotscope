@@ -6,6 +6,8 @@ Read-only. Every figure below came from a query against production or a live pri
 
 She is referred to throughout by parcel rather than by name. Her name and mailing address are public record in OPA, but §13 says minimise, and the report reads no worse for it.
 
+> **Superseded in part, 2026-08-20 (later the same day).** §1.4's delinquency-attribution defect was fixed in PR #168 and deployed as `c61181a`; all six lots now read `info`, each naming her own deed's grantor. §1.4 and the §179 decision item below are preserved as the record of what was measured at the time — do **not** act on them. The operational instructions are in `docs/runbooks/trial-concierge-seeding.md`, which is current. §2's assessment-sweep artifacts are unchanged and still apply.
+
 **Verdict in one line: not yet.** One defect in the delinquency-attribution join misreads two of her six lots, and the assessment sweep's headline numbers are mostly artifacts. Both are stated precisely below; neither is a blocker to *building*, both are blockers to *showing*.
 
 ---
