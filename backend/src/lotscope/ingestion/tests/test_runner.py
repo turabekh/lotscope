@@ -80,3 +80,60 @@ async def test_run_loader_records_a_cancelled_run_before_re_raising(
     finally:
         await _cleanup(session_factory, "ds_cancelled")
         await engine.dispose()
+
+
+async def test_a_failure_does_not_overwrite_a_success_recorded_after_the_run_started(
+    migrated_database: str,
+) -> None:
+    engine = create_async_engine(migrated_database)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def fails_after_a_concurrent_run_succeeds(session: AsyncSession) -> int:
+        async with session_factory() as concurrent:
+            await record_freshness(
+                concurrent, "ds_race", status="success", success=True, row_count=42
+            )
+            await concurrent.commit()
+        raise ValueError("duplicate run lost the merge")
+
+    try:
+        with pytest.raises(IngestionError):
+            await run_loader(
+                session_factory, fails_after_a_concurrent_run_succeeds, dataset="ds_race"
+            )
+        async with session_factory() as session:
+            record = await session.get(DatasetFreshness, ("phl", "ds_race"))
+            assert record is not None
+            assert record.status == "success"
+            assert record.row_count == 42
+            assert record.last_success_at is not None
+    finally:
+        await _cleanup(session_factory, "ds_race")
+        await engine.dispose()
+
+
+async def test_a_failure_still_supersedes_a_success_from_before_the_run_started(
+    migrated_database: str,
+) -> None:
+    engine = create_async_engine(migrated_database)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def failing(session: AsyncSession) -> int:
+        raise ValueError("boom")
+
+    try:
+        async with session_factory() as session:
+            await record_freshness(session, "ds_stale", status="success", success=True, row_count=9)
+            await session.commit()
+
+        with pytest.raises(IngestionError):
+            await run_loader(session_factory, failing, dataset="ds_stale")
+
+        async with session_factory() as session:
+            record = await session.get(DatasetFreshness, ("phl", "ds_stale"))
+            assert record is not None
+            assert record.status == "failed"
+            assert record.last_success_at is not None
+    finally:
+        await _cleanup(session_factory, "ds_stale")
+        await engine.dispose()

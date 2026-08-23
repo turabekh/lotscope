@@ -70,3 +70,28 @@ async def test_record_freshness_tracks_success(db_session: AsyncSession) -> None
     assert record.status == "success"
     assert record.row_count == 42
     assert record.last_success_at is not None
+
+
+async def test_upsert_where_clause_can_decline_the_conflict_update(
+    db_session: AsyncSession,
+) -> None:
+    await upsert(
+        db_session,
+        Parcel,
+        [{"parcel_number": "300", "owner": "Incumbent"}],
+        index_elements=["parcel_number"],
+    )
+    await db_session.flush()
+    await upsert(
+        db_session,
+        Parcel,
+        [{"parcel_number": "300", "owner": "Challenger"}],
+        index_elements=["parcel_number"],
+        where=Parcel.owner == "Somebody Else",
+    )
+    await db_session.flush()
+
+    owner = (
+        await db_session.execute(select(Parcel.owner).where(Parcel.parcel_number == "300"))
+    ).scalar_one()
+    assert owner == "Incumbent"
