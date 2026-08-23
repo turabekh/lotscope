@@ -1,7 +1,7 @@
 from collections.abc import Iterator, Sequence
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import ColumnElement, func
+from sqlalchemy import ColumnElement, CursorResult, func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,6 +48,7 @@ async def upsert(
         if update_columns is not None
         else [column for column in rows[0] if column not in keys]
     )
+    affected = 0
     for batch in batch_by_bind_limit(rows):
         statement = insert(model).values(list(batch))
         assignments: dict[str, Any] = {column: statement.excluded[column] for column in columns}
@@ -56,8 +57,9 @@ async def upsert(
         statement = statement.on_conflict_do_update(
             index_elements=list(index_elements), set_=assignments, where=where
         )
-        await session.execute(statement)
-    return len(rows)
+        result = cast(CursorResult[Any], await session.execute(statement))
+        affected += result.rowcount
+    return affected
 
 
 async def insert_ignore(

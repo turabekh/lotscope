@@ -16,7 +16,8 @@ _logger = get_logger("ingestion.runner")
 
 async def _database_now(session_factory: async_sessionmaker[AsyncSession]) -> datetime:
     async with session_factory() as session:
-        return (await session.execute(select(func.now()))).scalar_one()
+        stamp: datetime = (await session.execute(select(func.clock_timestamp()))).scalar_one()
+        return stamp
 
 
 async def _record_failure(
@@ -24,7 +25,7 @@ async def _record_failure(
     dataset: str,
     market_code: str,
     detail: str,
-    run_started_at: datetime | None,
+    run_started_at: datetime,
 ) -> None:
     async with session_factory() as session:
         await record_freshness(
@@ -45,9 +46,14 @@ async def run_loader(
     dataset: str,
     market_code: str = "phl",
 ) -> int:
-    run_started_at: datetime | None = None
     try:
         run_started_at = await _database_now(session_factory)
+    except Exception as exc:
+        _logger.error(
+            "ingestion_start_stamp_failed", market=market_code, dataset=dataset, error=str(exc)
+        )
+        raise IngestionError(f"ingestion could not start for {dataset}: {exc}") from exc
+    try:
         async with session_factory() as session:
             total = await loader(session)
             await session.commit()
