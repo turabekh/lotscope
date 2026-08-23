@@ -36,6 +36,26 @@ Distress splits: `assess_parcel_distress` scores **live** from raw signals on ev
 - **Now (no bump, Slice 4):** condemned + dead-end stored + displayed as **unscored parcel facts** with provenance; a condemned `pgh` parcel's `risk_score` stays unchanged at v8.
 - **Queued (needs bump):** (a) `pgh` condemned → an **unsafe-structure severity class** in risk scoring; (b) `pgh` **dead-end** (owner unlocatable) → a **new high-value distress factor** (an owner who can't be found by the city is a strong motivated-seller / opportunity signal).
 
+### Philadelphia public ownership is never flagged
+- **Source:** review sweep 2026-08-24. Measured on production.
+- **Now:** `is_city_owned` is set by loaders for `pgh` (8.7% of parcels), `hbg` (4.6%) and `wlm` (0.12%). **No loader sets it for `phl`: 1 parcel of 588,606.** Handoff 0047 §5 saw one symptom of this (`1935 N MARSHALL ST` rendering as private in the assemblage panel) and ledgered it at 0-of-3 as a feature; it is a data gap, and it reaches further than that panel.
+- **Scale:** 13,434 phl parcels carry a public-owner name (`CITY OF PHILA%` 4,886, `%PHILADELPHIA HOUSING%` 4,582, `%LAND BANK%` 2,490, `%REDEVELOPMENT AUTHORITY%` 1,473, `%PHDC%` 3). An owner-string match is a scoping estimate, not the fix — the fix is a Land Bank / PHDC / RDA parcel source, per §17.
+- **What it currently costs, measured:**
+  - `score_distress` returns `score=0, tier="none"` immediately for a city-owned parcel (`distress/scoring.py:61`). **13,431 of the 13,434 score above zero today**, and **7,539 clear the default lead threshold of 30** (`api/leads.py:24`) — 45 `high`, 7,494 `medium`. They surface as motivated-seller leads, saved-search matches and export rows as though privately owned. `savedsearch/matching.py:38`, `distress/service.py:158,175` and `watchlist/service.py:52` all exclude city-owned parcels and none of those exclusions fire.
+  - `risk/scoring.py:361` never adds the `public_ownership` medium flag ("acquisition is through the public disposition process, not a private sale").
+  - `assemblage/logic.py:46,82,99` treats them as private acquisition candidates and as a "clear path".
+- **Why it needs a bump:** the `public_ownership` flag moves `risk_score`, so stored verdicts would disagree with the engine while still stamped `v11`, and lazy recompute fires only on version mismatch. It also zeroes distress for thousands of parcels, so it needs the distress sweep in the same batch.
+- **Note:** this is the one queued item with an outreach dimension. Until it ships, lead lists can direct contact at the City, PHA and the Land Bank as if they were private sellers.
+
+### Philadelphia vacancy is never derived from OPA land use
+- **Source:** review sweep 2026-08-24. Measured on production.
+- **Now:** `VACANT_LAND_USES_BY_MARKET` (`vacancy/derivation.py:23`) registers `hbg` and `pgh` only, and `derive_vacancy` is called only from those two loaders. For `phl`, `is_vacant` comes solely from the Vacant Property Indicators loader, with no OPA `land_use` fallback. `_PGH_VACANT_USES` already contains the exact string `VACANT LAND` that phl uses.
+- **Scale:** **14,020 of 42,583** phl parcels whose OPA `land_use` starts `VACANT` are unflagged — 32.9%. The suffixed values are far worse: `VACANT LAND - RESIDENTIAL` 1,731 of 2,242 missing (**77%**), `VACANT LAND - NON-RESIDENTIAL` 172 of 212 (**81%**), plain `VACANT LAND` 12,117 of 40,129 (30%). The two sources disagree both ways — 9,150 parcels are flagged vacant that OPA does not call vacant land.
+- **What it currently costs:** those parcels miss the `vacant` distress factor (`vacant_weight=10`, `distress/scoring.py:103`), are absent from vacant-only search (`search/spatial.py:51` `coalesce(p.is_vacant, false) = true`), fall outside the vacant-only verdict recompute scope (`verdict/jobs.py:34`), and are not offered as vacant assemblage neighbours (`assemblage/logic.py:100`). Handoff 0047 §5 recorded `2138 N FAIRHILL ST` as a single miss; it is one instance of this class.
+- **Why it needs a bump:** +10 distress on ~14,020 parcels changes who appears in lead lists, which is the surface ADR-0028 gates. It does **not** move `risk_score` or `opportunity_score` directly — `is_vacant` feeds verdict only as batch *scope* — so if the batch is ever split, this half is distress-sweep-only.
+- **Open question for the packet:** whether an OPA-derived flag should carry the same weight as a VPI-sourced one. `derive_vacancy` already returns a confidence (0.35 single-signal / 0.5 multi-signal) that the phl path would need to respect rather than asserting a bare `true`.
+- **Related, not queued:** `parcel.category` is 100% NULL in `phl`, `pgh` and `hbg` (populated only in `wlm`), and `brt_number` and `recorded_at` are 0% populated in **every** market. Dead columns, no scoring impact — noted so the next reader does not mistake them for a signal.
+
 ## The next batch (proposed — separately gated on explicit approval)
 Named "the v9 batch" when written; v9 and v10 both shipped other work, so these three remain
 queued for whichever bump takes them. One ADR, one version bump, one coordinated recompute. Contents:
@@ -51,7 +71,9 @@ queued for whichever bump takes them. One ADR, one version bump, one coordinated
 
 ---
 
-## Multi-party grantor lists are never split on `;`
+## Multi-party grantor lists are never split on `;` — SHIPPED
+
+> **Shipped 2026-08-20 in PR #168, deployed `c61181a`. No version bump was taken**: severity moved `info` ↔ `medium` on 299 parcels but `counts_toward_distress` did not change on any of them, so it was accepted as a defect fix inside ADR-0083's methodology rather than a methodology change. Kept below as the record of the analysis. The two normalisation defects above are **not** addressed by it and still ride the next bump.
 
 **Filed:** 2026-08-20 · Third defect in the same family as the two above.
 
