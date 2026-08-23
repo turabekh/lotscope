@@ -1,7 +1,7 @@
 from collections.abc import Iterator, Sequence
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import ColumnElement, func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,7 @@ async def upsert(
     *,
     index_elements: Sequence[str],
     update_columns: Sequence[str] | None = None,
+    where: ColumnElement[bool] | None = None,
 ) -> int:
     if not rows:
         return 0
@@ -53,7 +54,7 @@ async def upsert(
         if "updated_at" in model.__table__.columns:
             assignments["updated_at"] = func.now()
         statement = statement.on_conflict_do_update(
-            index_elements=list(index_elements), set_=assignments
+            index_elements=list(index_elements), set_=assignments, where=where
         )
         await session.execute(statement)
     return len(rows)

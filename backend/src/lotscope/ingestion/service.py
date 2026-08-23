@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.provenance import datasets_for_source, oldest_as_of
@@ -42,6 +42,7 @@ async def record_freshness(
     row_count: int | None = None,
     detail: str | None = None,
     data_vintage: date | None = None,
+    unless_succeeded_after: datetime | None = None,
 ) -> None:
     row: dict[str, Any] = {
         "market_code": market_code,
@@ -59,7 +60,21 @@ async def record_freshness(
         row["detail"] = None
     if data_vintage is not None:
         row["data_vintage"] = data_vintage
-    await upsert(session, DatasetFreshness, [row], index_elements=["market_code", "dataset"])
+    not_superseded_by_a_newer_success = (
+        None
+        if unless_succeeded_after is None
+        else or_(
+            DatasetFreshness.last_success_at.is_(None),
+            DatasetFreshness.last_success_at < unless_succeeded_after,
+        )
+    )
+    await upsert(
+        session,
+        DatasetFreshness,
+        [row],
+        index_elements=["market_code", "dataset"],
+        where=not_superseded_by_a_newer_success,
+    )
 
 
 _FRESHNESS_SURFACES: tuple[tuple[str, str], ...] = (
