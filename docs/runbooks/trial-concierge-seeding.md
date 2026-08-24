@@ -42,7 +42,9 @@ Title it **"Your lots — graded"**. Neutral, possessive, no verb that implies w
 
 Then `GET /watchlist` and count six. A 201 per call is not the check; the list read is.
 
-**All six read correctly as of 2026-08-20.** Pre-flight §1.4 recorded `phl:362363700` and `phl:243037700` carrying a medium-severity delinquency that named a grantor on her own deed; the multi-party grantor fix (PR #168, deployed `c61181a`) cleared both. They now read `info` at risk 40, each naming her own deed's grantor. The pre-flight is a dated snapshot and still shows the old posture — nothing to seed around, and nothing to explain away.
+**All six read correctly, re-verified 2026-08-24.** `2138 N FAIRHILL ST` (`phl:191357500`) was the one lot missing its vacant flag — pre-flight and handoff 0047 §5 both recorded it. PR #177 (deployed `8e4cb2b`) derives Philadelphia vacancy from OPA land use, and it now reads `is_vacant = true`, so it carries the `Vacant lot` factor its five siblings already had and appears in vacant-only search. All six now read `is_vacant = true` at distress tier `low`. Its stale cached AI summary — which described the lot as not vacant — was purged as part of that change, so the first read regenerates.
+
+**As of 2026-08-20 the delinquency flags were already correct.** Pre-flight §1.4 recorded `phl:362363700` and `phl:243037700` carrying a medium-severity delinquency that named a grantor on her own deed; the multi-party grantor fix (PR #168, deployed `c61181a`) cleared both. They now read `info` at risk 40, each naming her own deed's grantor. The pre-flight is a dated snapshot and still shows the old posture — nothing to seed around, and nothing to explain away.
 
 ---
 
@@ -100,7 +102,9 @@ Say it with the caveat attached, in one breath: *a thin comparable set, an order
 
 **Do not import the other six.** $1,681 on 59 E GARFIELD, $1,117 on 128 E WELLENS, and the four like them are developed properties measured against vacant-land comps — a category error, not a saving (pre-flight §2). Found money claimed and wrong is worse than none, and she is the one person who will know instantly that her rowhouse is not worth $53,195.
 
-If she asks about her developed parcels: say plainly that LotScope models vacant and infill land, that the assessment read on a built property compares it to land sales, and that we do not stand behind those numbers yet.
+**The product no longer produces those six numbers.** PR #178 (deployed `8e4cb2b`, 2026-08-24) withholds the over-assessment and savings figures unless the subject is a vacant lot, so a developed parcel now reads "not evaluated" with the reason attached instead of a confident figure. Verified on production against a real developed parcel (`status=unknown`, `savings=None`) and a real vacant one (`over_assessed`, $198). The instruction above stands as a floor — do not import them — but the surface is no longer able to hand them to her.
+
+If she asks about her developed parcels: say plainly that LotScope models vacant and infill land, that the assessment read on a built property compares it to land sales, and that the product declines to score them rather than guessing.
 
 **The two flags that used to need getting ahead of are gone.** `phl:362363700` and `phl:243037700` once showed a medium-severity delinquency naming MCNAIR KENNETH and ASBELL WILLIAM — both grantors on her own sheriff's deeds — because the join failed to split multi-party grantor lists on `;`. Fixed in PR #168 and verified over HTTPS on production: 297 Philadelphia parcels moved from `medium` to `info`, and all six of her lots now name their own deed's grantor. **Do not raise it.** There is no defect left to disclose here, and volunteering a fixed one invites doubt about the five surfaces she has no reason to question.
 
@@ -125,7 +129,9 @@ Log in as her — or as a throwaway account at the same tier — and walk the pa
 
 ## 7. What NOT to do
 
-**Do not leave a paid CTA as a paywall in her first-session path.** The **$79 appeal packet** renders on the deal tab of any parcel the assessment surface calls over-assessed — including her developed parcels, where the arithmetic is a category error (§5). Two acceptable resolutions, one decision required before the send: keep her first session on the six vacant lots, where only 1329 GROVE ST triggers it; **or** comp the packet for her account so the number is never behind a price. Do not do neither.
+**The paid CTA is no longer a trap, but it is still a paywall.** The **$79 appeal packet** renders on the deal tab of any parcel the assessment surface calls over-assessed. As of `8e4cb2b` that can no longer include a developed parcel, so the category-error half of this problem is gone and the decision below is no longer send-gating.
+
+What remains is the ordinary one: on her six vacant lots only `1329 GROVE ST` triggers it, and a price tag in a concierge first session is a worse experience than a comped packet. **Recommended: comp it for her account.** Keeping her session on the six lots is now equally safe, so either resolution is defensible — this is a hospitality call, not a correctness one.
 
 **Do not open the neighbour's page in front of her without framing it.** `1941 N MARSHALL ST` (`phl:881000216`) shows "strong assemblage potential" with **her lot as one of two candidates**. That page is the neighbour's acquisition thesis about her land. Her own page correctly says there is no assemblage play for her, because only 1941 touches both vacant lots. If the assemblage story is worth telling, tell it as *what your lot is worth to the building next door* — never as a screen that helps someone buy from her. Two caveats belong with it: the panel does not model the existing >4-unit building on 1941, and the other candidate (`1935 N MARSHALL ST`) is **owned by the City of Philadelphia** while the panel shows it as an ordinary vacant lot. See `docs/preflight/send-gate-verification-2026-08-20.md` §5.
 
