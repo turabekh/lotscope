@@ -20,9 +20,18 @@ _PGH_VACANT_USES = frozenset(
     }
 )
 
+_PHL_VACANT_USES = frozenset(
+    {
+        "VACANT LAND",
+        "VACANT LAND - RESIDENTIAL",
+        "VACANT LAND - NON-RESIDENTIAL",
+    }
+)
+
 VACANT_LAND_USES_BY_MARKET: dict[str, frozenset[str]] = {
     "hbg": _HBG_VACANT_USES,
     "pgh": _PGH_VACANT_USES,
+    "phl": _PHL_VACANT_USES,
 }
 
 _IMPROVEMENT_THRESHOLD = 1000.0

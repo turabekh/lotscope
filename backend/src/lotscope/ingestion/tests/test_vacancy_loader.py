@@ -9,6 +9,7 @@ from lotscope.core.config import Settings
 from lotscope.ingestion.arcgis import ArcGisClient, ArcGisFeature
 from lotscope.ingestion.loaders.vacancy import to_vacancy_row
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.vacancy.derivation import DERIVED_MULTI_SIGNAL
 
 LAYER_URL = "http://arcgis.test/FeatureServer/0/query"
 
@@ -86,3 +87,84 @@ async def test_load_vacancy_preserves_existing_attributes(db_session: AsyncSessi
     ).one()
     assert row[0] == "Owner X"
     assert row[1] is True
+
+
+@pytest.mark.integration
+async def test_derive_phl_vacancy_flags_opa_vacant_land(db_session: AsyncSession) -> None:
+    from lotscope.ingestion.loaders.vacancy import derive_phl_vacancy
+
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, land_use, improvement_value) "
+            "VALUES ('phl:009000001', 'phl', 'VACANT LAND - RESIDENTIAL', 0)"
+        )
+    )
+    await db_session.flush()
+
+    derived = await derive_phl_vacancy(db_session)
+    await db_session.flush()
+
+    assert derived == 1
+    row = (
+        await db_session.execute(
+            text(
+                "SELECT is_vacant, vacancy_confidence FROM parcel "
+                "WHERE parcel_number = 'phl:009000001'"
+            )
+        )
+    ).one()
+    assert row.is_vacant is True
+    assert float(row.vacancy_confidence) == DERIVED_MULTI_SIGNAL
+
+
+@pytest.mark.integration
+async def test_derive_phl_vacancy_never_unflags_a_vacant_indicators_parcel(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.ingestion.loaders.vacancy import derive_phl_vacancy
+
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, land_use, improvement_value, "
+            "is_vacant, vacancy_confidence) "
+            "VALUES ('phl:009000002', 'phl', 'ROW B/GAR 2 STY MASONRY', 0, true, 0.9)"
+        )
+    )
+    await db_session.flush()
+
+    await derive_phl_vacancy(db_session)
+    await db_session.flush()
+
+    row = (
+        await db_session.execute(
+            text(
+                "SELECT is_vacant, vacancy_confidence FROM parcel "
+                "WHERE parcel_number = 'phl:009000002'"
+            )
+        )
+    ).one()
+    assert row.is_vacant is True
+    assert float(row.vacancy_confidence) == 0.9
+
+
+@pytest.mark.integration
+async def test_derive_phl_vacancy_leaves_a_standing_structure_alone(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.ingestion.loaders.vacancy import derive_phl_vacancy
+
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, land_use, improvement_value) "
+            "VALUES ('phl:009000003', 'phl', 'VACANT LAND', 45000)"
+        )
+    )
+    await db_session.flush()
+
+    await derive_phl_vacancy(db_session)
+    await db_session.flush()
+
+    is_vacant = await db_session.scalar(
+        text("SELECT is_vacant FROM parcel WHERE parcel_number = 'phl:009000003'")
+    )
+    assert is_vacant is None
