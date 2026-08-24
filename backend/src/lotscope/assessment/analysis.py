@@ -21,6 +21,7 @@ class AssessmentInputs:
     market_low: float | None
     market_high: float | None
     valuation_confidence: Confidence | None
+    is_vacant: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -48,24 +49,39 @@ def _classify(assessed: float, estimate: float) -> AssessmentStatus:
     return "fairly_assessed"
 
 
+NOT_VACANT_REASON = (
+    "This parcel is not a vacant lot, and the market estimate it would be compared against is "
+    "built from vacant-land sales. Comparing a developed property to land comps understates its "
+    "value, so no over-assessment or savings figure is shown."
+)
+
+
+def _not_evaluated(inputs: AssessmentInputs, reason: str) -> AssessmentAnalysis:
+    return AssessmentAnalysis(
+        status="unknown",
+        assessed_market_value=inputs.assessed_market_value,
+        market_estimate=inputs.market_estimate,
+        market_low=inputs.market_low,
+        market_high=inputs.market_high,
+        gap=None,
+        gap_pct=None,
+        over_assessed_amount=None,
+        estimated_annual_tax_savings=None,
+        tax_rate=PHILADELPHIA_REALTY_TAX_RATE,
+        confidence="low",
+        reasons=[reason],
+    )
+
+
 def analyze_assessment(inputs: AssessmentInputs) -> AssessmentAnalysis:
     assessed = inputs.assessed_market_value
     estimate = inputs.market_estimate
     if assessed is None or assessed <= 0 or estimate is None:
-        return AssessmentAnalysis(
-            status="unknown",
-            assessed_market_value=assessed,
-            market_estimate=estimate,
-            market_low=inputs.market_low,
-            market_high=inputs.market_high,
-            gap=None,
-            gap_pct=None,
-            over_assessed_amount=None,
-            estimated_annual_tax_savings=None,
-            tax_rate=PHILADELPHIA_REALTY_TAX_RATE,
-            confidence="low",
-            reasons=["Not enough assessment or comp data to evaluate the assessment."],
+        return _not_evaluated(
+            inputs, "Not enough assessment or comp data to evaluate the assessment."
         )
+    if inputs.is_vacant is not True:
+        return _not_evaluated(inputs, NOT_VACANT_REASON)
 
     gap = estimate - assessed
     gap_pct = gap / assessed

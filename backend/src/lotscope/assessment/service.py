@@ -13,7 +13,7 @@ from lotscope.assessment.schemas import AssessmentResult
 from lotscope.valuation.service import value_parcel
 
 _PARCEL_SQL = text(
-    "SELECT p.market_value, m.assessment_ratio FROM parcel p "
+    "SELECT p.market_value, p.is_vacant, m.assessment_ratio FROM parcel p "
     "JOIN market m ON m.code = p.market_code WHERE p.parcel_number = :parcel_number"
 )
 
@@ -53,6 +53,7 @@ async def analyze_parcel_assessment(
             market_low=valuation.low if valuation is not None else None,
             market_high=valuation.high if valuation is not None else None,
             valuation_confidence=valuation.confidence if valuation is not None else None,
+            is_vacant=parcel.is_vacant,
         )
     )
     reasons = list(analysis.reasons)
