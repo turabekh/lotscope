@@ -71,6 +71,18 @@ Loader is staged (raw→staging→merge, ADR-0036): a new case emits a dated `sh
 
 City-owned property and Land Bank / PHDC inventory — flags publicly-owned lots and disposition status. Current authoritative source to be located and pinned during ingestion.
 
+**Searched 2026-08-24, not found. Record of what was checked so it is not repeated:**
+
+- **Carto** (`https://phl.carto.com/api/v2/sql`) — `city_owned_property`, `city_land_assets`, `landbank_properties`, `public_property`, `philadelphia_landbank`, `land_bank_properties` all return `relation does not exist`. The catalog cannot be enumerated: `pg_tables` returns `system tables are forbidden`.
+- **ArcGIS** (`services.arcgis.com/fLeGjb7u4uXqeF9q`, 2,267 services) — three candidates, none usable:
+  - `PublicOwnership_Public` → layer `LAMAInventory_May12019_OPA_RMSP`: a May 2019 snapshot, **0 features**, fields `Agency` + `Location` only.
+  - `MDOLandBank` ("City-Owned Structures") — 17 fields, **no OPA account number**; addresses and geocodes only, so it needs address reconciliation rather than a key join.
+  - `LandDispositionStatus` — 4 fields (`Stage`, `Status`, `Sales`), **no parcel key**.
+
+**Consequence:** `is_city_owned` is set by loaders for `pgh` (8.7% of parcels), `hbg` (4.6%) and `wlm` (0.12%), and by none for `phl` — 1 parcel of 588,606. Both other markets bind to a parcel-keyed authoritative layer; Philadelphia has no equivalent published in these two places.
+
+**Interim option, not taken:** OPA owner-name matching identifies 13,434 phl parcels (`CITY OF PHILA%` 4,886, `%PHILADELPHIA HOUSING%` 4,582, `%LAND BANK%` 2,490, `%REDEVELOPMENT AUTHORITY%` 1,473, `%PHDC%` 3). Its error direction is conservative — a false positive only withholds a parcel from lead lists, a false negative only preserves today's behaviour — but it is a heuristic standing in for an ownership fact, and it would also add the `public_ownership` risk flag, which moves `risk_score`. Queued in `docs/verdict-bump-queue.md` rather than adopted unilaterally.
+
 ## Title 14 zoning standards (reference data)
 
 The `zoning_standard` table is populated by an idempotent seed
