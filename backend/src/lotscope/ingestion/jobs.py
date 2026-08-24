@@ -25,6 +25,7 @@ from lotscope.ingestion.loaders import (
     opa,
     overlays,
     pgh,
+    public_ownership,
     pwd,
     rtt,
     sheriff,
@@ -200,6 +201,14 @@ async def ingest_derived_vacancy(session_factory: SessionFactory, settings: Sett
     )
 
 
+async def ingest_public_ownership(session_factory: SessionFactory, settings: Settings) -> int:
+    return await run_loader(
+        session_factory,
+        public_ownership.derive_phl_public_ownership,
+        dataset=public_ownership.PUBLIC_OWNERSHIP_DATASET,
+    )
+
+
 async def ingest_flood(session_factory: SessionFactory, settings: Settings) -> int:
     return await _run_arcgis(
         session_factory, settings, loader=flood.load_flood, dataset=flood.FLOOD_DATASET
@@ -303,6 +312,7 @@ _PHL_JOBS: dict[str, Job] = {
     "rco": ingest_rco,
     "vacancy": ingest_vacancy,
     "derived_vacancy": ingest_derived_vacancy,
+    "public_ownership": ingest_public_ownership,
     "flood": ingest_flood,
     "neighborhoods": ingest_neighborhoods,
     "streets": ingest_streets,

@@ -168,3 +168,61 @@ async def test_derive_phl_vacancy_leaves_a_standing_structure_alone(
         text("SELECT is_vacant FROM parcel WHERE parcel_number = 'phl:009000003'")
     )
     assert is_vacant is None
+
+
+@pytest.mark.integration
+async def test_derive_phl_public_ownership_flags_and_clears(db_session: AsyncSession) -> None:
+    from lotscope.ingestion.loaders.public_ownership import derive_phl_public_ownership
+
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, owner, is_city_owned) VALUES "
+            "('phl:009100001', 'phl', 'PHILADELPHIA LAND BANK', null), "
+            "('phl:009100002', 'phl', 'WEST PHILADELPHIA HOUSING GROUP LLC', null), "
+            "('phl:009100003', 'phl', 'SMITH WILLIAM', true)"
+        )
+    )
+    await db_session.flush()
+
+    changed = await derive_phl_public_ownership(db_session)
+    await db_session.flush()
+
+    assert changed == 2
+    result = await db_session.execute(
+        text("SELECT parcel_number, is_city_owned FROM parcel WHERE parcel_number LIKE 'phl:0091%'")
+    )
+    rows = {row.parcel_number: row.is_city_owned for row in result}
+    assert rows["phl:009100001"] is True
+    assert not rows["phl:009100002"]
+    assert rows["phl:009100003"] is False
+
+
+@pytest.mark.integration
+async def test_derive_phl_public_ownership_never_touches_another_market(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.ingestion.loaders.public_ownership import derive_phl_public_ownership
+
+    await db_session.execute(
+        text(
+            "INSERT INTO market (code, name, state, url_slug, local_srid, map_center, "
+            "default_zoom, timezone, deal_assumption_overrides, launch_status) VALUES "
+            "('pgh', 'pgh', 'XX', 'pgh', 2272, '[0,0]'::jsonb, 12, 'UTC', '{}'::jsonb, 'live') "
+            "ON CONFLICT (code) DO NOTHING"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, market_code, owner, is_city_owned) "
+            "VALUES ('pgh:009100004', 'pgh', 'SMITH WILLIAM', true)"
+        )
+    )
+    await db_session.flush()
+
+    await derive_phl_public_ownership(db_session)
+    await db_session.flush()
+
+    still = await db_session.scalar(
+        text("SELECT is_city_owned FROM parcel WHERE parcel_number = 'pgh:009100004'")
+    )
+    assert still is True
