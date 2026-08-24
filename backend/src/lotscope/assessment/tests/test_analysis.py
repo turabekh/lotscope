@@ -12,6 +12,7 @@ def _inputs(**overrides: object) -> AssessmentInputs:
         "market_low": 180000.0,
         "market_high": 220000.0,
         "valuation_confidence": "high",
+        "is_vacant": True,
     }
     base.update(overrides)
     return AssessmentInputs(**base)  # type: ignore[arg-type]
@@ -69,3 +70,52 @@ def test_confidence_carries_from_valuation() -> None:
 def test_tax_rate_is_reported() -> None:
     result = analyze_assessment(_inputs())
     assert result.tax_rate == PHILADELPHIA_REALTY_TAX_RATE
+
+
+def test_a_developed_parcel_gets_no_appeal_figure() -> None:
+    analysis = analyze_assessment(
+        AssessmentInputs(
+            assessed_market_value=200_000.0,
+            market_estimate=40_000.0,
+            market_low=30_000.0,
+            market_high=50_000.0,
+            valuation_confidence="medium",
+            is_vacant=False,
+        )
+    )
+    assert analysis.status == "unknown"
+    assert analysis.over_assessed_amount is None
+    assert analysis.estimated_annual_tax_savings is None
+    assert analysis.confidence == "low"
+    assert any("vacant" in reason.lower() for reason in analysis.reasons)
+
+
+def test_a_vacant_parcel_still_gets_its_appeal_figure() -> None:
+    analysis = analyze_assessment(
+        AssessmentInputs(
+            assessed_market_value=200_000.0,
+            market_estimate=40_000.0,
+            market_low=30_000.0,
+            market_high=50_000.0,
+            valuation_confidence="medium",
+            is_vacant=True,
+        )
+    )
+    assert analysis.status == "over_assessed"
+    assert analysis.over_assessed_amount == 160_000.0
+    assert analysis.estimated_annual_tax_savings is not None
+
+
+def test_unknown_vacancy_is_treated_as_not_provable() -> None:
+    analysis = analyze_assessment(
+        AssessmentInputs(
+            assessed_market_value=200_000.0,
+            market_estimate=40_000.0,
+            market_low=30_000.0,
+            market_high=50_000.0,
+            valuation_confidence="medium",
+            is_vacant=None,
+        )
+    )
+    assert analysis.status == "unknown"
+    assert analysis.estimated_annual_tax_savings is None
