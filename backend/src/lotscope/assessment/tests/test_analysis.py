@@ -119,3 +119,20 @@ def test_unknown_vacancy_is_treated_as_not_provable() -> None:
     )
     assert analysis.status == "unknown"
     assert analysis.estimated_annual_tax_savings is None
+
+
+def test_a_developed_parcel_says_why_even_with_no_comp_data() -> None:
+    analysis = analyze_assessment(
+        AssessmentInputs(
+            assessed_market_value=200_000.0,
+            market_estimate=None,
+            market_low=None,
+            market_high=None,
+            valuation_confidence=None,
+            is_vacant=False,
+        )
+    )
+    assert analysis.status == "unknown"
+    assert analysis.estimated_annual_tax_savings is None
+    assert any("vacant" in reason.lower() for reason in analysis.reasons)
+    assert not any("not enough" in reason.lower() for reason in analysis.reasons)
