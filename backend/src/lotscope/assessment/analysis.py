@@ -76,12 +76,12 @@ def _not_evaluated(inputs: AssessmentInputs, reason: str) -> AssessmentAnalysis:
 def analyze_assessment(inputs: AssessmentInputs) -> AssessmentAnalysis:
     assessed = inputs.assessed_market_value
     estimate = inputs.market_estimate
+    if inputs.is_vacant is not True:
+        return _not_evaluated(inputs, NOT_VACANT_REASON)
     if assessed is None or assessed <= 0 or estimate is None:
         return _not_evaluated(
             inputs, "Not enough assessment or comp data to evaluate the assessment."
         )
-    if inputs.is_vacant is not True:
-        return _not_evaluated(inputs, NOT_VACANT_REASON)
 
     gap = estimate - assessed
     gap_pct = gap / assessed
