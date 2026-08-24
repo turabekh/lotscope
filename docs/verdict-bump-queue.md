@@ -36,7 +36,9 @@ Distress splits: `assess_parcel_distress` scores **live** from raw signals on ev
 - **Now (no bump, Slice 4):** condemned + dead-end stored + displayed as **unscored parcel facts** with provenance; a condemned `pgh` parcel's `risk_score` stays unchanged at v8.
 - **Queued (needs bump):** (a) `pgh` condemned → an **unsafe-structure severity class** in risk scoring; (b) `pgh` **dead-end** (owner unlocatable) → a **new high-value distress factor** (an owner who can't be found by the city is a strong motivated-seller / opportunity signal).
 
-### Philadelphia public ownership is never flagged
+### Philadelphia public ownership is never flagged — SHIPPED
+
+> **Shipped 2026-08-24 in PR #181, deployed `9534057`, and run on production the same day: 13,426 parcels flagged, 9,175 → **0** publicly-owned parcels in lead range.** Derived from the OPA owner name as an **interim** measure (ADR-0085) because no upstream source exists — see `docs/data-sources.md`. **No version bump was taken:** the `public_ownership` risk flag is existing v11 methodology receiving correct input, and a targeted verdict recompute of all 13,426 kept stored rows honest. The analysis below is kept as the record. The remaining gap is the missing authoritative source, not the flag.
 - **Source:** review sweep 2026-08-24. Measured on production.
 - **Now:** `is_city_owned` is set by loaders for `pgh` (8.7% of parcels), `hbg` (4.6%) and `wlm` (0.12%). **No loader sets it for `phl`: 1 parcel of 588,606.** Handoff 0047 §5 saw one symptom of this (`1935 N MARSHALL ST` rendering as private in the assemblage panel) and ledgered it at 0-of-3 as a feature; it is a data gap, and it reaches further than that panel.
 - **Scale:** 13,434 phl parcels carry a public-owner name (`CITY OF PHILA%` 4,886, `%PHILADELPHIA HOUSING%` 4,582, `%LAND BANK%` 2,490, `%REDEVELOPMENT AUTHORITY%` 1,473, `%PHDC%` 3). An owner-string match is a scoping estimate, not the fix — the fix is a Land Bank / PHDC / RDA parcel source, per §17.
@@ -47,7 +49,9 @@ Distress splits: `assess_parcel_distress` scores **live** from raw signals on ev
 - **Why it needs a bump:** the `public_ownership` flag moves `risk_score`, so stored verdicts would disagree with the engine while still stamped `v11`, and lazy recompute fires only on version mismatch. It also zeroes distress for thousands of parcels, so it needs the distress sweep in the same batch.
 - **Note:** this is the one queued item with an outreach dimension. Until it ships, lead lists can direct contact at the City, PHA and the Land Bank as if they were private sellers.
 
-### Philadelphia vacancy is never derived from OPA land use
+### Philadelphia vacancy is never derived from OPA land use — SHIPPED
+
+> **Shipped 2026-08-24 in PR #177, deployed `8e4cb2b`, and run on production the same day: 13,752 parcels flagged, phl leads 38,583 → 41,621.** Additive only — the 9,150 VPI-vacant parcels OPA does not call vacant land were preserved and verified (ADR-0084). **No version bump:** `is_vacant` reaches the verdict engine only as batch scope. The analysis below is kept as the record.
 - **Source:** review sweep 2026-08-24. Measured on production.
 - **Now:** `VACANT_LAND_USES_BY_MARKET` (`vacancy/derivation.py:23`) registers `hbg` and `pgh` only, and `derive_vacancy` is called only from those two loaders. For `phl`, `is_vacant` comes solely from the Vacant Property Indicators loader, with no OPA `land_use` fallback. `_PGH_VACANT_USES` already contains the exact string `VACANT LAND` that phl uses.
 - **Scale:** **14,020 of 42,583** phl parcels whose OPA `land_use` starts `VACANT` are unflagged — 32.9%. The suffixed values are far worse: `VACANT LAND - RESIDENTIAL` 1,731 of 2,242 missing (**77%**), `VACANT LAND - NON-RESIDENTIAL` 172 of 212 (**81%**), plain `VACANT LAND` 12,117 of 40,129 (30%). The two sources disagree both ways — 9,150 parcels are flagged vacant that OPA does not call vacant land.
