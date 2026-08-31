@@ -114,6 +114,13 @@ def decide(
             "this parcel can be developed as modelled.",
         )
 
+    if can_build_by_right is not True:
+        return ScreeningDecision(
+            recommendation="likely_pass",
+            reason="The parcel does not appear dimensionally eligible under its base district and "
+            "no variance path is indicated.",
+        )
+
     if deal_infeasible and (est_margin is None or est_margin < VIABLE_MARGIN):
         return ScreeningDecision(
             recommendation="economics_unattractive",
@@ -126,13 +133,6 @@ def decide(
             recommendation="economics_unattractive",
             reason=f"Projected margin of {est_margin:.0%} is below the {VIABLE_MARGIN:.0%} "
             "screening threshold under current assumptions.",
-        )
-
-    if can_build_by_right is not True:
-        return ScreeningDecision(
-            recommendation="likely_pass",
-            reason="The parcel does not appear dimensionally eligible under its base district and "
-            "no variance path is indicated.",
         )
 
     elevated_risk = risk_score is not None and risk_score >= ELEVATED_RISK_SCORE
