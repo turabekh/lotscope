@@ -3,7 +3,7 @@ from typing import Literal
 
 from lotscope.core.provenance import FieldProvenance
 
-DECISION_VERSION = "d2"
+DECISION_VERSION = "d3"
 
 Recommendation = Literal[
     "strong_candidate",
