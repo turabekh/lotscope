@@ -69,11 +69,11 @@ class _FakeRedis:
     async def expire(self, key: str, ttl: int) -> bool:
         return True
 
-    async def sadd(self, key: str, member: str) -> int:
+    async def sadd(self, key: str, *member: str) -> int:
         current = self.store.get(key)
         members = current if isinstance(current, set) else set()
         before = len(members)
-        members.add(member)
+        members.update(member)
         self.store[key] = members
         return len(members) - before
 
@@ -1807,3 +1807,20 @@ async def test_search_still_serves_a_signed_in_member(db_session: AsyncSession) 
         area_search = await client.post("/search/area", json=_AREA_REQUEST)
     assert text_search.status_code == 200
     assert area_search.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_area_search_stops_disclosing_once_the_daily_parcel_quota_is_spent(
+    db_session: AsyncSession,
+) -> None:
+    from lotscope.accounts.usage import area_search_key
+
+    app, redis = _authed_app(db_session)
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    redis.store[area_search_key(1, today)] = {f"phl:{n}" for n in range(10_000)}
+
+    async with _client(app) as client:
+        response = await client.post("/search/area", json=_AREA_REQUEST)
+
+    assert response.status_code == 429
+    assert "limit" in response.json()["detail"].lower()
