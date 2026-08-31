@@ -45,6 +45,13 @@ SAVED_SEARCH_LIMITS: dict[str, int | None] = {
     "enterprise": None,
 }
 
+AREA_SEARCH_DAILY_PARCEL_LIMITS: dict[str, int | None] = {
+    "free": 10_000,
+    "pro": 100_000,
+    "investor": None,
+    "enterprise": None,
+}
+
 EXPORT_MONTHLY_LIMITS: dict[str, int | None] = {
     "free": 0,
     "pro": 10,
@@ -82,6 +89,10 @@ def saved_search_limit(tier: str) -> int | None:
 
 def parcel_view_daily_limit(tier: str) -> int | None:
     return PARCEL_VIEW_DAILY_LIMITS.get(tier, PARCEL_VIEW_DAILY_LIMITS[_DEFAULT_TIER])
+
+
+def area_search_daily_parcel_limit(tier: str) -> int | None:
+    return AREA_SEARCH_DAILY_PARCEL_LIMITS.get(tier, AREA_SEARCH_DAILY_PARCEL_LIMITS[_DEFAULT_TIER])
 
 
 def export_monthly_limit(tier: str) -> int | None:
