@@ -1777,3 +1777,33 @@ async def test_distress_endpoint_returns_clean_error_for_unprofiled_market(
 
     assert resp.status_code == 503
     assert resp.json()["error"] == "UnknownMarketProfileError"
+
+
+_AREA_REQUEST = {
+    "market": "philadelphia",
+    "center": {"lng": -75.14, "lat": 39.99},
+    "radius_m": 150,
+    "limit": 2,
+}
+
+
+@pytest.mark.asyncio
+async def test_search_does_not_disclose_owners_to_anonymous_callers(
+    db_session: AsyncSession,
+) -> None:
+    app = _app_with_session(db_session)
+    async with _client(app) as client:
+        text_search = await client.get("/search?q=fairhill&market=philadelphia")
+        area_search = await client.post("/search/area", json=_AREA_REQUEST)
+    assert text_search.status_code == 401
+    assert area_search.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_search_still_serves_a_signed_in_member(db_session: AsyncSession) -> None:
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        text_search = await client.get("/search?q=fairhill&market=philadelphia")
+        area_search = await client.post("/search/area", json=_AREA_REQUEST)
+    assert text_search.status_code == 200
+    assert area_search.status_code == 200

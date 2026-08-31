@@ -3,9 +3,21 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.accounts.models import User
 from lotscope.api.app import create_app
-from lotscope.api.deps import get_session
+from lotscope.api.deps import get_current_user, get_session
 from lotscope.search.service import _like_escape, _padded_account, search_parcels
+
+
+def _member() -> User:
+    return User(
+        id=1,
+        email="member@example.com",
+        hashed_password="x",
+        full_name=None,
+        role="user",
+        tier="free",
+    )
 
 
 def test_padded_account_pads_short_digit_runs() -> None:
@@ -58,6 +70,7 @@ async def test_search_endpoint_returns_results(db_session: AsyncSession) -> None
         yield db_session
 
     app.dependency_overrides[get_session] = _override_session
+    app.dependency_overrides[get_current_user] = _member
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/search", params={"q": "main", "market": "philadelphia"})
@@ -76,6 +89,7 @@ async def test_search_rejects_unknown_market() -> None:
         yield None
 
     app.dependency_overrides[get_session] = _override_session
+    app.dependency_overrides[get_current_user] = _member
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/search", params={"q": "main", "market": "atlantis"})
