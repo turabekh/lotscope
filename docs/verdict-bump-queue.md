@@ -29,6 +29,23 @@ Distress splits: `assess_parcel_distress` scores **live** from raw signals on ev
 - **Sweep posture — deliberately NOT a full sweep.** `_STALE_ONLY_PREDICATE` matches on both versions, so `--only-stale` after a decision bump selects *every* parcel in *every* market: ~11.5h for `phl` alone, to correct 462 rows. The affected set is exactly enumerable by the predicate above, so **recompute those 462 and let everything else heal lazily on read.** Stored rows will carry mixed `d2`/`d3` for a while; that is a label lag, not a value disagreement, and no surface filters on `recommendation`.
 - **Test note:** `test_an_ineligible_parcel_without_a_variance_path_is_a_likely_pass` already encoded the correct intent and passed the whole time, because the `_decide` helper defaults `est_margin` to a healthy value. The defect lived in the one dimension the test did not vary. Same family as handoff 0048 §3.
 
+### Absentee owner mis-flagged on punctuation drift — no bump, distress sweep required
+
+- **Source:** review sweep 2026-08-31. Measured on the local production copy.
+- **Change:** `is_absentee` strips non-alphanumerics from both addresses before comparing. Previously a raw substring test, so any spacing or punctuation difference read as a different address.
+- **Why it is a correction, not a methodology change:** the distress weights, tiers and factors are untouched; an input derivation was simply wrong. Same posture as ADR-0085 — **no `VERDICT_VERSION` or profile bump**, but the stored table must be swept.
+- **Why it mattered:** OPA writes the location field joined and the mailing street split, so the drift is systematic rather than incidental — every Philadelphia `Mc` street mismatched (`2620 MCKEAN ST` against `2620 MC KEAN ST`), plus double-spaced and hyphenated variants. Affected parcels carried a visible "Absentee owner (out-of-area mailing address)" factor and 10 distress points while the owner lives at the property, and they feed outreach lists.
+- **Measured over a full sweep** (baseline `pre_absentee_distress`, 777,703 rows):
+
+| market | effect |
+|---|---|
+| `phl` | 2,537 parcels lost the false factor — 2,303 at −10, 234 at −15 (they also held `long_tenure`, which requires absentee). Exactly the predicted set. Leads ≥30: 38,559 → **38,552**. |
+| `hbg` | **31** parcels, −10 each — the same class (`20TH`/`20 TH`, `1209A`/`1209 A`). Not predicted beforehand, because the pre-measurement was scoped to `phl`. |
+| `pgh`, `wlm` | 0 changed. |
+
+- **One movement is NOT from this change.** 88 `phl` parcels went **+5**, all with `years_since_last_sale` between 15.001 and 15.023 — they crossed the 15-year `long_tenure` threshold in the 9 days since the baseline was taken. `years_since_last_sale` is `CURRENT_DATE`-relative, so any sweep drifts against its own baseline. Expect this on every future sweep and do not attribute it to the code.
+- **Cache purge is part of the job.** `ai/service.py` names distress factors in the summary payload, so cached artifacts for affected parcels assert the false absentee signal. Their keys carry `verdict_version`, which a distress correction does not move, so nothing invalidates them — purge `summary:*` / `report:*` for the affected parcels explicitly, per `CLAUDE.md` §12.
+
 ## Queued
 
 ### Party-name normalisation (from the v11 verify-posture packet)
