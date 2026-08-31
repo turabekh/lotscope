@@ -204,6 +204,18 @@ def test_summary_reads_naturally() -> None:
     assert "no major risk flags" in verdict.summary
 
 
+def test_summary_pluralises_the_by_right_unit_count() -> None:
+    single = compose_verdict(
+        _buildability(by_right_units=1), None, None, assessed_market_value=None
+    )
+    assert "(1 unit)" in single.summary
+
+    several = compose_verdict(
+        _buildability(by_right_units=4), None, None, assessed_market_value=None
+    )
+    assert "(4 units)" in several.summary
+
+
 def test_summary_flags_master_plan_for_special_purpose() -> None:
     verdict = compose_verdict(
         _buildability(
