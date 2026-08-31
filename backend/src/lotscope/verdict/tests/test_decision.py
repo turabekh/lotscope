@@ -267,3 +267,19 @@ def test_missing_buildability_still_reports_insufficient_data_without_a_master_p
     )
 
     assert decision.recommendation == "insufficient_data"
+
+
+def test_an_ineligible_parcel_stays_a_likely_pass_whatever_the_economics() -> None:
+    for est_margin in (None, VIABLE_MARGIN - 0.05, STRONG_MARGIN + 0.1):
+        result = _decide(can_build_by_right=False, needs_variance=False, est_margin=est_margin)
+        assert result.recommendation == "likely_pass"
+
+
+def test_an_ineligible_parcel_stays_a_likely_pass_when_no_land_price_works() -> None:
+    result = _decide(
+        can_build_by_right=False,
+        needs_variance=False,
+        est_margin=None,
+        deal_infeasible=True,
+    )
+    assert result.recommendation == "likely_pass"

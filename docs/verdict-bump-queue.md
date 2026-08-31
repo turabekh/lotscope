@@ -17,6 +17,18 @@ Current `VERDICT_VERSION`: **v11**.
 
 Distress splits: `assess_parcel_distress` scores **live** from raw signals on every read, so the parcel detail surface is current the moment the code deploys. The stored `parcel_distress` table has no such path, and it is what leads, saved-search matching, feed and spatial search filter on (`pd.score >= :min_score`). Those surfaces carry v1 scores — a prior owner's debt still admitting parcels to lead lists — until the distress sweep runs. **Distress is therefore swept before verdicts, and it is the sweep that actually changes who gets contacted.**
 
+## Shipped
+
+### Screening eligibility outranks economics — `DECISION_VERSION` d2 → d3
+
+- **Source:** review sweep 2026-08-31. Measured on the local production copy.
+- **Change:** in `decide()`, the `can_build_by_right is not True` branch now runs **before** the two economics branches.
+- **Why it was wrong:** a parcel that is not dimensionally eligible with no variance path is blocked structurally, but the margin branches ran first, so it was given an economics reason whenever its margin happened to be weak. The same parcel returned `likely_pass` on a healthy margin and `economics_unattractive` on a weak one — the stated blocker flipped on a number irrelevant to why it fails, and "under current assumptions" invited the reader to retune inputs that can never make it eligible. This is the ordering defect #183 fixed for vacancy on the assessment surface, in a second module.
+- **Scale:** **462 Philadelphia parcels** carried the wrong reason (`can_build_by_right IS FALSE AND needs_variance IS DISTINCT FROM TRUE AND recommendation = 'economics_unattractive'`). No other market is affected. The fix cannot move `opportunity_score` — that is computed before `decide()` is called and never reads its result. **A recompute will still move a few scores anyway**, from ordinary input drift since each row was last computed: the local 462 moved 6, three of them because the deal no longer yields an `est_margin` at all, so the neutral economics factor replaced a negative one. Do not attribute that movement to this change.
+- **Why it takes a version, not a silent recompute:** this is decision-engine logic, not an input correction, so rows produced by the old ordering must not keep claiming the current engine produced them. `DECISION_VERSION` exists for exactly this and is checked alongside `VERDICT_VERSION` by `get_or_compute_current_verdict`, so reads self-heal on mismatch.
+- **Sweep posture — deliberately NOT a full sweep.** `_STALE_ONLY_PREDICATE` matches on both versions, so `--only-stale` after a decision bump selects *every* parcel in *every* market: ~11.5h for `phl` alone, to correct 462 rows. The affected set is exactly enumerable by the predicate above, so **recompute those 462 and let everything else heal lazily on read.** Stored rows will carry mixed `d2`/`d3` for a while; that is a label lag, not a value disagreement, and no surface filters on `recommendation`.
+- **Test note:** `test_an_ineligible_parcel_without_a_variance_path_is_a_likely_pass` already encoded the correct intent and passed the whole time, because the `_decide` helper defaults `est_margin` to a healthy value. The defect lived in the one dimension the test did not vary. Same family as handoff 0048 §3.
+
 ## Queued
 
 ### Party-name normalisation (from the v11 verify-posture packet)
