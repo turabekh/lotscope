@@ -131,7 +131,8 @@ def _summary(
             status = "variance likely"
         else:
             status = "buildability uncertain"
-        units = f" ({buildability.by_right_units} unit)" if buildability.by_right_units else ""
+        count = buildability.by_right_units
+        units = f" ({count} unit{'' if count == 1 else 's'})" if count else ""
         parts.append(f"{buildability.district_code}: {status}{units}")
     elif buildability is not None:
         parts.append("zoning unresolved")
