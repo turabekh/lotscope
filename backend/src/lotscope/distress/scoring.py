@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -51,10 +52,20 @@ def _tier(score: int, profile: DistressScoringProfile) -> Tier:
     return "none"
 
 
+_ADDRESS_NOISE_RE = re.compile(r"[^A-Z0-9]")
+
+
+def _comparable_address(value: str) -> str:
+    return _ADDRESS_NOISE_RE.sub("", value.upper())
+
+
 def is_absentee(address: str | None, mailing_address: str | None) -> bool:
     if not address or not mailing_address:
         return False
-    return address.strip().upper() not in mailing_address.strip().upper()
+    comparable = _comparable_address(address)
+    if not comparable:
+        return False
+    return comparable not in _comparable_address(mailing_address)
 
 
 def score_distress(signals: DistressSignals, profile: DistressScoringProfile) -> DistressAssessment:

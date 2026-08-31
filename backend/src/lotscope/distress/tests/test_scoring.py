@@ -123,6 +123,17 @@ def test_is_absentee_heuristic() -> None:
     assert is_absentee("123 MAIN ST", None) is False
 
 
+def test_owner_occupier_is_not_absentee_when_only_the_spacing_differs() -> None:
+    assert is_absentee("2620 MCKEAN ST", "2620 MC KEAN ST PHILADELPHIA PA 19145") is False
+    assert is_absentee("429 MCCLELLAN ST", "429 MC CLELLAN ST PHILADELPHIA PA 19148") is False
+    assert is_absentee("3609 WINONA ST", "3609 WINONA  ST PHILADELPHIA PA 19129-1622") is False
+
+
+def test_a_genuinely_different_mailing_address_is_still_absentee() -> None:
+    assert is_absentee("1608 FOX CHASE RD", "2024 FAIRMOUNT AVE PHILADELPHIA PA 19130") is True
+    assert is_absentee("123 MAIN ST", "123 MAIN AVE PHILADELPHIA PA 19100") is True
+
+
 def test_a_complied_and_closed_violation_earns_no_distress() -> None:
     profile = PHILLY_DISTRESS_V1
     scored = score_distress(DistressSignals(open_violations=0, violations_on_record=1), profile)
