@@ -109,6 +109,7 @@ jobs:
       APP_ENV: local
       SMTP_HOST: 127.0.0.1
       SMTP_PORT: "1025"
+      SMTP_USE_TLS: "false"
     steps:
       - uses: actions/checkout@v4
 

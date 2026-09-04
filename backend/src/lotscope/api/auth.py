@@ -76,8 +76,15 @@ async def _send_verification(
         _logger.warning("verification_email_not_sent_no_transport", user_id=user_id)
         return
     token = create_email_verification_token(settings, user_id=user_id, nonce=nonce)
-    with contextlib.suppress(Exception):
+    try:
         await send_verification_email(sender, settings, to=email, token=token)
+    except Exception as cause:
+        _logger.error(
+            "verification_email_failed",
+            user_id=user_id,
+            error=str(cause),
+            error_type=type(cause).__name__,
+        )
 
 
 @router.post("/register", response_model=VerificationPending, status_code=202)

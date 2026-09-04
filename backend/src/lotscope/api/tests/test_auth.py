@@ -1,13 +1,16 @@
+import smtplib
 from collections.abc import AsyncIterator
 
 import httpx
 import pytest
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog.testing import capture_logs
 
 from lotscope.api.app import create_app
-from lotscope.api.deps import get_app_settings, get_session
+from lotscope.api.deps import get_app_settings, get_email_sender_dep, get_session
 from lotscope.core.config import Settings
+from lotscope.notifications.email import EmailAttachment
 
 pytestmark = pytest.mark.integration
 
@@ -95,3 +98,37 @@ async def test_register_validates_email_and_password(db_session: AsyncSession) -
 
     assert bad_email.status_code == 422
     assert short_password.status_code == 422
+
+
+class _BrokenSender:
+    async def send(
+        self,
+        *,
+        to: str,
+        subject: str,
+        html: str,
+        text: str,
+        attachment: EmailAttachment | None = None,
+        list_unsubscribe: str | None = None,
+    ) -> None:
+        raise smtplib.SMTPNotSupportedError("STARTTLS extension not supported by server.")
+
+
+async def test_a_confirmation_that_cannot_be_sent_is_logged_not_swallowed(
+    db_session: AsyncSession,
+) -> None:
+    app = _app(db_session)
+    app.dependency_overrides[get_email_sender_dep] = lambda: _BrokenSender()
+
+    with capture_logs() as events:
+        async with _client(app) as client:
+            registered = await client.post(
+                "/auth/register",
+                json={"email": "broken@example.com", "password": "hunter2-strong"},
+            )
+
+    assert registered.status_code == 202
+    failures = [event for event in events if event["event"] == "verification_email_failed"]
+    assert len(failures) == 1
+    assert failures[0]["log_level"] == "error"
+    assert failures[0]["error_type"] == "SMTPNotSupportedError"
