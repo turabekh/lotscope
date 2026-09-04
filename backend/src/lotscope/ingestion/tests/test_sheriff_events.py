@@ -105,3 +105,30 @@ async def test_the_search_predicate_returns_only_scheduled_parcels(
     assert "phl:000000711" in matched, "a future scheduled sale is scheduled"
     assert "phl:000000712" not in matched, "a past sale date is not upcoming"
     assert "phl:000000713" not in matched, "a sold listing is no longer scheduled"
+
+
+async def test_a_case_that_changes_status_and_date_together_is_one_event(
+    db_session: AsyncSession,
+) -> None:
+    await load_sheriff(
+        db_session,
+        _FakeSource([_row("CV-20", "000000721", _FUTURE, "Scheduled - Tax")]),
+    )
+    await db_session.flush()
+
+    await load_sheriff(
+        db_session,
+        _FakeSource([_row("CV-20", "000000721", _LATER, "Postponed")]),
+    )
+    await db_session.flush()
+
+    events = await _events(db_session)
+    assert len(events) == 1, (
+        "one row per changed case, not one per changed field — a postponement moves the "
+        "status and the date together and is a single thing that happened"
+    )
+    event = events[0]
+    assert event.old_status == "Scheduled - Tax"
+    assert event.new_status == "Postponed"
+    assert event.old_sale_date == _FUTURE
+    assert event.new_sale_date == _LATER

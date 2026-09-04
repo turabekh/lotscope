@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.logging import get_logger
 from lotscope.ingestion.events import (
     TaxSnapshot,
     classify_li_event,
@@ -14,6 +15,8 @@ from lotscope.ingestion.events import (
 )
 from lotscope.ingestion.models import ParcelEvent
 from lotscope.risk.models import SheriffSaleEvent
+
+_logger = get_logger(__name__)
 
 TAX_DATASET = "tax_delinquency"
 LI_DATASET = "li"
@@ -339,6 +342,12 @@ async def merge_sheriff(session: AsyncSession, ingest_run_id: int) -> MergeResul
         )
     if changes:
         await session.flush()
+        _logger.info(
+            "sheriff_sale_changes",
+            events=len(changes),
+            status_changed=sum(1 for c in changes if c.old_status != c.new_status),
+            date_changed=sum(1 for c in changes if c.old_sale_date != c.new_sale_date),
+        )
 
     await session.execute(_UPSERT_SHERIFF_SQL, {"ingest_run_id": ingest_run_id})
     return MergeResult(merged_rows=len(rows), event_count=events + len(changes))
