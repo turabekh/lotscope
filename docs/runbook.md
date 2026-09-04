@@ -11,6 +11,63 @@ containers, no redeploy required.
 
 ---
 
+## Local gates before pushing
+
+`make lint` (ruff, eslint, prettier), `make typecheck`, `make test`, `make test-integration`.
+Integration must report **0 skipped**, not merely green — a skip looks identical to a pass.
+
+**After any session that deletes a component or a route, run Playwright serially by hand
+before pushing:** `make e2e-seed && cd frontend && pnpm exec playwright test --workers=1`.
+No make target runs it, so CI is otherwise the first thing to notice a spec still driving
+a deleted button. Serially, because this box flakes on registration timeouts under
+parallel workers.
+
+---
+
+## Deploying cd43ff9+ to production
+
+The first deploy after the Philadelphia-only refactor drops tables and deletes ~189k
+parcel rows. Run these in order; do not skip step 2 because step 1 "looked fine".
+
+1. **Back up, and copy the dump off the VM.**
+   ```bash
+   ssh lotscope-vm 'docker compose exec -T db pg_dump -U lotscope -Fc lotscope' \
+     > lotscope-$(date +%Y%m%d-%H%M).dump
+   ls -lh lotscope-*.dump
+   ```
+
+2. **Prove the dump restores.** A backup that has not been restored is a hypothesis.
+   ```bash
+   createdb lotscope_verify
+   pg_restore -d lotscope_verify --no-owner lotscope-<stamp>.dump
+   psql -d lotscope_verify -tAc "select market_code, count(*) from parcel group by 1 order by 1"
+   dropdb lotscope_verify
+   ```
+   The count query must return rows. Stop here if it does not.
+
+3. **Deploy `main`.** `gh workflow run deploy.yml --ref main`, then confirm the served SHA.
+   Check `ingest_run` for rows without `finished_at` first — the nightly runs about an hour
+   (04:08–05:14 UTC), and deploying into it is how the 2026-08-24 datasets were lost.
+
+4. **Migrate.** `alembic upgrade head`. Migration `a1c7e4f90b62` drops `repository_listing`,
+   `market_gate_item` and sixteen foreign keys to `market.code`.
+
+5. **Dry run the purge.** `lotscope data purge-other-markets --dry-run`. Read the table:
+   every row it lists is about to be deleted. Expect ~189k parcels and ~962k rows total.
+
+6. **Purge.** `lotscope data purge-other-markets --yes`. One transaction; on any error it
+   rolls back whole and exits non-zero. The after-table must be all zeros.
+
+7. **Reclaim.** `lotscope data vacuum-parcel`. If it fails on a shared memory segment, the
+   container's `/dev/shm` is Docker's 64MB default — `docker-compose.yml` sets `shm_size: 1gb`,
+   so recreate the db container and retry.
+
+8. **Corpus load** — Part B, pending the artifacts landing at `/srv/lotscope/corpus/`.
+
+9. **`GET /health/corpus`** — Part B, pending.
+
+---
+
 ## Sheriff-sale live source (`SHERIFF_SALE_SOURCE`) · ADR-0038
 
 The Philadelphia sheriff-sale calendar reads the `sheriff_sale` table. That table is populated by the daily
@@ -100,7 +157,7 @@ parser is fixed.
 
 # Backup, retention, and recovery
 
-Required by `docs/PRD-amendment-03-launch-readiness.md` §LR-P005 and §LR-P006. Backlog ticket LR-B-033.
+Required so a dormant feature cannot be mistaken for a broken one.
 
 ## Refreshing a local database from production
 
@@ -270,7 +327,7 @@ docker compose exec -T db createdb -U lotscope lotscope_restore
 docker compose exec -T db pg_restore -U lotscope -d lotscope_restore --no-owner < /tmp/restore.dump
 ```
 
-**Restore into `lotscope_restore` first, never over the live database.** Verify row counts against `docs/launch-readiness/status.md` before promoting. Promoting is a rename, and it is the point at which a mistake becomes unrecoverable.
+**Restore into `lotscope_restore` first, never over the live database.** Verify row counts against the last figures recorded in `docs/LOG.md` before promoting. Promoting is a rename, and it is the point at which a mistake becomes unrecoverable.
 
 ## Objectives
 
@@ -288,9 +345,9 @@ RTO is now evidence-based rather than estimated, but it covers a *verified scrat
 A backup that has never been restored is a hypothesis. Once a month:
 
 1. Restore the most recent backup into `lotscope_restore`.
-2. Compare parcel and verdict counts per market against `status.md`.
+2. Compare parcel and verdict counts against the last recorded figures in `docs/LOG.md`.
 3. Drop the scratch database.
-4. Record the date and the counts in `docs/launch-readiness/gates.md` under **G6**.
+4. Record the date and the counts in `docs/LOG.md`.
 
 **Do not stop `api`, `worker`, or `web` for this test.** The *Restore* section above stops them because it describes a real recovery, where the live database is about to be replaced. The monthly test writes only to a scratch database, so stopping services would take production down to verify a copy — cost with no benefit.
 
