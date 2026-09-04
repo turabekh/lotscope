@@ -9,7 +9,6 @@ DefaultOrigin = Literal[
     "authoritative_source",
     "derived",
     "platform_default",
-    "market_default",
     "user_override",
     "scenario_override",
 ]

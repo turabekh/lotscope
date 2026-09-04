@@ -40,11 +40,9 @@ class MaoDisclosure:
 def build_assumption_set(
     *,
     settings: Any,
-    market_overrides: dict[str, Any] | None = None,
     user_overrides: dict[str, float] | None = None,
     scenario_overrides: dict[str, float] | None = None,
 ) -> AssumptionSet:
-    overrides = market_overrides or {}
     user = user_overrides or {}
     scenario = scenario_overrides or {}
 
@@ -56,7 +54,6 @@ def build_assumption_set(
             group,  # type: ignore[arg-type]
             unit,  # type: ignore[arg-type]
             platform_default=platform,
-            market_default=overrides.get(name),
             user_override=user.get(name),
             scenario_override=scenario.get(name),
             **kw,
