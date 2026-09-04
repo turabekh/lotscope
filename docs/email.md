@@ -7,6 +7,13 @@ switching providers is purely an env change — no code.
 `smtp_host` is the **single on/off switch**. If `SMTP_HOST` is blank, `get_email_sender` returns `None`
 and **every** email path becomes a quiet no-op.
 
+Since Step 0.5 that switch also gates **account confirmation**: registration answers 202 and every
+authenticated route answers 403 `email_unverified` until the address is confirmed, so with no transport
+nobody can finish signing up. `/health/ready` reports `email: false` and reads `degraded` when
+`SMTP_HOST` is blank. **`EMAIL_ALLOWLIST` has the same effect on any address not on it** — the
+confirmation mail is suppressed with `email_suppressed_by_allowlist` and that account can never be
+used. Keep the allowlist empty once registration is open to anyone but the listed addresses.
+
 ## Config keys
 
 | Env var | Meaning | Local (Mailpit) | Production example (Mailgun) |
