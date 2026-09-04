@@ -29,7 +29,7 @@ export function newAccount(label: string): TestAccount {
   }
 }
 
-const MAILPIT_URL = process.env.E2E_MAILPIT_URL ?? 'http://localhost:8025'
+const MAILPIT_URL = process.env.E2E_MAILPIT_URL ?? 'http://127.0.0.1:8025'
 
 export async function verificationLink(page: Page, address: string): Promise<string> {
   let body = ''
