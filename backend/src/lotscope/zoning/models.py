@@ -2,7 +2,7 @@ from datetime import date
 from typing import Any
 
 from geoalchemy2 import Geometry, WKBElement
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, UniqueConstraint, text
+from sqlalchemy import Boolean, Date, Integer, Numeric, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,7 +21,7 @@ class ZoningDistrict(Base, TimestampMixin, IngestionMixin):
     long_code: Mapped[str | None] = mapped_column(String(60))
 
     market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+        String(10), nullable=False, server_default="phl", index=True
     )
     geom_local: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
@@ -42,7 +42,7 @@ class ZoningOverlay(Base, TimestampMixin, IngestionMixin):
     code_section: Mapped[str | None] = mapped_column(String(60))
 
     market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+        String(10), nullable=False, server_default="phl", index=True
     )
     geom_local: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
@@ -62,7 +62,7 @@ class Rco(Base, TimestampMixin, IngestionMixin):
     org_type: Mapped[str | None] = mapped_column(String(60))
 
     market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+        String(10), nullable=False, server_default="phl", index=True
     )
     geom_local: Mapped[WKBElement | None] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=0, spatial_index=True)
@@ -82,7 +82,7 @@ class ZoningStandard(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+        String(10), nullable=False, server_default="phl", index=True
     )
     code: Mapped[str] = mapped_column(String(20), index=True)
     code_version: Mapped[str] = mapped_column(String(40))
@@ -125,7 +125,7 @@ class OverlayStandard(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+        String(10), nullable=False, server_default="phl", index=True
     )
     code_section: Mapped[str] = mapped_column(String(60), index=True)
     overlay_code: Mapped[str] = mapped_column(String(30))
@@ -146,7 +146,7 @@ class ParcelOverlay(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+        String(10), nullable=False, server_default="phl", index=True
     )
     parcel_number: Mapped[str] = mapped_column(String(40), index=True)
     overlay_id: Mapped[int] = mapped_column(Integer, nullable=False)

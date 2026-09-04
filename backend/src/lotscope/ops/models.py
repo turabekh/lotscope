@@ -2,7 +2,6 @@ from datetime import datetime
 
 from sqlalchemy import (
     DateTime,
-    ForeignKey,
     Integer,
     Numeric,
     String,
@@ -16,9 +15,7 @@ from lotscope.core.mixins import TimestampMixin
 class MarketStats(Base, TimestampMixin):
     __tablename__ = "market_stats"
 
-    market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), primary_key=True
-    )
+    market_code: Mapped[str] = mapped_column(String(10), primary_key=True)
     parcel_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     geometry_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
     verdict_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))

@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 
-import { MARKET_SLUG, registerAndSettle, SEEDED } from './support/app'
+import { registerAndSettle, SEEDED } from './support/app'
 
 test('the tray says what is missing before it lets you compare', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'tray-one')
-  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.bestMargin.number}`)
+  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
   await page.locator('[data-test="parcel-action-compare"]').click()
 
   const tray = page.getByRole('region', { name: 'Compare tray' })
@@ -17,7 +17,7 @@ test('the tray says what is missing before it lets you compare', async ({ page }
 test('the tray names the lot by address, not by parcel id', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'tray-label')
-  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.bestMargin.number}`)
+  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
   await page.locator('[data-test="parcel-action-compare"]').click()
 
   const chip = page.locator(`[data-test="compare-chip-${SEEDED.bestMargin.number}"]`)
@@ -28,9 +28,9 @@ test('the tray names the lot by address, not by parcel id', async ({ page }) => 
 test('a second lot makes compare available', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'tray-two')
-  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.bestMargin.number}`)
+  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
   await page.locator('[data-test="parcel-action-compare"]').click()
-  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.midMargin.number}`)
+  await page.goto(`/parcel/${SEEDED.midMargin.number}`)
   await page.locator('[data-test="parcel-action-compare"]').click()
 
   const tray = page.getByRole('region', { name: 'Compare tray' })
@@ -39,9 +39,9 @@ test('a second lot makes compare available', async ({ page }) => {
 })
 
 async function selectTwo(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.bestMargin.number}`)
+  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
   await page.locator('[data-test="parcel-action-compare"]').click()
-  await page.goto(`/parcel/${MARKET_SLUG}/${SEEDED.midMargin.number}`)
+  await page.goto(`/parcel/${SEEDED.midMargin.number}`)
   await page.locator('[data-test="parcel-action-compare"]').click()
 }
 

@@ -1,7 +1,7 @@
 from datetime import date
 
 from geoalchemy2 import Geometry, WKBElement
-from sqlalchemy import Boolean, Computed, Date, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import Boolean, Computed, Date, Index, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lotscope.core.db import Base
@@ -33,7 +33,7 @@ class Parcel(Base, TimestampMixin, IngestionMixin):
 
     parcel_number: Mapped[str] = mapped_column(String(40), primary_key=True)
     market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), nullable=False, server_default="phl", index=True
+        String(10), nullable=False, server_default="phl", index=True
     )
     local_key: Mapped[str] = mapped_column(
         String(40),

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { MARKET_SLUG, openDossier, registerAndSettle, SEEDED } from './support/app'
+import { openDossier, registerAndSettle, SEEDED } from './support/app'
 
 test('flows 3 and 4 — search by address reaches the dossier', async ({ page }) => {
   await registerAndSettle(page, 'search')
@@ -11,7 +11,7 @@ test('flows 3 and 4 — search by address reaches the dossier', async ({ page })
   await expect(suggestion).toBeVisible()
   await suggestion.click()
 
-  await expect(page).toHaveURL(new RegExp(`/parcel/${MARKET_SLUG}/`))
+  await expect(page).toHaveURL(new RegExp(`/parcel/`))
   await expect(page.getByText('Parcel 99900002')).toBeVisible()
 })
 

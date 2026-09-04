@@ -93,7 +93,6 @@ def test_seasonal_in_season_failed_is_red() -> None:
     assert evaluate_freshness(row, cad, in_season).status == "red"
 
 
-
 def test_unknown_dataset_falls_back_to_default_monthly() -> None:
     assert cadence_for("phl", "not_a_dataset").kind == "monthly"
 

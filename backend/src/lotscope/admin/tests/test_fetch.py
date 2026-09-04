@@ -22,7 +22,6 @@ def _client(app: FastAPI) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
-
 async def test_fetch_streams_bytes_as_attachment() -> None:
     app = _admin_app()
 

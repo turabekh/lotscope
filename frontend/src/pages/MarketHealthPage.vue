@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
 
 import { api } from '@/lib/api'
 import type { OpsMarketHealthDetail } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
-const route = useRoute()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
 const isAdmin = computed(() => user.value?.role === 'admin')
-const marketCode = computed(() => String(route.params.market ?? ''))
+const marketCode = 'phl'
 
 const detail = ref<OpsMarketHealthDetail | null>(null)
 const loading = ref(false)
@@ -45,11 +43,10 @@ function formatTime(value: string | null): string {
 }
 
 async function load(): Promise<void> {
-  if (marketCode.value === '') return
   loading.value = true
   notFound.value = false
   try {
-    detail.value = await api.getOpsMarketHealth(marketCode.value)
+    detail.value = await api.getOpsMarketHealth(marketCode)
   } catch {
     detail.value = null
     notFound.value = true
@@ -59,10 +56,6 @@ async function load(): Promise<void> {
 }
 
 onMounted(() => {
-  if (isAdmin.value) void load()
-})
-
-watch(marketCode, () => {
   if (isAdmin.value) void load()
 })
 </script>

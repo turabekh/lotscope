@@ -14,7 +14,7 @@ const { runJobMock } = vi.hoisted(() => ({
       job_id: jobId,
       label: 'HBG · zoning',
       kind: 'ingest',
-      market_code: 'hbg',
+      market_code: 'phl',
       status: 'queued',
       started_at: null,
       finished_at: null,
@@ -45,21 +45,21 @@ vi.mock('@/lib/api', async (importOriginal) => {
   }
   const catalog = [
     {
-      id: 'ingest:hbg:zoning',
+      id: 'ingest:phl:zoning',
       label: 'HBG · zoning',
       kind: 'ingest',
       description: 'Ingest the zoning dataset for HBG.',
-      market: 'hbg',
+      market: 'phl',
       dataset: 'zoning',
       params: [],
       latest_run: null,
     },
     {
-      id: 'ingest:hbg:tax_claim',
+      id: 'ingest:phl:zba',
       label: 'HBG · tax_claim',
       kind: 'ingest',
       description: 'Ingest the tax_claim dataset for HBG.',
-      market: 'hbg',
+      market: 'phl',
       dataset: 'tax_claim',
       params: [
         {
@@ -142,7 +142,7 @@ describe('AdminPage jobs console', () => {
     expect(target).toBeTruthy()
     await target!.trigger('click')
     await flushPromises()
-    expect(runJobMock).toHaveBeenCalledWith('ingest:hbg:zoning', {})
+    expect(runJobMock).toHaveBeenCalledWith('ingest:phl:zoning', {})
   })
 
   it('renders the server data puller', async () => {

@@ -63,7 +63,7 @@ describe('severityColor', () => {
 
 describe('marketCodeFromParcelNumber', () => {
   it('reads the market prefix', () => {
-    expect(marketCodeFromParcelNumber('hbg:02-021-052')).toBe('hbg')
+    expect(marketCodeFromParcelNumber('phl:000012345')).toBe('phl')
     expect(marketCodeFromParcelNumber('phl:875100090')).toBe('phl')
   })
 

@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.core.errors import ForbiddenError, QuotaExceededError, ValidationError
+from lotscope.core.errors import QuotaExceededError, ValidationError
 from lotscope.skiptrace.models import REASON_INVESTOR_GRANT, REASON_PACK_PURCHASE
 from lotscope.skiptrace.provider import SkipTraceContacts
 from lotscope.skiptrace.service import credit_balance, grant_credits, trace_owner
@@ -160,15 +160,3 @@ async def test_no_hit_refunds_the_credit(db_session: AsyncSession) -> None:
     )
     assert "skiptrace_burn" in reasons
     assert "refund" in reasons
-
-
-async def test_pgh_parcel_is_gated_off_skip_trace(db_session: AsyncSession) -> None:
-    await _add_user(db_session, 1)
-    await _add_parcel(db_session, "pgh:1", owner="JANE DOE", market="pgh")
-    await grant_credits(db_session, 1, 5, REASON_PACK_PURCHASE, "pay_1")
-    await db_session.flush()
-
-    provider = _FakeProvider(["215-555-0100"], [])
-    with pytest.raises(ForbiddenError):
-        await trace_owner(db_session, provider, 1, "pgh:1")
-    assert provider.calls == 0

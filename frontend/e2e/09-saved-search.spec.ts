@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 
-import { MARKET_SLUG, registerAndSettle } from './support/app'
+import { registerAndSettle } from './support/app'
 
 test('flow 9 — a user can create a saved search', async ({ page }) => {
   await registerAndSettle(page, 'saved-search')
 
-  await page.goto(`/${MARKET_SLUG}/lists`)
+  await page.goto(`/lists`)
   await page.getByRole('tab', { name: 'Saved searches' }).click()
 
   await expect(page.getByText('No saved searches yet')).toBeVisible()

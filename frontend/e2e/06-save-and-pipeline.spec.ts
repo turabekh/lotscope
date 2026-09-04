@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { MARKET_SLUG, openDossier, registerAndSettle, SEEDED } from './support/app'
+import { openDossier, registerAndSettle, SEEDED } from './support/app'
 
 test('flow 7 — saving a parcel puts it on the saved-lots list', async ({ page }) => {
   await registerAndSettle(page, 'save')
@@ -8,7 +8,7 @@ test('flow 7 — saving a parcel puts it on the saved-lots list', async ({ page 
 
   await page.getByRole('button', { name: 'Save to watchlist' }).click()
 
-  await page.goto(`/${MARKET_SLUG}/lists`)
+  await page.goto(`/lists`)
   await expect(page.getByRole('tab', { name: 'Saved lots' })).toBeVisible()
   await expect(page.getByText(SEEDED.bestMargin.address)).toBeVisible()
 })
@@ -21,6 +21,6 @@ test('flow 8 — adding a parcel to the pipeline gives it a stage', async ({ pag
 
   await expect(page.getByRole('link', { name: 'Lead' })).toBeVisible()
 
-  await page.goto(`/${MARKET_SLUG}/pipeline`)
+  await page.goto(`/pipeline`)
   await expect(page.getByText(SEEDED.midMargin.address)).toBeVisible()
 })

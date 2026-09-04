@@ -862,15 +862,6 @@ async def test_sheriff_sales_by_url_slug_returns_the_market_rows(db_session: Asy
 
 
 @pytest.mark.integration
-async def test_sheriff_sales_rejects_an_unknown_market(db_session: AsyncSession) -> None:
-    app, _ = _authed_app(db_session)
-    app.dependency_overrides[get_current_user] = _fake_pro_user
-    async with _client(app) as client:
-        resp = await client.get("/sheriff-sales", params={"market": "atlantis"})
-    assert resp.status_code == 422
-
-
-@pytest.mark.integration
 async def test_sheriff_calendar_reports_honest_empty_state(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     app.dependency_overrides[get_current_user] = _fake_pro_user
@@ -949,7 +940,7 @@ async def test_sheriff_calendar_tokenized_subscribe_roundtrip(db_session: AsyncS
         sub = await client.get("/sheriff-sales/calendar/subscribe")
         assert sub.status_code == 200
         url = sub.json()["url"]
-        assert url.endswith(".ics?market=phl")
+        assert url.endswith(".ics")
 
         token = create_calendar_token(settings, user_id=int(uid))
         feed = await client.get(f"/sheriff-sales/calendar/{token}.ics")
@@ -1749,34 +1740,6 @@ async def test_webhook_requires_signature(db_session: AsyncSession) -> None:
         resp = await client.post("/billing/webhook", content=b"{}")
 
     assert resp.status_code == 422
-
-
-@pytest.mark.integration
-async def test_distress_endpoint_returns_clean_error_for_unprofiled_market(
-    db_session: AsyncSession,
-) -> None:
-    await db_session.execute(
-        text(
-            "INSERT INTO market (code, name, url_slug, local_srid, map_center, default_zoom, "
-            "timezone) VALUES ('bal', 'Baltimore', 'baltimore', 2248, CAST(:center AS jsonb), "
-            "12, 'UTC')"
-        ),
-        {"center": '{"lat": 39.3, "lng": -76.6}'},
-    )
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, market_code, owner, address, mailing_address) "
-            "VALUES ('bal:1', 'bal', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY')"
-        )
-    )
-    await db_session.flush()
-
-    app, _ = _authed_app(db_session)
-    async with _client(app) as client:
-        resp = await client.get("/parcels/bal:1/distress")
-
-    assert resp.status_code == 503
-    assert resp.json()["error"] == "UnknownMarketProfileError"
 
 
 _AREA_REQUEST = {

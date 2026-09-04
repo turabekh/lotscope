@@ -78,6 +78,5 @@ async def test_search_endpoint_returns_results(db_session: AsyncSession) -> None
     assert response.status_code == 200
     body = response.json()
     assert body["query"] == "main"
-    assert body["market"] == "philadelphia"
+    assert body["market"] == "phl"
     assert any(item["parcel_number"] == "000012345" for item in body["results"])
-

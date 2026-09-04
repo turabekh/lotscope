@@ -239,21 +239,6 @@ async def test_recompute_dispatch_reaches_the_recompute(
 
 
 @pytest.mark.integration
-async def test_enqueue_stores_parsed_params(db_session: AsyncSession) -> None:
-    user_id = await _admin_user(db_session)
-    summary = await enqueue_job(
-        db_session,
-        _FakeEnqueuer(),
-        job_id="ingest:hbg:tax_claim",
-        triggered_by=user_id,
-        params={"list_url": "https://example.test/list.csv", "list_date": "2026-08-01"},
-    )
-    run = await db_session.get(JobRun, summary.id)
-    assert run is not None
-    assert run.params == {"list_url": "https://example.test/list.csv", "list_date": "2026-08-01"}
-
-
-@pytest.mark.integration
 async def test_run_admin_job_passes_params_to_dispatch(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:

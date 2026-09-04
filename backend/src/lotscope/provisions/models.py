@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import DateTime, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,9 +16,7 @@ class CodeProvision(Base):
         Index("ix_code_provision_market_title_ordinal", "market_code", "title_number", "ordinal"),
     )
 
-    market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), primary_key=True
-    )
+    market_code: Mapped[str] = mapped_column(String(10), primary_key=True)
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     cite: Mapped[str] = mapped_column(String(64), nullable=False)
     doc: Mapped[str] = mapped_column(String(16), nullable=False)

@@ -8,13 +8,12 @@ import type { User } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: { market: 'hbg' } }),
-}))
+  }))
 
 const { getMarketHealthMock } = vi.hoisted(() => ({
   getMarketHealthMock: vi.fn(() =>
     Promise.resolve({
-      market_code: 'hbg',
+      market_code: 'phl',
       name: 'Harrisburg',
       launch_status: 'pilot',
       coverage_note: 'Harrisburg city pilot — no open sale-price comps.',
@@ -81,7 +80,7 @@ describe('MarketHealthPage', () => {
 
   it('renders datasets with honest cadence reasons', async () => {
     const wrapper = await mountPage()
-    expect(getMarketHealthMock).toHaveBeenCalledWith('hbg')
+    expect(getMarketHealthMock).toHaveBeenCalledWith('phl')
     expect(wrapper.text()).toContain('dc_tax_claim')
     expect(wrapper.text()).toContain('Off-season — next expected in August to September.')
   })

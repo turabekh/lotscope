@@ -108,7 +108,6 @@ def test_snapshot_keeps_attribute_zoning_for_phl_unchanged() -> None:
     assert "Zoning: RSA5" in facts
 
 
-
 def test_summary_prompt_forbids_invented_risk() -> None:
     from lotscope.ai.prompts import SUMMARY_SYSTEM_PROMPT
 

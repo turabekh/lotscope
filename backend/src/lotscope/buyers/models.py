@@ -4,7 +4,6 @@ from geoalchemy2 import Geometry, WKBElement
 from sqlalchemy import (
     Date,
     DateTime,
-    ForeignKey,
     Integer,
     Numeric,
     String,
@@ -23,9 +22,7 @@ class BuyerProfile(Base, TimestampMixin, IngestionMixin):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    market_code: Mapped[str] = mapped_column(
-        String(10), ForeignKey("market.code"), nullable=False, index=True
-    )
+    market_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
     buyer_key: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     purchases_window: Mapped[int] = mapped_column(Integer, nullable=False)

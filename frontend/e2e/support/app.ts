@@ -1,8 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
-export const MARKET_SLUG = 'philadelphia'
-
 export const SEEDED = {
   delinquent: { number: 'phl:99900001', address: '1500 E2E FIXTURE WAY' },
   bestMargin: { number: 'phl:99900002', address: '1502 E2E FIXTURE WAY' },
@@ -37,7 +35,7 @@ export async function register(page: Page, account: TestAccount): Promise<void> 
   await page.getByLabel('Email').fill(account.email)
   await page.getByLabel('Password').fill(account.password)
   await page.getByRole('button', { name: 'Create account' }).click()
-  await expect(page).toHaveURL(new RegExp(`/${MARKET_SLUG}/home`))
+  await expect(page).toHaveURL(/\/home/)
 }
 
 export async function signIn(page: Page, account: TestAccount): Promise<void> {
@@ -45,7 +43,7 @@ export async function signIn(page: Page, account: TestAccount): Promise<void> {
   await page.getByLabel('Email').fill(account.email)
   await page.getByLabel('Password').fill(account.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(new RegExp(`/${MARKET_SLUG}/`))
+  await expect(page).toHaveURL(/\/home/)
 }
 
 export async function dismissTour(page: Page): Promise<void> {
@@ -74,7 +72,7 @@ export function navItem(page: Page, label: string) {
 }
 
 export async function openDossier(page: Page, parcelNumber: string): Promise<void> {
-  await page.goto(`/parcel/${MARKET_SLUG}/${parcelNumber}`)
+  await page.goto(`/parcel/${parcelNumber}`)
   await dismissTour(page)
   const localKey = parcelNumber.split(':')[1] ?? parcelNumber
   await expect(page.getByText(`Parcel ${localKey}`)).toBeVisible()

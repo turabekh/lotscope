@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { MARKET_SLUG, registerAndSettle } from './support/app'
+import { registerAndSettle } from './support/app'
 
 test('an expired token lands on login, not a broken app', async ({ page }) => {
   await registerAndSettle(page, 'expiry')
-  await page.goto(`/${MARKET_SLUG}/pipeline`)
+  await page.goto(`/pipeline`)
   await expect(page).toHaveURL(/pipeline/)
 
   await page.evaluate(() => {
@@ -16,12 +16,12 @@ test('an expired token lands on login, not a broken app', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/login/)
   expect(await page.evaluate(() => localStorage.getItem('lotscope_token'))).toBeNull()
-  expect(page.url()).toContain('redirect=/philadelphia/pipeline')
+  expect(page.url()).toContain('redirect=/pipeline')
 })
 
 test('a live session still reaches the app normally', async ({ page }) => {
   await registerAndSettle(page, 'live')
-  await page.goto(`/${MARKET_SLUG}/lists`)
+  await page.goto(`/lists`)
   await expect(page).toHaveURL(/lists/)
   await expect(page.getByRole('tab', { name: 'Saved lots' })).toBeVisible()
 })

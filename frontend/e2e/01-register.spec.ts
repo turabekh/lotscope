@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
 
-import { MARKET_SLUG, newAccount, navItem, PRIMARY_DESTINATIONS, register } from './support/app'
+import { newAccount, navItem, PRIMARY_DESTINATIONS, register } from './support/app'
 
 test('flow 1 — a new visitor can register and lands in the app', async ({ page }) => {
   const account = newAccount('register')
 
   await register(page, account)
 
-  await expect(page).toHaveURL(new RegExp(`/${MARKET_SLUG}/home`))
+  await expect(page).toHaveURL(new RegExp(`/home`))
   for (const destination of PRIMARY_DESTINATIONS) {
     await expect(navItem(page, destination)).toBeVisible()
   }
