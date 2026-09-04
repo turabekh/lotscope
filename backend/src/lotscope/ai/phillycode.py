@@ -1,6 +1,7 @@
 import asyncio
 import json
 from datetime import UTC, datetime
+from hashlib import sha256
 from uuid import uuid4
 
 from pydantic import BaseModel
@@ -59,7 +60,9 @@ _UPSERT = text(
     "embedding = EXCLUDED.embedding, updated_at = now()"
 )
 _EXISTING_FOR_TITLE = text(
-    "SELECT doc_metadata->>'provision_id' AS provision_id FROM document "
+    "SELECT doc_metadata->>'provision_id' AS provision_id, "
+    "doc_metadata->>'content_hash' AS content_hash, embedding IS NULL AS unembedded "
+    "FROM document "
     "WHERE source = :source AND doc_metadata->>'title_number' = :title_number"
 )
 _PRUNE = text(
@@ -81,6 +84,8 @@ class TitleDerivationResult(BaseModel):
     skipped_containers: int
     folded_leaves: int
     pruned: int
+    embedded: int = 0
+    reused: int = 0
     provisions_seen: int
     reconciled: bool
 
@@ -116,9 +121,14 @@ class DerivationRunReport(BaseModel):
         return [result.title_number for result in self.results if result.error]
 
 
+def content_hash(document: DerivedDocument) -> str:
+    return sha256(document.content.encode("utf-8")).hexdigest()
+
+
 def _metadata(document: DerivedDocument, derivation_version: str) -> str:
     return json.dumps(
         {
+            "content_hash": content_hash(document),
             "provision_id": document.provision_id,
             "cite": document.cite,
             "title_number": document.title_number,
@@ -160,13 +170,30 @@ async def derive_title(
     ]
     documents, report = derive(provisions)
 
+    existing_rows = (
+        await session.execute(
+            _EXISTING_FOR_TITLE,
+            {"source": PHILLYCODE_SOURCE, "title_number": title_number},
+        )
+    ).all()
+    unchanged_hashes = {
+        row.provision_id: row.content_hash
+        for row in existing_rows
+        if row.content_hash is not None and not row.unembedded
+    }
+    stale_documents = [
+        document
+        for document in documents
+        if unchanged_hashes.get(document.provision_id) != content_hash(document)
+    ]
+
     vectors: list[list[float]] = []
-    for index, batch in enumerate(batch_documents(documents, max_chars=max_batch_chars)):
+    for index, batch in enumerate(batch_documents(stale_documents, max_chars=max_batch_chars)):
         if index and pace_seconds:
             await asyncio.sleep(pace_seconds)
         vectors.extend(await embedder.embed([document.content for document in batch]))
 
-    for document, vector in zip(documents, vectors, strict=True):
+    for document, vector in zip(stale_documents, vectors, strict=True):
         await session.execute(
             _UPSERT,
             {
@@ -180,16 +207,7 @@ async def derive_title(
         )
 
     keep = {document.provision_id for document in documents}
-    existing = set(
-        (
-            await session.execute(
-                _EXISTING_FOR_TITLE,
-                {"source": PHILLYCODE_SOURCE, "title_number": title_number},
-            )
-        )
-        .scalars()
-        .all()
-    )
+    existing = {row.provision_id for row in existing_rows}
     stale = sorted(existing - keep)
     if stale:
         await session.execute(
@@ -212,6 +230,8 @@ async def derive_title(
         skipped_containers=report.skipped_containers,
         folded_leaves=report.folded_leaves,
         pruned=len(stale),
+        embedded=len(stale_documents),
+        reused=report.documents - len(stale_documents),
         provisions_seen=report.provisions_seen,
         reconciled=report.reconciles(),
     )

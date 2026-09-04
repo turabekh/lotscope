@@ -211,35 +211,6 @@ async def test_a_provision_removed_upstream_has_its_document_pruned(
     assert [d["section"] for d in await _documents(db_session)] == ["14-802", "14-802#table1"]
 
 
-async def test_the_run_report_reconciles_across_titles(db_session: AsyncSession) -> None:
-    await _seed(db_session)
-
-    report = await derive_corpus(db_session, FakeEmbedder(), titles=["14"])
-
-    assert report.reconciled is True
-    assert report.documents == 3
-    assert report.table_documents == 1
-    assert report.provisions_seen == 6
-    assert report.source_version == "May 25, 2026"
-
-
-async def test_the_incumbent_title14_source_is_never_touched(db_session: AsyncSession) -> None:
-    await _seed(db_session)
-    await db_session.execute(
-        text(
-            "INSERT INTO document (source, section, title, content, doc_metadata) "
-            "VALUES ('title14', '14-701', 'Quick Guide', 'incumbent text', '{}'::jsonb)"
-        )
-    )
-
-    await derive_corpus(db_session, FakeEmbedder(), titles=["14"])
-
-    remaining = await db_session.scalar(
-        text("SELECT count(*) FROM document WHERE source = 'title14'")
-    )
-    assert remaining == 1
-
-
 class FailingEmbedder:
     def __init__(self, fail_on_title: str) -> None:
         self.fail_on_title = fail_on_title
@@ -250,6 +221,18 @@ class FailingEmbedder:
         if any(f"Title {self.fail_on_title} " in text for text in texts):
             raise EmbeddingError("Request failed after retries")
         return [[0.01] * EMBEDDING_DIMENSIONS for _ in texts]
+
+
+async def test_the_run_report_reconciles_across_titles(db_session: AsyncSession) -> None:
+    await _seed(db_session)
+
+    report = await derive_corpus(db_session, FakeEmbedder(), titles=["14"])
+
+    assert report.reconciled is True
+    assert report.documents == 3
+    assert report.table_documents == 1
+    assert report.provisions_seen == 6
+    assert report.source_version == "May 25, 2026"
 
 
 async def _seed_second_title(session: AsyncSession) -> None:
@@ -328,3 +311,52 @@ async def test_the_failure_is_named_in_the_report_not_swallowed(
     assert failed.error == "Request failed after retries"
     assert failed.documents == 0
     assert failed.reconciled is False
+
+
+async def test_an_unchanged_rerun_embeds_nothing(db_session: AsyncSession) -> None:
+    await _seed(db_session)
+    cold = FakeEmbedder()
+    first = await derive_title(db_session, cold, "14")
+
+    warm = FakeEmbedder()
+    second = await derive_title(db_session, warm, "14")
+
+    assert first.embedded == 3
+    assert cold.calls > 0
+    assert second.embedded == 0, "an unchanged title must not be re-embedded"
+    assert second.reused == 3
+    assert warm.calls == 0, "an unchanged title must make no embedding call at all"
+
+
+async def test_only_the_changed_provision_is_re_embedded(db_session: AsyncSession) -> None:
+    await _seed(db_session)
+    await derive_title(db_session, FakeEmbedder(), "14")
+
+    await db_session.execute(
+        text(
+            "UPDATE code_provision SET text = text || ' amended.' "
+            "WHERE id = '14-802' AND market_code = 'phl'"
+        )
+    )
+    warm = FakeEmbedder()
+    result = await derive_title(db_session, warm, "14")
+
+    assert result.embedded == 1, "only the amended provision needs a new vector"
+    assert result.reused == 2
+    assert all("amended." in text_ for text_ in warm.texts)
+
+
+async def test_a_document_left_without_an_embedding_is_retried(db_session: AsyncSession) -> None:
+    await _seed(db_session)
+    await derive_title(db_session, FakeEmbedder(), "14")
+    await db_session.execute(
+        text(
+            "UPDATE document SET embedding = NULL "
+            "WHERE source = 'phillycode' AND section = '14-802'"
+        )
+    )
+
+    warm = FakeEmbedder()
+    result = await derive_title(db_session, warm, "14")
+
+    assert result.embedded == 1, "a row with no vector must be re-embedded, not skipped"

@@ -1,9 +1,14 @@
 from argparse import ArgumentParser
 
+from lotscope.corpus.cli import build_parser as build_corpus_parser
+from lotscope.corpus.cli import main as corpus_main
 from lotscope.data.cli import build_parser as build_data_parser
 from lotscope.data.cli import main as data_main
 
-_GROUPS = {"data": (build_data_parser, data_main)}
+_GROUPS = {
+    "corpus": (build_corpus_parser, corpus_main),
+    "data": (build_data_parser, data_main),
+}
 
 
 def main(argv: list[str] | None = None) -> None:
