@@ -4,7 +4,6 @@ import { useQuasar } from 'quasar'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import BuyBoxPanel from '@/components/BuyBoxPanel.vue'
 import DiscoverySources from '@/components/DiscoverySources.vue'
 import MapControlsOverlay from '@/components/MapControlsOverlay.vue'
 import MapView from '@/components/MapView.vue'
@@ -213,7 +212,6 @@ function onSelect(parcelNumber: string): void {
         </div>
         <q-scroll-area class="col">
           <div class="q-pa-md">
-            <BuyBoxPanel />
             <MapControlsOverlay embedded />
             <DiscoverySources />
           </div>

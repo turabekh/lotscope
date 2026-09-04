@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import BuyBoxEditor from '@/components/BuyBoxEditor.vue'
 import CorrectionStatus from '@/components/CorrectionStatus.vue'
 import PricingPlans from '@/components/PricingPlans.vue'
 import { ApiError, api } from '@/lib/api'
@@ -212,6 +213,12 @@ async function signOut(): Promise<void> {
         <div class="text-caption text-grey-6">Limits reset daily.</div>
       </q-card-section>
       <q-card-section v-else class="text-body2 text-grey-6">Loading usage…</q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <BuyBoxEditor />
+      </q-card-section>
 
       <q-separator />
 
