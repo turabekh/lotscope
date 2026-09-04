@@ -81,17 +81,3 @@ async def test_search_endpoint_returns_results(db_session: AsyncSession) -> None
     assert body["market"] == "philadelphia"
     assert any(item["parcel_number"] == "000012345" for item in body["results"])
 
-
-async def test_search_rejects_unknown_market() -> None:
-    app = create_app()
-
-    async def _override_session() -> object:
-        yield None
-
-    app.dependency_overrides[get_session] = _override_session
-    app.dependency_overrides[get_current_user] = _member
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/search", params={"q": "main", "market": "atlantis"})
-
-    assert response.status_code == 422

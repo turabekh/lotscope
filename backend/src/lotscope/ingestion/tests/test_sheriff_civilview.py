@@ -173,9 +173,3 @@ async def test_fetch_respects_detail_limit() -> None:
     source = CivilViewSheriffSource(settings, transport=httpx.MockTransport(_handler))
     records = await source.fetch()
     assert len(records) == 2
-
-
-def test_phl_profile_still_uses_the_positional_parser() -> None:
-    from lotscope.ingestion.loaders.sheriff_civilview import PHL_PROFILE, parse_sale_list
-
-    assert PHL_PROFILE.parse_list is parse_sale_list

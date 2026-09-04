@@ -4,8 +4,6 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.distress.jobs import _assert_market_coverage
-from lotscope.distress.profiles import UnknownMarketProfileError
 from lotscope.distress.service import (
     assess_parcel_distress,
     find_leads,
@@ -277,57 +275,6 @@ async def test_leads_respect_min_score_and_vacant_filter(db_session: AsyncSessio
 
     assert await find_leads(db_session, limit=50, min_score=30) == []
     assert await find_leads(db_session, limit=50, min_score=1, vacant_only=True) == []
-
-
-async def test_coverage_check_fails_loudly_on_unregistered_market(
-    db_session: AsyncSession,
-) -> None:
-    await _market(db_session, "bal")
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, market_code, owner, address, mailing_address) "
-            "VALUES ('bal:1', 'bal', 'OWNER', '1 A ST', '1 A ST')"
-        )
-    )
-    await db_session.flush()
-
-    with pytest.raises(UnknownMarketProfileError) as excinfo:
-        await _assert_market_coverage(db_session, None)
-    assert "bal" in str(excinfo.value)
-
-
-async def test_market_scoped_coverage_check_ignores_other_unprofiled_markets(
-    db_session: AsyncSession,
-) -> None:
-    await _market(db_session, "bal")
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, market_code, owner, address, mailing_address) "
-            "VALUES ('bal:3', 'bal', 'OWNER', '1 A ST', '1 A ST')"
-        )
-    )
-    await db_session.flush()
-
-    await _assert_market_coverage(db_session, "phl")
-
-    with pytest.raises(UnknownMarketProfileError):
-        await _assert_market_coverage(db_session, "bal")
-
-
-async def test_unprofiled_market_parcel_raises_on_live_scoring(
-    db_session: AsyncSession,
-) -> None:
-    await _market(db_session, "bal")
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, market_code, owner, address, mailing_address) "
-            "VALUES ('bal:2', 'bal', 'OWNER', '1 A ST', '99 ZZ AVE, NEW YORK NY')"
-        )
-    )
-    await db_session.flush()
-
-    with pytest.raises(UnknownMarketProfileError):
-        await assess_parcel_distress(db_session, "bal:2")
 
 
 async def test_leads_long_held_factor_is_profile_driven(db_session: AsyncSession) -> None:

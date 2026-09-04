@@ -2,7 +2,7 @@ import inspect
 
 from lotscope.distress import scoring as distress_scoring
 from lotscope.distress import service as distress_service
-from lotscope.distress.profiles import profile_for_market
+from lotscope.distress.profiles import DISTRESS_PROFILE
 from lotscope.risk import scoring as risk_scoring
 from lotscope.risk import service as risk_service
 from lotscope.valuation import service as valuation_service
@@ -42,7 +42,7 @@ def test_distress_separates_open_violations_from_violations_on_record() -> None:
 
 
 def test_philadelphia_scores_under_the_second_profile_version() -> None:
-    assert profile_for_market("phl").profile_id == "philly-distress-v2"
+    assert DISTRESS_PROFILE.profile_id == "philly-distress-v2"
 
 
 def test_valuation_and_verdict_composition_stayed_out_of_this_batch() -> None:

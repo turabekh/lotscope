@@ -12,10 +12,9 @@ from lotscope.valuation.avm import (
     trim_outlier_rates,
     wide_area_use_classes,
 )
-from lotscope.valuation.fallback import wide_area_policy_for_market
+from lotscope.valuation.fallback import WIDE_AREA
 from lotscope.valuation.policy import (
-    comp_selection_policy_for_market,
-    excluded_document_types_for_market,
+    excluded_document_types,
 )
 
 
@@ -216,18 +215,9 @@ def test_industrial_and_special_stay_segregated_when_widening() -> None:
     assert wide_area_use_classes(None) is None
 
 
-def test_only_measured_markets_get_a_wide_area_fallback() -> None:
-    assert wide_area_policy_for_market("phl") is not None
-    assert wide_area_policy_for_market("pgh") is None
-    assert wide_area_policy_for_market("hbg") is None
-    assert wide_area_policy_for_market("wlm") is None
-    assert wide_area_policy_for_market(None) is None
-
-
 def test_the_philadelphia_policy_matches_what_was_measured() -> None:
-    policy = wide_area_policy_for_market("phl")
+    policy = WIDE_AREA
 
-    assert policy is not None
     assert policy.radius_ft == 3000.0
     assert policy.years == 5
 
@@ -287,19 +277,9 @@ def test_size_similar_selection_is_skipped_when_the_subject_area_is_unknown() ->
     ) == (comps, False)
 
 
-def test_only_measured_markets_get_a_comp_selection_policy() -> None:
-    assert comp_selection_policy_for_market("phl") is not None
-    assert comp_selection_policy_for_market("pgh") is None
-    assert comp_selection_policy_for_market("hbg") is None
-    assert comp_selection_policy_for_market("wlm") is None
-    assert comp_selection_policy_for_market(None) is None
-
-
 def test_sheriff_and_nominal_deeds_are_excluded_from_philadelphia_comps() -> None:
-    excluded = excluded_document_types_for_market("phl")
+    excluded = excluded_document_types()
 
-    assert excluded is not None
     assert "SHERIFF'S DEED" in excluded
     assert "DEED LAND BANK" in excluded
     assert "DEED" not in excluded
-    assert excluded_document_types_for_market("pgh") is None

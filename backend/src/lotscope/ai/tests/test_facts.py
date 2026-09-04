@@ -108,14 +108,6 @@ def test_snapshot_keeps_attribute_zoning_for_phl_unchanged() -> None:
     assert "Zoning: RSA5" in facts
 
 
-def test_snapshot_carries_risk_coverage_for_hbg_not_phl() -> None:
-    hbg = _detail()
-    hbg.market_code = "hbg"
-    facts_hbg = _summary_facts(hbg, _verdict(risk_score=0.0, risk_flags=[]), None, None)
-    assert "Risk coverage" in facts_hbg
-    facts_phl = _summary_facts(_detail(), _verdict(risk_score=0.0, risk_flags=[]), None, None)
-    assert "Risk coverage" not in facts_phl
-
 
 def test_summary_prompt_forbids_invented_risk() -> None:
     from lotscope.ai.prompts import SUMMARY_SYSTEM_PROMPT

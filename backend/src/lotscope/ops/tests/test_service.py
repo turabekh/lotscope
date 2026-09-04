@@ -73,15 +73,5 @@ async def test_market_health_reports_datasets_and_verdict_spread(
     assert versions.get(None) == 1
 
 
-async def test_market_health_surfaces_capability_gaps(db_session: AsyncSession) -> None:
-    detail = await market_health(db_session, "hbg", _NOW)
-    assert detail is not None
-    categories = {c.category for c in detail.capabilities}
-    assert "li" in categories
-    li = next(c for c in detail.capabilities if c.category == "li")
-    assert li.state == "no_data_source"
-    assert li.detail
-
-
 async def test_market_health_unknown_market_is_none(db_session: AsyncSession) -> None:
     assert await market_health(db_session, "nope", _NOW) is None

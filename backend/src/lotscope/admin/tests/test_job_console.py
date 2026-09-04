@@ -15,15 +15,14 @@ from lotscope.admin.catalog import (
     MAINTENANCE_KIND,
     RECOMPUTE_KIND,
     ingest_job_id,
-    parse_params,
 )
 from lotscope.admin.models import JobRun
 from lotscope.admin.service import enqueue_job, job_catalog
 from lotscope.api.app import create_app
 from lotscope.api.deps import get_arq_pool, get_current_user, get_session
 from lotscope.core.config import Settings
-from lotscope.core.errors import ConflictError, NotFoundError, ValidationError
-from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS
+from lotscope.core.errors import ConflictError, NotFoundError
+from lotscope.ingestion.jobs import INGEST_JOBS
 from lotscope.worker import run_admin_job
 
 
@@ -66,10 +65,7 @@ async def _admin_user(session: AsyncSession) -> int:
 
 
 def test_catalog_covers_every_ingest_job() -> None:
-    ingest_ids = {
-        ingest_job_id(market, dataset)
-        for (market, dataset) in set(INGEST_JOBS) | set(PARAM_INGEST_JOBS)
-    }
+    ingest_ids = {ingest_job_id(market, dataset) for (market, dataset) in set(INGEST_JOBS)}
     catalog_ingest_ids = {spec.id for spec in CATALOG if spec.kind == INGEST_KIND}
     assert ingest_ids == catalog_ingest_ids
     assert len(CATALOG_BY_ID) == len(CATALOG)
@@ -80,7 +76,7 @@ def test_worker_dispatch_stays_in_sync_with_catalog() -> None:
     assert recompute_ids == set(worker._RECOMPUTE_DISPATCH)
     maintenance_ids = {spec.id for spec in CATALOG if spec.kind == MAINTENANCE_KIND}
     assert maintenance_ids == set(worker._MAINTENANCE_DISPATCH)
-    runnable = set(INGEST_JOBS) | set(PARAM_INGEST_JOBS)
+    runnable = set(INGEST_JOBS)
     for spec in CATALOG:
         if spec.kind == INGEST_KIND:
             assert (spec.market, spec.dataset) in runnable
@@ -221,33 +217,13 @@ async def test_job_catalog_reports_latest_run(db_session: AsyncSession) -> None:
     assert untriggered.latest_run is None
 
 
-def test_tax_claim_job_declares_params() -> None:
-    spec = CATALOG_BY_ID["ingest:hbg:tax_claim"]
-    assert {param.name for param in spec.params} == {"list_url", "list_date"}
-    assert ("hbg", "tax_claim") in PARAM_INGEST_JOBS
-
-
-def test_every_recompute_job_offers_an_optional_market_param() -> None:
+def test_every_recompute_job_is_dispatchable() -> None:
     recomputes = [spec for spec in CATALOG if spec.kind == RECOMPUTE_KIND]
     assert recomputes
-    for spec in recomputes:
-        market = next(param for param in spec.params if param.name == "market")
-        assert market.required is False
-        assert market.type == "market"
-
-
-def test_market_param_resolves_slugs_and_rejects_unknown_markets() -> None:
-    spec = CATALOG_BY_ID["recompute:verdicts"]
-    assert parse_params(spec, {"market": "wilmington"}) == {"market": "wlm"}
-    assert parse_params(spec, {"market": "wlm"}) == {"market": "wlm"}
-    assert parse_params(spec, {}) == {}
-    assert parse_params(spec, {"market": ""}) == {}
-    with pytest.raises(ValidationError):
-        parse_params(spec, {"market": "atlantis"})
 
 
 @pytest.mark.integration
-async def test_recompute_dispatch_threads_the_market_through(
+async def test_recompute_dispatch_reaches_the_recompute(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     received: dict[str, Any] = {}
@@ -258,27 +234,8 @@ async def test_recompute_dispatch_threads_the_market_through(
 
     monkeypatch.setitem(worker._RECOMPUTE_DISPATCH, "recompute:verdicts", _recompute)
 
-    scoped = await worker._dispatch_admin_job(
-        _reusing_factory(db_session), None, "recompute:verdicts", {"market": "wilmington"}
-    )
-    assert scoped == 3
-    assert received["market"] == "wlm"
-
     await worker._dispatch_admin_job(_reusing_factory(db_session), None, "recompute:verdicts", {})
     assert received["market"] is None
-
-
-@pytest.mark.integration
-async def test_enqueue_validates_required_params(db_session: AsyncSession) -> None:
-    user_id = await _admin_user(db_session)
-    with pytest.raises(ValidationError):
-        await enqueue_job(
-            db_session,
-            _FakeEnqueuer(),
-            job_id="ingest:hbg:tax_claim",
-            triggered_by=user_id,
-            params={"list_url": "https://example.test/list.csv"},
-        )
 
 
 @pytest.mark.integration

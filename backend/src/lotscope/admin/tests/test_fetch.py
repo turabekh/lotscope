@@ -22,14 +22,6 @@ def _client(app: FastAPI) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
-async def test_fetch_sources_lists_known() -> None:
-    app = _admin_app()
-    async with _client(app) as client:
-        resp = await client.get("/admin/fetch/sources")
-    assert resp.status_code == 200
-    labels = [source["label"] for source in resp.json()]
-    assert "Dauphin repository list (PDF)" in labels
-
 
 async def test_fetch_streams_bytes_as_attachment() -> None:
     app = _admin_app()
@@ -59,7 +51,5 @@ async def test_fetch_rejects_non_http_url() -> None:
 async def test_fetch_requires_admin() -> None:
     app = _admin_app(role="user")
     async with _client(app) as client:
-        sources = await client.get("/admin/fetch/sources")
         fetch = await client.get("/admin/fetch", params={"url": "https://example.test/x"})
-    assert sources.status_code == 403
     assert fetch.status_code == 403
