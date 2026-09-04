@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import cast
 
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 _TTL_SECONDS = 172_800
 _EXPORT_TTL_SECONDS = 3_456_000
@@ -97,3 +98,22 @@ async def register_area_search_parcels(
         if disclosed == 0:
             await redis.expire(key, _TTL_SECONDS)
     return True
+
+
+RESEND_LIMIT_PER_HOUR = 3
+_RESEND_WINDOW_SECONDS = 3600
+
+
+def _resend_key(email: str) -> str:
+    return f"verify:resend:{email.strip().lower()}"
+
+
+async def claim_resend_slot(redis: Redis, email: str) -> bool:
+    key = _resend_key(email)
+    try:
+        used = await redis.incr(key)
+        if used == 1:
+            await redis.expire(key, _RESEND_WINDOW_SECONDS)
+    except RedisError:
+        return True
+    return bool(used <= RESEND_LIMIT_PER_HOUR)

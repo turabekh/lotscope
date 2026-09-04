@@ -1,3 +1,6 @@
+import secrets
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +12,7 @@ from lotscope.accounts.billing import (
 )
 from lotscope.accounts.models import User
 from lotscope.accounts.schemas import UserCreate
-from lotscope.accounts.security import hash_password, verify_password
+from lotscope.accounts.security import hash_password, new_verification_nonce, verify_password
 from lotscope.core.config import Settings
 from lotscope.core.errors import AuthError, ValidationError
 
@@ -31,8 +34,30 @@ async def register_user(session: AsyncSession, data: UserCreate) -> User:
         email=email,
         hashed_password=hash_password(data.password),
         full_name=data.full_name,
+        email_verification_nonce=new_verification_nonce(),
     )
     session.add(user)
+    await session.flush()
+    return user
+
+
+async def rotate_verification_nonce(session: AsyncSession, user: User) -> str:
+    nonce = new_verification_nonce()
+    user.email_verification_nonce = nonce
+    await session.flush()
+    return nonce
+
+
+async def verify_email(session: AsyncSession, user_id: int, nonce: str) -> User:
+    user = await get_user_by_id(session, user_id)
+    if user is None or not user.is_active:
+        raise ValidationError("This verification link is no longer valid.")
+    if not user.email_verification_nonce or not secrets.compare_digest(
+        user.email_verification_nonce, nonce
+    ):
+        raise ValidationError("This verification link has already been used.")
+    user.email_verified_at = datetime.now(UTC)
+    user.email_verification_nonce = None
     await session.flush()
     return user
 

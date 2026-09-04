@@ -1,3 +1,4 @@
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -77,3 +78,38 @@ def verify_calendar_token(settings: Settings, token: str) -> int | None:
     if not isinstance(subject, str) or not subject.isdigit():
         return None
     return int(subject)
+
+
+_EMAIL_VERIFY_PURPOSE = "email_verify"
+EMAIL_VERIFY_TTL_HOURS = 24
+
+
+def new_verification_nonce() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def create_email_verification_token(
+    settings: Settings, *, user_id: int, nonce: str, now: datetime | None = None
+) -> str:
+    issued = now or datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "sub": str(user_id),
+        "purpose": _EMAIL_VERIFY_PURPOSE,
+        "nonce": nonce,
+        "exp": issued + timedelta(hours=EMAIL_VERIFY_TTL_HOURS),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
+
+
+def verify_email_verification_token(settings: Settings, token: str) -> tuple[int, str] | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != _EMAIL_VERIFY_PURPOSE:
+        return None
+    subject = payload.get("sub")
+    nonce = payload.get("nonce")
+    if not isinstance(subject, str) or not subject.isdigit() or not isinstance(nonce, str):
+        return None
+    return int(subject), nonce

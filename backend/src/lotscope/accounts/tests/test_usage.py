@@ -3,6 +3,8 @@ from typing import Any, cast
 from redis.asyncio import Redis
 
 from lotscope.accounts.usage import (
+    RESEND_LIMIT_PER_HOUR,
+    claim_resend_slot,
     get_area_search_parcels,
     get_ask_usage,
     get_export_usage,
@@ -113,4 +115,29 @@ async def test_area_search_ttl_is_set_only_once() -> None:
     redis = cast(Redis, fake)
     await register_area_search_parcels(redis, 1, ["phl:1"], None)
     await register_area_search_parcels(redis, 1, ["phl:2"], None)
+    assert len(fake.expires) == 1
+
+
+async def test_verification_resends_are_capped_per_hour_per_address() -> None:
+    fake = _Redis()
+    redis = cast(Redis, fake)
+    for _ in range(RESEND_LIMIT_PER_HOUR):
+        assert await claim_resend_slot(redis, "someone@example.test") is True
+    assert await claim_resend_slot(redis, "someone@example.test") is False
+    assert await claim_resend_slot(redis, "another@example.test") is True
+
+
+async def test_the_resend_cap_ignores_address_case_and_padding() -> None:
+    fake = _Redis()
+    redis = cast(Redis, fake)
+    for _ in range(RESEND_LIMIT_PER_HOUR):
+        assert await claim_resend_slot(redis, "Someone@Example.test") is True
+    assert await claim_resend_slot(redis, "  someone@example.TEST ") is False
+
+
+async def test_the_resend_window_is_set_once_per_address() -> None:
+    fake = _Redis()
+    redis = cast(Redis, fake)
+    await claim_resend_slot(redis, "window@example.test")
+    await claim_resend_slot(redis, "window@example.test")
     assert len(fake.expires) == 1
