@@ -29,6 +29,26 @@ parallel workers.
 The first deploy after the Philadelphia-only refactor drops tables and deletes ~189k
 parcel rows. Run these in order; do not skip step 2 because step 1 "looked fine".
 
+**Email prerequisite — check before every deploy that carries registration.** Since Step 0.5
+an account is unusable until its address is confirmed, so the confirmation mail is now on the
+critical path. Two settings can swallow it silently:
+
+- `SMTP_HOST` blank — `get_email_sender` returns `None`, registration still answers 202, and
+  nobody can finish signing up.
+- `EMAIL_ALLOWLIST` non-empty — mail to any address not on it is dropped with
+  `email_suppressed_by_allowlist` (warning, recipient domain only). Every registration from
+  outside the list bricks that account permanently.
+
+`/health/ready` reports both. Confirm before and after the deploy:
+
+```bash
+curl -s https://parcelphl.online/health/ready \
+  | python3 -c "import sys,json;d=json.load(sys.stdin);print({k:d[k] for k in ('email','email_allowlist_active')})"
+```
+
+Required for open registration: `{'email': True, 'email_allowlist_active': False}`. A non-empty
+allowlist is legitimate only while registration is closed to everyone but the listed addresses.
+
 **VM prerequisite — do this before step 3.** `/srv/lotscope/corpus` must exist on the VM and
 be readable inside the container, or step 8 fails after production has already been purged.
 Compose bind-mounts it read-only into `api` and `worker` at the same path; a bind mount whose

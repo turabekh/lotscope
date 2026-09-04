@@ -71,6 +71,7 @@ async def test_readiness_is_ready_when_ingestion_is_current() -> None:
     assert body["status"] == "ready"
     assert body["ingestion"] is True
     assert body["email"] is True
+    assert body["email_allowlist_active"] is False
     assert body["stale_datasets"] == []
 
 
@@ -107,3 +108,22 @@ async def test_readiness_does_not_call_unreadable_ingestion_healthy() -> None:
     assert body["status"] == "degraded"
     assert body["ingestion"] is False
     assert "unknown" in body["stale_datasets"][0]
+
+
+async def test_readiness_says_when_an_allowlist_is_still_gating_recipients() -> None:
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: _StubSession()
+    app.dependency_overrides[get_redis] = lambda: _StubRedis()
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
+        smtp_host="smtp.example.test",
+        email_allowlist=["owner@parcelphl.online"],
+    )
+    with mock.patch("lotscope.api.health.stale_automated_datasets", return_value=[]):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/health/ready")
+
+    body = response.json()
+    assert body["email"] is True
+    assert body["email_allowlist_active"] is True

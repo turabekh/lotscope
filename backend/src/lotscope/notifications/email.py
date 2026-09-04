@@ -9,6 +9,11 @@ from lotscope.core.config import Settings
 from lotscope.core.logging import get_logger
 
 
+def _recipient_domain(address: str) -> str:
+    _, _, domain = address.strip().lower().rpartition("@")
+    return domain or "unknown"
+
+
 @dataclass(frozen=True)
 class EmailAttachment:
     filename: str
@@ -54,7 +59,11 @@ class SmtpEmailSender:
         list_unsubscribe: str | None = None,
     ) -> None:
         if self._allowlist and to.strip().lower() not in self._allowlist:
-            self._logger.info("email_suppressed_by_allowlist", subject=subject)
+            self._logger.warning(
+                "email_suppressed_by_allowlist",
+                subject=subject,
+                recipient_domain=_recipient_domain(to),
+            )
             return
         message = EmailMessage()
         message["Subject"] = subject

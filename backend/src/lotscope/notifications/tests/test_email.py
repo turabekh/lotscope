@@ -1,6 +1,8 @@
 from email.message import EmailMessage
 from typing import Any
 
+from structlog.testing import capture_logs
+
 from lotscope.core.config import Settings
 from lotscope.notifications.email import SmtpEmailSender, get_email_sender
 
@@ -65,3 +67,20 @@ async def test_allowlist_suppresses_unlisted_recipients() -> None:
 
     await sender.send(to="owner@PARCELPHL.online", subject="Digest", html="<b>x</b>", text="x")
     assert len(captured) == 1
+
+
+async def test_a_suppressed_send_warns_with_the_domain_and_not_the_address() -> None:
+    sender = SmtpEmailSender(_settings(email_allowlist=["owner@parcelphl.online"]))
+    _capture(sender)
+
+    with capture_logs() as events:
+        await sender.send(to="Stranger@Example.com", subject="Confirm", html="x", text="x")
+
+    assert events == [
+        {
+            "event": "email_suppressed_by_allowlist",
+            "log_level": "warning",
+            "subject": "Confirm",
+            "recipient_domain": "example.com",
+        }
+    ]

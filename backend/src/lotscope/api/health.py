@@ -37,6 +37,7 @@ class ReadinessResponse(BaseModel):
     redis: bool
     ingestion: bool
     email: bool
+    email_allowlist_active: bool
     stale_datasets: list[str] = []
 
 
@@ -125,6 +126,7 @@ async def readiness(
     stale = await _stale_datasets(session) if database_ok else []
     ingestion_ok = not stale
     email_ok = get_email_sender(settings) is not None
+    allowlist_active = bool(settings.email_allowlist)
     healthy = database_ok and redis_ok and ingestion_ok and email_ok
     status: Literal["ready", "degraded"] = "ready" if healthy else "degraded"
     return ReadinessResponse(
@@ -133,6 +135,7 @@ async def readiness(
         redis=redis_ok,
         ingestion=ingestion_ok,
         email=email_ok,
+        email_allowlist_active=allowlist_active,
         stale_datasets=stale,
     )
 
