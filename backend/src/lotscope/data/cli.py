@@ -3,6 +3,7 @@ import logging
 from argparse import ArgumentParser, Namespace
 
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
@@ -75,6 +76,13 @@ async def _purge(args: Namespace) -> int:
         await engine.dispose()
 
 
+_SHM_HINT = (
+    "Postgres needs shared memory for parallel index vacuuming. In Docker that is "
+    "/dev/shm, which defaults to 64MB; docker-compose.yml sets shm_size: 1gb, so "
+    "recreate the db container if this box has not picked it up."
+)
+
+
 async def _vacuum() -> int:
     settings = get_settings()
     engine = create_engine(settings)
@@ -82,6 +90,11 @@ async def _vacuum() -> int:
         async with engine.connect() as connection:
             await connection.execution_options(isolation_level="AUTOCOMMIT")
             await connection.execute(text("VACUUM ANALYZE parcel"))
+    except DBAPIError as error:
+        print(f"VACUUM ANALYZE parcel — FAILED: {error.orig}")
+        if "shared memory" in str(error.orig):
+            print(_SHM_HINT)
+        return 1
     finally:
         await engine.dispose()
     print("VACUUM ANALYZE parcel — done")

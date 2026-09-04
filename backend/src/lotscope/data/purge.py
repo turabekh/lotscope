@@ -2,8 +2,9 @@ import importlib
 import pkgutil
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import Any, cast
 
-from sqlalchemy import MetaData, Table, text
+from sqlalchemy import CursorResult, MetaData, Table, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import lotscope
@@ -187,6 +188,9 @@ async def delete_targets(
         if not await _table_exists(session, target.key):
             deleted.append((target, None))
             continue
-        result = await session.execute(text(f"DELETE FROM {target.key} WHERE {target.predicate}"))
+        result = cast(
+            "CursorResult[Any]",
+            await session.execute(text(f"DELETE FROM {target.key} WHERE {target.predicate}")),
+        )
         deleted.append((target, result.rowcount))
     return deleted

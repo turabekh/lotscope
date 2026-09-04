@@ -6,6 +6,7 @@ from lotscope.data.purge import (
     EXPLICIT_LISTED,
     EXPLICIT_PARCEL_KEYED_TABLES,
     FK_REACHED,
+    PurgeTarget,
     build_deletion_graph,
     count_targets,
     delete_targets,
@@ -37,7 +38,7 @@ def _toy_metadata() -> MetaData:
     return metadata
 
 
-def _by_key(targets: list) -> dict:
+def _by_key(targets: list[PurgeTarget]) -> dict[str, PurgeTarget]:
     return {t.key: t for t in targets}
 
 
@@ -131,7 +132,5 @@ async def test_counting_and_deleting_agree_on_the_same_predicate(
 
 @pytest.mark.integration
 async def test_an_absent_table_is_reported_rather_than_raising(db_session: AsyncSession) -> None:
-    from lotscope.data.purge import PurgeTarget
-
     target = PurgeTarget(key="no_such_table", reason=EXPLICIT_LISTED, predicate="true")
     assert await count_targets(db_session, [target]) == [(target, None)]

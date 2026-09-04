@@ -21,6 +21,7 @@ services:
   db:
     build:
       context: ./docker/postgres
+    shm_size: 1gb
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-lotscope}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lotscope}
