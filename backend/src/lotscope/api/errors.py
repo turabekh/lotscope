@@ -8,6 +8,7 @@ from lotscope.core.errors import (
     AuthError,
     ConfigurationError,
     ConflictError,
+    EmailUnverifiedError,
     ForbiddenError,
     LotScopeError,
     NotFoundError,
@@ -23,12 +24,14 @@ _logger = get_logger("api.errors")
 class ErrorResponse(BaseModel):
     error: str
     detail: str
+    code: str | None = None
 
 
 _STATUS_BY_EXCEPTION: dict[type[LotScopeError], int] = {
     NotFoundError: 404,
     ValidationError: 422,
     AuthError: 401,
+    EmailUnverifiedError: 403,
     ForbiddenError: 403,
     QuotaExceededError: 429,
     ConflictError: 409,
@@ -46,7 +49,9 @@ def _status_for(exc: LotScopeError) -> int:
 
 async def _handle_lotscope_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, LotScopeError)
-    payload = ErrorResponse(error=type(exc).__name__, detail=exc.message)
+    payload = ErrorResponse(
+        error=type(exc).__name__, detail=exc.message, code=getattr(exc, "code", None)
+    )
     return JSONResponse(status_code=_status_for(exc), content=payload.model_dump())
 
 

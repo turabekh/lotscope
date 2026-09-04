@@ -30,6 +30,11 @@ class ForbiddenError(LotScopeError):
     default_message = "You do not have permission to perform this action."
 
 
+class EmailUnverifiedError(ForbiddenError):
+    default_message = "Confirm your email address to finish setting up your account."
+    code = "email_unverified"
+
+
 class QuotaExceededError(LotScopeError):
     default_message = "You have reached your plan's usage limit."
 

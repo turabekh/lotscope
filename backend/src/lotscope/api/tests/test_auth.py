@@ -42,8 +42,12 @@ async def test_register_login_me_flow(db_session: AsyncSession) -> None:
         me = await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
         unauthenticated = await client.get("/auth/me")
 
-    assert registered.status_code == 201
-    assert registered.json()["email"] == "u@example.com"
+    assert registered.status_code == 202
+    assert registered.json() == {
+        "email": "u@example.com",
+        "verification_required": True,
+        "detail": "Check your email for a confirmation link.",
+    }
     assert logged_in.status_code == 200
     assert me.status_code == 200
     assert me.json()["email"] == "u@example.com"

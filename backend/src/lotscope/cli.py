@@ -4,10 +4,13 @@ from lotscope.corpus.cli import build_parser as build_corpus_parser
 from lotscope.corpus.cli import main as corpus_main
 from lotscope.data.cli import build_parser as build_data_parser
 from lotscope.data.cli import main as data_main
+from lotscope.notifications.cli import build_parser as build_email_parser
+from lotscope.notifications.cli import main as email_main
 
 _GROUPS = {
     "corpus": (build_corpus_parser, corpus_main),
     "data": (build_data_parser, data_main),
+    "email": (build_email_parser, email_main),
 }
 
 

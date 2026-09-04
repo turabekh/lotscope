@@ -15,9 +15,10 @@ from lotscope.accounts.service import get_user_by_id
 from lotscope.ai.client import AnthropicGenerator, StructuredGenerator
 from lotscope.ai.embeddings import Embedder, VoyageEmbedder
 from lotscope.core.config import Settings
-from lotscope.core.errors import AuthError, ForbiddenError
+from lotscope.core.errors import AuthError, EmailUnverifiedError, ForbiddenError
 from lotscope.ingestion.extract import ExtractClient
 from lotscope.ingestion.loaders.sheriff_civilview import CivilViewSheriffSource
+from lotscope.notifications.email import EmailSender, get_email_sender
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -95,7 +96,19 @@ def get_stripe_gateway(request: Request) -> StripeGateway:
     return StripeApiGateway(get_app_settings(request))
 
 
+_VERIFICATION_EXEMPT_PREFIXES = ("/auth/", "/health", "/legal")
+
+
+def _is_verification_exempt(request: Request) -> bool:
+    path = request.url.path
+    for prefix in _VERIFICATION_EXEMPT_PREFIXES:
+        if path.startswith(prefix) or path.startswith(f"/api{prefix}"):
+            return True
+    return False
+
+
 async def get_current_user(
+    request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
@@ -112,6 +125,8 @@ async def get_current_user(
     user = await get_user_by_id(session, int(subject))
     if user is None or not user.is_active:
         raise AuthError("Account not found or inactive.")
+    if user.email_verified_at is None and not _is_verification_exempt(request):
+        raise EmailUnverifiedError("Confirm your email address to finish setting up your account.")
     return user
 
 
@@ -139,3 +154,9 @@ async def require_admin(user: Annotated[User, Depends(get_current_user)]) -> Use
     if user.role != "admin":
         raise ForbiddenError("Administrator access is required.")
     return user
+
+
+def get_email_sender_dep(
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> EmailSender | None:
+    return get_email_sender(settings)
