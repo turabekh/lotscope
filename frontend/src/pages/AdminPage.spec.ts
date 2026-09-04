@@ -103,15 +103,6 @@ vi.mock('@/lib/api', async (importOriginal) => {
       getAdminUsers: vi.fn(() => Promise.resolve({ total: 0, users: [] })),
       getJobCatalog: vi.fn(() => Promise.resolve(catalog)),
       getJobRuns: vi.fn(() => Promise.resolve([latestRun])),
-      getFetchSources: vi.fn(() =>
-        Promise.resolve([
-          {
-            label: 'Dauphin repository list (PDF)',
-            url: 'https://example.test/repo.pdf',
-            description: 'Master repository list.',
-          },
-        ]),
-      ),
       runJob: runJobMock,
     },
   }

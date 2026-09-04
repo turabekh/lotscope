@@ -8,7 +8,6 @@ import { api } from '@/lib/api'
 import type {
   AdminOverview,
   DatasetStatus,
-  FetchSource,
   JobCatalogEntry,
   JobRunSummary,
   User,
@@ -33,7 +32,6 @@ const submittingJob = ref<string | null>(null)
 const paramDialog = ref(false)
 const paramJob = ref<JobCatalogEntry | null>(null)
 const paramValues = ref<Record<string, string>>({})
-const fetchSources = ref<FetchSource[]>([])
 const fetchUrl = ref('')
 const pulling = ref(false)
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -99,7 +97,6 @@ function syncPolling(): void {
 async function loadJobs(): Promise<void> {
   jobs.value = await api.getJobCatalog()
   jobRuns.value = await api.getJobRuns(25)
-  fetchSources.value = await api.getFetchSources()
   syncPolling()
 }
 
@@ -310,20 +307,6 @@ onBeforeUnmount(() => {
             @click="() => pullSource(fetchUrl)"
           />
         </div>
-        <div v-if="fetchSources.length > 0" class="pull-shortcuts">
-          <q-chip
-            v-for="source in fetchSources"
-            :key="source.url"
-            clickable
-            dense
-            color="grey-3"
-            text-color="grey-9"
-            @click="() => (fetchUrl = source.url)"
-          >
-            {{ source.label }}
-            <q-tooltip>{{ source.description }}</q-tooltip>
-          </q-chip>
-        </div>
       </q-card>
 
       <div class="text-subtitle2 q-mt-md q-mb-xs">Corrections</div>
@@ -523,11 +506,5 @@ onBeforeUnmount(() => {
 }
 .pull-input {
   flex: 1;
-}
-.pull-shortcuts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
 }
 </style>

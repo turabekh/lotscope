@@ -79,9 +79,3 @@ class JobCatalogEntry(BaseModel):
 class JobRunRequest(BaseModel):
     job_id: str
     params: dict[str, str] = {}
-
-
-class FetchSource(BaseModel):
-    label: str
-    url: str
-    description: str

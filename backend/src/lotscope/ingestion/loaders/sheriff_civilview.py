@@ -1,6 +1,4 @@
 import asyncio
-from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -11,7 +9,6 @@ from selectolax.parser import HTMLParser
 from lotscope.core.config import Settings
 from lotscope.core.errors import LotScopeError
 from lotscope.ingestion.http import request_with_retry
-from lotscope.ingestion.normalizers import get_normalizer
 
 CIVILVIEW_DATASET = "sheriff_sale"
 
@@ -160,78 +157,6 @@ def civilview_record(row: CivilViewListRow, detail: CivilViewDetail) -> dict[str
     }
 
 
-def _header_index(tree: HTMLParser) -> dict[str, int]:
-    headers: dict[str, int] = {}
-    cells = tree.css("thead th") or tree.css("tr th")
-    for index, cell in enumerate(cells):
-        name = _clean(cell.text())
-        if name:
-            headers[name.casefold()] = index
-    return headers
-
-
-def _first_token(value: str | None) -> str | None:
-    cleaned = _clean(value)
-    return cleaned.split(" ")[0] if cleaned else None
-
-
-def parse_sale_list_new_castle(html: str) -> list[CivilViewListRow]:
-    tree = HTMLParser(html)
-    headers = _header_index(tree)
-
-    def column(cells: list[str | None], header: str) -> str | None:
-        index = headers.get(header)
-        return cells[index] if index is not None and index < len(cells) else None
-
-    rows: list[CivilViewListRow] = []
-    for tr in tree.css("tr"):
-        anchor = tr.css_first("a[href*='SaleDetails']")
-        if anchor is None:
-            continue
-        property_id = _property_id_from_href(anchor.attributes.get("href"))
-        if property_id is None:
-            continue
-        cells = [_clean(td.text()) for td in tr.css("td")]
-        rows.append(
-            CivilViewListRow(
-                property_id=property_id,
-                case_number=column(cells, "sheriff #"),
-                parcel_id=column(cells, "parcel #"),
-                plaintiff=column(cells, "plaintiff"),
-                address=column(cells, "address"),
-                status=column(cells, "status"),
-                sale_date=_first_token(column(cells, "sale date")),
-            )
-        )
-    return rows
-
-
-def new_castle_record(row: CivilViewListRow, detail: CivilViewDetail) -> dict[str, Any]:
-    return {
-        "case_number": row.case_number,
-        "opa_number": None,
-        "parcel_number": get_normalizer("wlm").to_canonical(row.parcel_id),
-        "address": row.address,
-        "plaintiff": row.plaintiff,
-        "sale_type": detail.sale_type,
-        "status": row.status,
-        "sale_date": parse_us_date(row.sale_date),
-        "opening_bid": None,
-    }
-
-
-@dataclass(frozen=True)
-class CivilViewProfile:
-    parse_list: Callable[[str], list[CivilViewListRow]]
-    build_record: Callable[[CivilViewListRow, CivilViewDetail], dict[str, Any]]
-
-
-PHL_PROFILE = CivilViewProfile(parse_list=parse_sale_list, build_record=civilview_record)
-NEW_CASTLE_PROFILE = CivilViewProfile(
-    parse_list=parse_sale_list_new_castle, build_record=new_castle_record
-)
-
-
 class CivilViewSheriffSource:
     def __init__(
         self,
@@ -239,11 +164,9 @@ class CivilViewSheriffSource:
         transport: httpx.AsyncBaseTransport | None = None,
         *,
         county_id: int | None = None,
-        profile: CivilViewProfile | None = None,
     ) -> None:
         self._base_url = settings.sheriff_sale_civilview_base_url.rstrip("/")
         self._county_id = county_id if county_id is not None else settings.sheriff_sale_county_id
-        self._profile = profile if profile is not None else PHL_PROFILE
         self._max_retries = settings.http_max_retries
         self._backoff = settings.http_backoff_seconds
         self._timeout = settings.http_timeout_seconds
@@ -269,7 +192,7 @@ class CivilViewSheriffSource:
         list_url = f"{self._base_url}{_LIST_PATH}"
         async with self._client() as client:
             list_html = await self._get(client, list_url, {_COUNTY_ID_PARAM: str(self._county_id)})
-        return self._profile.parse_list(list_html)
+        return parse_sale_list(list_html)
 
     async def fetch(self) -> list[dict[str, Any]]:
         list_url = f"{self._base_url}{_LIST_PATH}"
@@ -277,7 +200,7 @@ class CivilViewSheriffSource:
         records: list[dict[str, Any]] = []
         async with self._client() as client:
             list_html = await self._get(client, list_url, {_COUNTY_ID_PARAM: str(self._county_id)})
-            rows = self._profile.parse_list(list_html)
+            rows = parse_sale_list(list_html)
             if self._detail_limit is not None:
                 rows = rows[: self._detail_limit]
             for row in rows:
@@ -286,5 +209,5 @@ class CivilViewSheriffSource:
                 detail_html = await self._get(
                     client, detail_url, {_PROPERTY_ID_PARAM: row.property_id}
                 )
-                records.append(self._profile.build_record(row, parse_sale_detail(detail_html)))
+                records.append(civilview_record(row, parse_sale_detail(detail_html)))
         return records

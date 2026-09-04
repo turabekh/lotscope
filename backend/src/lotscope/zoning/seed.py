@@ -1,5 +1,4 @@
 import asyncio
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 from sqlalchemy import func
@@ -9,11 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.core.market import MARKET_CODE
 from lotscope.zoning.models import ZoningStandard
-from lotscope.zoning.seed_hbg import seed_hbg_zoning_standards
 from lotscope.zoning.seed_overlay import seed_overlay_standards
-from lotscope.zoning.seed_pgh import seed_pgh_zoning_standards
-from lotscope.zoning.seed_wlm import seed_wlm_zoning_standards
 
 TITLE_14_VERSION = "title14-quickguide-2026-02"
 TITLE_14_SOURCE = (
@@ -516,16 +513,8 @@ async def seed_zoning_standards(session: AsyncSession) -> int:
     return len(rows)
 
 
-_MARKET_SEEDERS: dict[str, Callable[[AsyncSession], Awaitable[int]]] = {
-    "phl": seed_zoning_standards,
-    "hbg": seed_hbg_zoning_standards,
-    "pgh": seed_pgh_zoning_standards,
-    "wlm": seed_wlm_zoning_standards,
-}
-
-
 async def seed_all_zoning_standards(session: AsyncSession) -> dict[str, int]:
-    return {market: await seeder(session) for market, seeder in _MARKET_SEEDERS.items()}
+    return {MARKET_CODE: await seed_zoning_standards(session)}
 
 
 async def _run() -> None:

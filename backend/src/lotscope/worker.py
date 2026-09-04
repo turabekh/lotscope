@@ -5,7 +5,6 @@ from typing import Any, ClassVar
 
 from arq import cron, func
 from arq.connections import RedisSettings
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.admin.catalog import (
@@ -24,11 +23,11 @@ from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.errors import NotFoundError
 from lotscope.core.logging import configure_logging, get_logger
+from lotscope.core.market import MARKET_CODE
 from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.carto import CartoClient
-from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS, ingest_market, markets
+from lotscope.ingestion.jobs import INGEST_JOBS, ingest_market
 from lotscope.ingestion.retention import sweep_retention
-from lotscope.markets.models import Market
 from lotscope.notifications.email import get_email_sender
 from lotscope.notifications.push import get_push_sender
 from lotscope.notifications.service import (
@@ -72,10 +71,7 @@ async def ingest_dataset(ctx: dict[str, Any], market: str, name: str) -> int:
 
 
 async def ingest_all(ctx: dict[str, Any]) -> int:
-    total = 0
-    for market in markets():
-        total += await ingest_market(ctx["session_factory"], ctx["settings"], market)
-    return total
+    return await ingest_market(ctx["session_factory"], ctx["settings"], MARKET_CODE)
 
 
 async def sweep_ingestion_retention(ctx: dict[str, Any]) -> int:
@@ -133,24 +129,16 @@ async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
 
 async def check_verdict_invariants(ctx: dict[str, Any]) -> int:
     async with ctx["session_factory"]() as session:
-        markets_checked = 0
-        breached_total = 0
-        codes = (await session.execute(select(Market.code).order_by(Market.code))).scalars()
-        for market in codes:
-            results = await check_invariants(session, market)
-            failed = breaches(results)
-            markets_checked += 1
-            breached_total += len(failed)
-            for result in failed:
-                _logger.error(
-                    "invariant_breached",
-                    market=market,
-                    invariant=result.invariant.name,
-                    violations=result.violations,
-                    claim=result.invariant.claim,
-                )
-    _logger.info("invariants_checked", markets=markets_checked, breached=breached_total)
-    return breached_total
+        failed = breaches(await check_invariants(session, MARKET_CODE))
+        for result in failed:
+            _logger.error(
+                "invariant_breached",
+                invariant=result.invariant.name,
+                violations=result.violations,
+                claim=result.invariant.claim,
+            )
+    _logger.info("invariants_checked", breached=len(failed))
+    return len(failed)
 
 
 async def reconcile_upstream_sample(ctx: dict[str, Any]) -> int:
@@ -232,12 +220,7 @@ async def _dispatch_admin_job(
     if spec.kind == INGEST_KIND:
         if spec.market is None or spec.dataset is None:
             raise NotFoundError(f"Job {job_id!r} is missing ingest coordinates.")
-        key = (spec.market, spec.dataset)
-        if key in PARAM_INGEST_JOBS:
-            return await PARAM_INGEST_JOBS[key](
-                session_factory, settings, **parse_params(spec, params)
-            )
-        return await INGEST_JOBS[key](session_factory, settings)
+        return await INGEST_JOBS[(spec.market, spec.dataset)](session_factory, settings)
     if spec.kind == RECOMPUTE_KIND:
         market = parse_params(spec, params).get("market")
         return await _RECOMPUTE_DISPATCH[spec.id](session_factory, market)

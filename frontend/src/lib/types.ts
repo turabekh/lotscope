@@ -1112,12 +1112,6 @@ export interface JobParamSpec {
   required: boolean
 }
 
-export interface FetchSource {
-  label: string
-  url: string
-  description: string
-}
-
 export interface JobRunSummary {
   id: number
   job_id: string

@@ -1,30 +1,23 @@
 from asyncio import CancelledError
 from collections.abc import Awaitable, Callable
-from datetime import date
-from pathlib import Path
-from typing import Any, Protocol
+from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.core.config import Settings
 from lotscope.core.logging import get_logger
+from lotscope.core.market import MARKET_CODE
 from lotscope.ingestion.arcgis import ArcGisClient
 from lotscope.ingestion.carto import CartoClient
-from lotscope.ingestion.ckan import CkanDatastoreClient
 from lotscope.ingestion.errors import IngestionError
-from lotscope.ingestion.extract import ExtractClient
 from lotscope.ingestion.filters import li_events_where, rtt_sales_where, zba_appeals_where
 from lotscope.ingestion.loaders import (
     flood,
-    hbg,
-    hbg_repository,
-    hbg_taxclaim,
     historic,
     li,
     neighborhoods,
     opa,
     overlays,
-    pgh,
     public_ownership,
     pwd,
     rtt,
@@ -32,18 +25,12 @@ from lotscope.ingestion.loaders import (
     streets,
     tax,
     vacancy,
-    wlm,
-    wlm_layers,
     zba,
     zoning,
 )
 from lotscope.ingestion.loaders.sheriff import CsvSheriffSource, SheriffSource, load_sheriff
-from lotscope.ingestion.loaders.sheriff_civilview import (
-    NEW_CASTLE_PROFILE,
-    CivilViewSheriffSource,
-)
+from lotscope.ingestion.loaders.sheriff_civilview import CivilViewSheriffSource
 from lotscope.ingestion.runner import run_loader
-from lotscope.markets.models import Market
 from lotscope.zoning.overlay_membership import refresh_all_parcel_overlays
 
 SessionFactory = async_sessionmaker[AsyncSession]
@@ -249,55 +236,6 @@ async def ingest_zba(session_factory: SessionFactory, settings: Settings) -> int
     )
 
 
-async def _hbg_source_config(session_factory: SessionFactory) -> dict[str, Any]:
-    async with session_factory() as session:
-        market = await session.get(Market, "hbg")
-        return dict(market.source_config) if market is not None else {}
-
-
-async def ingest_hbg_parcels(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _hbg_source_config(session_factory)
-    services_url = str(config["arcgis_services_url"])
-    municipality = str(config["municipality_filter"])
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=lambda session, arcgis: hbg.load_hbg_parcels(
-            session, arcgis, services_url=services_url, municipality=municipality
-        ),
-        dataset=hbg.HBG_PARCELS_DATASET,
-        market_code="hbg",
-    )
-
-
-async def ingest_hbg_sales(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _hbg_source_config(session_factory)
-    services_url = str(config["arcgis_services_url"])
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=lambda session, arcgis: hbg.load_hbg_sales(
-            session, arcgis, services_url=services_url
-        ),
-        dataset=hbg.HBG_SALES_DATASET,
-        market_code="hbg",
-    )
-
-
-async def ingest_hbg_zoning(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _hbg_source_config(session_factory)
-    services_url = str(config["arcgis_services_url"])
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=lambda session, arcgis: hbg.load_hbg_zoning_districts(
-            session, arcgis, services_url=services_url
-        ),
-        dataset=hbg.HBG_ZONING_DATASET,
-        market_code="hbg",
-    )
-
-
 _PHL_JOBS: dict[str, Job] = {
     "opa": ingest_opa,
     "pwd": ingest_pwd,
@@ -321,455 +259,11 @@ _PHL_JOBS: dict[str, Job] = {
 }
 
 
-async def ingest_hbg_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
-    return await run_loader(
-        session_factory,
-        hbg.derive_hbg_vacancy,
-        dataset=hbg.HBG_VACANCY_DATASET,
-        market_code="hbg",
-    )
-
-
-async def ingest_hbg_streets(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _hbg_source_config(session_factory)
-    services_url = str(config["arcgis_services_url"])
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=lambda session, arcgis: hbg.load_hbg_streets(
-            session, arcgis, services_url=services_url
-        ),
-        dataset=hbg.HBG_STREETS_DATASET,
-        market_code="hbg",
-    )
-
-
-async def ingest_hbg_public(session_factory: SessionFactory, settings: Settings) -> int:
-    return await run_loader(
-        session_factory,
-        hbg.derive_hbg_public_ownership,
-        dataset=hbg.HBG_PUBLIC_DATASET,
-        market_code="hbg",
-    )
-
-
-async def ingest_hbg_flood(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=hbg.load_hbg_flood,
-        dataset=hbg.HBG_FLOOD_DATASET,
-        market_code="hbg",
-    )
-
-
-async def ingest_hbg_dimensions(session_factory: SessionFactory, settings: Settings) -> int:
-    return await run_loader(
-        session_factory,
-        hbg.derive_hbg_lot_width,
-        dataset=hbg.HBG_DIMENSIONS_DATASET,
-        market_code="hbg",
-    )
-
-
-async def ingest_hbg_historic(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=hbg.load_hbg_historic,
-        dataset=hbg.HBG_HISTORIC_DATASET,
-        market_code="hbg",
-    )
-
-
-async def ingest_hbg_neighborhoods(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=hbg.load_hbg_neighborhoods,
-        dataset=hbg.HBG_NEIGHBORHOODS_DATASET,
-        market_code="hbg",
-    )
-
-
-_REPO_CSV_FIXTURE = (
-    Path(__file__).resolve().parents[4] / "docs" / "dauphin-repository-list-2026-06-25.csv"
-)
-
-
-def _pdf_text(content: bytes) -> str:
-    from io import BytesIO
-
-    from pypdf import PdfReader
-
-    reader = PdfReader(BytesIO(content))
-    return "\n".join(page.extract_text() or "" for page in reader.pages)
-
-
-async def ingest_hbg_repository(session_factory: SessionFactory, settings: Settings) -> int:
-    logger = get_logger("ingestion.hbg_repository")
-    rows: list[dict[str, Any]] | None = None
-    try:
-        async with ExtractClient(settings) as extract:
-            download = await extract.download(hbg_repository.REPOSITORY_PDF_URL)
-        parsed = hbg_repository.parse_repository_pdf_text(_pdf_text(download.content))
-        if parsed:
-            rows = parsed
-            logger.info("hbg_repository_source", source="prod_pdf", rows=len(parsed))
-    except Exception as exc:
-        logger.warning("hbg_repository_pdf_unavailable", error=str(exc))
-    if rows is None and _REPO_CSV_FIXTURE.exists():
-        rows = hbg_repository.read_repository_csv(_REPO_CSV_FIXTURE)
-        logger.info("hbg_repository_source", source="csv_fixture", rows=len(rows))
-    if not rows:
-        return 0
-    async with session_factory() as session:
-        result = await hbg_repository.load_hbg_repository(session, rows)
-        await session.commit()
-    return result.loaded
-
-
-async def ingest_hbg_tax_claim(
-    session_factory: SessionFactory, settings: Settings, *, list_url: str, list_date: date
-) -> int:
-    async with ExtractClient(settings) as extract:
-        return await run_loader(
-            session_factory,
-            lambda session: hbg_taxclaim.load_hbg_tax_claim(
-                session, extract, list_url=list_url, list_date=list_date
-            ),
-            dataset=hbg_taxclaim.HBG_TAX_CLAIM_DATASET,
-            market_code="hbg",
-        )
-
-
-async def _pgh_source_config(session_factory: SessionFactory) -> dict[str, Any]:
-    async with session_factory() as session:
-        market = await session.get(Market, "pgh")
-        return dict(market.source_config) if market is not None else {}
-
-
-async def ingest_pgh_parcels(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _pgh_source_config(session_factory)
-    base_url = str(config["ckan_base_url"])
-    resource_id = str(config["assessment_resource_id"])
-    async with CkanDatastoreClient(settings, base_url) as ckan:
-        return await run_loader(
-            session_factory,
-            lambda session: pgh.load_pgh_parcels(session, ckan, resource_id=resource_id),
-            dataset=pgh.PGH_PARCELS_DATASET,
-            market_code="pgh",
-        )
-
-
-async def ingest_pgh_geometry(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _pgh_source_config(session_factory)
-    base_url = str(config["ckan_base_url"])
-    async with CkanDatastoreClient(settings, base_url) as ckan:
-        return await run_loader(
-            session_factory,
-            lambda session: pgh.load_pgh_geometry(
-                session,
-                ckan,
-                boundaries_resource_id=str(config["boundaries_resource_id"]),
-                assessment_resource_id=str(config["assessment_resource_id"]),
-            ),
-            dataset=pgh.PGH_GEOMETRY_DATASET,
-            market_code="pgh",
-        )
-
-
-async def ingest_pgh_sales(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _pgh_source_config(session_factory)
-    base_url = str(config["ckan_base_url"])
-    resource_id = str(config["sales_resource_id"])
-    async with CkanDatastoreClient(settings, base_url) as ckan:
-        return await run_loader(
-            session_factory,
-            lambda session: pgh.load_pgh_sales(session, ckan, resource_id=resource_id),
-            dataset=pgh.PGH_SALES_DATASET,
-            market_code="pgh",
-        )
-
-
-async def ingest_pgh_liens(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _pgh_source_config(session_factory)
-    base_url = str(config["ckan_base_url"])
-    resource_id = str(config["liens_resource_id"])
-    async with CkanDatastoreClient(settings, base_url) as ckan:
-        return await run_loader(
-            session_factory,
-            lambda session: pgh.load_pgh_liens(session, ckan, resource_id=resource_id),
-            dataset=pgh.PGH_LIENS_DATASET,
-            market_code="pgh",
-        )
-
-
-async def ingest_pgh_foreclosures(session_factory: SessionFactory, settings: Settings) -> int:
-    from datetime import UTC, datetime
-
-    config = await _pgh_source_config(session_factory)
-    base_url = str(config["ckan_base_url"])
-    resource_id = str(config["foreclosures_resource_id"])
-    as_of = datetime.now(UTC).date()
-    async with CkanDatastoreClient(settings, base_url) as ckan:
-        return await run_loader(
-            session_factory,
-            lambda session: pgh.load_pgh_foreclosures(
-                session, ckan, resource_id=resource_id, as_of=as_of
-            ),
-            dataset=pgh.PGH_FORECLOSURES_DATASET,
-            market_code="pgh",
-        )
-
-
-async def _run_pgh_ckan(
-    session_factory: SessionFactory,
-    settings: Settings,
-    *,
-    resource_key: str,
-    dataset: str,
-    loader: Any,
-) -> int:
-    config = await _pgh_source_config(session_factory)
-    base_url = str(config["ckan_base_url"])
-    resource_id = str(config[resource_key])
-    async with CkanDatastoreClient(settings, base_url) as ckan:
-        return await run_loader(
-            session_factory,
-            lambda session: loader(session, ckan, resource_id=resource_id),
-            dataset=dataset,
-            market_code="pgh",
-        )
-
-
-async def ingest_pgh_violations(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_pgh_ckan(
-        session_factory,
-        settings,
-        resource_key="violations_resource_id",
-        dataset=pgh.PGH_VIOLATIONS_DATASET,
-        loader=pgh.load_pgh_violations,
-    )
-
-
-async def ingest_pgh_city_owned(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_pgh_ckan(
-        session_factory,
-        settings,
-        resource_key="city_owned_resource_id",
-        dataset=pgh.PGH_CITY_OWNED_DATASET,
-        loader=pgh.load_pgh_city_owned,
-    )
-
-
-async def ingest_pgh_condemned(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_pgh_ckan(
-        session_factory,
-        settings,
-        resource_key="condemned_resource_id",
-        dataset=pgh.PGH_CONDEMNED_DATASET,
-        loader=pgh.load_pgh_condemned,
-    )
-
-
-async def ingest_pgh_zoning(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_pgh_ckan(
-        session_factory,
-        settings,
-        resource_key="zoning_resource_id",
-        dataset=pgh.PGH_ZONING_DATASET,
-        loader=pgh.load_pgh_zoning_districts,
-    )
-
-
-async def ingest_pgh_neighborhoods(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_pgh_ckan(
-        session_factory,
-        settings,
-        resource_key="neighborhoods_resource_id",
-        dataset=pgh.PGH_NEIGHBORHOODS_DATASET,
-        loader=pgh.load_pgh_neighborhoods,
-    )
-
-
-async def ingest_pgh_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
-    return await run_loader(
-        session_factory,
-        pgh.derive_pgh_vacancy,
-        dataset=pgh.PGH_VACANCY_DATASET,
-        market_code="pgh",
-    )
-
-
-async def _wlm_source_config(session_factory: SessionFactory) -> dict[str, Any]:
-    async with session_factory() as session:
-        market = await session.get(Market, "wlm")
-        return dict(market.source_config) if market is not None else {}
-
-
-async def ingest_wlm_parcels(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _wlm_source_config(session_factory)
-    parcels_url = str(config["firstmap_parcels_url"])
-    hundred = str(config["hundred_filter"])
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=lambda session, arcgis: wlm.load_wlm_parcels(
-            session, arcgis, parcels_url=parcels_url, hundred=hundred
-        ),
-        dataset=wlm.WLM_PARCELS_DATASET,
-        market_code="wlm",
-    )
-
-
-async def ingest_wlm_assessment(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _wlm_source_config(session_factory)
-    parcels_layer_url = wlm.wilmington_parcels_layer_url(str(config["wilmington_arcgis_url"]))
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=lambda session, arcgis: wlm.load_wlm_assessment(
-            session, arcgis, parcels_layer_url=parcels_layer_url
-        ),
-        dataset=wlm.WLM_ASSESSMENT_DATASET,
-        market_code="wlm",
-    )
-
-
-async def ingest_wlm_zoning(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _wlm_source_config(session_factory)
-    parcels_layer_url = wlm.wilmington_parcels_layer_url(str(config["wilmington_arcgis_url"]))
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=lambda session, arcgis: wlm.load_wlm_zoning(
-            session, arcgis, parcels_layer_url=parcels_layer_url
-        ),
-        dataset=wlm.WLM_ZONING_DATASET,
-        market_code="wlm",
-    )
-
-
-async def ingest_wlm_comps(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _wlm_source_config(session_factory)
-    parcels_layer_url = wlm.wilmington_parcels_layer_url(str(config["wilmington_arcgis_url"]))
-    return await _run_arcgis(
-        session_factory,
-        settings,
-        loader=lambda session, arcgis: wlm.load_wlm_comps(
-            session, arcgis, parcels_layer_url=parcels_layer_url
-        ),
-        dataset=wlm.WLM_COMPS_DATASET,
-        market_code="wlm",
-    )
-
-
-async def ingest_wlm_dimensions(session_factory: SessionFactory, settings: Settings) -> int:
-    return await run_loader(
-        session_factory,
-        wlm.derive_wlm_lot_width,
-        dataset=wlm.WLM_DIMENSIONS_DATASET,
-        market_code="wlm",
-    )
-
-
-async def ingest_wlm_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
-    return await run_loader(
-        session_factory,
-        wlm.derive_wlm_vacancy,
-        dataset=wlm.WLM_VACANCY_DATASET,
-        market_code="wlm",
-    )
-
-
-async def ingest_wlm_sheriff(session_factory: SessionFactory, settings: Settings) -> int:
-    config = await _wlm_source_config(session_factory)
-    county_id = int(config["sheriff_civilview_county_id"])
-    source = CivilViewSheriffSource(settings, county_id=county_id, profile=NEW_CASTLE_PROFILE)
-
-    async def loader(session: AsyncSession) -> int:
-        known = await wlm._wlm_parcel_numbers(session)
-        return await load_sheriff(session, source, market_code="wlm", known_parcels=known)
-
-    return await run_loader(
-        session_factory, loader, dataset=sheriff.SHERIFF_DATASET, market_code="wlm"
-    )
-
-
-def _wlm_layer_job(loader: Any, dataset: str) -> Job:
-    async def job(session_factory: SessionFactory, settings: Settings) -> int:
-        config = await _wlm_source_config(session_factory)
-        base = str(config["wilmington_arcgis_url"])
-        return await _run_arcgis(
-            session_factory,
-            settings,
-            loader=lambda session, arcgis: loader(session, arcgis, arcgis_base_url=base),
-            dataset=dataset,
-            market_code="wlm",
-        )
-
-    return job
-
-
-_WLM_JOBS: dict[str, Job] = {
-    "parcels": ingest_wlm_parcels,
-    "assessment": ingest_wlm_assessment,
-    "zoning": ingest_wlm_zoning,
-    "comps": ingest_wlm_comps,
-    "dimensions": ingest_wlm_dimensions,
-    "flood": _wlm_layer_job(wlm_layers.load_wlm_flood, wlm_layers.WLM_FLOOD_DATASET),
-    "historic": _wlm_layer_job(wlm_layers.load_wlm_historic, wlm_layers.WLM_HISTORIC_DATASET),
-    "overlays": _wlm_layer_job(wlm_layers.load_wlm_overlays, wlm_layers.WLM_OVERLAYS_DATASET),
-    "public": _wlm_layer_job(wlm_layers.load_wlm_public, wlm_layers.WLM_PUBLIC_DATASET),
-    "vacancy": ingest_wlm_vacancy,
-    "sheriff": ingest_wlm_sheriff,
-}
-
-
-_PGH_JOBS: dict[str, Job] = {
-    "parcels": ingest_pgh_parcels,
-    "geometry": ingest_pgh_geometry,
-    "sales": ingest_pgh_sales,
-    "liens": ingest_pgh_liens,
-    "foreclosures": ingest_pgh_foreclosures,
-    "violations": ingest_pgh_violations,
-    "city_owned": ingest_pgh_city_owned,
-    "condemned": ingest_pgh_condemned,
-    "zoning": ingest_pgh_zoning,
-    "vacancy": ingest_pgh_vacancy,
-    "neighborhoods": ingest_pgh_neighborhoods,
-}
-
-
-_HBG_JOBS: dict[str, Job] = {
-    "parcels": ingest_hbg_parcels,
-    "sales": ingest_hbg_sales,
-    "zoning": ingest_hbg_zoning,
-    "streets": ingest_hbg_streets,
-    "historic": ingest_hbg_historic,
-    "neighborhoods": ingest_hbg_neighborhoods,
-    "vacancy": ingest_hbg_vacancy,
-    "public": ingest_hbg_public,
-    "repository": ingest_hbg_repository,
-    "flood": ingest_hbg_flood,
-    "dimensions": ingest_hbg_dimensions,
-}
-
 INGEST_JOBS: dict[tuple[str, str], Job] = {
-    **{("phl", dataset): job for dataset, job in _PHL_JOBS.items()},
-    **{("hbg", dataset): job for dataset, job in _HBG_JOBS.items()},
-    **{("pgh", dataset): job for dataset, job in _PGH_JOBS.items()},
-    **{("wlm", dataset): job for dataset, job in _WLM_JOBS.items()},
+    (MARKET_CODE, dataset): job for dataset, job in _PHL_JOBS.items()
 }
 
 _logger = get_logger("ingestion.jobs")
-
-ParamJob = Callable[..., Awaitable[int]]
-
-PARAM_INGEST_JOBS: dict[tuple[str, str], ParamJob] = {
-    ("hbg", "tax_claim"): ingest_hbg_tax_claim,
-}
 
 
 def datasets_for_market(market: str) -> list[str]:
@@ -781,7 +275,7 @@ def markets() -> list[str]:
 
 
 async def ingest_market(
-    session_factory: SessionFactory, settings: Settings, market: str = "phl"
+    session_factory: SessionFactory, settings: Settings, market: str = MARKET_CODE
 ) -> int:
     total = 0
     failed: list[str] = []

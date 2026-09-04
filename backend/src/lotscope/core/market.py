@@ -1,0 +1,4 @@
+MARKET_CODE = "phl"
+MARKET_NAME = "Philadelphia"
+CRS_ANALYSIS = 2272
+CRS_TILES = 4326

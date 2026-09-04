@@ -37,7 +37,6 @@ import type {
   DistressResult,
   EnvelopeResult,
   FeedResponse,
-  FetchSource,
   HistoricResult,
   JobCatalogEntry,
   JobRunSummary,
@@ -508,9 +507,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ job_id: jobId, params }),
     })
-  },
-  getFetchSources(): Promise<FetchSource[]> {
-    return request('/admin/fetch/sources')
   },
   getOpsFleet(): Promise<OpsFleetOverview> {
     return request('/admin/ops/fleet')

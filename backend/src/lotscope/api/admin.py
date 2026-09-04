@@ -13,7 +13,6 @@ from lotscope.admin.schemas import (
     AdminUsersResponse,
     AdminUserUpdate,
     DatasetStatus,
-    FetchSource,
     JobCatalogEntry,
     JobRunRequest,
     JobRunSummary,
@@ -27,7 +26,6 @@ from lotscope.admin.service import (
     platform_overview,
     update_user,
 )
-from lotscope.admin.sources import KNOWN_SOURCES
 from lotscope.api.deps import (
     SourceFetcher,
     get_arq_pool,
@@ -102,11 +100,6 @@ async def admin_run_job(
     )
     await session.commit()
     return result
-
-
-@router.get("/fetch/sources", response_model=list[FetchSource])
-async def admin_fetch_sources(admin: AdminDep) -> list[FetchSource]:
-    return KNOWN_SOURCES
 
 
 @router.get("/fetch")
