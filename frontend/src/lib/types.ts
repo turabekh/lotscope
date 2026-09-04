@@ -413,7 +413,8 @@ export interface AreaSearchRequest {
   min_opportunity_score?: number
   min_distress_score?: number
   delinquent_only?: boolean
-  sheriff_sale_only?: boolean
+  scheduled_for_sale?: boolean
+  sale_date?: string
   underpriced_only?: boolean
   by_right_only?: boolean
   limit?: number

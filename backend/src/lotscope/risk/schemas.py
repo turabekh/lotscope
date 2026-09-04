@@ -13,9 +13,24 @@ class SheriffSaleItem(BaseModel):
     status: str | None
     opening_bid: float | None
     plaintiff: str | None
+    is_vacant: bool | None
+    base_zoning_code: str | None
+    lot_area_sqft: float | None
     max_allowable_offer: float | None
     bid_gap: float | None
     opportunity_score: int | None
+
+
+class SheriffSaleDate(BaseModel):
+    sale_date: date
+    listings: int
+    vacant: int
+
+
+class SheriffSaleDates(BaseModel):
+    market: str
+    dates: list[SheriffSaleDate]
+    computed_at: datetime
 
 
 class SheriffSaleCalendar(BaseModel):

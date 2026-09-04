@@ -30,6 +30,11 @@ class ExplicitTable:
 
 EXPLICIT_PARCEL_KEYED_TABLES: tuple[ExplicitTable, ...] = (
     ExplicitTable(
+        "sheriff_sale_event",
+        "parcel_number",
+        "an auction's status history outlives the listing, so it declares no foreign key",
+    ),
+    ExplicitTable(
         "parcel_correction",
         "parcel_number",
         "keys on parcel_number but declares a foreign key only to app_user",

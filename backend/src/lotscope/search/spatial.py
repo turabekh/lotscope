@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from typing import Any
 
 from sqlalchemy import text
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import ValidationError
 from lotscope.core.sql import resolved_zoning_code_sql
+from lotscope.risk.service import NOT_SCHEDULED_STATUSES
 from lotscope.search.schemas import AreaSearchRequest, SpatialParcelResult
 
 MAX_RADIUS_M = 5000.0
@@ -28,6 +30,13 @@ _JOINS = (
 _POINT = "ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography"
 
 
+_SCHEDULED_EXISTS = (
+    "EXISTS (SELECT 1 FROM sheriff_sale ss WHERE ss.parcel_number = p.parcel_number "
+    "AND ss.sale_date >= current_date "
+    "AND coalesce(ss.status, '') <> ALL(:not_scheduled_statuses))"
+)
+
+
 def build_filters(
     *,
     market: str = "phl",
@@ -41,7 +50,8 @@ def build_filters(
     min_opportunity_score: int | None = None,
     min_distress_score: int | None = None,
     delinquent_only: bool = False,
-    sheriff_sale_only: bool = False,
+    scheduled_for_sale: bool = False,
+    sale_date: date | None = None,
     underpriced_only: bool = False,
     by_right_only: bool = False,
 ) -> tuple[str, dict[str, Any]]:
@@ -75,8 +85,13 @@ def build_filters(
         params["min_distress"] = min_distress_score
     if delinquent_only:
         conditions.append("coalesce(ts.is_delinquent, false) = true")
-    if sheriff_sale_only:
-        conditions.append("coalesce(ts.in_sheriff_sale, false) = true")
+    if scheduled_for_sale or sale_date is not None:
+        clause = _SCHEDULED_EXISTS
+        params["not_scheduled_statuses"] = list(NOT_SCHEDULED_STATUSES)
+        if sale_date is not None:
+            clause = clause.replace("ss.sale_date >= current_date", "ss.sale_date = :sale_date")
+            params["sale_date"] = sale_date
+        conditions.append(clause)
     if underpriced_only:
         conditions.append("coalesce(pv.is_underpriced, false) = true")
     if by_right_only:
@@ -97,7 +112,8 @@ def _filters_for(request: AreaSearchRequest) -> tuple[str, dict[str, Any]]:
         min_opportunity_score=request.min_opportunity_score,
         min_distress_score=request.min_distress_score,
         delinquent_only=request.delinquent_only,
-        sheriff_sale_only=request.sheriff_sale_only,
+        scheduled_for_sale=request.scheduled_for_sale,
+        sale_date=request.sale_date,
         underpriced_only=request.underpriced_only,
         by_right_only=request.by_right_only,
     )

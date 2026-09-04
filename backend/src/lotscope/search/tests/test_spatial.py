@@ -1,8 +1,11 @@
+from datetime import date
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.errors import ValidationError
+from lotscope.risk.service import NOT_SCHEDULED_STATUSES, OBSERVED_SHERIFF_STATUSES
 from lotscope.search.schemas import AreaSearchRequest, GeoPoint
 from lotscope.search.spatial import build_filters, search_area
 
@@ -108,16 +111,17 @@ def test_build_filters_investor_criteria() -> None:
         zoning_codes=[],
         min_distress_score=40,
         delinquent_only=True,
-        sheriff_sale_only=True,
+        scheduled_for_sale=True,
         underpriced_only=True,
         by_right_only=True,
     )
     assert "pd.score >= :min_distress" in where
     assert "coalesce(ts.is_delinquent, false) = true" in where
-    assert "coalesce(ts.in_sheriff_sale, false) = true" in where
+    assert "EXISTS (SELECT 1 FROM sheriff_sale ss" in where
     assert "coalesce(pv.is_underpriced, false) = true" in where
     assert "coalesce(pv.can_build_by_right, false) = true" in where
-    assert params == {"market": "phl", "min_distress": 40}
+    assert params["market"] == "phl"
+    assert params["min_distress"] == 40
 
 
 def _square(lng: float, lat: float, size: float = 0.0001) -> str:
@@ -305,3 +309,37 @@ async def test_area_search_distress_and_delinquent_filters(db_session: AsyncSess
         db_session, AreaSearchRequest(center=center, radius_m=500, delinquent_only=True)
     )
     assert [r.parcel_number for r in delinquent] == ["000000001"]
+
+
+def test_scheduled_for_sale_reads_the_calendar_not_the_revenue_flag() -> None:
+    where, params = build_filters(vacant_only=False, zoning_codes=[], scheduled_for_sale=True)
+
+    assert "in_sheriff_sale" not in where, (
+        "the Revenue delinquency flag means 'a sheriff sale was threatened', "
+        "not 'scheduled for auction'"
+    )
+    assert "EXISTS (SELECT 1 FROM sheriff_sale ss" in where
+    assert "ss.sale_date >= current_date" in where
+    assert params["not_scheduled_statuses"] == list(NOT_SCHEDULED_STATUSES)
+
+
+def test_a_sale_date_filter_pins_the_exact_date() -> None:
+    where, params = build_filters(vacant_only=False, zoning_codes=[], sale_date=date(2026, 10, 6))
+
+    assert "ss.sale_date = :sale_date" in where
+    assert "current_date" not in where
+    assert params["sale_date"] == date(2026, 10, 6)
+
+
+def test_postponed_is_not_excluded_because_it_carries_the_new_date() -> None:
+    assert "Postponed" not in NOT_SCHEDULED_STATUSES, (
+        "315 of 1,855 production rows are Postponed with a future sale_date: the status "
+        "describes the date that moved, and the row now carries the rescheduled one"
+    )
+
+
+def test_the_observed_status_vocabulary_is_recorded() -> None:
+    assert set() == OBSERVED_SHERIFF_STATUSES & NOT_SCHEDULED_STATUSES, (
+        "no status seen in production today means 'not happening'; if one starts to, "
+        "add it to NOT_SCHEDULED_STATUSES rather than letting it pass the filter"
+    )

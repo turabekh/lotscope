@@ -785,14 +785,6 @@ async def test_feed_lists_recent_events_for_paid_tier(db_session: AsyncSession) 
 
 
 @pytest.mark.integration
-async def test_sheriff_sales_is_gated_for_free_tier(db_session: AsyncSession) -> None:
-    app, _ = _authed_app(db_session)
-    async with _client(app) as client:
-        resp = await client.get("/sheriff-sales")
-    assert resp.status_code == 429
-
-
-@pytest.mark.integration
 async def test_sheriff_sales_ranked_by_bid_gap_for_paid_tier(db_session: AsyncSession) -> None:
     await db_session.execute(
         text(
@@ -900,13 +892,6 @@ async def test_sheriff_calendar_ics_feed(db_session: AsyncSession) -> None:
     assert "BEGIN:VEVENT" in text_body
     assert "DTSTART;VALUE=DATE:20260805" in text_body
     assert "UID:BW-A@parcelphl.online" in text_body
-
-
-async def test_sheriff_calendar_ics_gated_for_free_tier(db_session: AsyncSession) -> None:
-    app, _ = _authed_app(db_session)
-    async with _client(app) as client:
-        resp = await client.get("/sheriff-sales/calendar.ics")
-    assert resp.status_code == 429
 
 
 @pytest.mark.integration

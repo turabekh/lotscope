@@ -13,6 +13,7 @@ from lotscope.ingestion.events import (
     sheriff_sale_event,
 )
 from lotscope.ingestion.models import ParcelEvent
+from lotscope.risk.models import SheriffSaleEvent
 
 TAX_DATASET = "tax_delinquency"
 LI_DATASET = "li"
@@ -264,6 +265,19 @@ _SHERIFF_JOIN_SQL = text(
     "WHERE s.ingest_run_id = :ingest_run_id"
 )
 
+_SHERIFF_CHANGES_SQL = text(
+    "SELECT s.parcel_number, s.case_number, "
+    "       c.status AS old_status, s.status AS new_status, "
+    "       c.sale_date AS old_sale_date, s.sale_date AS new_sale_date "
+    "FROM staging.sheriff_sale s "
+    "JOIN sheriff_sale c ON c.case_number = s.case_number "
+    "WHERE s.ingest_run_id = :ingest_run_id "
+    "  AND ("
+    "    (s.status IS NOT NULL AND s.status IS DISTINCT FROM c.status) "
+    "    OR (s.sale_date IS NOT NULL AND s.sale_date IS DISTINCT FROM c.sale_date)"
+    "  )"
+)
+
 _UPSERT_SHERIFF_SQL = text(
     "INSERT INTO sheriff_sale "
     "(parcel_number, case_number, sale_type, sale_date, status, opening_bid, "
@@ -310,5 +324,21 @@ async def merge_sheriff(session: AsyncSession, ingest_run_id: int) -> MergeResul
             events += 1
         await session.flush()
 
+    changes = (await session.execute(_SHERIFF_CHANGES_SQL, {"ingest_run_id": ingest_run_id})).all()
+    for change in changes:
+        session.add(
+            SheriffSaleEvent(
+                parcel_number=change.parcel_number,
+                case_number=change.case_number,
+                sale_date=change.new_sale_date or change.old_sale_date,
+                old_status=change.old_status,
+                new_status=change.new_status,
+                old_sale_date=change.old_sale_date,
+                new_sale_date=change.new_sale_date,
+            )
+        )
+    if changes:
+        await session.flush()
+
     await session.execute(_UPSERT_SHERIFF_SQL, {"ingest_run_id": ingest_run_id})
-    return MergeResult(merged_rows=len(rows), event_count=events)
+    return MergeResult(merged_rows=len(rows), event_count=events + len(changes))

@@ -1,9 +1,10 @@
-from datetime import date
+from datetime import date, datetime
 
 from geoalchemy2 import Geometry, WKBElement
 from sqlalchemy import (
     Boolean,
     Date,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -11,6 +12,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,6 +37,22 @@ class TaxStatus(Base, TimestampMixin, IngestionMixin):
     lien_count: Mapped[int | None] = mapped_column(Integer)
     in_sheriff_sale: Mapped[bool | None] = mapped_column(Boolean)
     as_of_date: Mapped[date | None] = mapped_column(Date)
+
+
+class SheriffSaleEvent(Base, TimestampMixin):
+    __tablename__ = "sheriff_sale_event"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    parcel_number: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    case_number: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    sale_date: Mapped[date | None] = mapped_column(Date)
+    old_status: Mapped[str | None] = mapped_column(String(60))
+    new_status: Mapped[str | None] = mapped_column(String(60))
+    old_sale_date: Mapped[date | None] = mapped_column(Date)
+    new_sale_date: Mapped[date | None] = mapped_column(Date)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
 
 
 class SheriffSale(Base, TimestampMixin, IngestionMixin):

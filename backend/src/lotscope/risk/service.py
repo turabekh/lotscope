@@ -4,12 +4,15 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.core.market import MARKET_CODE
 from lotscope.risk.attribution import TransferAfterSnapshot, attribute_delinquency
 from lotscope.risk.schemas import (
     NextSheriffSale,
     RiskFlagSchema,
     RiskResult,
     SheriffSaleCalendar,
+    SheriffSaleDate,
+    SheriffSaleDates,
     SheriffSaleItem,
     ViolationPosture,
 )
@@ -113,6 +116,18 @@ _CHECKED_SOURCES = (
     "parcel",
 )
 
+
+NOT_SCHEDULED_STATUSES = frozenset({"Sold", "Withdrawn", "Stayed", "Cancelled"})
+
+OBSERVED_SHERIFF_STATUSES = frozenset(
+    {
+        "",
+        "Postponed",
+        "Scheduled - City Tax",
+        "Scheduled - Mortgage Foreclosure",
+        "Scheduled - Tax",
+    }
+)
 
 SHERIFF_SALE_SURFACE_LABEL = "Sheriff sales"
 _NO_UPCOMING_SALES_NOTE = (
@@ -270,7 +285,8 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
 
 _SHERIFF_SELECT = (
     "SELECT ss.parcel_number, p.address, ss.case_number, ss.sale_type, ss.sale_date, "
-    "ss.status, ss.opening_bid, ss.plaintiff, pv.max_allowable_offer, "
+    "ss.status, ss.opening_bid, ss.plaintiff, "
+    "p.is_vacant, p.base_zoning_code, p.lot_area_sqft, pv.max_allowable_offer, "
     "(pv.max_allowable_offer - ss.opening_bid) AS bid_gap, "
     "round(pv.opportunity_score)::int AS opportunity_score "
     "FROM sheriff_sale ss "
@@ -328,6 +344,9 @@ async def list_sheriff_sales(
             status=row.status,
             opening_bid=_as_float(row.opening_bid),
             plaintiff=row.plaintiff,
+            is_vacant=row.is_vacant,
+            base_zoning_code=row.base_zoning_code,
+            lot_area_sqft=_as_float(row.lot_area_sqft),
             max_allowable_offer=_as_float(row.max_allowable_offer),
             bid_gap=_as_float(row.bid_gap),
             opportunity_score=row.opportunity_score,
@@ -411,4 +430,40 @@ async def get_next_sheriff_sale(
         status=row.status,
         opening_bid=_as_float(row.opening_bid),
         days_until=(row.sale_date - as_of).days,
+    )
+
+
+_SHERIFF_DATES_SQL = text(
+    "SELECT ss.sale_date, count(*) AS listings, "
+    "       count(*) FILTER (WHERE coalesce(p.is_vacant, false)) AS vacant "
+    "FROM sheriff_sale ss "
+    "JOIN parcel p ON p.parcel_number = ss.parcel_number "
+    "WHERE p.market_code = :market_code "
+    "  AND ss.sale_date >= current_date "
+    "  AND coalesce(ss.status, '') <> ALL(:not_scheduled_statuses) "
+    "GROUP BY ss.sale_date ORDER BY ss.sale_date"
+)
+
+
+async def list_sheriff_sale_dates(
+    session: AsyncSession, *, market_code: str = MARKET_CODE
+) -> SheriffSaleDates:
+    rows = (
+        await session.execute(
+            _SHERIFF_DATES_SQL,
+            {
+                "market_code": market_code,
+                "not_scheduled_statuses": list(NOT_SCHEDULED_STATUSES),
+            },
+        )
+    ).all()
+    return SheriffSaleDates(
+        market=market_code,
+        dates=[
+            SheriffSaleDate(
+                sale_date=row.sale_date, listings=int(row.listings), vacant=int(row.vacant)
+            )
+            for row in rows
+        ],
+        computed_at=datetime.now(UTC),
     )

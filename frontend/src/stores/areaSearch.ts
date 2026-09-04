@@ -60,7 +60,7 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
     if (minScore.value !== null) c.min_opportunity_score = minScore.value
     if (minDistress.value !== null) c.min_distress_score = minDistress.value
     if (delinquentOnly.value) c.delinquent_only = true
-    if (sheriffSaleOnly.value) c.sheriff_sale_only = true
+    if (sheriffSaleOnly.value) c.scheduled_for_sale = true
     if (underpricedOnly.value) c.underpriced_only = true
     if (byRightOnly.value) c.by_right_only = true
     return c

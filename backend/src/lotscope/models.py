@@ -17,7 +17,7 @@ from lotscope.parcels.models import Parcel
 from lotscope.pipeline.models import Deal, DealActivity
 from lotscope.policies.models import PolicyDocument
 from lotscope.provisions.models import CodeProvision
-from lotscope.risk.models import FloodZone, LiEvent, TaxStatus
+from lotscope.risk.models import FloodZone, LiEvent, SheriffSaleEvent, TaxStatus
 from lotscope.savedsearch.models import SavedSearch, SavedSearchMatch
 from lotscope.skiptrace.models import CreditLedgerEntry, SkipTraceResult
 from lotscope.streets.models import StreetCenterline
@@ -60,6 +60,7 @@ __all__ = [
     "SavedParcel",
     "SavedSearch",
     "SavedSearchMatch",
+    "SheriffSaleEvent",
     "SkipTraceResult",
     "StreetCenterline",
     "TaxStatus",

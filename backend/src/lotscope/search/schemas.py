@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
@@ -37,7 +38,8 @@ class AreaSearchRequest(BaseModel):
     min_opportunity_score: int | None = Field(default=None, ge=0, le=100)
     min_distress_score: int | None = Field(default=None, ge=0, le=100)
     delinquent_only: bool = False
-    sheriff_sale_only: bool = False
+    scheduled_for_sale: bool = False
+    sale_date: date | None = None
     underpriced_only: bool = False
     by_right_only: bool = False
     limit: int = Field(default=200, ge=1, le=500)
