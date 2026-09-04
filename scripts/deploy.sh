@@ -8,7 +8,7 @@ export GIT_SHA
 echo "==> Deploying ${GIT_SHA}"
 
 echo "==> Building images"
-docker compose --profile app build
+docker compose --profile app build --build-arg GIT_SHA="${GIT_SHA}"
 
 alembic_revisions() {
   docker compose run --rm --entrypoint sh migrate -c \

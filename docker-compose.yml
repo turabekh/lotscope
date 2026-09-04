@@ -92,7 +92,6 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
       REDIS_URL: redis://redis:6379/0
       MARTIN_URL: http://martin:3000
-      GIT_SHA: ${GIT_SHA:-unknown}
     volumes:
       - ${CORPUS_DIR:-/srv/lotscope/corpus}:/srv/lotscope/corpus:ro
     depends_on:

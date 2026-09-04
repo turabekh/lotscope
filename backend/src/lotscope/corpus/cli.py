@@ -11,8 +11,7 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.core.market import MARKET_CODE
 from lotscope.corpus.service import (
-    MINIMUM_COVERAGE_PCT,
-    MINIMUM_PROVISIONS,
+    EXPECTED_TITLES,
     corpus_health,
 )
 from lotscope.provisions.loader import (
@@ -23,6 +22,7 @@ from lotscope.provisions.loader import (
     read_qa_summary,
 )
 
+DRY_RUN_PROVISION_FLOOR = 29_000
 _NOISY_LOGGERS = ("alembic",)
 
 
@@ -75,8 +75,14 @@ async def _dry_run(directory: Path) -> int:
     print(f"Artifacts at {directory} — validated, nothing written")
     _render_coverage(rows)
     total = sum(row[1] for row in rows)
-    if total < MINIMUM_PROVISIONS:
-        print(f"\nWARNING: {total:,} provisions is below the {MINIMUM_PROVISIONS:,} health floor")
+    problems = []
+    if len(rows) != EXPECTED_TITLES:
+        problems.append(f"found {len(rows)} titles, expected {EXPECTED_TITLES}")
+    if total < DRY_RUN_PROVISION_FLOOR:
+        problems.append(f"{total:,} provisions is below the {DRY_RUN_PROVISION_FLOOR:,} floor")
+    if problems:
+        print("\nSTOP — do not run the real load: " + "; ".join(problems))
+        return 1
     return 0
 
 
@@ -138,9 +144,9 @@ async def _load(directory: Path) -> int:
     )
     if not health.healthy:
         print(
-            f"INCOMPLETE: {health.total_provisions:,} provisions "
-            f"(floor {MINIMUM_PROVISIONS:,}), coverage {health.coverage_pct:.2f}% "
-            f"(floor {MINIMUM_COVERAGE_PCT}%). Re-run to continue; unchanged titles are skipped."
+            "INCOMPLETE: "
+            + "; ".join(health.failures)
+            + ". Re-run to continue; unchanged titles are skipped."
         )
         return 1
     return 0

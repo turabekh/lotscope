@@ -134,12 +134,21 @@ prints nothing, the mount is an empty directory: stop and fix it before step 3.
 
 9. **`GET /health/corpus`** — unauthenticated, like `/health`.
    ```bash
-   curl -s https://<host>/api/health/corpus | jq '{status, total_provisions, coverage_pct}'
+   curl -s https://<host>/api/health/corpus | jq '{status, total_documents, represented_pct, failures}'
    ```
-   Expect `status: "ok"`, `total_provisions: 29297`, `coverage_pct: 100.0`. It returns **503**
-   below 25,000 provisions or under 99% coverage. Coverage counts documents that carry a
-   vector — not provisions, because the derivation deliberately skips notes, figures and
-   container nodes; `represented_pct` (~98%) is the separate provision-level figure.
+   Expect `status: "ok"`, `total_provisions: 29297`, `total_documents: 21512`,
+   `represented_pct: 98.19`.
+
+   **The status is a real gate — treat a 503 as a failed deploy.** It returns 503 unless all
+   three hold: exactly 24 titles present, at least 21,000 documents, and at least 97% of
+   provisions represented. The failing conditions are named in the response's `failures`
+   array, so read that rather than guessing.
+
+   `coverage_pct` is still in the payload but **gates nothing**, and the reason is worth
+   knowing: it is embedded ÷ documents, so on 2026-09-04 a corpus holding 67 of 21,512
+   documents reported `coverage_pct: 100.0` and `status: "ok"` — every document it had did
+   have a vector. Ratios over what is present cannot detect absence. `represented_pct` and
+   the document floor measure against what should be there, which is why they gate.
 
 ---
 

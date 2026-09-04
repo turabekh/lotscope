@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.ai.derivation import PHILLYCODE_SOURCE
 from lotscope.core.market import MARKET_CODE
 
-MINIMUM_PROVISIONS = 25_000
-MINIMUM_COVERAGE_PCT = 99.0
+EXPECTED_TITLES = 24
+MINIMUM_DOCUMENTS = 21_000
+MINIMUM_REPRESENTED_PCT = 97.0
 
 _BY_TITLE = text(
     "WITH represented AS ("
@@ -91,11 +92,24 @@ class CorpusHealth:
         return 100.0 * self.total_represented / total if total else 0.0
 
     @property
+    def failures(self) -> list[str]:
+        problems: list[str] = []
+        if len(self.titles) != EXPECTED_TITLES:
+            problems.append(f"expected {EXPECTED_TITLES} titles, found {len(self.titles)}")
+        if self.total_documents < MINIMUM_DOCUMENTS:
+            problems.append(
+                f"expected at least {MINIMUM_DOCUMENTS:,} documents, found {self.total_documents:,}"
+            )
+        if self.represented_pct < MINIMUM_REPRESENTED_PCT:
+            problems.append(
+                f"expected at least {MINIMUM_REPRESENTED_PCT}% of provisions represented, "
+                f"found {self.represented_pct:.2f}%"
+            )
+        return problems
+
+    @property
     def healthy(self) -> bool:
-        return (
-            self.total_provisions >= MINIMUM_PROVISIONS
-            and self.coverage_pct >= MINIMUM_COVERAGE_PCT
-        )
+        return not self.failures
 
 
 def _title_sort_key(title_number: str) -> tuple[int, float]:

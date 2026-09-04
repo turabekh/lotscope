@@ -16,6 +16,9 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
+
 EXPOSE 8000
 
 CMD ["uvicorn", "lotscope.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -15,8 +15,9 @@ from lotscope.ai.derivation import PHILLYCODE_SOURCE
 from lotscope.api.deps import get_redis, get_session
 from lotscope.core.config import Settings, get_settings
 from lotscope.corpus.service import (
-    MINIMUM_COVERAGE_PCT,
-    MINIMUM_PROVISIONS,
+    EXPECTED_TITLES,
+    MINIMUM_DOCUMENTS,
+    MINIMUM_REPRESENTED_PCT,
     corpus_health,
 )
 from lotscope.ops.service import stale_automated_datasets
@@ -64,8 +65,10 @@ class CorpusHealthResponse(BaseModel):
     total_embedded: int
     coverage_pct: float
     represented_pct: float
-    minimum_provisions: int
-    minimum_coverage_pct: float
+    expected_titles: int
+    minimum_documents: int
+    minimum_represented_pct: float
+    failures: list[str]
     last_loaded_at: datetime | None
     computed_at: datetime
 
@@ -96,8 +99,10 @@ async def corpus_liveness(
         total_embedded=health.total_embedded,
         coverage_pct=round(health.coverage_pct, 2),
         represented_pct=round(health.represented_pct, 2),
-        minimum_provisions=MINIMUM_PROVISIONS,
-        minimum_coverage_pct=MINIMUM_COVERAGE_PCT,
+        expected_titles=EXPECTED_TITLES,
+        minimum_documents=MINIMUM_DOCUMENTS,
+        minimum_represented_pct=MINIMUM_REPRESENTED_PCT,
+        failures=health.failures,
         last_loaded_at=health.last_loaded_at,
         computed_at=datetime.now(UTC),
     )
