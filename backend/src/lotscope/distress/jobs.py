@@ -14,10 +14,6 @@ _PARCEL_NUMBERS_SQL = text(
     "WHERE (CAST(:market AS text) IS NULL OR market_code = CAST(:market AS text)) "
     "ORDER BY parcel_number"
 )
-_DISTINCT_MARKETS_SQL = text(
-    "SELECT DISTINCT market_code FROM parcel "
-    "WHERE (CAST(:market AS text) IS NULL OR market_code = CAST(:market AS text))"
-)
 _DEFAULT_BATCH_SIZE = 1000
 
 

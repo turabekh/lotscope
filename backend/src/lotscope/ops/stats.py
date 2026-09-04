@@ -32,27 +32,26 @@ def _round(value: Any) -> float | None:
 async def snapshot_market_stats(session_factory: async_sessionmaker[AsyncSession]) -> int:
     computed_at = datetime.now(UTC)
     async with session_factory() as session:
-        markets = [MARKET_CODE]
-        for market in markets:
-            params = {"market": market, "vv": VERDICT_VERSION}
-            row = (await session.execute(_STATS_SQL, params)).one()
-            values = {
-                "market_code": market,
-                "parcel_count": int(row.parcel_count or 0),
-                "geometry_pct": _round(row.geometry_pct),
-                "verdict_pct": _round(row.verdict_pct),
-                "vacant_count": int(row.vacant_count or 0),
-                "vacant_with_comp_pct": _round(row.vacant_with_comp_pct),
-                "computed_at": computed_at,
-            }
-            statement = insert(MarketStats).values(**values)
-            update_cols: dict[str, Any] = {
-                key: statement.excluded[key] for key in values if key != "market_code"
-            }
-            update_cols["updated_at"] = func.now()
-            statement = statement.on_conflict_do_update(
-                index_elements=["market_code"], set_=update_cols
-            )
-            await session.execute(statement)
+        market = MARKET_CODE
+        params = {"market": market, "vv": VERDICT_VERSION}
+        row = (await session.execute(_STATS_SQL, params)).one()
+        values = {
+            "market_code": market,
+            "parcel_count": int(row.parcel_count or 0),
+            "geometry_pct": _round(row.geometry_pct),
+            "verdict_pct": _round(row.verdict_pct),
+            "vacant_count": int(row.vacant_count or 0),
+            "vacant_with_comp_pct": _round(row.vacant_with_comp_pct),
+            "computed_at": computed_at,
+        }
+        statement = insert(MarketStats).values(**values)
+        update_cols: dict[str, Any] = {
+            key: statement.excluded[key] for key in values if key != "market_code"
+        }
+        update_cols["updated_at"] = func.now()
+        statement = statement.on_conflict_do_update(
+            index_elements=["market_code"], set_=update_cols
+        )
+        await session.execute(statement)
         await session.commit()
-    return len(markets)
+    return 1

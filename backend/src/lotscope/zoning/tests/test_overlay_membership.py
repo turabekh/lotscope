@@ -1,3 +1,5 @@
+import inspect
+
 from lotscope.zoning.overlay_membership import (
     _CLEAR_SQL,
     _DIVERGENCE_SQL,
@@ -26,11 +28,13 @@ def test_divergence_check_compares_the_live_join_against_the_materialized_table(
     assert "parcel_overlay" in body
 
 
-def test_refresh_discovers_every_market_that_has_overlays() -> None:
-    from lotscope.zoning.overlay_membership import _MARKETS_WITH_OVERLAYS_SQL
+def test_the_refresh_covers_philadelphia_only_and_discovers_no_markets() -> None:
+    import lotscope.zoning.overlay_membership as membership
 
-    body = str(_MARKETS_WITH_OVERLAYS_SQL)
-
-    assert "zoning_overlay" in body
-    assert "market_code" in body
-    assert "phl" not in body
+    assert not hasattr(membership, "_MARKETS_WITH_OVERLAYS_SQL"), (
+        "discovering markets from zoning_overlay is what failed the 2026-09-04 deploy: "
+        "leftover Wilmington polygons produced zero memberships and tripped the guard"
+    )
+    source = inspect.getsource(membership.refresh_all_parcel_overlays)
+    assert "MARKET_CODE" in source
+    assert "DISTINCT" not in source.upper()

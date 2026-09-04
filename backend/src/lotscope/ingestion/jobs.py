@@ -270,10 +270,6 @@ def datasets_for_market(market: str) -> list[str]:
     return [dataset for (registered_market, dataset) in INGEST_JOBS if registered_market == market]
 
 
-def markets() -> list[str]:
-    return sorted({registered_market for (registered_market, _) in INGEST_JOBS})
-
-
 async def ingest_market(
     session_factory: SessionFactory, settings: Settings, market: str = MARKET_CODE
 ) -> int:
