@@ -115,13 +115,9 @@ def test_summary_prompt_forbids_invented_risk() -> None:
     assert "invent offsetting" in SUMMARY_SYSTEM_PROMPT
 
 
-def test_assessed_value_fact_labels_base_year_market() -> None:
+def test_assessed_value_fact_states_the_philadelphia_assessment_directly() -> None:
     from lotscope.ai.service import _assessed_value_fact
 
-    hbg = _assessed_value_fact(_detail(market_value=2300.0, assessment_ratio=0.4042))
-    assert "common level ratio" in hbg
-    assert "NOT market value" in hbg
-    assert "5690" in hbg or "5691" in hbg
     phl = _assessed_value_fact(_detail(market_value=510000.0, assessment_ratio=1.0))
     assert phl == "Assessed value: 510000.0."
 

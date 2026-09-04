@@ -107,7 +107,7 @@ async def test_export_returns_csv_for_investor(db_session: AsyncSession) -> None
 async def test_export_gated_market_is_empty_but_valid(db_session: AsyncSession) -> None:
     app = _app(db_session, tier="investor")
     async with _client(app) as client:
-        resp = await client.get("/buyers/export", params={"market": "pgh"})
+        resp = await client.get("/buyers/export")
     assert resp.status_code == 200
     assert "Entity" in resp.text
     assert "Fair Housing" in resp.text

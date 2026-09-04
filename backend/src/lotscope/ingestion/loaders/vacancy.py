@@ -77,7 +77,7 @@ async def derive_phl_vacancy(session: AsyncSession) -> int:
     updates: list[dict[str, Any]] = []
     for row in result:
         improvement = float(row.improvement_value) if row.improvement_value is not None else None
-        is_vacant, confidence = derive_vacancy(row.land_use, improvement, _MARKET)
+        is_vacant, confidence = derive_vacancy(row.land_use, improvement)
         if is_vacant:
             updates.append({"parcel_number": row.parcel_number, "conf": confidence})
     if updates:

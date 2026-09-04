@@ -114,14 +114,6 @@ def _deal_is_infeasible(verdict: VerdictResult) -> bool:
 
 
 def _assessed_value_fact(detail: ParcelDetail) -> str:
-    ratio = detail.assessment_ratio
-    if detail.market_value is not None and ratio is not None and ratio != 1.0:
-        implied = detail.market_value / ratio
-        return (
-            f"Assessed value: {detail.market_value} — this is a base-year assessment at the "
-            f"county common level ratio ({ratio:.4f}), NOT market value; the implied market "
-            f"value is about {implied:.0f}. Never present the raw assessment as market value."
-        )
     return f"Assessed value: {detail.market_value}."
 
 

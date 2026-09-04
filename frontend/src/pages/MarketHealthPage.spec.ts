@@ -14,9 +14,9 @@ const { getMarketHealthMock } = vi.hoisted(() => ({
   getMarketHealthMock: vi.fn(() =>
     Promise.resolve({
       market_code: 'phl',
-      name: 'Harrisburg',
+      name: 'Philadelphia',
       launch_status: 'pilot',
-      coverage_note: 'Harrisburg city pilot — no open sale-price comps.',
+      coverage_note: null,
       health: { status: 'amber', red: 0, amber: 2, green: 8 },
       datasets: [
         {

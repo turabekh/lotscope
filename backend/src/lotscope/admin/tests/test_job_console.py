@@ -105,7 +105,7 @@ async def test_enqueue_unknown_job_is_rejected(db_session: AsyncSession) -> None
     user_id = await _admin_user(db_session)
     with pytest.raises(NotFoundError):
         await enqueue_job(
-            db_session, _FakeEnqueuer(), job_id="ingest:hbg:not_a_dataset", triggered_by=user_id
+            db_session, _FakeEnqueuer(), job_id="ingest:phl:not_a_dataset", triggered_by=user_id
         )
 
 
@@ -254,11 +254,11 @@ async def test_run_admin_job_passes_params_to_dispatch(
     monkeypatch.setattr(worker, "_dispatch_admin_job", _dispatch)
     user_id = await _admin_user(db_session)
     run = JobRun(
-        job_id="ingest:hbg:tax_claim",
-        label="HBG · tax_claim",
+        job_id="ingest:phl:opa",
+        label="PHL · opa",
         kind="ingest",
-        market_code="hbg",
-        params={"list_url": "https://example.test/list.csv", "list_date": "2026-08-01"},
+        market_code="phl",
+        params={},
         status="queued",
         triggered_by=user_id,
     )
@@ -270,11 +270,8 @@ async def test_run_admin_job_passes_params_to_dispatch(
     )
 
     assert result == 7
-    assert received["job_id"] == "ingest:hbg:tax_claim"
-    assert received["params"] == {
-        "list_url": "https://example.test/list.csv",
-        "list_date": "2026-08-01",
-    }
+    assert received["job_id"] == "ingest:phl:opa"
+    assert received["params"] == {}
 
 
 def _admin_app(session: AsyncSession, pool: Any, *, admin_id: int) -> FastAPI:

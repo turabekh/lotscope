@@ -1002,7 +1002,7 @@ async def test_assemblage_top_zoning_filter_matches_resolved_only(
         text(
             "INSERT INTO parcel "
             "(parcel_number, address, base_zoning_code, resolved_zoning_code) VALUES "
-            "('hbg:000000001', '1 A ST', '', 'RM')"
+            "('000000901', '1 A ST', '', 'RM')"
         )
     )
     await db_session.execute(
@@ -1010,7 +1010,7 @@ async def test_assemblage_top_zoning_filter_matches_resolved_only(
             "INSERT INTO parcel_assemblage "
             "(parcel_number, potential, candidate_count, unit_unlock, "
             "combined_lot_area_sqft, base_zoning_code, neighborhood) VALUES "
-            "('hbg:000000001', 'high', 2, 6, 5000, '', 'Midtown')"
+            "('000000901', 'high', 2, 6, 5000, '', 'Midtown')"
         )
     )
     await db_session.flush()
@@ -1023,7 +1023,7 @@ async def test_assemblage_top_zoning_filter_matches_resolved_only(
     assert filtered.status_code == 200
     body = filtered.json()
     assert body["total"] == 1
-    assert [p["parcel_number"] for p in body["plays"]] == ["hbg:000000001"]
+    assert [p["parcel_number"] for p in body["plays"]] == ["000000901"]
     assert body["plays"][0]["base_zoning_code"] == "RM"
 
 

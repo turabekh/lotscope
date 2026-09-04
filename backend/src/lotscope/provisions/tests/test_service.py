@@ -41,7 +41,7 @@ async def test_an_unknown_cite_returns_an_empty_list(loaded: AsyncSession) -> No
 
 
 async def test_a_cite_from_another_market_is_not_returned(loaded: AsyncSession) -> None:
-    assert await find_by_cite(loaded, "pgh", "7-101") == []
+    assert await find_by_cite(loaded, "zzz", "7-101") == []
 
 
 async def test_children_come_back_ordered_by_ordinal(loaded: AsyncSession) -> None:
@@ -62,7 +62,7 @@ async def test_get_provision_returns_one_row_or_none(loaded: AsyncSession) -> No
     assert found.cite == "7-101(1)"
     assert found.refs == ["7-102"]
     assert await get_provision(loaded, "phl", "does-not-exist") is None
-    assert await get_provision(loaded, "pgh", "7-101(1)") is None
+    assert await get_provision(loaded, "zzz", "7-101(1)") is None
 
 
 async def test_ancestors_come_back_root_first(loaded: AsyncSession) -> None:

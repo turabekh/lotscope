@@ -297,26 +297,6 @@ def test_overlay_and_rco_flags_surface_in_overlays_category() -> None:
     assert "Test RCO" in overlays.detail
 
 
-def test_an_unevaluated_check_can_never_report_as_a_pass() -> None:
-    items, _ = build_checklist(_verdict(risk_flags=[]), market_code="wlm")
-    unevaluated = [item for item in items if item.status == "not_evaluated"]
-    assert unevaluated, "a market with structural data gaps must show unevaluated checks"
-    for item in unevaluated:
-        assert item.status != "pass"
-        assert item.detail.strip(), f"{item.code} must say why it was not evaluated"
-
-
-def test_a_market_with_no_source_names_the_check_rather_than_omitting_it() -> None:
-    wlm_codes = {item.code for item in build_checklist(_verdict(), market_code="wlm")[0]}
-    phl_codes = {item.code for item in build_checklist(_verdict(), market_code="phl")[0]}
-    assert wlm_codes == phl_codes
-
-
-def test_the_summary_counts_unevaluated_checks_separately() -> None:
-    _, summary = build_checklist(_verdict(risk_flags=[]), market_code="wlm")
-    assert summary.not_evaluated > 0
-
-
 def test_silence_in_a_covered_market_is_a_pass_not_an_unevaluated_check() -> None:
     items, _ = build_checklist(_verdict(risk_flags=[]), market_code="phl")
     liens = _item(items, "liens_taxes")

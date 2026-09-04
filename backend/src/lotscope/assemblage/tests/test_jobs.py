@@ -99,17 +99,10 @@ async def test_market_scope_selects_only_the_named_market(db_session: AsyncSessi
         is_vacant=True,
         polygon="POLYGON((0 0,0 90,18 90,18 0,0 0))",
     )
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, market_code, is_vacant, geom_local) VALUES "
-            "('wlm:1', 'wlm', TRUE, ST_GeomFromText('POLYGON((0 0,0 9,9 9,9 0,0 0))', 2272))"
-        )
-    )
     await db_session.flush()
 
-    assert await _selected(db_session, "wlm") == ["wlm:1"]
     assert await _selected(db_session, "phl") == ["000000001"]
-    assert sorted(await _selected(db_session, None)) == ["000000001", "wlm:1"]
+    assert await _selected(db_session, None) == ["000000001"]
 
 
 async def test_recompute_removes_a_parcel_that_no_longer_qualifies(

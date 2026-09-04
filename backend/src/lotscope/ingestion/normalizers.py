@@ -1,6 +1,8 @@
 import re
 from typing import Protocol
 
+from lotscope.core.market import MARKET_CODE
+
 _MARKET_KEY_SEP = ":"
 
 
@@ -32,80 +34,8 @@ class PhlKeyNormalizer:
         return f"{self.market}{_MARKET_KEY_SEP}{local}"
 
 
-class HbgKeyNormalizer:
-    market = "hbg"
-    _whitespace = re.compile(r"\s+")
-    _digits_only = re.compile(r"^(\d{2})(\d{3})(\d{3})$")
-    _canonical = re.compile(r"^\d{2}-\d{3}-\d{3}(?:-\d+)?$")
-
-    def normalize_local_key(self, raw: str | int | None) -> str | None:
-        if raw is None:
-            return None
-        cleaned = self._whitespace.sub("", str(raw).strip().upper())
-        if not cleaned:
-            return None
-        digits_only = self._digits_only.match(cleaned)
-        if digits_only is not None:
-            return "-".join(digits_only.groups())
-        if self._canonical.match(cleaned):
-            return cleaned
-        return None
-
-    def to_canonical(self, raw: str | int | None) -> str | None:
-        local = self.normalize_local_key(raw)
-        if local is None:
-            return None
-        return f"{self.market}{_MARKET_KEY_SEP}{local}"
+KEY_NORMALIZERS: dict[str, KeyNormalizer] = {MARKET_CODE: PhlKeyNormalizer()}
 
 
-class PghKeyNormalizer:
-    market = "pgh"
-    _strip = re.compile(r"[\s\-.]+")
-    _canonical = re.compile(r"^[0-9A-Z]{16}$")
-
-    def normalize_local_key(self, raw: str | int | None) -> str | None:
-        if raw is None:
-            return None
-        cleaned = self._strip.sub("", str(raw).strip().upper())
-        if self._canonical.match(cleaned):
-            return cleaned
-        return None
-
-    def to_canonical(self, raw: str | int | None) -> str | None:
-        local = self.normalize_local_key(raw)
-        if local is None:
-            return None
-        return f"{self.market}{_MARKET_KEY_SEP}{local}"
-
-
-class WlmKeyNormalizer:
-    market = "wlm"
-    _strip = re.compile(r"[\s\-.]+")
-    _non_digit = re.compile(r"\D")
-    _pin_length = 10
-
-    def normalize_local_key(self, raw: str | int | None) -> str | None:
-        if raw is None:
-            return None
-        cleaned = self._strip.sub("", str(raw).strip())
-        if not cleaned or self._non_digit.search(cleaned) or len(cleaned) > self._pin_length:
-            return None
-        return cleaned.zfill(self._pin_length)
-
-    def to_canonical(self, raw: str | int | None) -> str | None:
-        local = self.normalize_local_key(raw)
-        if local is None:
-            return None
-        return f"{self.market}{_MARKET_KEY_SEP}{local}"
-
-
-KEY_NORMALIZERS: dict[str, KeyNormalizer] = {
-    "phl": PhlKeyNormalizer(),
-    "hbg": HbgKeyNormalizer(),
-    "pgh": PghKeyNormalizer(),
-    "wlm": WlmKeyNormalizer(),
-}
-
-
-def get_normalizer(market: str = "phl") -> KeyNormalizer:
+def get_normalizer(market: str = MARKET_CODE) -> KeyNormalizer:
     return KEY_NORMALIZERS[market]

@@ -202,25 +202,24 @@ async def test_skip_detail_separates_out_of_market_rows_from_unidentified_ones(
     db_session: AsyncSession,
 ) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('wlm:2600000001', 'wlm')")
+        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('000000901', 'phl')")
     )
     await db_session.flush()
     rows = [
-        {**_row("NCC-1", "2600000001", 10000.0), "parcel_number": "wlm:2600000001"},
-        {**_row("NCC-2", "1002330153", 20000.0), "parcel_number": "wlm:1002330153"},
-        {**_row("NCC-3", "1102510048", 30000.0), "parcel_number": "wlm:1102510048"},
-        {**_row("NCC-4", "", 40000.0), "opa_number": None, "parcel_number": None},
+        {**_row("SS-1", "000000901", 10000.0), "parcel_number": "000000901"},
+        {**_row("SS-2", "000000902", 20000.0), "parcel_number": "000000902"},
+        {**_row("SS-3", "000000903", 30000.0), "parcel_number": "000000903"},
+        {**_row("SS-4", "", 40000.0), "opa_number": None, "parcel_number": None},
     ]
     total = await load_sheriff(
         db_session,
         _FakeSource(rows),
-        market_code="wlm",
-        known_parcels={"wlm:2600000001"},
+        known_parcels={"000000901"},
     )
     await db_session.flush()
 
     assert total == 1
-    fresh = await db_session.get(DatasetFreshness, ("wlm", "sheriff_sale"))
+    fresh = await db_session.get(DatasetFreshness, ("phl", "sheriff_sale"))
     assert fresh is not None
     assert fresh.detail is not None
     assert "3 of 4 rows skipped" in fresh.detail
@@ -231,66 +230,15 @@ async def test_skip_detail_separates_out_of_market_rows_from_unidentified_ones(
 @pytest.mark.integration
 async def test_a_fully_reconciled_load_records_no_skip_detail(db_session: AsyncSession) -> None:
     await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('wlm:2600000002', 'wlm')")
+        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('000000902', 'phl')")
     )
     await db_session.flush()
-    rows = [{**_row("NCC-9", "2600000002", 1000.0), "parcel_number": "wlm:2600000002"}]
+    rows = [{**_row("SS-9", "000000902", 1000.0), "parcel_number": "000000902"}]
 
-    total = await load_sheriff(
-        db_session, _FakeSource(rows), market_code="wlm", known_parcels={"wlm:2600000002"}
-    )
+    total = await load_sheriff(db_session, _FakeSource(rows), known_parcels={"000000902"})
     await db_session.flush()
 
     assert total == 1
-    fresh = await db_session.get(DatasetFreshness, ("wlm", "sheriff_sale"))
+    fresh = await db_session.get(DatasetFreshness, ("phl", "sheriff_sale"))
     assert fresh is not None
     assert fresh.detail is None
-
-
-@pytest.mark.integration
-async def test_load_sheriff_wlm_filters_to_known_parcels_and_records_wlm_freshness(
-    db_session: AsyncSession,
-) -> None:
-    await db_session.execute(
-        text("INSERT INTO parcel (parcel_number, market_code) VALUES ('wlm:2601320063', 'wlm')")
-    )
-    await db_session.flush()
-
-    records = [
-        {
-            "case_number": "26-000001",
-            "parcel_number": "wlm:2601320063",
-            "sale_type": "MTG",
-            "status": "Scheduled",
-            "sale_date": "2026-08-11",
-            "plaintiff": "BANK",
-        },
-        {
-            "case_number": "26-000002",
-            "parcel_number": "wlm:0703240035",  # non-city New Castle parcel, not in our set
-            "sale_type": "MTG",
-            "status": "Scheduled",
-            "sale_date": "2026-08-11",
-            "plaintiff": "BANK",
-        },
-    ]
-    known = {"wlm:2601320063"}
-    total = await load_sheriff(
-        db_session, _FakeSource(records), market_code="wlm", known_parcels=known
-    )
-    await db_session.flush()
-
-    assert total == 1  # only the known city parcel is kept
-    kept = await db_session.scalar(
-        text("SELECT case_number FROM sheriff_sale WHERE parcel_number = 'wlm:2601320063'")
-    )
-    assert kept == "26-000001"
-    # the non-city parcel was neither kept nor created as a stub
-    stub = await db_session.scalar(
-        text("SELECT count(*) FROM parcel WHERE parcel_number = 'wlm:0703240035'")
-    )
-    assert stub == 0
-
-    fresh = await db_session.get(DatasetFreshness, ("wlm", "sheriff_sale"))
-    assert fresh is not None
-    assert fresh.status == "success"

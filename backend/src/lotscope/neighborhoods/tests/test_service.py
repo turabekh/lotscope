@@ -97,17 +97,3 @@ async def test_market_stats_excludes_empty_neighborhoods(db_session: AsyncSessio
     result = await neighborhood_market_stats(db_session, "phl")
     assert result.neighborhoods == []
     assert result.totals.vacant_lots == 0
-
-
-async def test_market_stats_are_scoped_to_the_requested_market(db_session: AsyncSession) -> None:
-    await _neighborhood(db_session, "PhlHood", "POLYGON((0 0,0 100,100 100,100 0,0 0))", "phl")
-    await _neighborhood(db_session, "HbgHood", "POLYGON((0 0,0 100,100 100,100 0,0 0))", "hbg")
-    await _vacant_parcel(db_session, "phl:1", x=10, y=10, market_value=40000, market="phl")
-    await _vacant_parcel(db_session, "hbg:1", x=20, y=20, market_value=50000, market="hbg")
-    await db_session.flush()
-
-    phl = await neighborhood_market_stats(db_session, "phl")
-    hbg = await neighborhood_market_stats(db_session, "hbg")
-
-    assert [n.name for n in phl.neighborhoods] == ["PhlHood"]
-    assert [n.name for n in hbg.neighborhoods] == ["HbgHood"]

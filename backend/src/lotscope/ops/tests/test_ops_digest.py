@@ -62,9 +62,9 @@ def test_digest_html_escapes_content() -> None:
 def test_alert_subject_and_text() -> None:
     content = OpsAlertContent(
         jobs=[("PHL · opa", "phl", "timeout")],
-        datasets=[("hbg", "dc_parcels", "connection refused")],
+        datasets=[("phl", "opa_properties_public", "connection refused")],
     )
     assert ops_alert_subject(content) == "LotScope ops alert — 2 new failures"
     text = render_ops_alert_text(content, ops_url="https://app.test/admin/ops")
     assert "JOB [phl] PHL · opa: timeout" in text
-    assert "DATASET [hbg] dc_parcels: connection refused" in text
+    assert "DATASET [phl] opa_properties_public: connection refused" in text

@@ -107,7 +107,7 @@ async def test_zoning_criteria_matches_resolved_only_parcel(db_session: AsyncSes
             "INSERT INTO parcel "
             "(parcel_number, address, base_zoning_code, resolved_zoning_code, is_vacant, "
             "is_city_owned, market_value) "
-            "VALUES ('hbg:000000001', '1 A ST', '', 'RM', true, false, 50000)"
+            "VALUES ('000000901', '1 A ST', '', 'RM', true, false, 50000)"
         )
     )
     search = await create_search(
@@ -119,7 +119,7 @@ async def test_zoning_criteria_matches_resolved_only_parcel(db_session: AsyncSes
 
     detail = await get_search(db_session, user_id, search.id)
     assert detail.match_count == 1
-    assert [m.parcel_number for m in detail.matches] == ["hbg:000000001"]
+    assert [m.parcel_number for m in detail.matches] == ["000000901"]
     assert detail.matches[0].base_zoning_code == "RM"
 
 

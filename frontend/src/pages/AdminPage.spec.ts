@@ -12,7 +12,7 @@ const { runJobMock } = vi.hoisted(() => ({
     Promise.resolve({
       id: 2,
       job_id: jobId,
-      label: 'HBG · zoning',
+      label: 'PHL · zoning',
       kind: 'ingest',
       market_code: 'phl',
       status: 'queued',
@@ -46,9 +46,9 @@ vi.mock('@/lib/api', async (importOriginal) => {
   const catalog = [
     {
       id: 'ingest:phl:zoning',
-      label: 'HBG · zoning',
+      label: 'PHL · zoning',
       kind: 'ingest',
-      description: 'Ingest the zoning dataset for HBG.',
+      description: 'Ingest the zoning dataset for PHL.',
       market: 'phl',
       dataset: 'zoning',
       params: [],
@@ -56,9 +56,9 @@ vi.mock('@/lib/api', async (importOriginal) => {
     },
     {
       id: 'ingest:phl:zba',
-      label: 'HBG · tax_claim',
+      label: 'PHL · zba',
       kind: 'ingest',
-      description: 'Ingest the tax_claim dataset for HBG.',
+      description: 'Ingest the zba dataset for PHL.',
       market: 'phl',
       dataset: 'tax_claim',
       params: [
@@ -132,7 +132,7 @@ describe('AdminPage jobs console', () => {
 
   it('lists catalog jobs grouped for the admin', async () => {
     const wrapper = await mountAdmin()
-    expect(wrapper.text()).toContain('HBG · zoning')
+    expect(wrapper.text()).toContain('PHL · zoning')
     expect(wrapper.text()).toContain('Recompute distress index')
   })
 
