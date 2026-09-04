@@ -15,6 +15,17 @@ AssumptionGroup = Literal[
 
 _CENTS = Decimal("0.01")
 
+CANONICAL_ASSUMPTION_KEYS = frozenset(
+    {
+        "construction_cost_per_sqft",
+        "soft_cost_pct",
+        "selling_cost_pct",
+        "target_margin",
+        "default_unit_sqft",
+        "max_unit_sqft",
+    }
+)
+
 
 class UnavailableInputError(ValueError):
     pass
@@ -85,7 +96,6 @@ def resolve(
     unit: Literal["money", "fraction", "count", "months", "sqft"],
     *,
     platform_default: float | None = None,
-    market_default: float | None = None,
     parcel_derived: float | None = None,
     user_override: float | None = None,
     scenario_override: float | None = None,
@@ -95,7 +105,6 @@ def resolve(
         (scenario_override, "scenario_override"),
         (user_override, "user_override"),
         (parcel_derived, "derived"),
-        (market_default, "market_default"),
         (platform_default, "platform_default"),
     ):
         if candidate is not None:
