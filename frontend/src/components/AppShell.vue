@@ -8,6 +8,7 @@ import AppTopBar from '@/components/AppTopBar.vue'
 import CompareTray from '@/components/CompareTray.vue'
 import OnboardingTour from '@/components/OnboardingTour.vue'
 import MobileTabBar from '@/components/MobileTabBar.vue'
+import VerifyEmailBanner from '@/components/VerifyEmailBanner.vue'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -46,6 +47,7 @@ watch(isMobile, (mobile) => {
     <AppTopBar />
 
     <q-page-container>
+      <VerifyEmailBanner />
       <slot />
     </q-page-container>
 

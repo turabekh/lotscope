@@ -10,6 +10,7 @@ vi.mock('@/lib/api', async () => {
     ApiError: actual.ApiError,
     setAuthToken: vi.fn(),
     setUnauthorizedHandler: vi.fn(),
+    setEmailUnverifiedHandler: vi.fn(),
     api: {
       login: vi.fn(),
       register: vi.fn(),

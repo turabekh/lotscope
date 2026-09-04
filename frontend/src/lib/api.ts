@@ -62,6 +62,7 @@ import type {
   PlansResponse,
   PortalResponse,
   RegisterPayload,
+  VerificationPending,
   SavedSearchDetail,
   SavedSearchListResponse,
   ScenariosResult,
@@ -85,6 +86,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 let authToken: string | null = null
 let unauthorizedHandler: (() => void) | null = null
+let emailUnverifiedHandler: (() => void) | null = null
 
 export function setAuthToken(token: string | null): void {
   authToken = token
@@ -94,17 +96,29 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler
 }
 
-const UNAUTHENTICATED_PATHS = ['/auth/login', '/auth/register']
+export function setEmailUnverifiedHandler(handler: (() => void) | null): void {
+  emailUnverifiedHandler = handler
+}
+
+const UNAUTHENTICATED_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/verify',
+  '/auth/resend-verification',
+]
 
 function reportUnauthorized(path: string): void {
   if (UNAUTHENTICATED_PATHS.some((candidate) => path.startsWith(candidate))) return
   unauthorizedHandler?.()
 }
 
+export const EMAIL_UNVERIFIED_CODE = 'email_unverified'
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code: string | null = null,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -120,8 +134,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, { ...init, headers })
   if (!response.ok) {
     if (response.status === 401) reportUnauthorized(path)
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null
-    throw new ApiError(response.status, body?.detail ?? response.statusText)
+    const body = (await response.json().catch(() => null)) as {
+      detail?: string
+      code?: string
+    } | null
+    if (body?.code === EMAIL_UNVERIFIED_CODE) emailUnverifiedHandler?.()
+    throw new ApiError(response.status, body?.detail ?? response.statusText, body?.code ?? null)
   }
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
@@ -599,8 +617,17 @@ export const api = {
   refreshToken(): Promise<TokenResponse> {
     return request('/auth/refresh', { method: 'POST' })
   },
-  register(payload: RegisterPayload): Promise<User> {
+  register(payload: RegisterPayload): Promise<VerificationPending> {
     return request('/auth/register', { method: 'POST', body: JSON.stringify(payload) })
+  },
+  verifyEmail(token: string): Promise<TokenResponse> {
+    return request('/auth/verify', { method: 'POST', body: JSON.stringify({ token }) })
+  },
+  resendVerification(email: string): Promise<VerificationPending> {
+    return request('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
   },
   getMe(): Promise<User> {
     return request('/auth/me')

@@ -33,6 +33,11 @@ export const routes: RouteRecordRaw[] = [
     meta: { guestOnly: true },
   },
   {
+    path: '/verify',
+    name: 'verify',
+    component: () => import('@/pages/VerifyPage.vue'),
+  },
+  {
     path: '/account',
     name: 'account',
     component: () => import('@/pages/AccountPage.vue'),

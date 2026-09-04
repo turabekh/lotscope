@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import { ApiError, api, setAuthToken, setUnauthorizedHandler } from '@/lib/api'
+import {
+  ApiError,
+  api,
+  setAuthToken,
+  setEmailUnverifiedHandler,
+  setUnauthorizedHandler,
+} from '@/lib/api'
 import { isTokenExpired, millisecondsUntilRefresh, shouldRefreshToken } from '@/lib/session'
 import type { RegisterPayload, SignerProfile, Usage, User } from '@/lib/types'
 import { useAreaSearchStore } from '@/stores/areaSearch'
@@ -13,6 +19,8 @@ const TOKEN_KEY = 'lotscope_token'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem(TOKEN_KEY))
+  const pendingVerificationEmail = ref<string | null>(null)
+  const emailUnverified = ref(false)
   const user = ref<User | null>(null)
   const usage = ref<Usage | null>(null)
   const loading = ref(false)
@@ -20,6 +28,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   setAuthToken(token.value)
   setUnauthorizedHandler(() => void handleUnauthorized())
+  setEmailUnverifiedHandler(() => {
+    emailUnverified.value = true
+  })
 
   const hasLiveToken = computed(() => token.value !== null && !isTokenExpired(token.value))
   const isAuthenticated = computed(() => hasLiveToken.value && user.value !== null)
@@ -53,12 +64,35 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       await api.register(payload)
+      pendingVerificationEmail.value = payload.email
     } catch (cause) {
       error.value = cause instanceof ApiError ? cause.message : 'Registration failed.'
-      loading.value = false
       throw cause
+    } finally {
+      loading.value = false
     }
-    await login(payload.email, payload.password)
+  }
+
+  async function verifyEmail(verificationToken: string): Promise<void> {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await api.verifyEmail(verificationToken)
+      persist(response.access_token)
+      pendingVerificationEmail.value = null
+      emailUnverified.value = false
+      await restore()
+    } catch (cause) {
+      error.value =
+        cause instanceof ApiError ? cause.message : 'This link is invalid or has expired.'
+      throw cause
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function resendVerification(email: string): Promise<void> {
+    await api.resendVerification(email)
   }
 
   async function restore(): Promise<void> {
@@ -185,6 +219,10 @@ export const useAuthStore = defineStore('auth', () => {
     hasLiveToken,
     login,
     register,
+    verifyEmail,
+    resendVerification,
+    pendingVerificationEmail,
+    emailUnverified,
     restore,
     ensureRestored,
     refresh,

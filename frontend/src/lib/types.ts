@@ -1325,3 +1325,9 @@ export interface PolicyDocument {
   effective_date: string
   published_at: string
 }
+
+export interface VerificationPending {
+  email: string
+  verification_required: boolean
+  detail: string
+}

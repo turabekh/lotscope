@@ -15,6 +15,13 @@ const route = useRoute()
 const email = ref('')
 const password = ref('')
 const fullName = ref('')
+const sent = ref(false)
+const resent = ref(false)
+
+async function resend(): Promise<void> {
+  await store.resendVerification(email.value.trim())
+  resent.value = true
+}
 
 async function submit(): Promise<void> {
   try {
@@ -26,6 +33,8 @@ async function submit(): Promise<void> {
         password: password.value,
         full_name: fullName.value.trim() || null,
       })
+      sent.value = true
+      return
     }
     const fallback = router.resolve({
       name: 'home',
@@ -40,7 +49,27 @@ async function submit(): Promise<void> {
 
 <template>
   <div class="auth-page">
-    <q-card flat bordered class="auth-card">
+    <q-card v-if="sent" flat bordered class="auth-card" data-test="check-your-email">
+      <q-card-section class="text-center">
+        <q-icon name="mark_email_unread" color="primary" size="40px" />
+        <div class="text-h6 q-mt-sm">Check your email</div>
+        <p class="text-body2 q-mt-sm">
+          We sent a confirmation link to <strong>{{ email }}</strong
+          >. Open it to finish setting up your account. The link works once and expires in 24 hours.
+        </p>
+        <q-btn
+          flat
+          no-caps
+          color="primary"
+          :label="resent ? 'Sent again' : 'Resend the link'"
+          :disable="resent"
+          data-test="resend-verification"
+          @click="resend"
+        />
+      </q-card-section>
+    </q-card>
+
+    <q-card v-else flat bordered class="auth-card">
       <q-card-section class="text-center q-pb-none">
         <q-icon name="location_city" color="primary" size="40px" />
         <div class="text-h5 q-mt-xs">LotScope <span class="text-weight-light">PHL</span></div>
