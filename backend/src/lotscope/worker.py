@@ -39,7 +39,6 @@ from lotscope.notifications.service import (
     send_saved_search_alerts,
 )
 from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
-from lotscope.ops.gates import seed_market_gates
 from lotscope.ops.invariants import breaches, check_invariants
 from lotscope.ops.reconcile import reconcile_against_opa
 from lotscope.ops.stats import snapshot_market_stats
@@ -194,17 +193,9 @@ async def _seed_zoning_standards(session_factory: async_sessionmaker[AsyncSessio
     return sum(seeded.values())
 
 
-async def _seed_market_gates(session_factory: async_sessionmaker[AsyncSession]) -> int:
-    async with session_factory() as session:
-        total = await seed_market_gates(session)
-        await session.commit()
-    return total
-
-
 _MAINTENANCE_DISPATCH: dict[str, _MaintenanceFn] = {
     "maintenance:seed_zoning": _seed_zoning_standards,
     "maintenance:snapshot_stats": snapshot_market_stats,
-    "maintenance:seed_gates": _seed_market_gates,
 }
 
 

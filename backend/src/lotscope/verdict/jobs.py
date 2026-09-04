@@ -9,7 +9,6 @@ from sqlalchemy.sql.elements import TextClause
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
-from lotscope.core.markets import market_argument
 from lotscope.verdict.composition import VERDICT_VERSION
 from lotscope.verdict.decision import DECISION_VERSION
 from lotscope.verdict.service import recompute_verdicts
@@ -99,7 +98,7 @@ def main() -> None:
     asyncio.run(
         _run(
             vacant_only="vacant" in args,
-            market=market_argument(args),
+            market=None,
             only_stale="stale" in args,
         )
     )

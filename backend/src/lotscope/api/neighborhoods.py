@@ -1,7 +1,7 @@
 import contextlib
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,7 @@ from lotscope.accounts.models import User
 from lotscope.accounts.tiers import market_stats_access
 from lotscope.api.deps import get_current_user, get_redis, get_session
 from lotscope.core.errors import QuotaExceededError
-from lotscope.core.markets import market_code
+from lotscope.core.market import MARKET_CODE
 from lotscope.neighborhoods.schemas import (
     NeighborhoodListResponse,
     NeighborhoodMarketResponse,
@@ -26,11 +26,8 @@ _MARKET_CACHE_TTL_SECONDS = 3_600
 @router.get("/neighborhoods", response_model=NeighborhoodListResponse)
 async def get_neighborhoods(
     session: Annotated[AsyncSession, Depends(get_session)],
-    market: Annotated[str, Query()] = "phl",
 ) -> NeighborhoodListResponse:
-    return NeighborhoodListResponse(
-        neighborhoods=await list_neighborhoods(session, market_code(market))
-    )
+    return NeighborhoodListResponse(neighborhoods=await list_neighborhoods(session, MARKET_CODE))
 
 
 @router.get("/neighborhoods/market", response_model=NeighborhoodMarketResponse)
@@ -38,14 +35,13 @@ async def get_neighborhood_market(
     session: Annotated[AsyncSession, Depends(get_session)],
     current_user: Annotated[User, Depends(get_current_user)],
     redis: Annotated[Redis, Depends(get_redis)],
-    market: Annotated[str, Query()] = "phl",
 ) -> NeighborhoodMarketResponse:
     if not market_stats_access(current_user.tier):
         raise QuotaExceededError(
             "Market intelligence is a Pro feature — upgrade to see neighborhood opportunity stats."
         )
 
-    code = market_code(market)
+    code = MARKET_CODE
     cache_key = f"{_MARKET_CACHE_KEY_PREFIX}:{code}"
     with contextlib.suppress(RedisError):
         cached = await redis.get(cache_key)

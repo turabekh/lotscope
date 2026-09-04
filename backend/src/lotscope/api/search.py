@@ -9,7 +9,7 @@ from lotscope.accounts.tiers import area_search_daily_parcel_limit
 from lotscope.accounts.usage import register_area_search_parcels
 from lotscope.api.deps import get_current_user, get_redis, get_session
 from lotscope.core.errors import QuotaExceededError
-from lotscope.core.markets import DEFAULT_MARKET, Market, market_code
+from lotscope.core.market import MARKET_CODE
 from lotscope.search.schemas import (
     AreaSearchRequest,
     AreaSearchResponse,
@@ -30,14 +30,11 @@ async def search(
     session: SessionDep,
     current_user: CurrentUserDep,
     q: Annotated[str, Query(min_length=1)],
-    market: Annotated[Market, Query()] = DEFAULT_MARKET,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ParcelSearchResponse:
-    results = await search_parcels(
-        session, q, market_code=market_code(market), limit=limit, offset=offset
-    )
-    return ParcelSearchResponse(query=q, market=market, results=results)
+    results = await search_parcels(session, q, market_code=MARKET_CODE, limit=limit, offset=offset)
+    return ParcelSearchResponse(query=q, market=MARKET_CODE, results=results)
 
 
 @router.post("/search/area", response_model=AreaSearchResponse)
@@ -47,7 +44,7 @@ async def search_within_area(
     current_user: CurrentUserDep,
     redis: RedisDep,
 ) -> AreaSearchResponse:
-    scoped = request.model_copy(update={"market": market_code(request.market)})
+    scoped = request.model_copy(update={"market": MARKET_CODE})
     results, total = await search_area(session, scoped)
     within_quota = await register_area_search_parcels(
         redis,

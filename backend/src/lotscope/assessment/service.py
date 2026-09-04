@@ -10,11 +10,11 @@ from lotscope.assessment.analysis import (
     analyze_assessment,
 )
 from lotscope.assessment.schemas import AssessmentResult
+from lotscope.core.market import ASSESSMENT_RATIO
 from lotscope.valuation.service import value_parcel
 
 _PARCEL_SQL = text(
-    "SELECT p.market_value, p.is_vacant, m.assessment_ratio FROM parcel p "
-    "JOIN market m ON m.code = p.market_code WHERE p.parcel_number = :parcel_number"
+    "SELECT market_value, is_vacant FROM parcel WHERE parcel_number = :parcel_number"
 )
 
 _SOURCES: list[dict[str, Any]] = [{"source": "opa_properties_public"}, {"source": "rtt_summary"}]
@@ -36,9 +36,7 @@ async def analyze_parcel_assessment(
     if parcel is None:
         return None
 
-    ratio = _as_float(parcel.assessment_ratio)
-    if ratio is None or ratio <= 0:
-        return None
+    ratio = ASSESSMENT_RATIO
 
     assessed = _as_float(parcel.market_value)
     implied_market_value = assessed / ratio if assessed is not None else None

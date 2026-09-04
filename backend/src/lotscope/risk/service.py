@@ -4,17 +4,9 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.markets.capabilities import (
-    forced_sale_label,
-    forced_sale_surface_label,
-    sale_calendar_state,
-)
 from lotscope.risk.attribution import TransferAfterSnapshot, attribute_delinquency
 from lotscope.risk.schemas import (
     NextSheriffSale,
-    RepositoryEntry,
-    RepositoryList,
-    RepositoryStatus,
     RiskFlagSchema,
     RiskResult,
     SheriffSaleCalendar,
@@ -122,14 +114,20 @@ _CHECKED_SOURCES = (
 )
 
 
-def _flag_schema(flag: RiskFlag, market: str) -> RiskFlagSchema:
-    label, detail = flag.label, flag.detail
-    if flag.code == "sheriff_sale" and market != "phl":
-        term = forced_sale_label(market)
-        label = f"{term} exposure"
-        detail = f"Parcel is in the {term} pipeline."
+SHERIFF_SALE_SURFACE_LABEL = "Sheriff sales"
+_NO_UPCOMING_SALES_NOTE = (
+    "No upcoming sheriff sales are currently loaded for Philadelphia. Lists publish on a "
+    "rolling basis — check back or watch individual parcels."
+)
+
+
+def _flag_schema(flag: RiskFlag) -> RiskFlagSchema:
     return RiskFlagSchema(
-        code=flag.code, severity=flag.severity, label=label, detail=detail, source=flag.source
+        code=flag.code,
+        severity=flag.severity,
+        label=flag.label,
+        detail=flag.detail,
+        source=flag.source,
     )
 
 
@@ -242,7 +240,6 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
         await _overlay_signal(session, parcel_number) if parcel.has_geometry else OverlaySignal()
     )
     rco = await _rco_signal(session, parcel_number) if parcel.has_geometry else RcoSignal()
-    market = parcel_number.split(":", 1)[0]
     assessment = assess_risk(
         RiskSignals(
             li=li,
@@ -258,13 +255,12 @@ async def assess_parcel_risk(session: AsyncSession, parcel_number: str) -> RiskR
             historic=historic,
             overlays=overlays,
             rco=rco,
-        ),
-        market,
+        )
     )
     return RiskResult(
         parcel_number=parcel_number,
         risk_score=assessment.risk_score,
-        flags=[_flag_schema(flag, market) for flag in assessment.flags],
+        flags=[_flag_schema(flag) for flag in assessment.flags],
         summary=assessment.summary,
         confidence=assessment.confidence,
         sources=[{"source": source} for source in _CHECKED_SOURCES],
@@ -339,12 +335,11 @@ async def list_sheriff_sales(
         for row in rows
     ]
     has_upcoming = any(item.sale_date is not None for item in items)
-    state, note = sale_calendar_state(market_code, has_upcoming=has_upcoming)
     return SheriffSaleCalendar(
         market=market_code,
-        label=forced_sale_surface_label(market_code),
-        state=state,
-        note=note,
+        label=SHERIFF_SALE_SURFACE_LABEL,
+        state="live" if has_upcoming else "empty",
+        note=None if has_upcoming else _NO_UPCOMING_SALES_NOTE,
         total=int(total or 0),
         returned=len(items),
         items=items,
@@ -417,47 +412,3 @@ async def get_next_sheriff_sale(
         opening_bid=_as_float(row.opening_bid),
         days_until=(row.sale_date - as_of).days,
     )
-
-
-_REPO_STATUS_SQL = text(
-    "SELECT city_status, bid_pending, list_as_of, source_url "
-    "FROM repository_listing WHERE parcel_number = :parcel_number"
-)
-_REPO_LIST_SQL = text(
-    "SELECT r.parcel_number, p.address, r.city_status, r.bid_pending, r.list_as_of "
-    "FROM repository_listing r JOIN parcel p ON p.parcel_number = r.parcel_number "
-    "WHERE p.market_code = :market_code "
-    "ORDER BY r.bid_pending DESC, p.address NULLS LAST, r.parcel_number LIMIT :limit"
-)
-
-
-async def get_repository_status(session: AsyncSession, parcel_number: str) -> RepositoryStatus:
-    row = (await session.execute(_REPO_STATUS_SQL, {"parcel_number": parcel_number})).one_or_none()
-    if row is None:
-        return RepositoryStatus(in_repository=False)
-    return RepositoryStatus(
-        in_repository=True,
-        city_status=row.city_status,
-        bid_pending=row.bid_pending,
-        list_as_of=row.list_as_of,
-        source_url=row.source_url,
-    )
-
-
-async def list_repository(
-    session: AsyncSession, *, market_code: str, limit: int = 500
-) -> RepositoryList:
-    rows = (
-        await session.execute(_REPO_LIST_SQL, {"market_code": market_code, "limit": limit})
-    ).all()
-    items = [
-        RepositoryEntry(
-            parcel_number=row.parcel_number,
-            address=row.address,
-            city_status=row.city_status,
-            bid_pending=row.bid_pending,
-        )
-        for row in rows
-    ]
-    list_as_of = next((row.list_as_of for row in rows if row.list_as_of is not None), None)
-    return RepositoryList(items=items, list_as_of=list_as_of, total=len(items))

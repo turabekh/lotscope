@@ -73,32 +73,6 @@ CADENCE: dict[tuple[str, str], Cadence] = {
     ("phl", "streets"): Cadence("monthly"),
     ("phl", "historicdistricts_local"): Cadence("monthly"),
     ("phl", "fema_flood"): Cadence("quarterly"),
-    ("pgh", "pgh_assessment"): Cadence("monthly"),
-    ("pgh", "pgh_sales"): Cadence("monthly"),
-    ("pgh", "pgh_liens"): Cadence("monthly"),
-    ("pgh", "pgh_violations"): Cadence("monthly"),
-    ("pgh", "pgh_foreclosures"): Cadence("monthly"),
-    ("pgh", "pgh_condemned"): Cadence("monthly"),
-    ("pgh", "pgh_city_owned"): Cadence("monthly"),
-    ("pgh", "pgh_vacancy"): Cadence("monthly"),
-    ("pgh", "pgh_boundaries"): Cadence("quarterly"),
-    ("pgh", "pgh_zoning_districts"): Cadence("quarterly"),
-    ("pgh", "pgh_neighborhoods"): Cadence("quarterly"),
-    ("hbg", "dc_parcels"): Cadence("monthly"),
-    ("hbg", "dc_deed_references"): Cadence("monthly"),
-    ("hbg", "hbg_code_violations"): Cadence("monthly"),
-    ("hbg", "dc_streets"): Cadence("quarterly"),
-    ("hbg", "city_flood_parcels"): Cadence("quarterly"),
-    ("hbg", "city_municipal_hd"): Cadence("quarterly"),
-    ("hbg", "city_neighborhoods"): Cadence("quarterly"),
-    ("hbg", "tcrp_zoning_districts"): Cadence("quarterly"),
-    ("hbg", "dc_repository"): Cadence("quarterly"),
-    ("hbg", "dc_tax_claim"): Cadence(
-        "seasonal", season_months=(8, 9), note="upset / judicial sale list"
-    ),
-    ("hbg", "derived_lot_width"): Cadence("manual"),
-    ("hbg", "derived_vacancy"): Cadence("manual"),
-    ("hbg", "public_ownership"): Cadence("manual"),
 }
 
 

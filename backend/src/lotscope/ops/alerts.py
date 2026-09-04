@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.accounts.models import User
 from lotscope.admin.models import JobRun
+from lotscope.core.market import MARKET_CODE, MARKET_NAME
 from lotscope.ingestion.models import DatasetFreshness
-from lotscope.markets.models import Market
 from lotscope.notifications.email import EmailSender
 from lotscope.ops.digest import (
     OpsAlertContent,
@@ -156,33 +156,22 @@ def _ops_url(settings: Any) -> str:
 
 
 async def build_ops_digest(session: AsyncSession, now: datetime) -> OpsDigestContent:
-    markets = (await session.execute(select(Market).order_by(Market.code))).scalars().all()
     lines: list[OpsMarketLine] = []
-    for market in markets:
-        health = await market_health(session, market.code, now)
-        if health is None:
-            continue
+    health = await market_health(session, MARKET_CODE, now)
+    if health is not None:
         red = [(d.dataset, d.reason) for d in health.datasets if d.freshness == "red"]
         amber = [(d.dataset, d.reason) for d in health.datasets if d.freshness == "amber"]
-        blockers = [
-            (item.title, item.owner)
-            for gate in health.gates
-            if gate.gate_type == "graduation"
-            for item in gate.items
-            if item.status == "blocked"
-        ]
-        if not (red or amber or blockers):
-            continue
-        lines.append(
-            OpsMarketLine(
-                market_code=market.code,
-                name=market.name,
-                health_status=health.health.status,
-                red=red,
-                amber=amber,
-                blockers=blockers,
+        if red or amber:
+            lines.append(
+                OpsMarketLine(
+                    market_code=MARKET_CODE,
+                    name=MARKET_NAME,
+                    health_status=health.health.status,
+                    red=red,
+                    amber=amber,
+                    blockers=[],
+                )
             )
-        )
     return OpsDigestContent(markets=lines, generated_at=now)
 
 

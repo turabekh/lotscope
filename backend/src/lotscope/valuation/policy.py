@@ -28,19 +28,8 @@ PHILADELPHIA_COMP_SELECTION_V1 = CompSelectionPolicy(
     min_similar_comps=3,
 )
 
-_REGISTRY: dict[str, CompSelectionPolicy] = {
-    PHILADELPHIA_COMP_SELECTION_V1.market: PHILADELPHIA_COMP_SELECTION_V1,
-}
+COMP_SELECTION = PHILADELPHIA_COMP_SELECTION_V1
 
 
-def comp_selection_policy_for_market(market: str | None) -> CompSelectionPolicy | None:
-    if market is None:
-        return None
-    return _REGISTRY.get(market)
-
-
-def excluded_document_types_for_market(market: str | None) -> list[str] | None:
-    policy = comp_selection_policy_for_market(market)
-    if policy is None or not policy.excluded_document_types:
-        return None
-    return sorted(policy.excluded_document_types)
+def excluded_document_types() -> list[str]:
+    return sorted(COMP_SELECTION.excluded_document_types)

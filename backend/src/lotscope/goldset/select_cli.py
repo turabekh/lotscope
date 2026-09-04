@@ -6,7 +6,7 @@ from pathlib import Path
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging
-from lotscope.core.markets import market_argument, market_code
+from lotscope.core.market import MARKET_CODE
 from lotscope.goldset.selection import SELECTORS, select_gold_set
 
 DEFAULT_PATH = Path("data/goldset/phl.jsonl")
@@ -61,8 +61,7 @@ async def _run(path: Path, market: str, per_category: int) -> int:
 
 def main() -> None:
     argv = sys.argv[1:]
-    market = market_code(market_argument(argv) or "phl")
-    sys.exit(asyncio.run(_run(_output_path(argv), market, _per_category(argv))))
+    sys.exit(asyncio.run(_run(_output_path(argv), MARKET_CODE, _per_category(argv))))
 
 
 if __name__ == "__main__":

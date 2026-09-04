@@ -1042,12 +1042,6 @@ export interface OpsDatasetHealth {
   row_count: number | null
 }
 
-export interface OpsCapabilityNote {
-  category: string
-  state: string
-  detail: string
-}
-
 export interface OpsVerdictVersionCount {
   verdict_version: string | null
   count: number
@@ -1098,7 +1092,6 @@ export interface OpsMarketHealthDetail {
   coverage: OpsCoverageStats
   zoning_standard_count: number
   zoning_district_count: number
-  capabilities: OpsCapabilityNote[]
   verdict_versions: OpsVerdictVersionCount[]
   gates: OpsGateSummary[]
   recent_jobs: OpsJobRunRow[]

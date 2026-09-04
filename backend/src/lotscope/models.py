@@ -8,9 +8,8 @@ from lotscope.core.db import Base
 from lotscope.corrections.models import ParcelCorrection
 from lotscope.historic.models import HistoricDistrict
 from lotscope.ingestion.models import DatasetFreshness
-from lotscope.markets.models import Market
 from lotscope.neighborhoods.models import Neighborhood
-from lotscope.ops.models import MarketGateItem, MarketStats, OpsAlertState
+from lotscope.ops.models import MarketStats, OpsAlertState
 from lotscope.parcels.models import Parcel
 from lotscope.policies.models import PolicyDocument
 from lotscope.provisions.models import CodeProvision
@@ -34,8 +33,6 @@ __all__ = [
     "HistoricDistrict",
     "JobRun",
     "LiEvent",
-    "Market",
-    "MarketGateItem",
     "MarketStats",
     "Neighborhood",
     "OpsAlertState",

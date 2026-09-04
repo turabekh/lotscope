@@ -5,31 +5,27 @@ from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.admin.models import JobRun
+from lotscope.core.market import MARKET_CODE, MARKET_NAME
 from lotscope.ingestion.loaders.sheriff_civilview import CivilViewListRow, CivilViewSheriffSource
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.ingestion.reconciliation import to_parcel_key
-from lotscope.markets.capabilities import market_capability_notes, market_display_name
-from lotscope.markets.models import Market
 from lotscope.ops.cadence import FreshnessInput, cadence_for, evaluate_freshness
-from lotscope.ops.models import MarketGateItem, MarketStats
+from lotscope.ops.models import MarketStats
 from lotscope.ops.schemas import (
-    CapabilityNote,
     CoverageStats,
     DatasetHealth,
     FleetMarketRow,
     FleetOverview,
-    GateBoard,
-    GateItem,
-    GateSummary,
     HealthRollup,
     JobRunRow,
-    MarketGates,
     MarketHealthDetail,
     SheriffCoverage,
     VerdictVersionCount,
 )
 from lotscope.parcels.models import Parcel
 from lotscope.zoning.models import ZoningStandard
+
+LAUNCH_STATUS = "live"
 
 _AUTOMATED_CADENCES = frozenset({"daily", "weekly"})
 _FAILED = "failed"
@@ -192,25 +188,19 @@ async def _zoning_counts(session: AsyncSession, market_code: str) -> tuple[int, 
 
 
 async def fleet_overview(session: AsyncSession, now: datetime, git_sha: str) -> FleetOverview:
-    markets = (await session.execute(select(Market).order_by(Market.code))).scalars().all()
-    stats_by_market = {
-        s.market_code: s for s in (await session.execute(select(MarketStats))).scalars()
-    }
-    rows: list[FleetMarketRow] = []
-    for market in markets:
-        healths = await _dataset_healths(session, market.code, now)
-        standards, _ = await _zoning_counts(session, market.code)
-        rows.append(
-            FleetMarketRow(
-                market_code=market.code,
-                name=market.name,
-                launch_status=market.launch_status,
-                health=_rollup(healths),
-                coverage=_coverage(stats_by_market.get(market.code)),
-                last_ingest_at=await _last_ingest_at(session, market.code),
-                zoning_standard_count=standards,
-            )
+    healths = await _dataset_healths(session, MARKET_CODE, now)
+    standards, _ = await _zoning_counts(session, MARKET_CODE)
+    rows = [
+        FleetMarketRow(
+            market_code=MARKET_CODE,
+            name=MARKET_NAME,
+            launch_status=LAUNCH_STATUS,
+            health=_rollup(healths),
+            coverage=_coverage(await session.get(MarketStats, MARKET_CODE)),
+            last_ingest_at=await _last_ingest_at(session, MARKET_CODE),
+            zoning_standard_count=standards,
         )
+    ]
     return FleetOverview(markets=rows, git_sha=git_sha, generated_at=now)
 
 
@@ -238,72 +228,25 @@ async def _recent_jobs(session: AsyncSession, market_code: str, limit: int) -> l
     return [JobRunRow.model_validate(row) for row in rows]
 
 
-async def _market_gates(session: AsyncSession, market_code: str) -> list[GateSummary]:
-    rows = (
-        await session.execute(
-            select(MarketGateItem)
-            .where(MarketGateItem.market_code == market_code)
-            .order_by(MarketGateItem.gate_type, MarketGateItem.ordinal)
-        )
-    ).scalars()
-    by_type: dict[str, list[GateItem]] = {}
-    for row in rows:
-        by_type.setdefault(row.gate_type, []).append(GateItem.model_validate(row))
-    return [
-        GateSummary(
-            gate_type=gate_type,
-            satisfied=sum(1 for item in items if item.satisfied),
-            total=len(items),
-            items=items,
-        )
-        for gate_type, items in sorted(by_type.items())
-    ]
-
-
-async def gate_board(session: AsyncSession, now: datetime) -> GateBoard:
-    markets = (await session.execute(select(Market).order_by(Market.code))).scalars().all()
-    rows: list[MarketGates] = []
-    for market in markets:
-        gates = await _market_gates(session, market.code)
-        if not gates:
-            continue
-        rows.append(
-            MarketGates(
-                market_code=market.code,
-                name=market.name,
-                launch_status=market.launch_status,
-                gates=gates,
-            )
-        )
-    return GateBoard(markets=rows, generated_at=now)
-
-
 async def market_health(
     session: AsyncSession, market_code: str, now: datetime, *, job_limit: int = 20
 ) -> MarketHealthDetail | None:
-    market = await session.get(Market, market_code)
-    if market is None:
+    if market_code != MARKET_CODE:
         return None
     healths = await _dataset_healths(session, market_code, now)
     stats = await session.get(MarketStats, market_code)
     standards, districts = await _zoning_counts(session, market_code)
-    capabilities = [
-        CapabilityNote(category=category, state=state, detail=detail)
-        for category, state, detail in market_capability_notes(market_code)
-    ]
     return MarketHealthDetail(
-        market_code=market.code,
-        name=market.name or market_display_name(market.code),
-        launch_status=market.launch_status,
-        coverage_note=market.coverage_note,
+        market_code=MARKET_CODE,
+        name=MARKET_NAME,
+        launch_status=LAUNCH_STATUS,
+        coverage_note=None,
         health=_rollup(healths),
         datasets=healths,
         coverage=_coverage(stats),
         zoning_standard_count=standards,
         zoning_district_count=districts,
-        capabilities=capabilities,
         verdict_versions=await _verdict_versions(session, market_code),
-        gates=await _market_gates(session, market_code),
         recent_jobs=await _recent_jobs(session, market_code, job_limit),
         generated_at=now,
     )

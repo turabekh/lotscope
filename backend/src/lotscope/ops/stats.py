@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from lotscope.markets.models import Market
+from lotscope.core.market import MARKET_CODE
 from lotscope.ops.models import MarketStats
 from lotscope.verdict.composition import VERDICT_VERSION
 
@@ -32,7 +32,7 @@ def _round(value: Any) -> float | None:
 async def snapshot_market_stats(session_factory: async_sessionmaker[AsyncSession]) -> int:
     computed_at = datetime.now(UTC)
     async with session_factory() as session:
-        markets = list((await session.execute(select(Market.code))).scalars())
+        markets = [MARKET_CODE]
         for market in markets:
             params = {"market": market, "vv": VERDICT_VERSION}
             row = (await session.execute(_STATS_SQL, params)).one()

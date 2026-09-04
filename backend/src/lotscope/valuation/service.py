@@ -14,10 +14,10 @@ from lotscope.valuation.avm import (
     select_size_similar_comps,
     wide_area_use_classes,
 )
-from lotscope.valuation.fallback import wide_area_policy_for_market
+from lotscope.valuation.fallback import WIDE_AREA
 from lotscope.valuation.policy import (
-    comp_selection_policy_for_market,
-    excluded_document_types_for_market,
+    COMP_SELECTION,
+    excluded_document_types,
 )
 from lotscope.valuation.schemas import CompResult, ValuationResult
 
@@ -137,9 +137,7 @@ async def value_parcel(
     computed_at = datetime.now(UTC)
 
     use_class = land_use_class(subject.base_zoning_code) if segment_by_use_class else None
-    policy = wide_area_policy_for_market(subject.market_code)
-    selection = comp_selection_policy_for_market(subject.market_code)
-    excluded_document_types = excluded_document_types_for_market(subject.market_code)
+    excluded = excluded_document_types()
     subject_area = _as_float(subject.lot_area_sqft)
     comps: list[Comp] = []
     related_party_excluded = 0
@@ -153,29 +151,27 @@ async def value_parcel(
             vacant_only=vacant_only,
             since=since,
             use_class=use_class,
-            excluded_document_types=excluded_document_types,
+            excluded_document_types=excluded,
         )
-        if not comps and since is None and policy is not None:
+        if not comps and since is None:
             wide_area = True
             comps, related_party_excluded = await find_comps(
                 session,
                 parcel_number,
-                radius_ft=policy.radius_ft,
-                years=policy.years,
+                radius_ft=WIDE_AREA.radius_ft,
+                years=WIDE_AREA.years,
                 vacant_only=vacant_only,
                 use_classes=wide_area_use_classes(use_class),
-                excluded_document_types=excluded_document_types,
+                excluded_document_types=excluded,
             )
 
-    size_narrowed = False
-    if selection is not None:
-        comps, size_narrowed = select_size_similar_comps(
-            comps,
-            subject_area,
-            ratio_min=selection.lot_area_ratio_min,
-            ratio_max=selection.lot_area_ratio_max,
-            min_similar_comps=selection.min_similar_comps,
-        )
+    comps, size_narrowed = select_size_similar_comps(
+        comps,
+        subject_area,
+        ratio_min=COMP_SELECTION.lot_area_ratio_min,
+        ratio_max=COMP_SELECTION.lot_area_ratio_max,
+        min_similar_comps=COMP_SELECTION.min_similar_comps,
+    )
 
     estimate = estimate_land_value(
         subject_area,
@@ -183,8 +179,8 @@ async def value_parcel(
         related_party_excluded=related_party_excluded,
         wide_area=wide_area,
         size_narrowed_to=(
-            (selection.lot_area_ratio_min, selection.lot_area_ratio_max)
-            if size_narrowed and selection is not None
+            (COMP_SELECTION.lot_area_ratio_min, COMP_SELECTION.lot_area_ratio_max)
+            if size_narrowed
             else None
         ),
     )
@@ -215,14 +211,14 @@ async def value_parcel(
             {
                 "source": "rtt_summary",
                 "comp_count": len(comps),
-                "radius_ft": policy.radius_ft if wide_area and policy else radius_ft,
-                "years": policy.years if wide_area and policy else years,
+                "radius_ft": WIDE_AREA.radius_ft if wide_area else radius_ft,
+                "years": WIDE_AREA.years if wide_area else years,
                 "use_class": use_class,
                 "use_classes": wide_area_use_classes(use_class) if wide_area else None,
                 "comp_tier": "wide_area" if wide_area else "local",
                 "package_deeds_excluded": True,
-                "comp_selection_policy": selection.version if selection else None,
-                "excluded_document_types": excluded_document_types,
+                "comp_selection_policy": COMP_SELECTION.version,
+                "excluded_document_types": excluded,
                 "size_similar_only": size_narrowed,
             }
         ],

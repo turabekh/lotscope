@@ -8,7 +8,6 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.logging import get_logger
-from lotscope.markets.capabilities import zoning_citation_label
 from lotscope.zoning.buildability import (
     DistrictStandard,
     OverlayModification,
@@ -26,6 +25,8 @@ from lotscope.zoning.confidence import (
 )
 from lotscope.zoning.envelope import estimate_floors, representative_inset_ft
 from lotscope.zoning.schemas import BuildabilityResult, DistrictResolution, EnvelopeResult
+
+TITLE_14 = "Title 14"
 
 logger = get_logger(__name__)
 
@@ -232,7 +233,7 @@ async def _get_standard(
     standard = DistrictStandard(
         code=row.code,
         code_version=row.code_version,
-        citation_label=zoning_citation_label(market_code),
+        citation_label=TITLE_14,
         permitted_uses=list(row.permitted_uses or []),
         min_lot_area_sqft=_as_float(row.min_lot_area_sqft),
         min_lot_width_ft=_as_float(row.min_lot_width_ft),
@@ -326,10 +327,7 @@ def _no_standard_result(
         buildable_area_sqft=None,
         buildability_score=0.0,
         confidence="low",
-        reasons=[
-            f"No {zoning_citation_label(_market_of(parcel_number))} standards are loaded "
-            f"for district {resolution.code}."
-        ],
+        reasons=[f"No {TITLE_14} standards are loaded for district {resolution.code}."],
         sources=[{"source": "zoning_district", "method": resolution.method}],
         computed_at=computed_at,
     )
@@ -486,8 +484,7 @@ async def compute_envelope(session: AsyncSession, parcel_number: str) -> Envelop
     if standard is None:
         district_code = resolution.code if resolution else None
         reason = (
-            f"No {zoning_citation_label(_market_of(parcel_number))} standards are loaded "
-            f"for district {district_code}."
+            f"No {TITLE_14} standards are loaded for district {district_code}."
             if district_code
             else "Zoning district could not be resolved for this parcel."
         )

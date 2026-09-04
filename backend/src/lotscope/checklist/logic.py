@@ -2,11 +2,6 @@ from typing import Any
 
 from lotscope.checklist.dimensional import DimensionalContext, build_dimensional_items
 from lotscope.checklist.schemas import ChecklistItem, ChecklistStatus, ChecklistSummary
-from lotscope.markets.capabilities import (
-    checklist_category_state,
-    checklist_state_detail,
-    clear_detail_override,
-)
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.zoning.posture import BuildabilityPosture, resolve_posture
 
@@ -76,8 +71,6 @@ def _risk_item(
     clear_detail: str,
     flags: list[Any],
     *,
-    availability: str = "available",
-    state_detail: str = "",
     unknown_detail: str | None = None,
 ) -> ChecklistItem:
     if unknown_detail is not None and not any(flag.get("code") in flag_codes for flag in flags):
@@ -87,15 +80,6 @@ def _risk_item(
             category=category,
             status="not_evaluated",
             detail=unknown_detail,
-        )
-    if availability != "available":
-        return ChecklistItem(
-            code=code,
-            label=category,
-            category=category,
-            status="not_evaluated",
-            detail=state_detail or "This check was not evaluated for this market.",
-            availability=availability,
         )
     matched = [flag for flag in flags if flag.get("code") in flag_codes]
     if not matched:
@@ -291,17 +275,13 @@ def build_checklist(
     flags = verdict.risk_flags
     items = [_zoning_item(verdict, resolved_posture)]
     for code, category, flag_codes, clear_detail in _RISK_CATEGORIES:
-        state = checklist_category_state(market_code, code)
-        clear = clear_detail_override(market_code, code) or clear_detail
         items.append(
             _risk_item(
                 code,
                 category,
                 flag_codes,
-                clear,
+                clear_detail,
                 flags,
-                availability=state,
-                state_detail=checklist_state_detail(market_code, code, state),
                 unknown_detail=(
                     _UNKNOWN_TAX_DETAIL if code == "liens_taxes" and tax_status_unknown else None
                 ),

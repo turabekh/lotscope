@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
 from lotscope.api.deps import get_current_user, get_session
-from lotscope.core.markets import market_code
+from lotscope.core.market import MARKET_CODE
 from lotscope.underwriting.schemas import BuyBoxMatches, ProfileRead, ProfileWrite
 from lotscope.underwriting.service import (
     create_profile,
@@ -62,7 +62,6 @@ async def delete_own_profile(profile_id: int, session: SessionDep, user: Current
 async def read_buy_box_matches(
     session: SessionDep,
     user: CurrentUserDep,
-    market: Annotated[str, Query(max_length=40)] = "philadelphia",
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> BuyBoxMatches:
-    return await find_buy_box_matches(session, user.id, market=market_code(market), limit=limit)
+    return await find_buy_box_matches(session, user.id, market=MARKET_CODE, limit=limit)

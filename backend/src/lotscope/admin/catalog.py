@@ -3,8 +3,7 @@ from datetime import date
 from typing import Any
 
 from lotscope.core.errors import ValidationError
-from lotscope.core.markets import market_code
-from lotscope.ingestion.jobs import INGEST_JOBS, PARAM_INGEST_JOBS
+from lotscope.ingestion.jobs import INGEST_JOBS
 
 INGEST_KIND = "ingest"
 RECOMPUTE_KIND = "recompute"
@@ -30,22 +29,6 @@ class JobSpec:
     params: tuple[JobParam, ...] = field(default_factory=tuple)
 
 
-_INGEST_PARAMS: dict[tuple[str, str], tuple[JobParam, ...]] = {
-    ("hbg", "tax_claim"): (
-        JobParam(name="list_url", label="Upset / judicial list CSV URL", type="string"),
-        JobParam(name="list_date", label="List date", type="date"),
-    ),
-}
-
-
-_MARKET_PARAM = JobParam(
-    name="market",
-    label="Market (blank = every market)",
-    type="market",
-    required=False,
-)
-
-
 _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
     JobSpec(
         id="recompute:verdicts",
@@ -53,7 +36,6 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
         kind=RECOMPUTE_KIND,
         description="Recompute the Parcel Verdict for every parcel, in one market or in every "
         "market when left blank.",
-        params=(_MARKET_PARAM,),
     ),
     JobSpec(
         id="recompute:vacant_verdicts",
@@ -61,7 +43,6 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
         kind=RECOMPUTE_KIND,
         description="Recompute the Parcel Verdict for vacant parcels only, in one market or in "
         "every market when left blank.",
-        params=(_MARKET_PARAM,),
     ),
     JobSpec(
         id="recompute:distress",
@@ -69,7 +50,6 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
         kind=RECOMPUTE_KIND,
         description="Recompute the motivated-seller distress index for every parcel, in one "
         "market or in every market when left blank.",
-        params=(_MARKET_PARAM,),
     ),
     JobSpec(
         id="recompute:vacancy",
@@ -77,7 +57,6 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
         kind=RECOMPUTE_KIND,
         description="Recompute the vacancy-confidence cross-check for every vacant parcel, in "
         "one market or in every market when left blank.",
-        params=(_MARKET_PARAM,),
     ),
     JobSpec(
         id="recompute:assemblage",
@@ -85,7 +64,6 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
         kind=RECOMPUTE_KIND,
         description="Recompute assemblage Top Plays for every vacant parcel, in one market or in "
         "every market when left blank.",
-        params=(_MARKET_PARAM,),
     ),
     JobSpec(
         id="recompute:buyers",
@@ -95,7 +73,6 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
         "vacant-lot sales. Only Philadelphia carries grantee names today.",
         market="phl",
         dataset="buyer_profile",
-        params=(_MARKET_PARAM,),
     ),
 )
 
@@ -105,7 +82,7 @@ _MAINTENANCE_SPECS: tuple[JobSpec, ...] = (
         id="maintenance:seed_zoning",
         label="Seed zoning standards",
         kind=MAINTENANCE_KIND,
-        description="Re-seed Title 14, Harrisburg, and Pittsburgh zoning standards "
+        description="Re-seed Title 14 zoning standards "
         "(permitted uses + dimensional standards) from code.",
     ),
     JobSpec(
@@ -115,13 +92,6 @@ _MAINTENANCE_SPECS: tuple[JobSpec, ...] = (
         description="Recompute the per-market coverage snapshot (spine, geometry, verdict, "
         "vacant, comp share) that the ops health pages read.",
     ),
-    JobSpec(
-        id="maintenance:seed_gates",
-        label="Seed market gates",
-        kind=MAINTENANCE_KIND,
-        description="Re-seed the graduation / parity gate items (transcribed from the gate "
-        "docs) that the ops gate board reads.",
-    ),
 )
 
 
@@ -130,7 +100,7 @@ def ingest_job_id(market: str, dataset: str) -> str:
 
 
 def _build_catalog() -> list[JobSpec]:
-    keys = set(INGEST_JOBS) | set(PARAM_INGEST_JOBS)
+    keys = set(INGEST_JOBS)
     ingest = [
         JobSpec(
             id=ingest_job_id(market, dataset),
@@ -139,7 +109,6 @@ def _build_catalog() -> list[JobSpec]:
             description=f"Ingest the {dataset} dataset for {market.upper()}.",
             market=market,
             dataset=dataset,
-            params=_INGEST_PARAMS.get((market, dataset), ()),
         )
         for (market, dataset) in sorted(keys)
     ]
@@ -165,8 +134,6 @@ def parse_params(spec: JobSpec, raw: dict[str, Any]) -> dict[str, Any]:
                 raise ValidationError(
                     f"Parameter {param.name!r} must be an ISO date (YYYY-MM-DD)."
                 ) from error
-        elif param.type == "market":
-            parsed[param.name] = market_code(str(value))
         else:
             parsed[param.name] = str(value)
     return parsed

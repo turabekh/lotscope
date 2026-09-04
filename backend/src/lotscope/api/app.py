@@ -21,7 +21,6 @@ from lotscope.api.health import router as health_router
 from lotscope.api.layers import router as layers_router
 from lotscope.api.leads import router as leads_router
 from lotscope.api.maps import router as maps_router
-from lotscope.api.markets import router as markets_router
 from lotscope.api.neighborhoods import router as neighborhoods_router
 from lotscope.api.ops import router as ops_router
 from lotscope.api.outreach import router as outreach_router
@@ -79,7 +78,6 @@ def create_app() -> FastAPI:
     app.include_router(corrections_router)
     app.include_router(leads_router)
     app.include_router(policies_router)
-    app.include_router(markets_router)
     app.include_router(outreach_router)
     app.include_router(skiptrace_router)
     app.include_router(feed_router)

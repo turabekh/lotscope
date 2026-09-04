@@ -52,36 +52,6 @@ PHILLY_DISTRESS_V1 = DistressScoringProfile(
     medium_tier=30,
 )
 
-HARRISBURG_DISTRESS_V1 = replace(
-    PHILLY_DISTRESS_V1, profile_id="harrisburg-distress-v1", market="hbg"
-)
-
-PITTSBURGH_DISTRESS_V1 = replace(
-    PHILLY_DISTRESS_V1, profile_id="pittsburgh-distress-v1", market="pgh"
-)
-
-WILMINGTON_DISTRESS_V1 = replace(
-    PHILLY_DISTRESS_V1, profile_id="wilmington-distress-v1", market="wlm"
-)
-
 PHILLY_DISTRESS_V2 = replace(PHILLY_DISTRESS_V1, profile_id="philly-distress-v2")
 
-_REGISTRY: dict[str, DistressScoringProfile] = {
-    PHILLY_DISTRESS_V2.market: PHILLY_DISTRESS_V2,
-    HARRISBURG_DISTRESS_V1.market: HARRISBURG_DISTRESS_V1,
-    PITTSBURGH_DISTRESS_V1.market: PITTSBURGH_DISTRESS_V1,
-    WILMINGTON_DISTRESS_V1.market: WILMINGTON_DISTRESS_V1,
-}
-
-
-def profile_for_market(market: str) -> DistressScoringProfile:
-    profile = _REGISTRY.get(market)
-    if profile is None:
-        raise UnknownMarketProfileError(
-            f"No distress scoring profile is registered for market '{market}'."
-        )
-    return profile
-
-
-def registered_markets() -> frozenset[str]:
-    return frozenset(_REGISTRY)
+DISTRESS_PROFILE = PHILLY_DISTRESS_V2

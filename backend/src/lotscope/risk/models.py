@@ -37,20 +37,6 @@ class TaxStatus(Base, TimestampMixin, IngestionMixin):
     as_of_date: Mapped[date | None] = mapped_column(Date)
 
 
-class RepositoryListing(Base, TimestampMixin, IngestionMixin):
-    __tablename__ = "repository_listing"
-
-    parcel_number: Mapped[str] = mapped_column(
-        String(40),
-        ForeignKey("parcel.parcel_number", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    city_status: Mapped[str | None] = mapped_column(String(40))
-    bid_pending: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    list_as_of: Mapped[date | None] = mapped_column(Date)
-    source_url: Mapped[str | None] = mapped_column(Text)
-
-
 class SheriffSale(Base, TimestampMixin, IngestionMixin):
     __tablename__ = "sheriff_sale"
     __table_args__ = (

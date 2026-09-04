@@ -1,10 +1,9 @@
 import asyncio
-import sys
 
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
-from lotscope.core.markets import market_argument
+from lotscope.core.market import MARKET_CODE
 from lotscope.ops.invariants import breaches, check_invariants
 
 
@@ -32,7 +31,7 @@ async def _run(market: str) -> int:
 
 
 def main() -> None:
-    market = market_argument(sys.argv[1:]) or "phl"
+    market = MARKET_CODE
     raise SystemExit(asyncio.run(_run(market)))
 
 

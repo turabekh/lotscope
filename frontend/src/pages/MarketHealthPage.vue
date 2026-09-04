@@ -31,12 +31,6 @@ function launchColor(status: string): string {
   return 'grey'
 }
 
-function stateColor(state: string): string {
-  if (state === 'available') return 'positive'
-  if (state === 'no_data_source') return 'negative'
-  return 'warning'
-}
-
 function gateStatusColor(status: string): string {
   if (status === 'met' || status === 'pass') return 'positive'
   if (status === 'honest_degradation') return 'teal'
@@ -172,19 +166,6 @@ watch(marketCode, () => {
           </tbody>
         </q-markup-table>
 
-        <div v-if="detail.capabilities.length" class="text-subtitle2 q-mt-md q-mb-xs">
-          Capability gaps
-        </div>
-        <div v-if="detail.capabilities.length" class="capabilities">
-          <q-card v-for="c in detail.capabilities" :key="c.category" flat bordered class="cap-card">
-            <div class="cap-head">
-              <span class="cap-name">{{ c.category }}</span>
-              <q-badge :color="stateColor(c.state)" text-color="white">{{ c.state }}</q-badge>
-            </div>
-            <div class="cap-detail">{{ c.detail }}</div>
-          </q-card>
-        </div>
-
         <template v-for="gate in detail.gates" :key="gate.gate_type">
           <div class="text-subtitle2 q-mt-md q-mb-xs">
             {{ gateLabel(gate.gate_type) }}
@@ -316,29 +297,6 @@ watch(marketCode, () => {
 .reason {
   color: #616161;
   font-size: 13px;
-}
-.capabilities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.cap-card {
-  padding: 10px 14px;
-  max-width: 340px;
-}
-.cap-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.cap-name {
-  font-weight: 600;
-}
-.cap-detail {
-  margin-top: 6px;
-  font-size: 13px;
-  color: #616161;
 }
 .versions {
   display: flex;

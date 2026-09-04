@@ -8,7 +8,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.distress.models import ParcelDistress
-from lotscope.distress.profiles import DistressScoringProfile, profile_for_market
+from lotscope.distress.profiles import DISTRESS_PROFILE, DistressScoringProfile
 from lotscope.distress.schemas import (
     DistressFactor,
     DistressResult,
@@ -289,16 +289,15 @@ async def assess_parcel_distress(
     ).one_or_none()
     if row is None:
         return None
-    profile = profile_for_market(row.market_code)
     tired = await _owner_is_tired(session, row.owner_key)
     tired_owner_keys = frozenset({row.owner_key}) if tired and row.owner_key else frozenset()
-    assessment = score_distress(_signals(row, tired_owner_keys), profile)
+    assessment = score_distress(_signals(row, tired_owner_keys), DISTRESS_PROFILE)
     return DistressResult(
         parcel_number=parcel_number,
         score=assessment.score,
         tier=assessment.tier,
         version=DISTRESS_VERSION,
-        profile_id=profile.profile_id,
+        profile_id=DISTRESS_PROFILE.profile_id,
         factors=[
             DistressFactor(code=f.code, label=f.label, weight=f.weight) for f in assessment.factors
         ],
@@ -321,21 +320,16 @@ async def recompute_distress(
         return 0
     now = datetime.now(UTC)
     values = []
-    profiles: dict[str, DistressScoringProfile] = {}
     for row in rows:
-        profile = profiles.get(row.market_code)
-        if profile is None:
-            profile = profile_for_market(row.market_code)
-            profiles[row.market_code] = profile
         signals = _signals(row, tired_owner_keys)
-        assessment = score_distress(signals, profile)
+        assessment = score_distress(signals, DISTRESS_PROFILE)
         values.append(
             {
                 "parcel_number": row.parcel_number,
                 "score": assessment.score,
                 "tier": assessment.tier,
                 "version": DISTRESS_VERSION,
-                "profile_id": profile.profile_id,
+                "profile_id": DISTRESS_PROFILE.profile_id,
                 "sources": _SOURCES,
                 "debt_counts": signals.is_delinquent,
                 "computed_at": now,
@@ -398,9 +392,8 @@ async def find_leads(
             },
         )
     ).all()
-    profile = profile_for_market(market_code)
     signals = await get_deal_signals(session, [row.parcel_number for row in rows])
-    return [_lead_item(row, signals.get(row.parcel_number), profile) for row in rows]
+    return [_lead_item(row, signals.get(row.parcel_number), DISTRESS_PROFILE) for row in rows]
 
 
 async def export_leads(

@@ -1,5 +1,4 @@
 import asyncio
-import sys
 from collections.abc import Iterator, Sequence
 
 from sqlalchemy import text
@@ -9,7 +8,6 @@ from lotscope.assemblage.service import recompute_assemblage
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
-from lotscope.core.markets import market_argument
 
 _VACANT_PARCEL_NUMBERS_SQL = text(
     "SELECT parcel_number FROM parcel "
@@ -58,7 +56,7 @@ async def _run(*, market: str | None) -> None:
 
 
 def main() -> None:
-    asyncio.run(_run(market=market_argument(sys.argv[1:])))
+    asyncio.run(_run(market=None))
 
 
 if __name__ == "__main__":

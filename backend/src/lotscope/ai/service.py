@@ -22,7 +22,6 @@ from lotscope.ai.prompts import (
     build_report_prompt,
     build_summary_prompt,
     build_user_prompt,
-    for_market,
 )
 from lotscope.ai.query_terms import extract_cites, extract_districts
 from lotscope.ai.retrieval import (
@@ -48,7 +47,6 @@ from lotscope.assessment.schemas import AssessmentResult
 from lotscope.assessment.service import analyze_parcel_assessment
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
-from lotscope.markets.capabilities import market_display_name, risk_coverage_note
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.risk.schemas import ViolationPosture
@@ -221,12 +219,6 @@ def _summary_facts(
         )
         if verdict.risk_flags:
             lines.extend(_risk_flag_lines(verdict.risk_flags))
-        coverage = risk_coverage_note(detail.market_code)
-        if coverage is not None:
-            lines.append(
-                f"Risk coverage: the risk read is {coverage}; some feeds present in other "
-                "markets are absent here, so no flags does not prove a clean parcel."
-            )
     if violations is not None:
         lines.append(_violation_posture_fact(violations))
     if distress is not None and distress.factors:
@@ -258,7 +250,7 @@ async def summarize_parcel(
 
     facts = _summary_facts(detail, verdict, distress, assessment, violations)
     raw = await generator.generate(
-        system=for_market(SUMMARY_SYSTEM_PROMPT, market_display_name(detail.market_code)),
+        system=SUMMARY_SYSTEM_PROMPT,
         user=build_summary_prompt(facts),
         schema=ParcelSummary,
     )
@@ -323,7 +315,7 @@ async def draft_parcel_report(
 
     facts = _report_facts(detail, verdict, distress, assessment, cited_section, violations)
     raw = await generator.generate(
-        system=for_market(REPORT_SYSTEM_PROMPT, market_display_name(detail.market_code)),
+        system=REPORT_SYSTEM_PROMPT,
         user=build_report_prompt(facts),
         schema=ParcelReport,
     )
@@ -456,7 +448,7 @@ async def ask_the_parcel(
     user_prompt = build_user_prompt(question, _parcel_facts(detail, verdict), documents)
 
     raw = await generator.generate(
-        system=for_market(SYSTEM_PROMPT, market_display_name(detail.market_code)),
+        system=SYSTEM_PROMPT,
         user=user_prompt,
         schema=ParcelAnswer,
     )

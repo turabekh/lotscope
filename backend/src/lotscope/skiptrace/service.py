@@ -5,8 +5,7 @@ from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.core.errors import ForbiddenError, QuotaExceededError, ValidationError
-from lotscope.markets.capabilities import hidden_surfaces
+from lotscope.core.errors import QuotaExceededError, ValidationError
 from lotscope.skiptrace.models import (
     APPEAL_PACKET_REASONS,
     REASON_APPEAL_PACKET_BURN,
@@ -25,7 +24,6 @@ from lotscope.skiptrace.schemas import (
 )
 
 CACHE_TTL_DAYS = 30
-_SKIP_TRACE_SURFACE = "skip_trace"
 
 _OWNER_SQL = text(
     "SELECT owner, owner_key, mailing_address, market_code "
@@ -155,8 +153,6 @@ async def trace_owner(
     subject = (await session.execute(_OWNER_SQL, {"parcel_number": parcel_number})).one_or_none()
     if subject is None:
         raise ValidationError(f"Parcel {parcel_number} was not found.")
-    if _SKIP_TRACE_SURFACE in hidden_surfaces(subject.market_code):
-        raise ForbiddenError("Skip trace is not available in this market.")
     if subject.owner_key is None:
         raise ValidationError("This parcel has no owner on record to trace.")
     owner_key = subject.owner_key

@@ -14,10 +14,9 @@ from lotscope.api.deps import (
 from lotscope.core.config import Settings
 from lotscope.core.errors import NotFoundError
 from lotscope.ingestion.loaders.sheriff_civilview import CivilViewSheriffSource
-from lotscope.ops.schemas import FleetOverview, GateBoard, MarketHealthDetail, SheriffCoverage
+from lotscope.ops.schemas import FleetOverview, MarketHealthDetail, SheriffCoverage
 from lotscope.ops.service import (
     fleet_overview,
-    gate_board,
     market_health,
     sheriff_sale_coverage,
 )
@@ -35,11 +34,6 @@ _SHERIFF_COVERAGE_MARKET = "phl"
 @router.get("/fleet", response_model=FleetOverview)
 async def ops_fleet(session: SessionDep, admin: AdminDep, settings: SettingsDep) -> FleetOverview:
     return await fleet_overview(session, datetime.now(UTC), settings.git_sha)
-
-
-@router.get("/gates", response_model=GateBoard)
-async def ops_gates(session: SessionDep, admin: AdminDep) -> GateBoard:
-    return await gate_board(session, datetime.now(UTC))
 
 
 @router.post("/sheriff-coverage", response_model=SheriffCoverage)
