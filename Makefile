@@ -110,6 +110,7 @@ lint: ## Lint (backend + frontend) - mirrors what CI runs
 	cd $(BACKEND) && uv run ruff check .
 	cd $(BACKEND) && uv run ruff format --check .
 	cd $(FRONTEND) && pnpm lint
+	cd $(FRONTEND) && pnpm format:check
 
 fmt: ## Format and autofix (backend + frontend)
 	cd $(BACKEND) && uv run ruff format . && uv run ruff check --fix .

@@ -33,7 +33,11 @@ export interface ParcelDetail {
 }
 
 export type ChecklistStatus =
-  'pass' | 'fail' | 'potential_issue' | 'not_evaluated' | 'not_applicable'
+  | 'pass'
+  | 'fail'
+  | 'potential_issue'
+  | 'not_evaluated'
+  | 'not_applicable'
 export type ChecklistAvailability = 'available' | 'no_data_source' | 'pending_load'
 
 export interface ChecklistItem {
@@ -69,7 +73,10 @@ export interface DevelopmentProgram {
 }
 
 export type BuildabilityPosture =
-  'by_right' | 'variance_required' | 'master_plan_required' | 'undetermined'
+  | 'by_right'
+  | 'variance_required'
+  | 'master_plan_required'
+  | 'undetermined'
 
 export interface ParcelChecklist {
   parcel_number: string
@@ -124,7 +131,13 @@ export interface SourceFreshness {
 }
 
 export type CorrectionSection =
-  'verdict' | 'buildability' | 'valuation' | 'deal' | 'risk' | 'ownership' | 'other'
+  | 'verdict'
+  | 'buildability'
+  | 'valuation'
+  | 'deal'
+  | 'risk'
+  | 'ownership'
+  | 'other'
 
 export interface CorrectionCreate {
   section: CorrectionSection

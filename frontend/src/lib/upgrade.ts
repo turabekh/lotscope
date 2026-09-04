@@ -1,5 +1,12 @@
 export type UpgradeCap =
-  'parcel_views' | 'ask' | 'saved_search' | 'leads' | 'export' | 'letters' | 'offer' | 'buyer_intel'
+  | 'parcel_views'
+  | 'ask'
+  | 'saved_search'
+  | 'leads'
+  | 'export'
+  | 'letters'
+  | 'offer'
+  | 'buyer_intel'
 
 export interface UpgradeCopy {
   headline: string

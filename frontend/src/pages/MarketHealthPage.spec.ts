@@ -7,8 +7,7 @@ import MarketHealthPage from '@/pages/MarketHealthPage.vue'
 import type { User } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
-vi.mock('vue-router', () => ({
-  }))
+vi.mock('vue-router', () => ({}))
 
 const { getMarketHealthMock } = vi.hoisted(() => ({
   getMarketHealthMock: vi.fn(() =>
