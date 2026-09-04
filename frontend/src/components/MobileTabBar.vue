@@ -3,14 +3,12 @@ import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { useMarketStore } from '@/stores/market'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const emit = defineEmits<{ more: [] }>()
 
 const route = useRoute()
-const market = useMarketStore()
 const { alerts } = storeToRefs(useWatchlistStore())
 const { newTotal } = storeToRefs(useSavedSearchesStore())
 
@@ -41,7 +39,7 @@ function isActive(name: string): boolean {
       :key="tab.name"
       class="tab"
       :class="{ active: isActive(tab.name) }"
-      :to="{ name: tab.name, params: { market: market.active } }"
+      :to="{ name: tab.name }"
     >
       <q-icon :name="tab.icon" size="22px" />
       <span>{{ tab.label }}</span>

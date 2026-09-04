@@ -7,11 +7,9 @@ import { ApiError, api } from '@/lib/api'
 import { severityColor, severityIcon } from '@/lib/format'
 import type { FeedEvent, FeedResponse } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 
 const router = useRouter()
-const market = useMarketStore()
 const auth = useAuthStore()
 const savedSearches = useSavedSearchesStore()
 const { user } = storeToRefs(auth)
@@ -55,7 +53,7 @@ async function load(): Promise<void> {
 }
 
 function openEvent(event: FeedEvent): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: event.parcel_number } })
+  void router.push({ name: 'parcel', params: { id: event.parcel_number } })
 }
 
 function whenLabel(iso: string): string {

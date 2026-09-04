@@ -2,12 +2,11 @@
 import { computed } from 'vue'
 
 import { buildQualifier, postureDisplay, resolvePosture } from '@/lib/by-right'
-import { formatRange, marketCodeFromParcelNumber, scoreVar } from '@/lib/format'
+import { formatRange, scoreVar } from '@/lib/format'
 import { screeningDisplay } from '@/lib/screening'
 import { wideAreaSearchNote } from '@/lib/comp-tier'
 import { rankedDealKillers } from '@/lib/deal-killers'
 import type { ParcelChecklist, VerdictResult } from '@/lib/types'
-import { useMarketStore } from '@/stores/market'
 
 const props = defineProps<{
   verdict: VerdictResult
@@ -15,8 +14,6 @@ const props = defineProps<{
   checklist?: ParcelChecklist | null
 }>()
 const emit = defineEmits<{ explain: [] }>()
-
-const market = useMarketStore()
 
 interface Pillar {
   key: string
@@ -69,14 +66,9 @@ const valuePillar = computed<Pillar>(() => {
 const riskPillar = computed<Pillar>(() => {
   const score = props.verdict.risk_score
   const count = props.verdict.risk_flags.length
-  const coverageNote = market.infoByCode(
-    marketCodeFromParcelNumber(props.verdict.parcel_number),
-  )?.risk_coverage_note
   const tone: Pillar['tone'] =
     score == null ? 'neutral' : score >= 50 ? 'caution' : score >= 20 ? 'warning' : 'positive'
-  const cleanHint = coverageNote
-    ? `No major risk flags found ${coverageNote} — absent feeds mean this is not a proven clean result.`
-    : 'No major risk flags found.'
+  const cleanHint = 'No major risk flags found.'
   return {
     key: 'risk',
     label: 'Risk',

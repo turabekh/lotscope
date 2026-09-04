@@ -46,8 +46,8 @@ function shortSha(value: string): string {
   return value === 'unknown' ? 'unknown' : value.slice(0, 7)
 }
 
-function openMarket(marketCode: string): void {
-  void router.push({ name: 'ops-market', params: { market: marketCode } })
+function openMarket(): void {
+  void router.push({ name: 'ops-market' })
 }
 
 async function load(): Promise<void> {
@@ -110,7 +110,7 @@ onMounted(() => {
             v-for="row in fleet?.markets ?? []"
             :key="row.market_code"
             class="fleet-row"
-            @click="openMarket(row.market_code)"
+            @click="openMarket()"
           >
             <td class="text-left">
               <div class="market-name">{{ row.name }}</div>

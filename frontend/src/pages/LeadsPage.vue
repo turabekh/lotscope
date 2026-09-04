@@ -8,10 +8,8 @@ import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import type { LeadItem } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 
 const router = useRouter()
-const market = useMarketStore()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
@@ -47,7 +45,6 @@ async function load(): Promise<void> {
   error.value = null
   try {
     const response = await api.getLeads({
-      market: market.active,
       minScore: minScore.value,
       vacantOnly: vacantOnly.value,
       zipCode: zipCode.value.trim() || undefined,
@@ -62,7 +59,7 @@ async function load(): Promise<void> {
 }
 
 function openLead(lead: LeadItem): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: lead.parcel_number } })
+  void router.push({ name: 'parcel', params: { id: lead.parcel_number } })
 }
 
 const isFree = computed(() => (user.value?.tier ?? 'free') === 'free')

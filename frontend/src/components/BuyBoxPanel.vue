@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 
 import { useAreaSearchStore } from '@/stores/areaSearch'
 import { USE_CLASS_OPTIONS, useFiltersStore } from '@/stores/filters'
-import { useMarketStore } from '@/stores/market'
 
 const filters = useFiltersStore()
 const { vacantOnly, useClasses } = storeToRefs(filters)
@@ -22,7 +21,6 @@ const {
   underpricedOnly,
   byRightOnly,
 } = storeToRefs(areaSearch)
-const market = useMarketStore()
 const router = useRouter()
 
 const VALUE_MAX = 1_000_000
@@ -85,7 +83,6 @@ function reset(): void {
 function saveAlert(): void {
   void router.push({
     name: 'saved-searches',
-    params: { market: market.active },
     query: vacantOnly.value ? { vacant: '1' } : {},
   })
 }

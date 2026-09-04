@@ -10,12 +10,10 @@ import { formatCurrency } from '@/lib/format'
 import type { DealActivityItem, DealItem, DealStage } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 import { useCreditsStore } from '@/stores/credits'
-import { useMarketStore } from '@/stores/market'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 
 const $q = useQuasar()
 const router = useRouter()
-const market = useMarketStore()
 const auth = useAuthStore()
 const pipeline = usePipelineStore()
 const credits = useCreditsStore()
@@ -116,7 +114,7 @@ function openOffer(deal: DealItem): void {
 }
 
 function openParcel(deal: DealItem): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: deal.parcel_number } })
+  void router.push({ name: 'parcel', params: { id: deal.parcel_number } })
 }
 
 function onDragStart(event: DragEvent, deal: DealItem): void {
@@ -264,7 +262,7 @@ async function skipTraceContact(): Promise<void> {
         no-caps
         color="primary"
         label="Browse the map"
-        :to="{ name: 'explore', params: { market: market.active } }"
+        :to="{ name: 'explore' }"
       />
     </div>
 
@@ -466,7 +464,7 @@ async function skipTraceContact(): Promise<void> {
           {{ detailDeal?.address ?? detailDeal?.parcel_number }}
         </q-card-section>
         <q-card-section class="q-gutter-sm">
-          <div v-if="!market.isHidden('skip_trace')" class="row items-center q-gutter-sm">
+          <div v-if="true" class="row items-center q-gutter-sm">
             <q-btn
               outline
               no-caps

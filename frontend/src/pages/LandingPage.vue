@@ -4,11 +4,9 @@ import { storeToRefs } from 'pinia'
 import HeroShowcase from '@/components/HeroShowcase.vue'
 import PricingPlans from '@/components/PricingPlans.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 
 const auth = useAuthStore()
 const { isAuthenticated } = storeToRefs(auth)
-const market = useMarketStore()
 
 const features = [
   {
@@ -50,7 +48,7 @@ const features = [
           text-color="indigo-10"
           no-caps
           label="Open the map"
-          :to="{ name: 'explore', params: { market: market.active } }"
+          :to="{ name: 'explore' }"
         />
         <q-btn v-else flat dense no-caps label="Sign in" :to="{ name: 'login' }" />
       </q-toolbar>
@@ -78,7 +76,7 @@ const features = [
                 icon="map"
                 label="Open the map"
                 class="cta-primary"
-                :to="{ name: 'explore', params: { market: market.active } }"
+                :to="{ name: 'explore' }"
               />
               <template v-else>
                 <q-btn
@@ -137,11 +135,7 @@ const features = [
             color="primary"
             no-caps
             :label="isAuthenticated ? 'Open the map' : 'Get started — it’s free'"
-            :to="
-              isAuthenticated
-                ? { name: 'explore', params: { market: market.active } }
-                : { name: 'register' }
-            "
+            :to="isAuthenticated ? { name: 'explore' } : { name: 'register' }"
           />
           <p class="disclaimer">
             Informational only — not legal, financial or real-estate advice. City data is provided

@@ -77,7 +77,6 @@ vi.mock('@/lib/api', async (importOriginal) => {
       label: 'Recompute distress index',
       kind: 'recompute',
       description: 'Recompute the distress index.',
-      market: null,
       dataset: null,
       params: [],
       latest_run: latestRun,
@@ -146,10 +145,9 @@ describe('AdminPage jobs console', () => {
     expect(runJobMock).toHaveBeenCalledWith('ingest:hbg:zoning', {})
   })
 
-  it('renders the server data puller with known-source shortcuts', async () => {
+  it('renders the server data puller', async () => {
     const wrapper = await mountAdmin()
     expect(wrapper.text()).toContain('Pull data from the server')
-    expect(wrapper.text()).toContain('Dauphin repository list (PDF)')
   })
 
   it('opens a param dialog for a job with parameters', async () => {

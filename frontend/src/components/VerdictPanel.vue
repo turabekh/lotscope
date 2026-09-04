@@ -8,7 +8,6 @@ import {
   formatPercent,
   formatRange,
   formatSqft,
-  marketCodeFromParcelNumber,
   severityColor,
   severityIcon,
   severityVar,
@@ -23,7 +22,6 @@ import {
 } from '@/lib/by-right'
 import { wideAreaSearchNote } from '@/lib/comp-tier'
 import type { ParcelChecklist, VerdictResult } from '@/lib/types'
-import { useMarketStore } from '@/stores/market'
 
 const props = defineProps<{
   verdict: VerdictResult
@@ -31,13 +29,7 @@ const props = defineProps<{
   checklist?: ParcelChecklist | null
 }>()
 
-const market = useMarketStore()
-
-const coverageNote = computed(
-  () =>
-    market.infoByCode(marketCodeFromParcelNumber(props.verdict.parcel_number))
-      ?.risk_coverage_note ?? null,
-)
+const coverageNote = null
 
 interface Status {
   label: string
@@ -173,7 +165,7 @@ const confidenceHint = computed(() =>
         </div>
       </div>
       <VarianceOutlookLine
-        v-if="verdict.needs_variance && !market.isHidden('zba_variance')"
+        v-if="verdict.needs_variance && true"
         :parcel-number="verdict.parcel_number"
       />
     </q-card-section>

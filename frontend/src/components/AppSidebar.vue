@@ -3,9 +3,7 @@ import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-import MarketSwitcher from '@/components/MarketSwitcher.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
@@ -13,7 +11,6 @@ withDefaults(defineProps<{ collapsed: boolean; mobile?: boolean }>(), { mobile: 
 const emit = defineEmits<{ toggle: []; navigate: [] }>()
 
 const route = useRoute()
-const market = useMarketStore()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 const { alerts } = storeToRefs(useWatchlistStore())
@@ -36,7 +33,7 @@ const sections = computed<NavLink[]>(() => [
 
 const researchSections = computed<NavLink[]>(() => [
   {
-    label: market.activeInfo?.forced_sale_surface_label ?? 'Sheriff sales',
+    label: 'Sheriff sales',
     icon: 'gavel',
     name: 'sheriff-sales',
   },
@@ -47,7 +44,7 @@ const researchSections = computed<NavLink[]>(() => [
 ])
 
 function visible(links: NavLink[]): NavLink[] {
-  return links.filter((item) => !market.isHidden(item.name.replace(/-/g, '_')))
+  return links.filter(() => true)
 }
 
 const visibleSections = computed<NavLink[]>(() => visible(sections.value))
@@ -64,18 +61,12 @@ const researchOpen = computed<boolean>(() =>
 
 <template>
   <div class="sidebar column no-wrap fit">
-    <router-link
-      :to="{ name: 'home', params: { market: market.active } }"
-      class="brand"
-      aria-label="LotScope home"
-    >
+    <router-link :to="{ name: 'home' }" class="brand" aria-label="LotScope home">
       <span class="brand-mark">◧</span>
       <span v-if="!collapsed" class="brand-name">LotScope <span class="brand-sub">PHL</span></span>
     </router-link>
 
-    <div v-if="!mobile" class="switcher-slot" :class="{ mini: collapsed }">
-      <MarketSwitcher :collapsed="collapsed" />
-    </div>
+    <div v-if="!mobile" class="switcher-slot" :class="{ mini: collapsed }"></div>
 
     <q-list class="nav" data-test="nav-primary">
       <q-item
@@ -86,7 +77,7 @@ const researchOpen = computed<boolean>(() =>
         :active="isActive(item.name)"
         active-class="nav-active"
         class="nav-item"
-        :to="{ name: item.name, params: { market: market.active } }"
+        :to="{ name: item.name }"
         @click="emit('navigate')"
       >
         <q-item-section avatar class="nav-avatar">
@@ -123,7 +114,7 @@ const researchOpen = computed<boolean>(() =>
           :active="isActive(item.name)"
           active-class="nav-active"
           class="nav-item nav-nested"
-          :to="{ name: item.name, params: { market: market.active } }"
+          :to="{ name: item.name }"
           @click="emit('navigate')"
         >
           <q-item-section avatar class="nav-avatar">

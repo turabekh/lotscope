@@ -5,13 +5,11 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
-import type { RepositoryList, SheriffSaleItem, SheriffSalesResponse } from '@/lib/types'
+import type { SheriffSaleItem, SheriffSalesResponse } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 
 const $q = useQuasar()
 const router = useRouter()
-const market = useMarketStore()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
@@ -20,7 +18,6 @@ const hasAccess = computed(() => SHERIFF_TIERS.includes(user.value?.tier ?? 'fre
 
 const zip = ref('')
 const result = ref<SheriffSalesResponse | null>(null)
-const repo = ref<RepositoryList | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -30,7 +27,6 @@ async function load(): Promise<void> {
   error.value = null
   try {
     result.value = await api.getSheriffSales({
-      market: market.active,
       zip: zip.value.trim() || undefined,
       limit: 200,
     })
@@ -38,11 +34,6 @@ async function load(): Promise<void> {
     error.value = cause instanceof ApiError ? cause.message : 'Could not load sheriff sales.'
   } finally {
     loading.value = false
-  }
-  try {
-    repo.value = await api.getRepositoryList(market.active)
-  } catch {
-    repo.value = null
   }
 }
 
@@ -61,7 +52,7 @@ const monthGroups = computed(() => {
 
 async function downloadIcs(): Promise<void> {
   try {
-    await api.downloadSheriffIcs(market.active)
+    await api.downloadSheriffIcs()
   } catch (cause) {
     error.value =
       cause instanceof ApiError ? cause.message : 'Could not download the calendar feed.'
@@ -70,7 +61,7 @@ async function downloadIcs(): Promise<void> {
 
 async function copySubscribeUrl(): Promise<void> {
   try {
-    const { url } = await api.getSheriffSubscribeUrl(market.active)
+    const { url } = await api.getSheriffSubscribeUrl()
     await navigator.clipboard.writeText(url)
     $q.notify({
       type: 'positive',
@@ -83,11 +74,7 @@ async function copySubscribeUrl(): Promise<void> {
 }
 
 function openItem(item: SheriffSaleItem): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: item.parcel_number } })
-}
-
-function openRepo(parcelNumber: string): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: parcelNumber } })
+  void router.push({ name: 'parcel', params: { id: item.parcel_number } })
 }
 
 function daysUntil(iso: string | null): number | null {
@@ -246,38 +233,6 @@ onMounted(() => {
           class="text-caption text-grey-6 q-mt-sm"
         >
           Showing {{ result.returned }} of {{ result.total }} scheduled sales.
-        </div>
-
-        <div v-if="repo && repo.items.length" class="q-mt-lg">
-          <div class="text-subtitle1 text-weight-medium">
-            Repository — over-the-counter
-            <span class="text-caption text-grey-6">
-              · {{ repo.total }} parcels<template v-if="repo.list_as_of">
-                · as of {{ repo.list_as_of }}</template
-              >
-            </span>
-          </div>
-          <div class="text-caption text-grey-7 q-mb-sm">
-            County-held tax-repository parcels: written bid, $2,000 minimum plus fees, taxing-body
-            approval, no redemption period.
-          </div>
-          <q-list bordered separator class="rounded-borders">
-            <q-item
-              v-for="p in repo.items"
-              :key="p.parcel_number"
-              clickable
-              @click="openRepo(p.parcel_number)"
-            >
-              <q-item-section>
-                <div class="text-body2">{{ p.address ?? p.parcel_number }}</div>
-                <div class="text-caption text-grey-6">{{ p.parcel_number }}</div>
-              </q-item-section>
-              <q-item-section side class="row items-center q-gutter-xs">
-                <q-badge v-if="p.bid_pending" color="orange-8">bid pending</q-badge>
-                <q-badge v-if="p.city_status" color="blue-grey-6">{{ p.city_status }}</q-badge>
-              </q-item-section>
-            </q-item>
-          </q-list>
         </div>
       </template>
     </div>

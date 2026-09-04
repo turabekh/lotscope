@@ -6,10 +6,8 @@ import { useRouter } from 'vue-router'
 import { ApiError, api } from '@/lib/api'
 import type { AssemblageTopPlay, AssemblageTopResponse } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 
 const router = useRouter()
-const market = useMarketStore()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
@@ -35,7 +33,7 @@ async function load(): Promise<void> {
 }
 
 function openPlay(play: AssemblageTopPlay): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: play.parcel_number } })
+  void router.push({ name: 'parcel', params: { id: play.parcel_number } })
 }
 
 function unitLabel(play: AssemblageTopPlay): string {

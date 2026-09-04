@@ -4,8 +4,7 @@ import { Quasar } from 'quasar'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import VerdictHero from '@/components/VerdictHero.vue'
-import type { MarketInfo, ParcelChecklist, VerdictResult } from '@/lib/types'
-import { useMarketStore } from '@/stores/market'
+import type { ParcelChecklist, VerdictResult } from '@/lib/types'
 
 function makeVerdict(overrides: Partial<VerdictResult>): VerdictResult {
   return {
@@ -35,24 +34,6 @@ function makeVerdict(overrides: Partial<VerdictResult>): VerdictResult {
     computed_at: '2026-07-05T00:00:00Z',
     ...overrides,
   } as VerdictResult
-}
-
-function makeMarket(overrides: Partial<MarketInfo>): MarketInfo {
-  return {
-    code: 'phl',
-    name: 'Philadelphia',
-    state: 'PA',
-    url_slug: 'philadelphia',
-    map_center: [-75.16, 39.95],
-    map_bounds: null,
-    default_zoom: 12,
-    launch_status: 'live',
-    coverage_note: null,
-    hidden_surfaces: [],
-    risk_coverage_note: null,
-    forced_sale_surface_label: 'Sheriff sales',
-    ...overrides,
-  }
 }
 
 function mountHero(verdict: VerdictResult) {
@@ -153,51 +134,6 @@ describe('VerdictHero', () => {
       expect(text).not.toContain('can build by right')
       expect(text).not.toContain('approved')
     }
-  })
-
-  it('qualifies the clean risk pillar with the coverage note of the parcel market', () => {
-    const store = useMarketStore()
-    store.active = 'harrisburg'
-    store.infos = [
-      makeMarket({
-        code: 'hbg',
-        url_slug: 'harrisburg',
-        launch_status: 'pilot',
-        risk_coverage_note: 'based on available Harrisburg sources',
-      }),
-    ]
-    const wrapper = mountHero(
-      makeVerdict({ parcel_number: 'hbg:000000001', risk_score: 0, risk_flags: [] }),
-    )
-    expect(wrapper.text()).toContain('based on available Harrisburg sources')
-  })
-
-  it('leaves the clean risk pillar unqualified for a market with full coverage', () => {
-    const store = useMarketStore()
-    store.active = 'philadelphia'
-    store.infos = [makeMarket({ risk_coverage_note: null })]
-    const wrapper = mountHero(makeVerdict({ risk_score: 0, risk_flags: [] }))
-    expect(wrapper.text()).toContain('No major risk flags found')
-    expect(wrapper.text()).not.toContain('based on available')
-  })
-
-  it('does not leak the active market note onto a parcel from another market', () => {
-    const store = useMarketStore()
-    store.active = 'harrisburg'
-    store.infos = [
-      makeMarket({ code: 'phl', url_slug: 'philadelphia', risk_coverage_note: null }),
-      makeMarket({
-        code: 'hbg',
-        url_slug: 'harrisburg',
-        launch_status: 'pilot',
-        risk_coverage_note: 'based on available Harrisburg sources',
-      }),
-    ]
-    const wrapper = mountHero(
-      makeVerdict({ parcel_number: 'phl:875100090', risk_score: 0, risk_flags: [] }),
-    )
-    expect(wrapper.text()).toContain('No major risk flags found')
-    expect(wrapper.text()).not.toContain('based on available Harrisburg sources')
   })
 })
 

@@ -4,10 +4,8 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import SearchBox from '@/components/SearchBox.vue'
-import { useMarketStore } from '@/stores/market'
 
 const router = useRouter()
-const market = useMarketStore()
 const $q = useQuasar()
 
 const compact = computed(() => $q.screen.lt.sm)
@@ -15,7 +13,7 @@ const open = ref(false)
 
 function onSelect(parcelNumber: string): void {
   open.value = false
-  void router.push({ name: 'parcel', params: { market: market.active, id: parcelNumber } })
+  void router.push({ name: 'parcel', params: { id: parcelNumber } })
 }
 </script>
 

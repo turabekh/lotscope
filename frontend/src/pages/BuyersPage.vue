@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
 import type { BuyerRoster, BuyerStats } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 
 const router = useRouter()
-const market = useMarketStore()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
@@ -54,7 +52,7 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    roster.value = await api.getBuyers(market.active)
+    roster.value = await api.getBuyers()
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Could not load buyers.'
   } finally {
@@ -65,7 +63,7 @@ async function load(): Promise<void> {
 async function exportCsv(): Promise<void> {
   downloading.value = true
   try {
-    await api.downloadBuyersCsv(market.active)
+    await api.downloadBuyersCsv()
   } finally {
     downloading.value = false
   }
@@ -74,12 +72,11 @@ async function exportCsv(): Promise<void> {
 function openBuyer(buyer: BuyerStats): void {
   void router.push({
     name: 'buyer-profile',
-    params: { market: market.active, buyerKey: buyer.buyer_key },
+    params: { buyerKey: buyer.buyer_key },
   })
 }
 
 onMounted(load)
-watch(() => market.active, load)
 </script>
 
 <template>

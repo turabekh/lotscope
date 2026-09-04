@@ -131,7 +131,7 @@ const toolbarLabel = computed(() => {
 
 function onSelect(parcelNumber: string): void {
   if (isMobile.value) {
-    void router.push({ name: 'parcel', params: { market: route.params.market, id: parcelNumber } })
+    void router.push({ name: 'parcel', params: { id: parcelNumber } })
     return
   }
   void store.select(parcelNumber)

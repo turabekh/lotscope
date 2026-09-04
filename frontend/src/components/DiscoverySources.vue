@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { useMarketStore } from '@/stores/market'
-
-const market = useMarketStore()
-
 interface DiscoverySource {
   label: string
   icon: string
@@ -20,7 +16,7 @@ const sources = computed<DiscoverySource[]>(() => [
     blurb: 'New and changed lots since your last visit',
   },
   {
-    label: market.activeInfo?.forced_sale_surface_label ?? 'Sheriff sales',
+    label: 'Sheriff sales',
     icon: 'gavel',
     name: 'sheriff-sales',
     blurb: 'Lots heading to forced sale',
@@ -33,9 +29,7 @@ const sources = computed<DiscoverySource[]>(() => [
   },
 ])
 
-const visibleSources = computed<DiscoverySource[]>(() =>
-  sources.value.filter((source) => !market.isHidden(source.name.replace(/-/g, '_'))),
-)
+const visibleSources = computed<DiscoverySource[]>(() => sources.value.filter(() => true))
 </script>
 
 <template>
@@ -44,7 +38,7 @@ const visibleSources = computed<DiscoverySource[]>(() =>
     <router-link
       v-for="source in visibleSources"
       :key="source.name"
-      :to="{ name: source.name, params: { market: market.active } }"
+      :to="{ name: source.name }"
       class="source"
     >
       <q-icon :name="source.icon" size="18px" class="source-icon" />

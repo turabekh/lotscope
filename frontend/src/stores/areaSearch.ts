@@ -4,7 +4,6 @@ import { computed, ref } from 'vue'
 import { api } from '@/lib/api'
 import type { AreaSearchRequest, GeoPoint, SpatialParcelResult } from '@/lib/types'
 import { useFiltersStore } from '@/stores/filters'
-import { useMarketStore } from '@/stores/market'
 
 const DEFAULT_RADIUS_M = 500
 const RESULT_LIMIT = 200
@@ -18,7 +17,6 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   const polygon = ref<GeoJSON.Polygon | null>(null)
   const neighborhood = ref<string | null>(null)
   const neighborhoods = ref<string[]>([])
-  const loadedNeighborhoodMarket = ref<string | null>(null)
   const radiusM = ref(DEFAULT_RADIUS_M)
   const minValue = ref<number | null>(null)
   const maxValue = ref<number | null>(null)
@@ -51,7 +49,6 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   function criteria(): Partial<AreaSearchRequest> {
     const filters = useFiltersStore()
     const c: Partial<AreaSearchRequest> = {
-      market: useMarketStore().active,
       vacant_only: filters.vacantOnly,
     }
     if (filters.useClasses.length > 0 && filters.useClasses.length < 4)
@@ -80,11 +77,9 @@ export const useAreaSearchStore = defineStore('areaSearch', () => {
   }
 
   async function loadNeighborhoods(): Promise<void> {
-    const market = useMarketStore().active
-    if (loadedNeighborhoodMarket.value === market && neighborhoods.value.length > 0) return
-    const response = await api.getNeighborhoods(market)
+    if (neighborhoods.value.length > 0) return
+    const response = await api.getNeighborhoods()
     neighborhoods.value = response.neighborhoods.map((item) => item.name)
-    loadedNeighborhoodMarket.value = market
   }
 
   function toggle(): void {

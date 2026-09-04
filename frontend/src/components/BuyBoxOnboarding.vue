@@ -4,9 +4,6 @@ import { computed, ref } from 'vue'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { BuyBox, BuyBoxMatches, UnderwritingProfile } from '@/lib/types'
-import { useMarketStore } from '@/stores/market'
-
-const market = useMarketStore()
 
 const RISK_OPTIONS = [
   { value: 'low', label: 'Low' },
@@ -61,7 +58,7 @@ async function submit(): Promise<void> {
   errorMessage.value = null
   try {
     await saveDefaultProfile(buildBuyBox())
-    result.value = await api.getBuyBoxMatches(market.active, 5)
+    result.value = await api.getBuyBoxMatches(5)
   } catch {
     errorMessage.value = 'Your buy box could not be saved. Nothing was changed.'
   } finally {
@@ -137,8 +134,7 @@ async function submit(): Promise<void> {
       <div v-if="result" class="results" data-test="buy-box-results">
         <div class="results-head">
           <strong>{{ result.total }}</strong>
-          matching {{ result.total === 1 ? 'lot' : 'lots' }} in
-          {{ market.activeInfo?.name ?? result.market }}
+          matching {{ result.total === 1 ? 'lot' : 'lots' }} in Philadelphia
         </div>
 
         <div v-if="result.total === 0" class="note">
@@ -151,7 +147,7 @@ async function submit(): Promise<void> {
           :key="item.parcel_number"
           :to="{
             name: 'parcel',
-            params: { market: market.active, id: item.parcel_number },
+            params: { id: item.parcel_number },
           }"
           class="match"
         >

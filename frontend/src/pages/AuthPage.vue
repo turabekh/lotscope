@@ -4,13 +4,11 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 
 const props = defineProps<{ mode: 'login' | 'register' }>()
 
 const store = useAuthStore()
 const { loading, error } = storeToRefs(store)
-const market = useMarketStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -31,7 +29,6 @@ async function submit(): Promise<void> {
     }
     const fallback = router.resolve({
       name: 'home',
-      params: { market: market.active },
     }).fullPath
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : fallback
     await router.push(redirect)

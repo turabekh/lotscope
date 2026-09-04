@@ -15,7 +15,6 @@ import type { MapBounds } from '@/lib/explore'
 import { absoluteTileBaseUrl } from '@/lib/format'
 import { useAreaSearchStore } from '@/stores/areaSearch'
 import { useFiltersStore } from '@/stores/filters'
-import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
 
 const emit = defineEmits<{
@@ -54,11 +53,8 @@ const martinUrl = absoluteTileBaseUrl(
 )
 const PHILADELPHIA: [number, number] = [-75.1652, 39.9526]
 
-const marketStore = useMarketStore()
-const homeCenter = computed<[number, number]>(
-  () => marketStore.activeInfo?.map_center ?? PHILADELPHIA,
-)
-const homeZoom = computed<number>(() => marketStore.activeInfo?.default_zoom ?? 13)
+const homeCenter: [number, number] = PHILADELPHIA
+const homeZoom = 13
 
 const parcelStore = useParcelStore()
 const { detail, envelope, assemblage, focusTick } = storeToRefs(parcelStore)
@@ -613,7 +609,7 @@ function focusSelected(): void {
 }
 
 function flyHome(): void {
-  map?.flyTo({ center: homeCenter.value, zoom: 11.5, pitch: 0, duration: 900, essential: true })
+  map?.flyTo({ center: homeCenter, zoom: 11.5, pitch: 0, duration: 900, essential: true })
 }
 
 function addParcelLayers(instance: maplibregl.Map): void {
@@ -765,13 +761,12 @@ function addParcelLayers(instance: maplibregl.Map): void {
 }
 
 onMounted(() => {
-  void marketStore.load()
   if (container.value === null) return
   map = new maplibregl.Map({
     container: container.value,
     style: baseStyle,
-    center: homeCenter.value,
-    zoom: homeZoom.value,
+    center: homeCenter,
+    zoom: homeZoom,
     attributionControl: false,
   })
   map.addControl(new maplibregl.NavigationControl(), 'top-right')
@@ -797,19 +792,6 @@ onMounted(() => {
 watch(basemap, (id) => {
   void applyBasemap(id)
 })
-
-watch(
-  () => marketStore.active,
-  () => {
-    map?.flyTo({
-      center: homeCenter.value,
-      zoom: homeZoom.value,
-      pitch: 0,
-      duration: 900,
-      essential: true,
-    })
-  },
-)
 
 watch([vacantOnly, useClasses], () => {
   if (!map?.getLayer('parcels-fill')) return

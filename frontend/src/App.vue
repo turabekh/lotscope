@@ -4,12 +4,10 @@ import { useRoute } from 'vue-router'
 
 import AppShell from '@/components/AppShell.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 import { useThemeStore } from '@/stores/theme'
 
 const auth = useAuthStore()
 const theme = useThemeStore()
-const market = useMarketStore()
 const route = useRoute()
 
 theme.init()
@@ -42,7 +40,6 @@ function onVisibilityChange(): void {
 onMounted(async () => {
   await auth.ensureRestored()
   authResolved.value = true
-  void market.load()
   scheduleRefresh()
   document.addEventListener('visibilitychange', onVisibilityChange)
 })

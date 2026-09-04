@@ -6,7 +6,6 @@ import {
 } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
-import { DEFAULT_MARKET, isKnownMarket, useMarketStore } from '@/stores/market'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -52,105 +51,97 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, requiresAdmin: true, title: 'Fleet health' },
   },
   {
-    path: '/admin/ops/:market',
+    path: '/admin/ops/market',
     name: 'ops-market',
     component: () => import('@/pages/MarketHealthPage.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, title: 'Market health' },
   },
   {
-    path: '/:market',
-    name: 'market-root',
-    redirect: (to) => ({ name: 'home', params: { market: to.params.market } }),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/:market/home',
+    path: '/home',
     name: 'home',
     component: () => import('@/pages/HomePage.vue'),
     meta: { requiresAuth: true },
   },
   {
-    path: '/:market/explore',
+    path: '/explore',
     name: 'explore',
     component: () => import('@/pages/ExplorePage.vue'),
     meta: { requiresAuth: true },
   },
   {
-    path: '/:market/leads',
+    path: '/leads',
     name: 'leads',
     component: () => import('@/pages/LeadsPage.vue'),
     meta: { requiresAuth: true, title: 'Motivated-seller leads' },
   },
   {
-    path: '/:market/feed',
+    path: '/feed',
     name: 'feed',
     component: () => import('@/pages/FeedPage.vue'),
     meta: { requiresAuth: true, title: 'Deal feed' },
   },
   {
-    path: '/:market/sheriff-sales',
+    path: '/sheriff-sales',
     name: 'sheriff-sales',
     component: () => import('@/pages/SheriffSalesPage.vue'),
     meta: { requiresAuth: true, title: 'Sheriff sales' },
   },
   {
-    path: '/:market/buyers',
+    path: '/buyers',
     name: 'buyers',
     component: () => import('@/pages/BuyersPage.vue'),
     meta: { requiresAuth: true, title: 'Cash buyers' },
   },
   {
-    path: '/:market/buyers/:buyerKey',
+    path: '/buyers/:buyerKey',
     name: 'buyer-profile',
     component: () => import('@/pages/BuyerProfilePage.vue'),
     meta: { requiresAuth: true, title: 'Buyer profile' },
   },
   {
-    path: '/:market/top-plays',
+    path: '/top-plays',
     name: 'top-plays',
     component: () => import('@/pages/TopPlaysPage.vue'),
     meta: { requiresAuth: true, title: 'Top plays' },
   },
   {
-    path: '/:market/market',
+    path: '/market',
     name: 'market',
     component: () => import('@/pages/MarketPage.vue'),
     meta: { requiresAuth: true, title: 'Market' },
   },
   {
-    path: '/:market/pipeline',
+    path: '/pipeline',
     name: 'pipeline',
     component: () => import('@/pages/PipelinePage.vue'),
     meta: { requiresAuth: true, title: 'Deal pipeline' },
   },
   {
-    path: '/:market/lists',
+    path: '/lists',
     name: 'lists',
     component: () => import('@/pages/ListsPage.vue'),
     meta: { requiresAuth: true, title: 'Lists' },
   },
   {
-    path: '/:market/watchlist',
+    path: '/watchlist',
     name: 'watchlist',
     redirect: (to) => ({
       name: 'lists',
-      params: { market: to.params.market },
       query: { ...to.query, tab: 'lots' },
     }),
     meta: { requiresAuth: true },
   },
   {
-    path: '/:market/compare',
+    path: '/compare',
     name: 'compare',
-    redirect: (to) => ({ name: 'explore', params: { market: to.params.market }, query: to.query }),
+    redirect: (to) => ({ name: 'explore', query: to.query }),
     meta: { requiresAuth: true },
   },
   {
-    path: '/:market/saved-searches',
+    path: '/saved-searches',
     name: 'saved-searches',
     redirect: (to) => ({
       name: 'lists',
-      params: { market: to.params.market },
       query: { ...to.query, tab: 'searches' },
     }),
     meta: { requiresAuth: true },
@@ -161,45 +152,31 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/LegalPage.vue'),
   },
   {
-    path: '/parcel/:market/:id',
+    path: '/parcel/:id',
     name: 'parcel',
     component: () => import('@/pages/ParcelDossierPage.vue'),
     meta: { requiresAuth: true },
   },
 ]
 
-export const marketGuard: NavigationGuard = async (to) => {
+export const authGuard: NavigationGuard = async (to) => {
   const auth = useAuthStore()
-  const market = useMarketStore()
-
-  const marketParam = to.params.market
-  if (marketParam !== undefined && marketParam !== '') {
-    if (!isKnownMarket(marketParam)) {
-      return {
-        name: (to.name as string | undefined) ?? 'home',
-        params: { ...to.params, market: DEFAULT_MARKET },
-        query: to.query,
-        hash: to.hash,
-      }
-    }
-    market.set(marketParam)
-  }
 
   if (to.meta.requiresAuth && !auth.hasLiveToken) {
     auth.endSession()
     return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.meta.guestOnly && auth.hasLiveToken) {
-    return { name: 'home', params: { market: market.active } }
+    return { name: 'home' }
   }
   if (to.meta.requiresAdmin) {
     await auth.ensureRestored()
     if (auth.user === null || auth.user.role !== 'admin') {
-      return { name: 'home', params: { market: market.active } }
+      return { name: 'home' }
     }
   }
   if (to.name === 'landing' && auth.hasLiveToken) {
-    return { name: 'home', params: { market: market.active } }
+    return { name: 'home' }
   }
   return true
 }
@@ -209,4 +186,4 @@ export const router = createRouter({
   routes,
 })
 
-router.beforeEach(marketGuard)
+router.beforeEach(authGuard)

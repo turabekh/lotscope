@@ -33,11 +33,7 @@ export interface ParcelDetail {
 }
 
 export type ChecklistStatus =
-  | 'pass'
-  | 'fail'
-  | 'potential_issue'
-  | 'not_evaluated'
-  | 'not_applicable'
+  'pass' | 'fail' | 'potential_issue' | 'not_evaluated' | 'not_applicable'
 export type ChecklistAvailability = 'available' | 'no_data_source' | 'pending_load'
 
 export interface ChecklistItem {
@@ -73,10 +69,7 @@ export interface DevelopmentProgram {
 }
 
 export type BuildabilityPosture =
-  | 'by_right'
-  | 'variance_required'
-  | 'master_plan_required'
-  | 'undetermined'
+  'by_right' | 'variance_required' | 'master_plan_required' | 'undetermined'
 
 export interface ParcelChecklist {
   parcel_number: string
@@ -131,13 +124,7 @@ export interface SourceFreshness {
 }
 
 export type CorrectionSection =
-  | 'verdict'
-  | 'buildability'
-  | 'valuation'
-  | 'deal'
-  | 'risk'
-  | 'ownership'
-  | 'other'
+  'verdict' | 'buildability' | 'valuation' | 'deal' | 'risk' | 'ownership' | 'other'
 
 export interface CorrectionCreate {
   section: CorrectionSection
@@ -395,21 +382,6 @@ export interface SavedSearchListResponse {
 export interface GeoPoint {
   lat: number
   lng: number
-}
-
-export interface MarketInfo {
-  code: string
-  name: string
-  state: string | null
-  url_slug: string
-  map_center: [number, number]
-  map_bounds: number[] | null
-  default_zoom: number
-  launch_status: string
-  coverage_note: string | null
-  hidden_surfaces: string[]
-  risk_coverage_note: string | null
-  forced_sale_surface_label: string
 }
 
 export interface AreaSearchRequest {
@@ -1061,27 +1033,6 @@ export interface OpsJobRunRow {
   created_at: string
 }
 
-export interface OpsGateItem {
-  ordinal: number
-  title: string
-  status: string
-  satisfied: boolean
-  qualifier: string | null
-  threshold: string | null
-  measured: string | null
-  owner: string | null
-  evidence: string | null
-  spec_ref: string | null
-  as_of: string | null
-}
-
-export interface OpsGateSummary {
-  gate_type: string
-  satisfied: number
-  total: number
-  items: OpsGateItem[]
-}
-
 export interface OpsMarketHealthDetail {
   market_code: string
   name: string
@@ -1093,7 +1044,6 @@ export interface OpsMarketHealthDetail {
   zoning_standard_count: number
   zoning_district_count: number
   verdict_versions: OpsVerdictVersionCount[]
-  gates: OpsGateSummary[]
   recent_jobs: OpsJobRunRow[]
   generated_at: string
 }
@@ -1282,27 +1232,6 @@ export interface Usage {
   tier: string
   ask: UsageMetric
   parcel_views: UsageMetric
-}
-
-export interface RepositoryStatus {
-  in_repository: boolean
-  city_status: string | null
-  bid_pending: boolean
-  list_as_of: string | null
-  source_url: string | null
-}
-
-export interface RepositoryEntry {
-  parcel_number: string
-  address: string | null
-  city_status: string | null
-  bid_pending: boolean
-}
-
-export interface RepositoryList {
-  items: RepositoryEntry[]
-  list_as_of: string | null
-  total: number
 }
 
 export interface BuyBox {

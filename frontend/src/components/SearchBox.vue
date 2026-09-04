@@ -3,12 +3,9 @@ import { ref } from 'vue'
 
 import { api } from '@/lib/api'
 import type { ParcelSearchResult } from '@/lib/types'
-import { useMarketStore } from '@/stores/market'
 
 const props = withDefaults(defineProps<{ autofocus?: boolean }>(), { autofocus: false })
 const emit = defineEmits<{ select: [parcelNumber: string] }>()
-
-const market = useMarketStore()
 
 const query = ref('')
 const results = ref<ParcelSearchResult[]>([])
@@ -31,7 +28,7 @@ async function runSearch(): Promise<void> {
   }
   loading.value = true
   try {
-    const response = await api.search(term, market.active)
+    const response = await api.search(term)
     results.value = response.results
   } finally {
     loading.value = false

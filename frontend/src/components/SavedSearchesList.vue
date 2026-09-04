@@ -10,7 +10,6 @@ import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SavedSearchItem, SavedSearchMatchItem, SearchCriteria } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 import { emptyCriteria, useSavedSearchesStore } from '@/stores/savedSearches'
 
 const ZONING_PRESETS = ['RSA5', 'RSA3', 'RM1', 'RM2', 'CMX1', 'CMX2', 'CMX2.5', 'CMX3', 'ICMX']
@@ -19,7 +18,6 @@ const route = useRoute()
 const router = useRouter()
 const $q = useQuasar()
 const store = useSavedSearchesStore()
-const market = useMarketStore()
 const auth = useAuthStore()
 const { searches, limit, used, atLimit, loading } = storeToRefs(store)
 
@@ -156,7 +154,7 @@ function remove(search: SavedSearchItem): void {
 }
 
 function openParcel(match: SavedSearchMatchItem): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: match.parcel_number } })
+  void router.push({ name: 'parcel', params: { id: match.parcel_number } })
 }
 
 function summarize(search: SavedSearchItem): string {

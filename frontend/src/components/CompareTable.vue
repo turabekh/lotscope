@@ -5,11 +5,9 @@ import { useRouter } from 'vue-router'
 import { ApiError, api } from '@/lib/api'
 import type { ParcelCompareItem } from '@/lib/types'
 import { useCompareStore } from '@/stores/compare'
-import { useMarketStore } from '@/stores/market'
 
 const router = useRouter()
 const compare = useCompareStore()
-const market = useMarketStore()
 
 const items = ref<ParcelCompareItem[]>([])
 const loading = ref(false)
@@ -91,7 +89,7 @@ async function load(): Promise<void> {
 }
 
 function openParcel(parcelNumber: string): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: parcelNumber } })
+  void router.push({ name: 'parcel', params: { id: parcelNumber } })
 }
 
 watch(() => [...compare.parcelNumbers], load, { immediate: true })

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 
 import App from '@/App.vue'
-import { marketGuard, routes } from '@/router'
+import { authGuard, routes } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 
 const getMe = vi.fn()
@@ -25,7 +25,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
 
 function makeRouter(): Router {
   const router = createRouter({ history: createMemoryHistory(), routes })
-  router.beforeEach(marketGuard)
+  router.beforeEach(authGuard)
   return router
 }
 
@@ -71,7 +71,7 @@ describe('App auth boot gate', () => {
     useAuthStore().token = 'test-token'
 
     const router = makeRouter()
-    await router.push('/philadelphia/sheriff-sales')
+    await router.push('/sheriff-sales')
     await router.isReady()
 
     const wrapper = mountApp(router)

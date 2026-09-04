@@ -100,7 +100,7 @@ describe('OpsPage fleet health', () => {
   it('navigates to the market health page on row click', async () => {
     const wrapper = await mountPage()
     await wrapper.find('.fleet-row').trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'ops-market', params: { market: 'phl' } })
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ops-market' })
   })
 
   it('blocks non-admins', async () => {

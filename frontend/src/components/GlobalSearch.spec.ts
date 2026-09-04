@@ -10,7 +10,7 @@ import SearchBox from '@/components/SearchBox.vue'
 function makeRouter(): Router {
   return createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/parcel/:market/:id', name: 'parcel', component: { template: '<div />' } }],
+    routes: [{ path: '/parcel/:id', name: 'parcel', component: { template: '<div />' } }],
   })
 }
 
@@ -29,7 +29,7 @@ describe('GlobalSearch', () => {
 
     expect(push).toHaveBeenCalledWith({
       name: 'parcel',
-      params: { market: 'philadelphia', id: '000012345' },
+      params: { id: '000012345' },
     })
   })
 })

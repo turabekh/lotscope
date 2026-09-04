@@ -43,7 +43,6 @@ import type {
   LayersResponse,
   LeadsResponse,
   MarketContext,
-  MarketInfo,
   NeighborhoodListResponse,
   NeighborhoodMarketResponse,
   NextSheriffSale,
@@ -63,8 +62,6 @@ import type {
   PlansResponse,
   PortalResponse,
   RegisterPayload,
-  RepositoryList,
-  RepositoryStatus,
   SavedSearchDetail,
   SavedSearchListResponse,
   ScenariosResult,
@@ -166,13 +163,8 @@ async function downloadFile(path: string, filename: string, body?: unknown): Pro
 }
 
 export const api = {
-  getMarkets(): Promise<MarketInfo[]> {
-    return request('/markets')
-  },
-  search(query: string, market: string, limit = 10): Promise<ParcelSearchResponse> {
-    return request(
-      `/search?q=${encodeURIComponent(query)}&market=${encodeURIComponent(market)}&limit=${limit}`,
-    )
+  search(query: string, limit = 10): Promise<ParcelSearchResponse> {
+    return request(`/search?q=${encodeURIComponent(query)}&limit=${limit}`)
   },
   getParcel(parcelNumber: string): Promise<ParcelDetail> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}`)
@@ -200,17 +192,11 @@ export const api = {
   getNextSheriffSale(parcelNumber: string): Promise<NextSheriffSale | null> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/next-sheriff-sale`)
   },
-  getRepositoryStatus(parcelNumber: string): Promise<RepositoryStatus> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/repository`)
-  },
-  getRepositoryList(market: string): Promise<RepositoryList> {
-    return request(`/sheriff-sales/repository?market=${encodeURIComponent(market)}`)
-  },
   getVarianceOutlook(parcelNumber: string): Promise<VarianceOutlook> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/variance-outlook`)
   },
-  getNeighborhoodMarket(market: string): Promise<NeighborhoodMarketResponse> {
-    return request(`/neighborhoods/market?market=${encodeURIComponent(market)}`)
+  getNeighborhoodMarket(): Promise<NeighborhoodMarketResponse> {
+    return request('/neighborhoods/market')
   },
   getParcelSummary(parcelNumber: string): Promise<ParcelSummaryResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/summary`)
@@ -337,13 +323,11 @@ export const api = {
     )
   },
   getLeads(params: {
-    market?: string
     minScore?: number
     vacantOnly?: boolean
     zipCode?: string
   }): Promise<LeadsResponse> {
     const query = new URLSearchParams()
-    if (params.market) query.set('market', params.market)
     if (params.minScore != null) query.set('min_score', String(params.minScore))
     if (params.vacantOnly) query.set('vacant_only', 'true')
     if (params.zipCode) query.set('zip_code', params.zipCode)
@@ -404,8 +388,8 @@ export const api = {
   searchArea(payload: AreaSearchRequest): Promise<AreaSearchResponse> {
     return request('/search/area', { method: 'POST', body: JSON.stringify(payload) })
   },
-  getNeighborhoods(market: string): Promise<NeighborhoodListResponse> {
-    return request(`/neighborhoods?market=${encodeURIComponent(market)}`)
+  getNeighborhoods(): Promise<NeighborhoodListResponse> {
+    return request('/neighborhoods')
   },
   getAdminOverview(): Promise<AdminOverview> {
     return request('/admin/overview')
@@ -445,8 +429,8 @@ export const api = {
   getOwnCorrections(): Promise<CorrectionRecord[]> {
     return request('/corrections')
   },
-  getBuyBoxMatches(market: string, limit = 5): Promise<BuyBoxMatches> {
-    return request(`/underwriting/matches?market=${encodeURIComponent(market)}&limit=${limit}`)
+  getBuyBoxMatches(limit = 5): Promise<BuyBoxMatches> {
+    return request(`/underwriting/matches?limit=${limit}`)
   },
   listUnderwritingProfiles(): Promise<UnderwritingProfile[]> {
     return request('/underwriting/profiles')
@@ -523,17 +507,15 @@ export const api = {
   getParcelBuyers(parcelNumber: string): Promise<BuyersNearby> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/buyers`)
   },
-  getBuyers(market: string, minPurchases = 3): Promise<BuyerRoster> {
-    const query = new URLSearchParams({ market, min_purchases: String(minPurchases) })
+  getBuyers(minPurchases = 3): Promise<BuyerRoster> {
+    const query = new URLSearchParams({ min_purchases: String(minPurchases) })
     return request(`/buyers?${query.toString()}`)
   },
-  getBuyer(market: string, buyerKey: string): Promise<BuyerProfileDetail> {
-    const query = new URLSearchParams({ market })
-    return request(`/buyers/${encodeURIComponent(buyerKey)}?${query.toString()}`)
+  getBuyer(buyerKey: string): Promise<BuyerProfileDetail> {
+    return request(`/buyers/${encodeURIComponent(buyerKey)}`)
   },
-  downloadBuyersCsv(market: string): Promise<void> {
-    const query = new URLSearchParams({ market })
-    return downloadFile(`/buyers/export?${query.toString()}`, `lotscope-buyers-${market}.csv`)
+  downloadBuyersCsv(): Promise<void> {
+    return downloadFile('/buyers/export', 'lotscope-buyers.csv')
   },
   generateOffer(parcelNumber: string, payload: OfferRequest): Promise<void> {
     const slug = parcelNumber.replace(/:/g, '-')
@@ -703,10 +685,9 @@ export const api = {
     return request(`/feed${suffix ? `?${suffix}` : ''}`)
   },
   getSheriffSales(
-    params: { market?: string; from?: string; to?: string; zip?: string; limit?: number } = {},
+    params: { from?: string; to?: string; zip?: string; limit?: number } = {},
   ): Promise<SheriffSalesResponse> {
     const query = new URLSearchParams()
-    if (params.market != null) query.set('market', params.market)
     if (params.from != null) query.set('from', params.from)
     if (params.to != null) query.set('to', params.to)
     if (params.zip != null) query.set('zip', params.zip)
@@ -714,14 +695,11 @@ export const api = {
     const suffix = query.toString()
     return request(`/sheriff-sales${suffix ? `?${suffix}` : ''}`)
   },
-  downloadSheriffIcs(market: string): Promise<void> {
-    return downloadFile(
-      `/sheriff-sales/calendar.ics?market=${encodeURIComponent(market)}`,
-      `${market}-sales.ics`,
-    )
+  downloadSheriffIcs(): Promise<void> {
+    return downloadFile('/sheriff-sales/calendar.ics', 'phl-sales.ics')
   },
-  getSheriffSubscribeUrl(market: string): Promise<{ url: string }> {
-    return request(`/sheriff-sales/calendar/subscribe?market=${encodeURIComponent(market)}`)
+  getSheriffSubscribeUrl(): Promise<{ url: string }> {
+    return request('/sheriff-sales/calendar/subscribe')
   },
   getTopPlays(
     params: { neighborhood?: string; zoning?: string; limit?: number } = {},

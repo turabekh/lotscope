@@ -5,13 +5,10 @@ import { useRoute } from 'vue-router'
 
 import DataCoverageChip from '@/components/DataCoverageChip.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
-import MarketSwitcher from '@/components/MarketSwitcher.vue'
 import UserMenu from '@/components/UserMenu.vue'
-import { useMarketStore } from '@/stores/market'
 import { useThemeStore } from '@/stores/theme'
 
 const route = useRoute()
-const market = useMarketStore()
 const theme = useThemeStore()
 const $q = useQuasar()
 
@@ -19,8 +16,8 @@ const isMobile = computed(() => $q.screen.lt.md)
 const isNarrow = computed(() => $q.screen.lt.sm)
 const title = computed(() => {
   if (isMobile.value) return ''
-  if (route.name === 'sheriff-sales' && market.activeInfo?.forced_sale_surface_label) {
-    return market.activeInfo.forced_sale_surface_label
+  if (route.name === 'sheriff-sales' && 'Sheriff sales') {
+    return 'Sheriff sales'
   }
   return route.meta.title ?? ''
 })
@@ -29,7 +26,6 @@ const title = computed(() => {
 <template>
   <q-header class="topbar">
     <q-toolbar class="topbar-toolbar">
-      <MarketSwitcher v-if="isMobile" variant="pill" :compact="isNarrow" class="q-mr-xs" />
       <span v-if="title" class="page-title">{{ title }}</span>
       <GlobalSearch v-if="!isNarrow" />
       <slot name="lead" />

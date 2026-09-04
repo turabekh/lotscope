@@ -4,13 +4,11 @@ import { computed } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
 import type { LeadItem } from '@/lib/types'
-import { useMarketStore } from '@/stores/market'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const props = defineProps<{ topLead: LeadItem | null }>()
 
-const market = useMarketStore()
 const { searches } = storeToRefs(useSavedSearchesStore())
 const { items: watchItems } = storeToRefs(useWatchlistStore())
 
@@ -46,7 +44,7 @@ const action = computed<Action>(() => {
       detail: 'Screened against your buy box since you last looked.',
       cta: 'Review matches',
       icon: 'bolt',
-      to: { name: 'lists', params: { market: market.active }, query: { tab: 'searches' } },
+      to: { name: 'lists', query: { tab: 'searches' } },
     }
   }
 
@@ -59,7 +57,7 @@ const action = computed<Action>(() => {
       detail: 'Distress, liens or scores moved on lots you are tracking.',
       cta: 'See what changed',
       icon: 'notifications_active',
-      to: { name: 'lists', params: { market: market.active }, query: { tab: 'lots' } },
+      to: { name: 'lists', query: { tab: 'lots' } },
     }
   }
 
@@ -73,7 +71,7 @@ const action = computed<Action>(() => {
       icon: 'trending_up',
       to: {
         name: 'parcel',
-        params: { market: market.active, id: props.topLead.parcel_number },
+        params: { id: props.topLead.parcel_number },
       },
     }
   }
@@ -85,7 +83,7 @@ const action = computed<Action>(() => {
     detail: 'Search the map, or set a buy box and let matches come to you.',
     cta: 'Find lots',
     icon: 'travel_explore',
-    to: { name: 'explore', params: { market: market.active } },
+    to: { name: 'explore' },
   }
 })
 </script>

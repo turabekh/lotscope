@@ -4,14 +4,12 @@ import type { RouteLocationRaw } from 'vue-router'
 
 import type { FirstStep } from '@/stores/firstSteps'
 import { useFirstStepsStore } from '@/stores/firstSteps'
-import { useMarketStore } from '@/stores/market'
 
 const firstSteps = useFirstStepsStore()
-const market = useMarketStore()
 
 function stepTarget(step: FirstStep): RouteLocationRaw {
   if (!step.marketScoped) return { name: step.routeName }
-  return { name: step.routeName, params: { market: market.active } }
+  return { name: step.routeName }
 }
 
 const expandedByUser = ref(false)

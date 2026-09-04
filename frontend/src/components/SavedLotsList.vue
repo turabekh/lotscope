@@ -8,11 +8,9 @@ import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { WatchlistItem } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const router = useRouter()
-const market = useMarketStore()
 const watchlist = useWatchlistStore()
 const { items, limit, used, loading, alerts } = storeToRefs(watchlist)
 const { user } = storeToRefs(useAuthStore())
@@ -61,7 +59,7 @@ function markSeen(item: WatchlistItem): void {
 }
 
 function openParcel(item: WatchlistItem): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: item.parcel_number } })
+  void router.push({ name: 'parcel', params: { id: item.parcel_number } })
 }
 
 function onTags(item: WatchlistItem, tags: string[]): void {
@@ -145,7 +143,7 @@ function remove(item: WatchlistItem): void {
         no-caps
         color="primary"
         label="Browse the map"
-        :to="{ name: 'explore', params: { market: market.active } }"
+        :to="{ name: 'explore' }"
       />
     </div>
 

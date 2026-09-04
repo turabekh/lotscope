@@ -4,13 +4,11 @@ import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 import { useThemeStore } from '@/stores/theme'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useAuthStore()
-const market = useMarketStore()
 const { user, isAuthenticated } = storeToRefs(store)
 const watchlist = useWatchlistStore()
 const { alerts } = storeToRefs(watchlist)
@@ -42,19 +40,19 @@ function goAccount(): void {
 }
 
 function goLeads(): void {
-  void router.push({ name: 'leads', params: { market: market.active } })
+  void router.push({ name: 'leads' })
 }
 
 function goWatchlist(): void {
-  void router.push({ name: 'watchlist', params: { market: market.active } })
+  void router.push({ name: 'watchlist' })
 }
 
 function goPipeline(): void {
-  void router.push({ name: 'pipeline', params: { market: market.active } })
+  void router.push({ name: 'pipeline' })
 }
 
 function goSavedSearches(): void {
-  void router.push({ name: 'saved-searches', params: { market: market.active } })
+  void router.push({ name: 'saved-searches' })
 }
 
 function goAdmin(): void {

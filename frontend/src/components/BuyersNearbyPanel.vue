@@ -6,11 +6,9 @@ import { useRouter } from 'vue-router'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import type { BuyersNearby, NearbyBuyer } from '@/lib/types'
-import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
 
 const router = useRouter()
-const market = useMarketStore()
 const store = useParcelStore()
 const { detail } = storeToRefs(store)
 
@@ -43,7 +41,7 @@ async function load(parcelNumber: string | undefined): Promise<void> {
 function openBuyer(buyer: NearbyBuyer): void {
   void router.push({
     name: 'buyer-profile',
-    params: { market: market.active, buyerKey: buyer.buyer_key },
+    params: { buyerKey: buyer.buyer_key },
   })
 }
 
@@ -85,9 +83,7 @@ watch(() => detail.value?.parcel_number, load, { immediate: true })
         </q-item-section>
       </q-item>
     </q-list>
-    <router-link class="all-link" :to="{ name: 'buyers', params: { market: market.active } }">
-      See all active buyers →
-    </router-link>
+    <router-link class="all-link" :to="{ name: 'buyers' }"> See all active buyers → </router-link>
   </div>
 </template>
 

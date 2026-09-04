@@ -5,7 +5,6 @@ import { computed, onMounted, ref } from 'vue'
 
 import AskBox from '@/components/AskBox.vue'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
-import RepositoryBadge from '@/components/RepositoryBadge.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import AssessmentPanel from '@/components/AssessmentPanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
@@ -34,7 +33,6 @@ import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { DistressTier } from '@/lib/types'
 import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
-import { useMarketStore } from '@/stores/market'
 import { useParcelStore } from '@/stores/parcel'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -48,7 +46,6 @@ const pipeline = usePipelineStore()
 const props = withDefaults(defineProps<{ showBack?: boolean }>(), { showBack: false })
 const emit = defineEmits<{ back: [] }>()
 const compare = useCompareStore()
-const market = useMarketStore()
 const $q = useQuasar()
 const saving = ref(false)
 const whyOpen = ref(false)
@@ -292,7 +289,7 @@ async function toggleSave(): Promise<void> {
               icon="view_kanban"
               :label="dealStageLabel"
               data-test="parcel-action-pipeline"
-              :to="{ name: 'pipeline', params: { market: market.active } }"
+              :to="{ name: 'pipeline' }"
             />
             <q-btn
               class="act"
@@ -429,7 +426,6 @@ async function toggleSave(): Promise<void> {
             </q-tooltip>
           </q-chip>
         </div>
-        <RepositoryBadge :parcel-number="detail.parcel_number" />
       </header>
 
       <q-tabs

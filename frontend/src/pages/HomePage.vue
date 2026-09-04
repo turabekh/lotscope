@@ -10,7 +10,6 @@ import { api } from '@/lib/api'
 import { formatCurrency, formatNumber, scoreColor } from '@/lib/format'
 import type { LeadItem } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { MARKET_LABELS, useMarketStore } from '@/stores/market'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -18,7 +17,6 @@ import { useWatchlistStore } from '@/stores/watchlist'
 const LEADS_PREVIEW = 5
 
 const router = useRouter()
-const market = useMarketStore()
 const auth = useAuthStore()
 const watchlist = useWatchlistStore()
 const savedSearches = useSavedSearchesStore()
@@ -29,7 +27,7 @@ const { items: watchItems, alerts, used: watchUsed } = storeToRefs(watchlist)
 const { searches, newTotal, used: searchUsed } = storeToRefs(savedSearches)
 const { deals, used: dealsUsed } = storeToRefs(pipeline)
 
-const marketLabel = computed(() => MARKET_LABELS[market.active])
+const marketLabel = 'Philadelphia'
 const greetingName = computed(() => user.value?.full_name?.split(' ')[0] ?? null)
 
 interface ChangeRow {
@@ -83,7 +81,6 @@ const changeRows = computed<ChangeRow[]>(() => {
       to: () =>
         void router.push({
           name: 'lists',
-          params: { market: market.active },
           query: { tab: 'searches' },
         }),
     })
@@ -106,7 +103,7 @@ const leads = ref<LeadItem[]>([])
 const leadsLoading = ref(true)
 
 function openParcel(parcelNumber: string): void {
-  void router.push({ name: 'parcel', params: { market: market.active, id: parcelNumber } })
+  void router.push({ name: 'parcel', params: { id: parcelNumber } })
 }
 
 function severityColor(severity: 'high' | 'medium' | 'info'): string {
@@ -119,7 +116,7 @@ const needsBuyBox = ref(false)
 
 async function refreshBuyBoxState(): Promise<void> {
   try {
-    const matches = await api.getBuyBoxMatches(market.active, 1)
+    const matches = await api.getBuyBoxMatches(1)
     needsBuyBox.value = !matches.has_profile || matches.criteria_applied.length === 0
   } catch {
     needsBuyBox.value = false
@@ -132,7 +129,7 @@ onMounted(async () => {
   void savedSearches.ensureLoaded()
   void pipeline.ensureLoaded()
   try {
-    const response = await api.getLeads({ market: market.active })
+    const response = await api.getLeads({})
     leads.value = response.leads.slice(0, LEADS_PREVIEW)
   } finally {
     leadsLoading.value = false
@@ -199,7 +196,7 @@ onMounted(async () => {
                 no-caps
                 color="primary"
                 label="Find new lots"
-                :to="{ name: 'explore', params: { market: market.active } }"
+                :to="{ name: 'explore' }"
               />
             </div>
           </q-card>
@@ -216,7 +213,7 @@ onMounted(async () => {
                 size="sm"
                 color="primary"
                 label="Open"
-                :to="{ name: 'pipeline', params: { market: market.active } }"
+                :to="{ name: 'pipeline' }"
               />
             </div>
             <q-separator />
@@ -242,7 +239,7 @@ onMounted(async () => {
                 no-caps
                 color="primary"
                 label="Browse leads"
-                :to="{ name: 'leads', params: { market: market.active } }"
+                :to="{ name: 'leads' }"
               />
             </div>
           </q-card>
@@ -259,7 +256,7 @@ onMounted(async () => {
                 size="sm"
                 color="primary"
                 label="See all"
-                :to="{ name: 'leads', params: { market: market.active } }"
+                :to="{ name: 'leads' }"
               />
             </div>
             <q-separator />
@@ -296,7 +293,7 @@ onMounted(async () => {
                 no-caps
                 color="primary"
                 label="Explore the map"
-                :to="{ name: 'explore', params: { market: market.active } }"
+                :to="{ name: 'explore' }"
               />
             </div>
           </q-card>
@@ -309,10 +306,7 @@ onMounted(async () => {
             </div>
             <q-separator />
             <div class="stat-grid">
-              <router-link
-                class="stat"
-                :to="{ name: 'lists', params: { market: market.active }, query: { tab: 'lots' } }"
-              >
+              <router-link class="stat" :to="{ name: 'lists', query: { tab: 'lots' } }">
                 <div class="stat-num">{{ watchUsed }}</div>
                 <div class="stat-label">Watchlist</div>
               </router-link>
@@ -320,17 +314,13 @@ onMounted(async () => {
                 class="stat"
                 :to="{
                   name: 'lists',
-                  params: { market: market.active },
                   query: { tab: 'searches' },
                 }"
               >
                 <div class="stat-num">{{ searchUsed }}</div>
                 <div class="stat-label">Saved searches</div>
               </router-link>
-              <router-link
-                class="stat"
-                :to="{ name: 'pipeline', params: { market: market.active } }"
-              >
+              <router-link class="stat" :to="{ name: 'pipeline' }">
                 <div class="stat-num">{{ dealsUsed }}</div>
                 <div class="stat-label">Deals</div>
               </router-link>

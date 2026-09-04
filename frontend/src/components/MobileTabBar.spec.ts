@@ -23,19 +23,19 @@ describe('MobileTabBar', () => {
     localStorage.clear()
   })
 
-  it('renders the four primary tabs with market-scoped links', async () => {
+  it('renders the four primary tabs', async () => {
     const router = makeRouter()
     const wrapper = await mountBar(router)
     const html = wrapper.html()
-    expect(html).toContain('href="/philadelphia/home"')
-    expect(html).toContain('href="/philadelphia/explore"')
-    expect(html).toContain('href="/philadelphia/leads"')
+    expect(html).toContain('href="/home"')
+    expect(html).toContain('href="/explore"')
+    expect(html).toContain('href="/leads"')
     expect(wrapper.text()).toContain('More')
   })
 
   it('marks the active tab from the current route', async () => {
     const router = makeRouter()
-    await router.push({ name: 'explore', params: { market: 'philadelphia' } })
+    await router.push({ name: 'explore' })
     const wrapper = await mountBar(router)
     expect(wrapper.find('.tab.active').text()).toContain('Find lots')
   })

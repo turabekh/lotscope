@@ -6,11 +6,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { ApiError, api } from '@/lib/api'
 import type { BuyerProfileDetail, BuyerPurchase } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 
 const route = useRoute()
 const router = useRouter()
-const market = useMarketStore()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
@@ -42,7 +40,7 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    profile.value = await api.getBuyer(market.active, buyerKey.value)
+    profile.value = await api.getBuyer(buyerKey.value)
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Could not load this buyer.'
   } finally {
@@ -53,7 +51,7 @@ async function load(): Promise<void> {
 function openParcel(purchase: BuyerPurchase): void {
   void router.push({
     name: 'parcel',
-    params: { market: market.active, id: purchase.parcel_number },
+    params: { id: purchase.parcel_number },
   })
 }
 
@@ -70,7 +68,7 @@ watch(buyerKey, load)
         no-caps
         icon="arrow_back"
         label="Buyers"
-        :to="{ name: 'buyers', params: { market: market.active } }"
+        :to="{ name: 'buyers' }"
         class="q-mb-sm"
       />
 

@@ -2,29 +2,18 @@
 import { computed } from 'vue'
 
 import { launchStatusDisplay } from '@/lib/market-status'
-import { MARKET_LABELS, useMarketStore } from '@/stores/market'
 
-const market = useMarketStore()
-
-const label = computed(() => MARKET_LABELS[market.active])
-const status = computed(() => launchStatusDisplay(market.activeInfo?.launch_status))
-const known = computed(() => market.activeInfo !== null)
-const isPilot = computed(() => status.value.presentation === 'pilot')
+const label = 'Philadelphia'
+const status = computed(() => launchStatusDisplay('live'))
 const suffix = computed(() => status.value.badge ?? 'coverage')
 </script>
 
 <template>
-  <div v-if="known" class="coverage" role="note">
+  <div class="coverage" role="note">
     <q-icon name="dataset" size="15px" class="coverage-icon" />
     <span class="coverage-label">{{ label }} · {{ suffix }}</span>
     <q-tooltip max-width="260px" anchor="bottom middle" self="top middle">
-      <template v-if="isPilot">
-        {{ label }} pilot — county assessment &amp; geometry, provided as-is. No open sale-price
-        comps or code-enforcement feed; zoning provisional.
-      </template>
-      <template v-else>
-        {{ status.summary }} Zoning, sales, and L&amp;I from {{ label }} open data, provided as-is.
-      </template>
+      {{ status.summary }} Zoning, sales, and L&amp;I from {{ label }} open data, provided as-is.
     </q-tooltip>
   </div>
 </template>

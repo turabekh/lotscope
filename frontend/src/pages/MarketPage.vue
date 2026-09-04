@@ -7,10 +7,8 @@ import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { NeighborhoodMarketResponse, NeighborhoodMarketStats } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketStore } from '@/stores/market'
 
 const router = useRouter()
-const market = useMarketStore()
 const { user } = storeToRefs(useAuthStore())
 
 const PAID_TIERS = ['pro', 'investor', 'enterprise']
@@ -68,7 +66,6 @@ function num(value: number | null): string {
 function openNeighborhood(name: string): void {
   void router.push({
     name: 'explore',
-    params: { market: market.active },
     query: { neighborhood: name },
   })
 }
@@ -77,7 +74,7 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    data.value = await api.getNeighborhoodMarket(market.active)
+    data.value = await api.getNeighborhoodMarket()
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Could not load market data.'
   } finally {
