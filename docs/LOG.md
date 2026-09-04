@@ -14,3 +14,8 @@ Shipped: Pittsburgh, Harrisburg and Wilmington removed. 61 files deleted, ~10,10
 Verified: lint + typecheck clean both sides; backend 1100 unit / 540 integration, 0 failed, 0 skipped; frontend 424. Migration up/down round-tripped against the real DB. grep for the nine market terms across backend/src, backend/scripts, frontend/src, frontend/e2e returns nothing.
 Not done: ai/scope.py keeps one unreachable non-Philadelphia branch — Step 0.3 owns deleting it. The market table is kept (one row, still read by deal/service.py's override path, which Step 1.1 owns). Old migrations keep their seed data as replay history. The DB still holds 189k non-Philadelphia parcels; no data migration was in scope.
 Branch is stacked on chore/product-doc, which must merge first.
+
+## 2026-09-04 — fix/ci-green (merged to main)
+Shipped: merged refactor/philadelphia-only to main (ebe827d) and pushed. CI ran for the first time in weeks — billing is evidently fixed — and caught two things my local gate did not: a Playwright test asserting on the deleted MarketSwitcher, and three prettier failures. Both fixed; `make lint` now runs `pnpm format:check` so its "mirrors what CI runs" comment is true.
+Verified: main at d11479f, all four CI jobs green (lint-type-unit, web, integration, e2e). Locally: 1100 unit, 540 integration 0 skipped, 424 vitest, Playwright 42 passed serially.
+Not done: production is untouched — deploy is workflow_dispatch only and last ran 2026-08-16, so prod still serves the pre-refactor code. Next: owner items for 0.3 (corpus artifacts to /srv/lotscope/corpus/, paid ANTHROPIC_API_KEY with a spend cap).
