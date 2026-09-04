@@ -1,13 +1,27 @@
+# Data licences
 
-## Pittsburgh / Allegheny County — WPRDC (per-dataset)
+## Philadelphia — OpenDataPhilly / city open data
 
-Source portal: Western Pennsylvania Regional Data Center (`data.wprdc.org`, CKAN). **Licenses are per-dataset** — record each dataset's license as it is loaded (Slices 2–6). Confirm via the CKAN `license_id`/`license_title` on each package before ingest.
+Every city dataset we ingest (OPA assessments, PWD parcels, RTT transfers, tax
+delinquency, L&I violations and permits, vacancy indicators, zoning base
+districts and overlays, RCOs, street centerlines, historic districts, ZBA
+appeals) is published as-is through OpenDataPhilly and the Carto SQL API, with
+no warranty of accuracy or fitness. Product output must carry that posture: the
+city's terms are hold-harmless, so derived facts are shown with their source and
+as-of timestamp rather than asserted as ground truth.
 
-| Dataset | resource_id | License | Loaded |
-|---|---|---|---|
-| Property Assessments | 65855e14-549e-4992-b5be-d629afc676fa | (confirm at load) | S2 |
-| Parcel Boundaries | 3f50d47a-ab54-4da2-9f03-8519006e9fc9 | (confirm at load) | S2 |
-| Property Sale Transactions | 5bbe6c55-bce6-4edb-9d04-68edeb6bf7b1 | (confirm at load) | S3 |
-| Tax Liens / Violations / Condemned / City-Owned / Foreclosures / Zoning / Neighborhoods | see recon | (confirm at load) | S3–S6 |
+## FEMA — national flood hazard layer
 
-Note: assessment data excludes owner names per Allegheny Ordinance 3478-07 (`docs/pgh-ordinance-3478-07-memo.md`).
+Public domain. Flood-zone reads are a screening signal, not a determination; a
+FIRMette or an elevation certificate is the authoritative artefact.
+
+## Sheriff sales — CivilView
+
+Scraped from the public listing site. Postponements and withdrawals happen
+between scrapes, so a listing is a scheduled-auction signal and is verified live
+before it is relied on.
+
+## Third parties
+
+BatchData (skip trace) carries its own terms including a 30-day cache limit; see
+`docs/PLAN.md` Step 5.2 before enabling it. Regrid is not currently ingested.

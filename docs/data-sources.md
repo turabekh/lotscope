@@ -79,9 +79,9 @@ City-owned property and Land Bank / PHDC inventory — flags publicly-owned lots
   - `MDOLandBank` ("City-Owned Structures") — 17 fields, **no OPA account number**; addresses and geocodes only, so it needs address reconciliation rather than a key join.
   - `LandDispositionStatus` — 4 fields (`Stage`, `Status`, `Sales`), **no parcel key**.
 
-**Consequence:** `is_city_owned` is set by loaders for `pgh` (8.7% of parcels), `hbg` (4.6%) and `wlm` (0.12%), and by none for `phl` — 1 parcel of 588,606. Both other markets bind to a parcel-keyed authoritative layer; Philadelphia has no equivalent published in these two places.
+**Consequence:** no loader sets `is_city_owned` from an authoritative layer — 1 parcel of 588,606 carries it. Philadelphia publishes no parcel-keyed public-ownership layer in either place, so the flag is derived from OPA owner names instead (ADR-0085, now in git history).
 
-**Interim option, not taken:** OPA owner-name matching identifies 13,434 phl parcels (`CITY OF PHILA%` 4,886, `%PHILADELPHIA HOUSING%` 4,582, `%LAND BANK%` 2,490, `%REDEVELOPMENT AUTHORITY%` 1,473, `%PHDC%` 3). Its error direction is conservative — a false positive only withholds a parcel from lead lists, a false negative only preserves today's behaviour — but it is a heuristic standing in for an ownership fact, and it would also add the `public_ownership` risk flag, which moves `risk_score`. Queued in `docs/verdict-bump-queue.md` rather than adopted unilaterally.
+**Interim option, not taken:** OPA owner-name matching identifies 13,434 phl parcels (`CITY OF PHILA%` 4,886, `%PHILADELPHIA HOUSING%` 4,582, `%LAND BANK%` 2,490, `%REDEVELOPMENT AUTHORITY%` 1,473, `%PHDC%` 3). Its error direction is conservative — a false positive only withholds a parcel from lead lists, a false negative only preserves today's behaviour — but it is a heuristic standing in for an ownership fact, and it would also add the `public_ownership` risk flag, which moves `risk_score`. It was subsequently adopted as the derived public-ownership signal.
 
 ## Title 14 zoning standards (reference data)
 

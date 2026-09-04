@@ -151,7 +151,7 @@ Every other check in this repo asks whether the system agrees with itself. This 
 ## Cross-field invariants
 
 ```
-make check-invariants                 # phl by default; ARGS="--market pgh" for another
+make check-invariants
 ```
 
 Assertions about relationships that must hold between fields, rather than about particular values. Tests assert what someone thought of; invariants assert what must never happen, which is the class of defect that reaches production. They also run nightly (`check_verdict_invariants`, 10:30 UTC) and log `invariant_breached` per failure.
@@ -298,7 +298,7 @@ A backup that has never been restored is a hypothesis. Once a month:
 
 | Measure | Live | Restored |
 |---|---|---|
-| phl / pgh / wlm / hbg parcels | 550,976 / 143,355 / 26,197 / 19,502 | identical |
+| phl parcels | 550,976 | identical |
 | `parcel_verdict` | 740,030 | identical |
 | `app_user` / `deal` / `deal_activity` / `saved_search` | 10 / 5 / 2 / 3 | identical |
 | Tables | 45 | 44 |
@@ -321,10 +321,8 @@ Downgrades that drop a column lose the data in it. Where the column is derived �
 If a deployed change produces wrong verdicts rather than a broken schema, the response is a recompute rather than a restore:
 
 ```bash
-docker compose exec -T worker python -m lotscope.verdict.jobs --market philadelphia
+docker compose exec -T worker python -m lotscope.verdict.jobs
 ```
-
-Market-scoped, so a bad Philadelphia recompute does not disturb pilots.
 
 ## Verdict v9 rollout — overlay-aware zoning standards
 
@@ -334,11 +332,11 @@ v9 changes how zoning standards resolve (ADR-0080) and requires a full `phl` rec
 
 1. **Stop the app before Alembic.** `scripts/deploy.sh` takes a `pre-migration` backup automatically when migrations are pending; this deploy carries two (`e5b1c93a7d24` overlay_standard, `f3a71c8d0e59` parcel_overlay).
 2. **Migrate**, then **seed**: `make seed` writes the six `overlay_standard` rows, RSA-5 at 960, RM-1's provision and the industrial FARs. The base flip and the overlay rows must land together — 960 without the overlay layer is the 54,376-parcel false-positive window ADR-0080 exists to close.
-3. **Populate membership before traffic returns — now automatic.** `scripts/deploy.sh` runs `python -m lotscope.zoning.overlay_membership` between the seed and app start, and **exits nonzero if any market ends up with zero memberships**, which fails the deploy rather than serving a wrong standard. An empty `parcel_overlay` does not fail loudly on its own: it silently resolves every parcel to its base standard, which for RSA-5 is 960 everywhere — exactly the failure mode being prevented. To run it by hand:
+3. **Populate membership before traffic returns — now automatic.** `scripts/deploy.sh` runs `python -m lotscope.zoning.overlay_membership` between the seed and app start, and **exits nonzero if it ends up with zero memberships**, which fails the deploy rather than serving a wrong standard. An empty `parcel_overlay` does not fail loudly on its own: it silently resolves every parcel to its base standard, which for RSA-5 is 960 everywhere — exactly the failure mode being prevented. To run it by hand:
    ```
    cd backend && uv run python -m lotscope.zoning.overlay_membership
    ```
-   Measured locally: **phl 1,487,536 + wlm 14,777 rows in ~60s**. Thereafter the nightly overlay ingest refreshes it automatically. The refresh covers **every market with overlay polygons**, discovered from `zoning_overlay` rather than hardcoded — `wlm` has 7 polygons and would otherwise lose overlay display entirely.
+   Measured locally: **1,487,536 rows in ~60s**. Thereafter the nightly overlay ingest refreshes it automatically.
 4. **Verify before traffic:** `make verify-zoning-standards` → `OK` (0.44s). Exits nonzero on divergence.
 5. **Start the app**, then **recompute**.
 
@@ -347,8 +345,6 @@ v9 changes how zoning standards resolve (ADR-0080) and requires a full `phl` rec
 ```
 make recompute-verdicts          # python -m lotscope.verdict.jobs, batch size 500
 ```
-
-**Scope to `phl`.** pgh (143,355), wlm (26,197) and hbg (19,502) are untouched by every v9 correction; recomputing them burns hours for no change.
 
 **Measured wall-clock**, sequential, local hardware (40-parcel samples, `compute_verdict`):
 
