@@ -42,7 +42,7 @@ critical path. Two settings can swallow it silently:
 `/health/ready` reports both. Confirm before and after the deploy:
 
 ```bash
-curl -s https://parcelphl.online/health/ready \
+curl -s https://parcelphl.online/api/health/ready \
   | python3 -c "import sys,json;d=json.load(sys.stdin);print({k:d[k] for k in ('email','email_allowlist_active')})"
 ```
 
