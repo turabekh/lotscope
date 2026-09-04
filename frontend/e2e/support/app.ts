@@ -29,12 +29,41 @@ export function newAccount(label: string): TestAccount {
   }
 }
 
+const MAILPIT_URL = process.env.E2E_MAILPIT_URL ?? 'http://localhost:8025'
+
+export async function verificationLink(page: Page, address: string): Promise<string> {
+  let body = ''
+  await expect
+    .poll(
+      async () => {
+        const found = await page.request.get(`${MAILPIT_URL}/api/v1/search`, {
+          params: { query: `to:${address}` },
+        })
+        const summaries = (await found.json()) as { messages: { ID: string }[] }
+        const newest = summaries.messages[0]
+        if (newest === undefined) return ''
+        const message = await page.request.get(`${MAILPIT_URL}/api/v1/message/${newest.ID}`)
+        body = ((await message.json()) as { Text: string }).Text
+        return body
+      },
+      { timeout: 15_000, message: `no verification email arrived for ${address}` },
+    )
+    .not.toBe('')
+  const link = /https?:\/\/\S+\/verify\?token=\S+/.exec(body)?.[0]
+  if (link === undefined) throw new Error(`no verification link in the email to ${address}`)
+  return link
+}
+
 export async function register(page: Page, account: TestAccount): Promise<void> {
   await page.goto('/register')
   await page.getByLabel('Name (optional)').fill(account.fullName)
   await page.getByLabel('Email').fill(account.email)
   await page.getByLabel('Password').fill(account.password)
   await page.getByRole('button', { name: 'Create account' }).click()
+  await expect(page.locator('[data-test="check-your-email"]')).toBeVisible()
+
+  const link = await verificationLink(page, account.email)
+  await page.goto(new URL(link).pathname + new URL(link).search)
   await expect(page).toHaveURL(/\/home/)
 }
 
