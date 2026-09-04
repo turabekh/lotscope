@@ -3,13 +3,13 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.buybox.service import buy_box_assumptions
 from lotscope.core.config import get_settings
 from lotscope.deal.analysis import DealAssumptions, DealInputs
 from lotscope.deal.case_analysis import CaseAnalysis, analyze_cases
 from lotscope.deal.inventory import build_assumption_set, mao_disclosure
 from lotscope.deal.sensitivity import SensitivityGrid, build_grid
-from lotscope.deal.service import _assumptions, market_overrides_for
-from lotscope.underwriting.service import default_assumptions
+from lotscope.deal.service import _assumptions
 from lotscope.valuation.avm import land_use_class
 from lotscope.valuation.service import find_comps
 from lotscope.zoning.schemas import BuildabilityResult
@@ -45,8 +45,7 @@ async def build_underwriting(
     computed_at = datetime.now(UTC)
     settings = get_settings()
 
-    profile_overrides = await default_assumptions(session, owner_id)
-    market_overrides = await market_overrides_for(session, market_code)
+    buy_box = await buy_box_assumptions(session, owner_id)
     scenario_overrides = {
         key: value
         for key, value in {
@@ -59,8 +58,7 @@ async def build_underwriting(
     }
     assumption_set = build_assumption_set(
         settings=settings,
-        market_overrides=market_overrides,
-        user_overrides=profile_overrides,
+        user_overrides=buy_box,
         scenario_overrides=scenario_overrides,
     )
 
@@ -82,21 +80,11 @@ async def build_underwriting(
         land_value_is_assessed=land_value is None and market_value is not None,
     )
     assumptions: DealAssumptions = _assumptions(
-        construction_cost_per_sqft=construction_cost_per_sqft
-        if construction_cost_per_sqft is not None
-        else profile_overrides.get("construction_cost_per_sqft"),
-        soft_cost_pct=soft_cost_pct
-        if soft_cost_pct is not None
-        else profile_overrides.get("soft_cost_pct"),
-        selling_cost_pct=selling_cost_pct
-        if selling_cost_pct is not None
-        else profile_overrides.get("selling_cost_pct"),
-        target_margin=target_margin
-        if target_margin is not None
-        else profile_overrides.get("target_margin"),
-        default_unit_sqft=profile_overrides.get("default_unit_sqft"),
-        max_unit_sqft=profile_overrides.get("max_unit_sqft"),
-        market_overrides=market_overrides,
+        construction_cost_per_sqft=construction_cost_per_sqft,
+        soft_cost_pct=soft_cost_pct,
+        selling_cost_pct=selling_cost_pct,
+        target_margin=target_margin,
+        buy_box=buy_box,
     )
 
     disclosure = mao_disclosure(assumption_set, computed_at)

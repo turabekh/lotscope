@@ -59,7 +59,7 @@ class DealResult(BaseModel):
     comp_count: int
     confidence: Literal["high", "medium", "low"]
     assumptions: DealAssumptionsSchema
-    assumptions_source: Literal["market_default", "calibrated"] = "market_default"
+    assumptions_source: Literal["platform_default", "buy_box"] = "platform_default"
     reasons: list[str]
     sources: list[dict[str, Any]]
     computed_at: datetime

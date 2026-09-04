@@ -101,18 +101,6 @@ async def delete_profile(session: AsyncSession, profile_id: int, owner_id: int) 
     await session.flush()
 
 
-async def default_assumptions(session: AsyncSession, owner_id: int) -> dict[str, float]:
-    profile = (
-        await session.execute(
-            select(UnderwritingProfile).where(
-                UnderwritingProfile.owner_id == owner_id,
-                UnderwritingProfile.is_default.is_(True),
-            )
-        )
-    ).scalar_one_or_none()
-    return dict(profile.assumptions) if profile is not None else {}
-
-
 async def default_buy_box(session: AsyncSession, owner_id: int) -> BuyBox | None:
     profile = (
         await session.execute(

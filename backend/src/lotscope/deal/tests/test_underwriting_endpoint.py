@@ -4,6 +4,8 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.buybox.schemas import BuyBoxWrite
+from lotscope.buybox.service import write_buy_box
 from lotscope.deal.underwriting import UnderwritingAnalysis, build_underwriting
 
 pytestmark = pytest.mark.integration
@@ -94,19 +96,13 @@ async def test_all_three_cases_and_a_sensitivity_verdict_are_present(
     assert analysis.sensitivity.unavailable_reason is not None
 
 
-async def test_a_users_profile_defaults_reach_their_own_analysis(
+async def test_a_users_buy_box_reaches_their_own_analysis(
     db_session: AsyncSession,
 ) -> None:
-    from lotscope.underwriting.schemas import ProfileWrite
-    from lotscope.underwriting.service import create_profile
-
     owner = await _user(db_session)
     await _parcel(db_session)
-    await create_profile(
-        db_session,
-        owner,
-        ProfileWrite(name="Mine", is_default=True, assumptions={"target_margin": 0.35}),
-    )
+    await write_buy_box(db_session, owner, BuyBoxWrite(assumptions={"target_margin": 0.35}))
+    await db_session.flush()
 
     analysis = await build_underwriting(
         db_session,
@@ -123,20 +119,15 @@ async def test_a_users_profile_defaults_reach_their_own_analysis(
     assert target["origin"] == "user_override"
 
 
-async def test_a_request_override_beats_the_user_profile(db_session: AsyncSession) -> None:
+async def test_a_request_override_beats_the_users_buy_box(db_session: AsyncSession) -> None:
     owner = await _user(db_session)
     await _parcel(db_session)
-    await db_session.execute(
-        text(
-            "INSERT INTO underwriting_profile (owner_id, name, is_default, assumptions, "
-            "version) VALUES (:owner, 'default', true, "
-            "'{\"construction_cost_per_sqft\": 210.0}'::jsonb, 1)"
-        ),
-        {"owner": owner},
+    await write_buy_box(
+        db_session, owner, BuyBoxWrite(assumptions={"construction_cost_per_sqft": 210.0})
     )
     await db_session.flush()
 
-    from_profile = await build_underwriting(
+    from_buy_box = await build_underwriting(
         db_session,
         "phl:uw1",
         owner_id=owner,
@@ -161,8 +152,8 @@ async def test_a_request_override_beats_the_user_profile(db_session: AsyncSessio
     def item(analysis: UnderwritingAnalysis, name: str) -> dict[str, Any]:
         return next(entry for entry in analysis.assumptions if entry["name"] == name)
 
-    assert item(from_profile, "construction_cost_per_sqft")["value"] == 210.0
-    assert item(from_profile, "construction_cost_per_sqft")["origin"] == "user_override"
+    assert item(from_buy_box, "construction_cost_per_sqft")["value"] == 210.0
+    assert item(from_buy_box, "construction_cost_per_sqft")["origin"] == "user_override"
     assert item(from_request, "construction_cost_per_sqft")["value"] == 190.0
     assert item(from_request, "construction_cost_per_sqft")["origin"] == "scenario_override"
 

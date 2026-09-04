@@ -8,13 +8,7 @@ _IGNORED_SCHEMAS = ("staging", "raw", "topology", "tiger", "tiger_data")
 _IGNORED_PREFIXES = ("pre_",)
 _IGNORED_TABLES = {"alembic_version", "spatial_ref_sys", "geography_columns", "geometry_columns"}
 
-TABLES_KEPT_WITHOUT_A_MODEL: dict[str, str] = {
-    "market": (
-        "one Philadelphia row, read only by deal/service.py's raw assumption-override SQL; "
-        "the model was deleted with the market registry and the table goes when the buy box "
-        "replaces that query"
-    ),
-}
+TABLES_KEPT_WITHOUT_A_MODEL: dict[str, str] = {}
 
 
 def _registered() -> set[str]:

@@ -2,30 +2,33 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.deal.service import (
-    _assumptions,
-    analyze_parcel_deal,
-    assumptions_source,
-    normalize_overrides,
-)
+from lotscope.buybox.schemas import BuyBoxWrite
+from lotscope.buybox.service import write_buy_box
+from lotscope.deal.service import _assumptions, analyze_parcel_deal, assumptions_source
 from lotscope.deal.underwriting import build_underwriting
 
 pytestmark = pytest.mark.integration
 
-OVERRIDE_COST_PER_SQFT = 145.0
+BUY_BOX_COST_PER_SQFT = 145.0
 PLATFORM_COST_PER_SQFT = 175.0
+PLATFORM_SOFT_COST_PCT = 0.15
+PLATFORM_TARGET_MARGIN = 0.20
 
 
-async def _market_with_override(session: AsyncSession, code: str, overrides: str) -> None:
+async def _user(session: AsyncSession, email: str) -> int:
     await session.execute(
         text(
-            "INSERT INTO market (code, name, url_slug, state, local_srid, map_center, "
-            "default_zoom, timezone, deal_assumption_overrides, launch_status) VALUES "
-            "(:code, :code, :code, 'PA', 2272, '{}'::jsonb, 12, 'America/New_York', "
-            "(:overrides)::jsonb, 'live')"
+            "INSERT INTO app_user (email, hashed_password, role, tier, is_active) "
+            "VALUES (:email, 'x', 'user', 'pro', true)"
         ),
-        {"code": code, "overrides": overrides},
+        {"email": email},
     )
+    await session.flush()
+    return int(await session.scalar(text("SELECT id FROM app_user WHERE email=:e"), {"e": email}))
+
+
+async def _buy_box(session: AsyncSession, user_id: int, **assumptions: float) -> None:
+    await write_buy_box(session, user_id, BuyBoxWrite(assumptions=assumptions))
     await session.flush()
 
 
@@ -72,64 +75,93 @@ async def _parcel_with_comps(session: AsyncSession, market_code: str, parcel: st
     await session.flush()
 
 
-async def test_a_market_construction_cost_override_reaches_the_computed_deal(
+async def test_a_buy_box_construction_cost_reaches_the_computed_offer(
     db_session: AsyncSession,
 ) -> None:
-    await _market_with_override(db_session, "ovr", '{"construction_cost_per_sqft": 145.0}')
-    await _parcel_with_comps(db_session, "ovr", "ovr:subject")
+    await _parcel_with_comps(db_session, "phl", "phl:bb1")
+    user_id = await _user(db_session, "bb1@example.com")
+    await _buy_box(db_session, user_id, construction_cost_per_sqft=BUY_BOX_COST_PER_SQFT)
 
-    at_market = await analyze_parcel_deal(db_session, "ovr:subject")
-    at_platform = await analyze_parcel_deal(
-        db_session, "ovr:subject", construction_cost_per_sqft=PLATFORM_COST_PER_SQFT
-    )
-    at_override = await analyze_parcel_deal(
-        db_session, "ovr:subject", construction_cost_per_sqft=OVERRIDE_COST_PER_SQFT
+    with_box = await analyze_parcel_deal(db_session, "phl:bb1", user_id=user_id)
+    at_platform = await analyze_parcel_deal(db_session, "phl:bb1")
+    forced = await analyze_parcel_deal(
+        db_session, "phl:bb1", construction_cost_per_sqft=BUY_BOX_COST_PER_SQFT
     )
 
-    assert at_market is not None
-    assert at_override is not None
+    assert with_box is not None
     assert at_platform is not None
-    assert at_platform.max_allowable_offer != at_override.max_allowable_offer
-    assert at_market.max_allowable_offer == at_override.max_allowable_offer
+    assert forced is not None
+    assert at_platform.max_allowable_offer != forced.max_allowable_offer
+    assert with_box.max_allowable_offer == forced.max_allowable_offer
+    assert with_box.assumptions_source == "buy_box"
+    assert at_platform.assumptions_source == "platform_default"
 
 
-async def test_an_explicit_request_value_still_beats_the_market_override(
+async def test_one_buyers_box_does_not_move_another_buyers_offer(
     db_session: AsyncSession,
 ) -> None:
-    await _market_with_override(db_session, "ovr2", '{"construction_cost_per_sqft": 145.0}')
-    await _parcel_with_comps(db_session, "ovr2", "ovr2:subject")
+    await _parcel_with_comps(db_session, "phl", "phl:bb2")
+    mine = await _user(db_session, "bb2-mine@example.com")
+    theirs = await _user(db_session, "bb2-theirs@example.com")
+    await _buy_box(db_session, mine, construction_cost_per_sqft=BUY_BOX_COST_PER_SQFT)
+
+    ours = await analyze_parcel_deal(db_session, "phl:bb2", user_id=mine)
+    hers = await analyze_parcel_deal(db_session, "phl:bb2", user_id=theirs)
+    anonymous = await analyze_parcel_deal(db_session, "phl:bb2")
+
+    assert ours is not None
+    assert hers is not None
+    assert anonymous is not None
+    assert hers.max_allowable_offer == anonymous.max_allowable_offer
+    assert ours.max_allowable_offer != hers.max_allowable_offer
+
+
+async def test_an_explicit_request_value_still_beats_the_buy_box(
+    db_session: AsyncSession,
+) -> None:
+    await _parcel_with_comps(db_session, "phl", "phl:bb3")
+    user_id = await _user(db_session, "bb3@example.com")
+    await _buy_box(db_session, user_id, construction_cost_per_sqft=BUY_BOX_COST_PER_SQFT)
 
     requested = await analyze_parcel_deal(
-        db_session, "ovr2:subject", construction_cost_per_sqft=PLATFORM_COST_PER_SQFT
+        db_session, "phl:bb3", user_id=user_id, construction_cost_per_sqft=PLATFORM_COST_PER_SQFT
     )
-    market = await analyze_parcel_deal(db_session, "ovr2:subject")
+    from_box = await analyze_parcel_deal(db_session, "phl:bb3", user_id=user_id)
 
     assert requested is not None
-    assert market is not None
-    assert requested.max_allowable_offer != market.max_allowable_offer
+    assert from_box is not None
+    assert requested.max_allowable_offer != from_box.max_allowable_offer
 
 
-async def test_underwriting_computes_from_the_market_override_not_only_displays_it(
+async def test_a_higher_target_margin_lowers_the_offer(db_session: AsyncSession) -> None:
+    await _parcel_with_comps(db_session, "phl", "phl:bb4")
+    patient = await _user(db_session, "bb4-patient@example.com")
+    greedy = await _user(db_session, "bb4-greedy@example.com")
+    await _buy_box(db_session, patient, target_margin=0.10)
+    await _buy_box(db_session, greedy, target_margin=0.35)
+
+    at_ten = await analyze_parcel_deal(db_session, "phl:bb4", user_id=patient)
+    at_thirty_five = await analyze_parcel_deal(db_session, "phl:bb4", user_id=greedy)
+
+    assert at_ten is not None
+    assert at_thirty_five is not None
+    assert at_ten.max_allowable_offer is not None
+    assert at_thirty_five.max_allowable_offer is not None
+    assert at_thirty_five.max_allowable_offer < at_ten.max_allowable_offer
+
+
+async def test_underwriting_computes_from_the_buy_box_not_only_displays_it(
     db_session: AsyncSession,
 ) -> None:
-    await _market_with_override(db_session, "ovr3", '{"construction_cost_per_sqft": 145.0}')
-    await _parcel_with_comps(db_session, "ovr3", "ovr3:subject")
-    await db_session.execute(
-        text(
-            "INSERT INTO app_user (email, hashed_password, role, tier, is_active) "
-            "VALUES ('ovr@example.com', 'x', 'user', 'pro', true)"
-        )
-    )
-    await db_session.flush()
-    owner = int(
-        await db_session.scalar(text("SELECT id FROM app_user WHERE email='ovr@example.com'"))
-    )
+    await _parcel_with_comps(db_session, "phl", "phl:bb5")
+    user_id = await _user(db_session, "bb5@example.com")
+    await _buy_box(db_session, user_id, construction_cost_per_sqft=BUY_BOX_COST_PER_SQFT)
 
     analysis = await build_underwriting(
         db_session,
-        "ovr3:subject",
-        owner_id=owner,
-        market_code="ovr3",
+        "phl:bb5",
+        owner_id=user_id,
+        market_code="phl",
         base_zoning_code="RSA-5",
         market_value=90000.0,
         buildability=None,
@@ -138,53 +170,32 @@ async def test_underwriting_computes_from_the_market_override_not_only_displays_
 
     origins = {item["name"]: item["origin"] for item in analysis.assumptions}
     values = {item["name"]: item["value"] for item in analysis.assumptions}
-    assert origins["construction_cost_per_sqft"] == "market_default"
-    assert values["construction_cost_per_sqft"] == OVERRIDE_COST_PER_SQFT
+    assert origins["construction_cost_per_sqft"] == "user_override"
+    assert values["construction_cost_per_sqft"] == BUY_BOX_COST_PER_SQFT
 
 
-def test_only_canonical_keys_survive_normalisation() -> None:
-    resolved = normalize_overrides(
-        {
-            "construction_cost_per_sqft": 145.0,
-            "deal_construction_cost_per_sqft": 999.0,
-            "soft_cost_pct": 0.12,
-            "calibrated": True,
-            "nonsense": 1.0,
-            "target_margin": "not a number",
-        }
-    )
+def test_precedence_is_request_then_buy_box_then_platform() -> None:
+    box = {"construction_cost_per_sqft": BUY_BOX_COST_PER_SQFT, "soft_cost_pct": 0.11}
 
-    assert resolved == {"construction_cost_per_sqft": 145.0, "soft_cost_pct": 0.12}
+    from_box = _assumptions(buy_box=box)
+    from_request = _assumptions(construction_cost_per_sqft=200.0, buy_box=box)
+    from_platform = _assumptions(buy_box={})
 
-
-def test_a_non_dict_or_empty_override_normalises_to_nothing() -> None:
-    assert normalize_overrides(None) == {}
-    assert normalize_overrides({}) == {}
-    assert normalize_overrides("nope") == {}
-
-
-def test_the_calibrated_marker_is_orthogonal_to_values() -> None:
-    assert assumptions_source({"calibrated": True, "construction_cost_per_sqft": 145.0}) == (
-        "calibrated"
-    )
-    assert assumptions_source({"construction_cost_per_sqft": 145.0}) == "market_default"
-    assert normalize_overrides({"calibrated": True}) == {}
-
-
-def test_precedence_is_request_then_market_then_platform() -> None:
-    market = {"construction_cost_per_sqft": 145.0, "soft_cost_pct": 0.11}
-
-    from_market = _assumptions(market_overrides=market)
-    from_request = _assumptions(construction_cost_per_sqft=200.0, market_overrides=market)
-    from_platform = _assumptions(market_overrides={})
-
-    assert from_market.construction_cost_per_sqft == 145.0
-    assert from_market.soft_cost_pct == 0.11
+    assert from_box.construction_cost_per_sqft == BUY_BOX_COST_PER_SQFT
+    assert from_box.soft_cost_pct == 0.11
     assert from_request.construction_cost_per_sqft == 200.0
     assert from_request.soft_cost_pct == 0.11
     assert from_platform.construction_cost_per_sqft == PLATFORM_COST_PER_SQFT
+    assert from_platform.soft_cost_pct == PLATFORM_SOFT_COST_PCT
+    assert from_platform.target_margin == PLATFORM_TARGET_MARGIN
 
 
-def test_an_empty_override_set_is_identical_to_no_override_set() -> None:
-    assert _assumptions(market_overrides={}) == _assumptions()
-    assert _assumptions(market_overrides=None) == _assumptions()
+def test_an_empty_buy_box_is_identical_to_no_buy_box() -> None:
+    assert _assumptions(buy_box={}) == _assumptions()
+    assert _assumptions(buy_box=None) == _assumptions()
+
+
+def test_the_assumptions_source_names_where_the_numbers_came_from() -> None:
+    assert assumptions_source(None) == "platform_default"
+    assert assumptions_source({}) == "platform_default"
+    assert assumptions_source({"construction_cost_per_sqft": BUY_BOX_COST_PER_SQFT}) == "buy_box"

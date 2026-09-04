@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.buybox.service import buy_box_assumptions
 from lotscope.core.config import get_settings
 from lotscope.core.logging import get_logger
 from lotscope.deal.analysis import DealAssumptions, DealInputs, analyze_deal
@@ -24,56 +25,11 @@ from lotscope.zoning.service import compute_envelope
 _SUBJECT_SQL = text(
     "SELECT market_value, base_zoning_code FROM parcel WHERE parcel_number = :parcel_number"
 )
-_MARKET_OVERRIDES_SQL = text(
-    "SELECT deal_assumption_overrides FROM market WHERE code = :market_code"
-)
-
-
-CANONICAL_ASSUMPTION_KEYS = frozenset(
-    {
-        "construction_cost_per_sqft",
-        "soft_cost_pct",
-        "selling_cost_pct",
-        "target_margin",
-        "default_unit_sqft",
-        "max_unit_sqft",
-    }
-)
-_CALIBRATION_FLAG = "calibrated"
-
 logger = get_logger(__name__)
 
 
-def assumptions_source(overrides: object) -> str:
-    if isinstance(overrides, dict) and bool(overrides.get(_CALIBRATION_FLAG)):
-        return "calibrated"
-    return "market_default"
-
-
-def normalize_overrides(raw: object) -> dict[str, float]:
-    if not isinstance(raw, dict):
-        return {}
-    resolved: dict[str, float] = {}
-    for key, value in raw.items():
-        if key == _CALIBRATION_FLAG:
-            continue
-        if key not in CANONICAL_ASSUMPTION_KEYS:
-            logger.warning("unknown_market_assumption_override", override_key=key)
-            continue
-        if isinstance(value, bool) or not isinstance(value, int | float):
-            logger.warning("non_numeric_market_assumption_override", override_key=key)
-            continue
-        resolved[key] = float(value)
-    return resolved
-
-
-def market_code_of(parcel_number: str) -> str:
-    return parcel_number.split(":", 1)[0] if ":" in parcel_number else "phl"
-
-
-async def market_overrides_for(session: AsyncSession, market_code: str) -> dict[str, float]:
-    raw = await session.scalar(_MARKET_OVERRIDES_SQL, {"market_code": market_code})
-    return normalize_overrides(raw)
+def assumptions_source(assumptions: dict[str, float] | None) -> str:
+    return "buy_box" if assumptions else "platform_default"
 
 
 def _as_float(value: Any) -> float | None:
@@ -88,16 +44,16 @@ def _assumptions(
     target_margin: float | None = None,
     default_unit_sqft: float | None = None,
     max_unit_sqft: float | None = None,
-    market_overrides: dict[str, float] | None = None,
+    buy_box: dict[str, float] | None = None,
 ) -> DealAssumptions:
     settings = get_settings()
-    market = market_overrides or {}
+    chosen = buy_box or {}
 
     def resolve(requested: float | None, key: str, platform: float) -> float:
         if requested is not None:
             return requested
-        if key in market:
-            return market[key]
+        if key in chosen:
+            return chosen[key]
         return platform
 
     return DealAssumptions(
@@ -122,6 +78,7 @@ async def analyze_parcel_deal(
     session: AsyncSession,
     parcel_number: str,
     *,
+    user_id: int | None = None,
     acquisition_price: float | None = None,
     construction_cost_per_sqft: float | None = None,
     soft_cost_pct: float | None = None,
@@ -139,6 +96,7 @@ async def analyze_parcel_deal(
     return await build_deal(
         session,
         parcel_number,
+        user_id=user_id,
         base_zoning_code=subject.base_zoning_code,
         market_value=_as_float(subject.market_value),
         buildability=buildability,
@@ -157,6 +115,7 @@ async def analyze_parcel_scenarios(
     session: AsyncSession,
     parcel_number: str,
     *,
+    user_id: int | None = None,
     acquisition_price: float | None = None,
     construction_cost_per_sqft: float | None = None,
     soft_cost_pct: float | None = None,
@@ -191,12 +150,13 @@ async def analyze_parcel_scenarios(
         land_value = _as_float(subject.market_value)
         land_value_is_assessed = land_value is not None
 
+    buy_box = await buy_box_assumptions(session, user_id)
     assumptions = _assumptions(
         construction_cost_per_sqft=construction_cost_per_sqft,
         soft_cost_pct=soft_cost_pct,
         selling_cost_pct=selling_cost_pct,
         target_margin=target_margin,
-        market_overrides=await market_overrides_for(session, market_code_of(parcel_number)),
+        buy_box=buy_box,
     )
     analysis = build_scenarios(
         ScenarioInputs(
@@ -258,6 +218,7 @@ async def build_deal(
     session: AsyncSession,
     parcel_number: str,
     *,
+    user_id: int | None = None,
     base_zoning_code: str | None,
     market_value: float | None,
     buildability: BuildabilityResult | None,
@@ -292,12 +253,13 @@ async def build_deal(
         land_value = market_value
         land_value_is_assessed = land_value is not None
 
+    buy_box = await buy_box_assumptions(session, user_id)
     assumptions = _assumptions(
         construction_cost_per_sqft=construction_cost_per_sqft,
         soft_cost_pct=soft_cost_pct,
         selling_cost_pct=selling_cost_pct,
         target_margin=target_margin,
-        market_overrides=await market_overrides_for(session, market_code_of(parcel_number)),
+        buy_box=buy_box,
     )
     analysis = analyze_deal(
         DealInputs(
@@ -314,13 +276,9 @@ async def build_deal(
         assumptions,
     )
 
-    overrides = await session.scalar(
-        _MARKET_OVERRIDES_SQL, {"market_code": market_code_of(parcel_number)}
-    )
-
     return DealResult(
         parcel_number=parcel_number,
-        assumptions_source=assumptions_source(overrides),
+        assumptions_source=assumptions_source(buy_box),
         units=units,
         arv=analysis.arv,
         per_unit_value=analysis.per_unit_value,

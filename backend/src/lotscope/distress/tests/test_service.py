@@ -14,16 +14,6 @@ from lotscope.distress.service import (
 pytestmark = pytest.mark.integration
 
 
-async def _market(session: AsyncSession, code: str) -> None:
-    await session.execute(
-        text(
-            "INSERT INTO market (code, name, url_slug, local_srid, map_center, default_zoom, "
-            "timezone) VALUES (:c, :c, :c, 2248, CAST(:center AS jsonb), 12, 'UTC')"
-        ),
-        {"c": code, "center": '{"lat": 39.3, "lng": -76.6}'},
-    )
-
-
 async def _parcel(
     session: AsyncSession,
     parcel_number: str,

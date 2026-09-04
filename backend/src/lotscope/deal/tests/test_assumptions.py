@@ -38,24 +38,24 @@ def test_a_percentage_outside_zero_to_one_is_rejected() -> None:
             fraction(bad)
 
 
-def test_user_override_beats_market_default_beats_platform_default() -> None:
+def test_the_buy_box_beats_the_platform_default_and_a_scenario_beats_both() -> None:
     settings = _settings()
     platform = build_assumption_set(settings=settings)
     assert platform.get("construction_cost_per_sqft").origin == "platform_default"
 
-    market = build_assumption_set(
-        settings=settings, market_overrides={"construction_cost_per_sqft": 210.0}
-    )
-    assert market.get("construction_cost_per_sqft").origin == "market_default"
-    assert market.get("construction_cost_per_sqft").value == Decimal("210.00")
-
     user = build_assumption_set(
-        settings=settings,
-        market_overrides={"construction_cost_per_sqft": 210.0},
-        user_overrides={"construction_cost_per_sqft": 260.0},
+        settings=settings, user_overrides={"construction_cost_per_sqft": 260.0}
     )
     assert user.get("construction_cost_per_sqft").origin == "user_override"
     assert user.get("construction_cost_per_sqft").value == Decimal("260.00")
+
+    scenario = build_assumption_set(
+        settings=settings,
+        user_overrides={"construction_cost_per_sqft": 260.0},
+        scenario_overrides={"construction_cost_per_sqft": 310.0},
+    )
+    assert scenario.get("construction_cost_per_sqft").origin == "scenario_override"
+    assert scenario.get("construction_cost_per_sqft").value == Decimal("310.00")
 
 
 def test_financing_and_time_are_unavailable_rather_than_zero() -> None:

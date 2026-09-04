@@ -6,7 +6,6 @@ from lotscope.core.errors import ConflictError, NotFoundError
 from lotscope.underwriting.schemas import BuyBox, ProfileWrite
 from lotscope.underwriting.service import (
     create_profile,
-    default_assumptions,
     delete_profile,
     find_buy_box_matches,
     get_profile,
@@ -115,18 +114,6 @@ async def test_only_one_profile_is_default_per_user(db_session: AsyncSession) ->
     profiles = {p.name: p.is_default for p in await list_profiles(db_session, alice)}
     assert profiles == {"A": False, "B": True}
     assert first.id is not None
-
-
-async def test_default_assumptions_are_scoped_to_the_asking_user(
-    db_session: AsyncSession,
-) -> None:
-    alice = await _user(db_session, "alice@example.com")
-    bob = await _user(db_session, "bob@example.com")
-    await create_profile(
-        db_session, alice, _write(is_default=True, assumptions={"target_margin": 0.33})
-    )
-    assert await default_assumptions(db_session, alice) == {"target_margin": 0.33}
-    assert await default_assumptions(db_session, bob) == {}
 
 
 def test_a_percentage_assumption_outside_zero_to_one_is_rejected() -> None:
