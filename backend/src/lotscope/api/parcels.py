@@ -614,6 +614,7 @@ async def parcel_deal(
     result = await analyze_parcel_deal(
         session,
         parcel_number,
+        user_id=current_user.id,
         acquisition_price=acquisition_price,
         construction_cost_per_sqft=construction_cost_per_sqft,
         soft_cost_pct=soft_cost_pct,
@@ -643,6 +644,7 @@ async def parcel_scenarios(
     result = await analyze_parcel_scenarios(
         session,
         parcel_number,
+        user_id=current_user.id,
         acquisition_price=acquisition_price,
         construction_cost_per_sqft=construction_cost_per_sqft,
         soft_cost_pct=soft_cost_pct,
