@@ -89,12 +89,21 @@ prints nothing, the mount is an empty directory: stop and fix it before step 3.
    container's `/dev/shm` is Docker's 64MB default — `docker-compose.yml` sets `shm_size: 1gb`,
    so recreate the db container and retry.
 
-8. **Load the Philadelphia Code corpus.** Validate the artifacts first; the dry run
-   writes nothing.
+8. **Load the Philadelphia Code corpus.** Run it in `worker` — both containers carry the
+   mount, but the cold load takes about nine minutes and `worker` is the right home for it;
+   the prerequisite `ls` check above stays on `api`. Validate the artifacts first; the dry
+   run writes nothing.
    ```bash
-   docker compose exec -T api lotscope corpus load --path /srv/lotscope/corpus --dry-run
-   docker compose exec -T api lotscope corpus load --path /srv/lotscope/corpus
+   docker compose exec -T worker lotscope corpus load --path /srv/lotscope/corpus --dry-run
+   docker compose exec -T worker lotscope corpus load --path /srv/lotscope/corpus
    ```
+   **The dry run is the second gate on the empty-mount trap. If it exits non-zero, or prints
+   a total under 29,000 provisions, stop — do not run the real load.** Loading from a wrong
+   mount would leave a purged database carrying a corpus that looks loaded. Verified
+   behaviour: an empty mount exits 1 with `qa_summary.json is missing`, and a partial one
+   exits 1 naming the first title whose `.jsonl` is absent, so the usual failures are loud
+   rather than a short count — the count threshold catches the rest.
+
    Expect **29,297 provisions across 24 titles** and **21,512 documents**, all embedded.
    A cold load takes about **9 minutes** and needs `VOYAGE_API_KEY` (embeddings are Voyage,
    not Anthropic). The command exits non-zero and prints INCOMPLETE if it falls short.
