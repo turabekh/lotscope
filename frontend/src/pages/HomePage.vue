@@ -3,7 +3,6 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import BuyBoxOnboarding from '@/components/BuyBoxOnboarding.vue'
 import FirstSteps from '@/components/FirstSteps.vue'
 import NextAction from '@/components/NextAction.vue'
 import { api } from '@/lib/api'
@@ -148,7 +147,13 @@ onMounted(async () => {
       </header>
 
       <NextAction v-if="!needsBuyBox" :top-lead="leads[0] ?? null" class="q-mb-md" />
-      <BuyBoxOnboarding v-if="needsBuyBox" class="q-mb-md" />
+      <q-banner v-else dense class="q-mb-md bg-blue-1" data-test="buy-box-prompt">
+        <template #avatar><q-icon name="tune" color="primary" /></template>
+        Set your buy box and every lot gets screened against your numbers.
+        <template #action>
+          <q-btn flat no-caps color="primary" label="Set it up" :to="{ name: 'account' }" />
+        </template>
+      </q-banner>
       <FirstSteps class="q-mb-md" />
 
       <div class="row q-col-gutter-md">

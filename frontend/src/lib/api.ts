@@ -4,7 +4,10 @@ import type {
   PolicySummary,
   CorrectionRecord,
   BuyBox,
+  BuyBoxPayload,
+  BuyBoxRecord,
   BuyBoxMatches,
+  OwnedParcelSeedResult,
   UnderwritingProfile,
   AdminOverview,
   AdminUserUpdate,
@@ -447,6 +450,21 @@ export const api = {
   getOwnCorrections(): Promise<CorrectionRecord[]> {
     return request('/corrections')
   },
+  getBuyBox(): Promise<BuyBoxRecord> {
+    return request('/me/buy-box')
+  },
+
+  saveBuyBox(payload: BuyBoxPayload): Promise<BuyBoxRecord> {
+    return request('/me/buy-box', { method: 'PUT', body: JSON.stringify(payload) })
+  },
+
+  seedOwnedParcels(ownerName: string): Promise<OwnedParcelSeedResult> {
+    return request('/me/buy-box/owned-parcels/seed', {
+      method: 'POST',
+      body: JSON.stringify({ owner_name: ownerName }),
+    })
+  },
+
   getBuyBoxMatches(limit = 5): Promise<BuyBoxMatches> {
     return request(`/underwriting/matches?limit=${limit}`)
   },

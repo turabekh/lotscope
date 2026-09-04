@@ -2,28 +2,34 @@ import { expect, test } from '@playwright/test'
 
 import { dismissTour, newAccount, register } from './support/app'
 
-test('flow 2 — a new user completes the tour and sets a buy box', async ({ page }) => {
+test('flow 2 — a new user completes the tour and is pointed at the buy box', async ({ page }) => {
   await register(page, newAccount('onboarding'))
 
   await expect(page.getByRole('button', { name: 'Skip' })).toBeVisible()
   await dismissTour(page)
 
-  const buyBox = page.locator('[data-test="buy-box-onboarding"]')
-  await expect(buyBox).toBeVisible()
-
-  await page.getByRole('spinbutton', { name: 'Most you would pay' }).fill('250000')
-  await page.getByRole('spinbutton', { name: 'Target margin' }).fill('20')
-  await buyBox.getByRole('button', { name: 'Save and show matches' }).click()
-
-  const results = buyBox.locator('[data-test="buy-box-results"]')
-  await expect(results).toBeVisible()
-  await expect(results).toContainText(/matching lot/)
+  const prompt = page.locator('[data-test="buy-box-prompt"]')
+  await expect(prompt).toBeVisible()
+  await prompt.getByRole('link', { name: 'Set it up' }).click()
+  await expect(page).toHaveURL(/\/account/)
+  await expect(page.locator('[data-test="buy-box-editor"]')).toBeVisible()
 })
 
-test('flow 2 — the buy box refuses to submit with no criterion set', async ({ page }) => {
-  await register(page, newAccount('onboarding-empty'))
+test('flow 2 — the buy box saves and reads back', async ({ page }) => {
+  await register(page, newAccount('onboarding-save'))
   await dismissTour(page)
+  await page.goto('/account')
 
-  const buyBox = page.locator('[data-test="buy-box-onboarding"]')
-  await expect(buyBox.getByRole('button', { name: 'Save and show matches' })).toBeDisabled()
+  const editor = page.locator('[data-test="buy-box-editor"]')
+  await expect(editor).toBeVisible()
+
+  await editor.locator('[data-test="buy-box-max-bid"]').fill('250000')
+  await editor.locator('[data-test="buy-box-target_margin"]').fill('0.3')
+  await editor.locator('[data-test="buy-box-zoning"]').fill('rsa-5, cmx-2')
+  await editor.locator('[data-test="buy-box-save"]').click()
+  await expect(editor.locator('[data-test="buy-box-saved"]')).toBeVisible()
+
+  await page.reload()
+  await expect(editor.locator('[data-test="buy-box-max-bid"]')).toHaveValue('250000')
+  await expect(editor.locator('[data-test="buy-box-zoning"]')).toHaveValue('RSA-5, CMX-2')
 })

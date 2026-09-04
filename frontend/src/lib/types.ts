@@ -1331,3 +1331,40 @@ export interface VerificationPending {
   verification_required: boolean
   detail: string
 }
+
+export type BuyBoxTargetUse = 'hold' | 'build' | 'flip'
+
+export interface BuyBoxArea {
+  name: string
+  polygon?: Record<string, unknown> | null
+  zip_codes: string[]
+}
+
+export interface BuyBoxPayload {
+  areas: BuyBoxArea[]
+  max_bid: number | null
+  target_use: BuyBoxTargetUse
+  min_lot_sqft: number | null
+  zoning_codes: string[]
+  exclude_city_neighbor: boolean
+  exclude_open_violations: boolean
+  exclude_historic: boolean
+  exclude_flood: boolean
+  assumptions: Record<string, number>
+  owned_parcels: string[]
+}
+
+export interface BuyBoxRecord extends BuyBoxPayload {
+  user_id: number
+  created_at: string
+  updated_at: string
+}
+
+export interface OwnedParcelSeedResult {
+  owner_name: string
+  added: string[]
+  owned_parcels: string[]
+  source: string
+  source_url: string
+  fetched_at: string
+}
