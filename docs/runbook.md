@@ -132,7 +132,22 @@ prints nothing, the mount is an empty directory: stop and fix it before step 3.
      -c "DELETE FROM document WHERE source = 'title14'"
    ```
 
-9. **`GET /health/corpus`** — unauthenticated, like `/health`.
+9. **One-time, next deploy only: the market-rooted purge.** Yesterday's purge walked foreign
+   keys out of `parcel`, so it never reached reference tables keyed by `market_code` with no
+   `parcel_number`. Wilmington's seven `zoning_overlay` polygons survived, the overlay refresh
+   built zero memberships for them, and the guard failed the deploy mid-flight — an 81-second
+   outage. `purge-other-markets` now runs a second, market-rooted pass; run it once.
+   ```bash
+   docker compose exec -T api lotscope data purge-other-markets --dry-run   # read pass 2
+   docker compose exec -T api lotscope data purge-other-markets --yes
+   docker compose exec -T db psql -U lotscope -d lotscope \
+     -c "SELECT market_code, count(*) FROM zoning_overlay GROUP BY 1"
+   ```
+   Expect roughly 27,500 rows across 16 tables — mostly `street_centerline` (19,642),
+   `flood_zone` (4,620), `historic_district` (1,810) and `zoning_district` (1,253) — and
+   `zoning_overlay` left holding `phl` only. Pass 1 should report all zeros: it already ran.
+
+10. **`GET /health/corpus`** — unauthenticated, like `/health`.
    ```bash
    curl -s https://<host>/api/health/corpus | jq '{status, total_documents, represented_pct, failures}'
    ```

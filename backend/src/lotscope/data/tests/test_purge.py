@@ -6,11 +6,14 @@ from lotscope.data.purge import (
     EXPLICIT_LISTED,
     EXPLICIT_PARCEL_KEYED_TABLES,
     FK_REACHED,
+    MARKET_ROOTED,
     PurgeTarget,
+    all_targets,
     build_deletion_graph,
     count_targets,
     delete_targets,
     load_full_metadata,
+    market_rooted_targets,
 )
 
 
@@ -134,3 +137,37 @@ async def test_counting_and_deleting_agree_on_the_same_predicate(
 async def test_an_absent_table_is_reported_rather_than_raising(db_session: AsyncSession) -> None:
     target = PurgeTarget(key="no_such_table", reason=EXPLICIT_LISTED, predicate="true")
     assert await count_targets(db_session, [target]) == [(target, None)]
+
+
+def test_every_market_scoped_table_is_in_one_of_the_two_passes() -> None:
+    metadata = load_full_metadata()
+    covered = {t.key for t in all_targets(metadata)}
+    market_scoped = {t.key for t in metadata.sorted_tables if "market_code" in t.c}
+
+    assert market_scoped - covered == set(), (
+        "a table carrying market_code is in neither the parcel-rooted graph nor the "
+        "market-rooted list, so a purge would leave non-Philadelphia rows in it. That is "
+        "what failed the 2026-09-04 deploy: zoning_overlay kept its Wilmington polygons."
+    )
+
+
+def test_the_two_passes_do_not_overlap() -> None:
+    metadata = load_full_metadata()
+    parcel_rooted = {t.key for t in build_deletion_graph(metadata)}
+    market_rooted = {t.key for t in market_rooted_targets(metadata)}
+
+    assert parcel_rooted & market_rooted == set(), "a table must be deleted by one pass only"
+
+
+def test_zoning_overlay_is_covered_by_the_market_rooted_pass() -> None:
+    keys = {t.key for t in market_rooted_targets(load_full_metadata())}
+
+    assert "zoning_overlay" in keys, "the table whose leftovers failed the deploy"
+    assert "zoning_standard" in keys
+    assert "street_centerline" in keys
+
+
+def test_the_market_rooted_pass_filters_on_market_not_parcel() -> None:
+    for target in market_rooted_targets(load_full_metadata()):
+        assert target.predicate == "market_code <> 'phl'"
+        assert target.reason == MARKET_ROOTED

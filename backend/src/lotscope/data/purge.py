@@ -15,6 +15,10 @@ PARCEL_TABLE = "parcel"
 
 FK_REACHED = "fk"
 EXPLICIT_LISTED = "explicit"
+MARKET_ROOTED = "market"
+
+MARKET_COLUMN = "market_code"
+PARCEL_COLUMN = "parcel_number"
 
 
 @dataclass(frozen=True)
@@ -194,3 +198,34 @@ async def delete_targets(
         )
         deleted.append((target, result.rowcount))
     return deleted
+
+
+def market_rooted_targets(
+    metadata: MetaData, *, market_code: str = MARKET_CODE
+) -> list[PurgeTarget]:
+    parcel_rooted = {
+        target.key for target in build_deletion_graph(metadata, market_code=market_code)
+    }
+    keys = [
+        table.key
+        for table in metadata.sorted_tables
+        if MARKET_COLUMN in table.c
+        and PARCEL_COLUMN not in table.c
+        and table.key not in parcel_rooted
+    ]
+    keys.reverse()
+    return [
+        PurgeTarget(
+            key=key,
+            reason=MARKET_ROOTED,
+            predicate=f"{MARKET_COLUMN} <> '{market_code}'",
+            note="market-scoped reference data, not reachable from parcel",
+        )
+        for key in keys
+    ]
+
+
+def all_targets(metadata: MetaData, *, market_code: str = MARKET_CODE) -> list[PurgeTarget]:
+    return build_deletion_graph(metadata, market_code=market_code) + market_rooted_targets(
+        metadata, market_code=market_code
+    )

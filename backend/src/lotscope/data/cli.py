@@ -15,6 +15,7 @@ from lotscope.data.purge import (
     count_targets,
     delete_targets,
     load_full_metadata,
+    market_rooted_targets,
 )
 
 _ABSENT = "absent"
@@ -45,14 +46,25 @@ async def _purge(args: Namespace) -> int:
     configure_logging(settings)
     _quiet_third_party_chatter()
     logger = get_logger("data.purge")
-    targets = build_deletion_graph(load_full_metadata(), market_code=MARKET_CODE)
+    metadata = load_full_metadata()
+    parcel_targets = build_deletion_graph(metadata, market_code=MARKET_CODE)
+    market_targets = market_rooted_targets(metadata, market_code=MARKET_CODE)
+    targets = parcel_targets + market_targets
 
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
     try:
         async with session_factory() as session:
             before = await count_targets(session, targets)
-            _render(before, heading=f"Rows outside market {MARKET_CODE!r} — deletion order")
+            split = len(parcel_targets)
+            _render(
+                before[:split],
+                heading=f"Pass 1 — rows reachable from parcel, outside {MARKET_CODE!r}",
+            )
+            _render(
+                before[split:],
+                heading=f"Pass 2 — market-scoped reference data, outside {MARKET_CODE!r}",
+            )
             if args.dry_run:
                 logger.info("purge_dry_run", tables=len(targets))
                 return 0
@@ -69,7 +81,8 @@ async def _purge(args: Namespace) -> int:
                 return 1
 
             after = await count_targets(session, targets)
-            _render(after, heading="After — same graph, recounted")
+            _render(after[:split], heading="After — pass 1 recounted")
+            _render(after[split:], heading="After — pass 2 recounted")
             logger.info("purge_completed", tables=len(targets))
             return 0
     finally:
