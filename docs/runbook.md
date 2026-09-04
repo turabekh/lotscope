@@ -72,12 +72,24 @@ prints nothing, the mount is an empty directory: stop and fix it before step 3.
    ```
    The count query must return rows. Stop here if it does not.
 
+   **Use PG16 tools.** Production is Postgres 16, so `pg_dump -Fc` writes archive version
+   1.15, and `pg_restore` is not forward-compatible: a Homebrew PostgreSQL 15 client fails
+   with `unsupported version (1.15) in file header` and cannot read the dump at all. Restore
+   into the local docker `db` container instead, which is the same major version — copy the
+   dump in with `docker compose cp`, restore with `-U lotscope` into a scratch database
+   (`pg_restore` defaults to the container's root user, which has no role), then drop it.
+   Do not restore over the local working database.
+
 3. **Deploy `main`.** `gh workflow run deploy.yml --ref main`, then confirm the served SHA.
    Check `ingest_run` for rows without `finished_at` first — the nightly runs about an hour
    (04:08–05:14 UTC), and deploying into it is how the 2026-08-24 datasets were lost.
 
-4. **Migrate.** `alembic upgrade head`. Migration `a1c7e4f90b62` drops `repository_listing`,
-   `market_gate_item` and sixteen foreign keys to `market.code`.
+4. **Migrate — verification, not application.** The `migrate` compose service runs
+   `alembic upgrade head` during step 3, so by the time you get here `alembic current` already
+   reads head and an upgrade applies zero revisions. Confirm the migration by its effects
+   rather than its version marker: `repository_listing` and `market_gate_item` gone, and
+   `SELECT count(*) FROM pg_constraint WHERE confrelid = 'market'::regclass` returning 0.
+   That is what `a1c7e4f90b62` does.
 
 5. **Dry run the purge.** `lotscope data purge-other-markets --dry-run`. Read the table:
    every row it lists is about to be deleted. Expect ~189k parcels and ~962k rows total.
