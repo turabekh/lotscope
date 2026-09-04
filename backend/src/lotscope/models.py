@@ -3,6 +3,7 @@ from lotscope.admin.models import JobRun
 from lotscope.ai.models import Document
 from lotscope.appeal.models import AppealPacketEntitlement
 from lotscope.assemblage.models import ParcelAssemblage
+from lotscope.buybox.models import BuyBox
 from lotscope.buyers.models import BuyerProfile
 from lotscope.core.db import Base
 from lotscope.corrections.models import ParcelCorrection
@@ -32,6 +33,7 @@ metadata = Base.metadata
 
 __all__ = [
     "AppealPacketEntitlement",
+    "BuyBox",
     "BuyerProfile",
     "CodeProvision",
     "CreditLedgerEntry",
