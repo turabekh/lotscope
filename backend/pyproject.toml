@@ -28,6 +28,9 @@ dependencies = [
     "selectolax>=0.4.10",
 ]
 
+[project.scripts]
+lotscope = "lotscope.cli:main"
+
 [project.optional-dependencies]
 geo = [
     "shapely>=2.0.6",
