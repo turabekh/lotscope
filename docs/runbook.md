@@ -29,6 +29,33 @@ parallel workers.
 The first deploy after the Philadelphia-only refactor drops tables and deletes ~189k
 parcel rows. Run these in order; do not skip step 2 because step 1 "looked fine".
 
+**VM prerequisite — do this before step 3.** `/srv/lotscope/corpus` must exist on the VM and
+be readable inside the container, or step 8 fails after production has already been purged.
+Compose bind-mounts it read-only into `api` and `worker` at the same path; a bind mount whose
+source is missing is created by Docker as an empty directory, so an absent corpus looks like
+an empty one rather than an error. The containers run as root, so the only requirement is
+that the directory exists and is world-readable.
+
+```bash
+scp -i ~/.ssh/lotscope_deploy -r backend/data/phillycode \
+  turaboy@34.148.129.129:/tmp/corpus
+ssh -i ~/.ssh/lotscope_deploy turaboy@34.148.129.129 \
+  'sudo mkdir -p /srv/lotscope && sudo rm -rf /srv/lotscope/corpus \
+   && sudo mv /tmp/corpus /srv/lotscope/corpus \
+   && sudo chmod -R a+rX /srv/lotscope/corpus'
+```
+
+Then recreate the containers so the mount takes effect, and prove the path is visible from
+inside — not just present on the host:
+
+```bash
+docker compose --profile app up -d api worker
+docker compose exec -T api ls /srv/lotscope/corpus | head
+```
+
+That must list `qa_summary.json` and the `title_*.jsonl` files (50 entries, 24 MB). If it
+prints nothing, the mount is an empty directory: stop and fix it before step 3.
+
 1. **Back up, and copy the dump off the VM.**
    ```bash
    ssh lotscope-vm 'docker compose exec -T db pg_dump -U lotscope -Fc lotscope' \

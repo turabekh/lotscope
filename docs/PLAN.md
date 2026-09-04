@@ -90,7 +90,7 @@ Then:
 
 ### OWNER 0.3
 - [ ] Copy the phillyruleparser artifacts (the 24 MB corpus output) to the VM at `/srv/lotscope/corpus/` — `scp` or a GCS bucket, your call.
-- [ ] Confirm `ANTHROPIC_API_KEY` is set in the production `.env` with a paid key and a sensible spend limit.
+- [ ] Confirm `VOYAGE_API_KEY` is set in the production `.env` — the corpus load builds its embeddings through Voyage, not Anthropic, so this is the key step 0.3 actually needs. `ANTHROPIC_API_KEY` is for the answer layer; confirm it too, with a sensible spend limit.
 
 ### Step 0.3 — Corpus live in production
 Branch: `feat/corpus-live`
