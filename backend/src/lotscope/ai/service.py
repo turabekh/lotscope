@@ -26,7 +26,6 @@ from lotscope.ai.prompts import (
 from lotscope.ai.query_terms import extract_cites, extract_districts
 from lotscope.ai.retrieval import (
     embed_and_search,
-    fetch_district_documents,
     fetch_documents_by_cite,
     search_parcel_documents,
 )
@@ -39,7 +38,6 @@ from lotscope.ai.schemas import (
     RetrievedDocument,
 )
 from lotscope.ai.scope import (
-    PHILLYCODE_SOURCE,
     RetrievalScope,
     zoning_retrieval_scope,
 )
@@ -328,34 +326,6 @@ async def draft_parcel_report(
     )
 
 
-async def _incumbent_context(
-    session: AsyncSession,
-    embedder: Embedder,
-    question: str,
-    *,
-    scope: RetrievalScope,
-    zoning_code: str | None,
-    document_limit: int,
-) -> list[RetrievedDocument]:
-    documents = await embed_and_search(
-        session,
-        embedder,
-        question,
-        limit=document_limit,
-        source=scope.source,
-        market=scope.market,
-    )
-    if not zoning_code:
-        return documents
-    pinned = await fetch_district_documents(
-        session, zoning_code, source=scope.source, market=scope.market
-    )
-    if not pinned:
-        return documents
-    seen = {document.id for document in pinned}
-    return (pinned + [d for d in documents if d.id not in seen])[: max(document_limit, len(pinned))]
-
-
 async def _canonical_context(
     session: AsyncSession,
     embedder: Embedder,
@@ -404,34 +374,23 @@ async def ask_the_parcel(
     embedder: Embedder,
     generator: StructuredGenerator,
     document_limit: int = 5,
-    source_override: str | None = None,
 ) -> ParcelAnswer | None:
     detail = await get_parcel_detail(session, parcel_number)
     if detail is None:
         return None
 
     verdict = await get_verdict(session, parcel_number)
-    scope = zoning_retrieval_scope(detail.market_code, source_override=source_override)
+    scope = zoning_retrieval_scope()
     zoning_code = detail.resolved_zoning_code or detail.base_zoning_code
-    if scope.source == PHILLYCODE_SOURCE:
-        documents = await _canonical_context(
-            session,
-            embedder,
-            question,
-            scope=scope,
-            market_code=detail.market_code,
-            zoning_code=zoning_code,
-            document_limit=document_limit,
-        )
-    else:
-        documents = await _incumbent_context(
-            session,
-            embedder,
-            question,
-            scope=scope,
-            zoning_code=zoning_code,
-            document_limit=document_limit,
-        )
+    documents = await _canonical_context(
+        session,
+        embedder,
+        question,
+        scope=scope,
+        market_code=detail.market_code,
+        zoning_code=zoning_code,
+        document_limit=document_limit,
+    )
 
     deeds = await search_parcel_documents(
         session, embedder, question, parcel_number, source=DEED_SOURCE, limit=3

@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin mailpit
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set gold-set-select recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage ingest-title14 load-phillycode derive-phillycode verify-derivation verify-zoning-standards check-invariants verify-v11 reconcile-opa demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set gold-set-select recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage load-phillycode derive-phillycode verify-derivation verify-zoning-standards check-invariants verify-v11 reconcile-opa demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -65,9 +65,6 @@ recompute-assemblage: ## Recompute assemblage Top Plays for every vacant parcel
 
 vapid-keys: ## Generate a VAPID keypair for web push (copy into .env)
 	cd $(BACKEND) && uv run python -m lotscope.notifications.vapid_keys
-
-ingest-title14: ## Embed the Title 14 corpus (use: make ingest-title14 FILE=data/title14/sections.jsonl)
-	cd $(BACKEND) && uv run python -m lotscope.ai.corpus $(FILE)
 
 load-phillycode: ## Load the parsed Philadelphia Code (QA-gated) into code_provision
 	cd $(BACKEND) && uv run python -m lotscope.provisions.cli $(ARGS)

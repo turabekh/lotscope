@@ -96,12 +96,12 @@ async def test_the_attribution_is_visible_to_the_model(db_session: AsyncSession)
 
 async def test_a_document_nobody_referenced_reads_exactly_as_before() -> None:
     plain = RetrievedDocument(
-        id=1, source="title14", section="§ 14-701", title=None, content="body", distance=0.1
+        id=1, source="phillycode", section="§ 14-701", title=None, content="body", distance=0.1
     )
 
     prompt = build_user_prompt("q", "facts", [plain])
 
-    assert "[title14 § 14-701] body" in prompt
+    assert "[phillycode § 14-701] body" in prompt
     assert "referenced by" not in prompt
 
 

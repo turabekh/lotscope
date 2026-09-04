@@ -17,7 +17,7 @@ async def _seed(session: AsyncSession) -> None:
         ("phillycode", "14-303(12)(e)", "14"),
         ("phillycode", "14-701", "14"),
         ("phillycode", "9-3010", "9"),
-        ("title14", "§ 14-701 / § 14-602 (RSA-5)", None),
+        ("phillycode", "§ 14-701 / § 14-602 (RSA-5)", None),
     ]
     for source, section, title_number in rows:
         metadata: dict[str, object] = {"provision_id": section}
@@ -80,13 +80,3 @@ async def test_no_cites_costs_no_query(db_session: AsyncSession) -> None:
     await _seed(db_session)
 
     assert await fetch_documents_by_cite(db_session, [], source="phillycode") == []
-
-
-async def test_the_incumbent_source_is_not_reachable_by_a_phillycode_cite(
-    db_session: AsyncSession,
-) -> None:
-    await _seed(db_session)
-
-    found = await fetch_documents_by_cite(db_session, ["14-701"], source="title14")
-
-    assert found == []

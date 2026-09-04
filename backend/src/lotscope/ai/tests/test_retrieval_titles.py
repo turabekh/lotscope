@@ -20,7 +20,7 @@ async def _seed(session: AsyncSession) -> None:
         ("phillycode", "14-602", "14", 0.011),
         ("phillycode", "9-3010", "9", 0.012),
         ("phillycode", "19-1301", "19", 0.013),
-        ("title14", "§ 14-701 (RSA-5)", None, 0.014),
+        ("phillycode", "untitled-provision", None, 0.014),
     ]
     for source, section, title_number, seed in rows:
         metadata: dict[str, object] = {"provision_id": section}
@@ -42,7 +42,13 @@ async def test_an_unscoped_search_still_sees_every_title(db_session: AsyncSessio
 
     found = await vector_search(db_session, _vector(0.01), limit=10, source="phillycode")
 
-    assert {document.section for document in found} == {"14-701", "14-602", "9-3010", "19-1301"}
+    assert {document.section for document in found} == {
+        "14-701",
+        "14-602",
+        "9-3010",
+        "19-1301",
+        "untitled-provision",
+    }
 
 
 async def test_a_title_scope_excludes_everything_outside_it(db_session: AsyncSession) -> None:
@@ -70,17 +76,7 @@ async def test_an_empty_title_list_is_treated_as_no_scope_at_all(db_session: Asy
 
     found = await vector_search(db_session, _vector(0.01), limit=10, source="phillycode", titles=[])
 
-    assert len(found) == 4
-
-
-async def test_the_incumbent_source_is_unaffected_by_title_scoping(
-    db_session: AsyncSession,
-) -> None:
-    await _seed(db_session)
-
-    found = await vector_search(db_session, _vector(0.014), limit=10, source="title14")
-
-    assert [document.section for document in found] == ["§ 14-701 (RSA-5)"]
+    assert len(found) == 5
 
 
 async def test_rows_without_a_title_number_are_excluded_by_a_title_scope(

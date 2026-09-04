@@ -307,7 +307,7 @@ async def test_ask_endpoint(db_session: AsyncSession) -> None:
     )
     await add_document(
         db_session,
-        source="title14",
+        source="phillycode",
         section="14-701",
         content="RSA-5 minimum lot area is 1,440 sqft.",
         embedding=[1.0] + [0.0] * (EMBEDDING_DIMENSIONS - 1),

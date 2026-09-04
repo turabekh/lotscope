@@ -16,6 +16,7 @@ from lotscope.accounts.usage import (
     register_parcel_view,
 )
 from lotscope.ai.client import StructuredGenerator
+from lotscope.ai.derivation import PHILLYCODE_SOURCE
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.prompts import (
     PROMPT_VERSION,
@@ -667,7 +668,7 @@ async def ask_parcel(
     settings: SettingsDep,
 ) -> ParcelAnswer:
     cache_key = _ask_cache_key(
-        parcel_number, body.question, settings.zoning_retrieval_source, settings.anthropic_model
+        parcel_number, body.question, PHILLYCODE_SOURCE, settings.anthropic_model
     )
     try:
         cached = await redis.get(cache_key)
@@ -693,7 +694,6 @@ async def ask_parcel(
         body.question,
         embedder=embedder,
         generator=generator,
-        source_override=settings.zoning_retrieval_source,
     )
     if answer is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")

@@ -5,7 +5,7 @@ from lotscope.ai.schemas import RetrievedDocument
 def _doc() -> RetrievedDocument:
     return RetrievedDocument(
         id=1,
-        source="title14",
+        source="phillycode",
         section="14-701",
         title=None,
         content="RSA-5 minimum lot area is 1,440 sqft.",
@@ -17,7 +17,7 @@ def test_build_user_prompt_includes_question_facts_and_sources() -> None:
     prompt = build_user_prompt("Can I build a house?", "Parcel facts here", [_doc()])
     assert "Can I build a house?" in prompt
     assert "Parcel facts here" in prompt
-    assert "[title14 14-701] RSA-5 minimum lot area is 1,440 sqft." in prompt
+    assert "[phillycode 14-701] RSA-5 minimum lot area is 1,440 sqft." in prompt
 
 
 def test_build_user_prompt_handles_no_documents() -> None:

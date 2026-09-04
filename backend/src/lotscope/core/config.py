@@ -100,7 +100,6 @@ class Settings(BaseSettings):
 
     carto_sql_url: str = "https://phl.carto.com/api/v2/sql"
     arcgis_hub_url: str = "https://data-phl.opendata.arcgis.com"
-    zoning_retrieval_source: str = "title14"
     sheriff_sale_source: str = "csv"
     sheriff_sale_csv_path: str | None = None
     sheriff_sale_county_id: int = 60

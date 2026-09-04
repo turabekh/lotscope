@@ -39,10 +39,11 @@ async def test_ask_the_parcel_grounds_and_cites(db_session: AsyncSession) -> Non
     )
     await add_document(
         db_session,
-        source="title14",
+        source="phillycode",
         section="14-701",
         content="RSA-5 minimum lot area is 1,440 sqft.",
         embedding=_embedding(1.0, 0.0),
+        metadata={"provision_id": "14-701", "cite": "14-701", "title_number": "14"},
     )
     await db_session.flush()
 
@@ -74,30 +75,49 @@ async def test_ask_the_parcel_pins_parcel_district_over_nearer_neighbor(
     await db_session.execute(
         text("INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('000000002', 'CMX-2')")
     )
-    await add_document(
-        db_session,
-        source="title14",
-        section="§ 14-701 (CMX-2.5)",
-        content="CMX-2.5 max height 55 ft",
-        embedding=_embedding(1.0, 0.0),
+    await db_session.execute(
+        text(
+            "INSERT INTO zoning_standard (market_code, code, code_version, permitted_uses, "
+            "dimensional) VALUES ('phl', 'CMX-2', 'title14-quickguide-2026-02', '[]'::jsonb, "
+            "'{}'::jsonb)"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO code_provision (market_code, id, cite, doc, kind, title_number, parent, "
+            "ordinal, path, heading, text, raw_text, refs, note_refs, table_data, page_start, "
+            "page_end, source_file, source_version) VALUES ('phl', '14-701.1', '14-701.1', "
+            "'code', 'subsection', '14', null, 1, '[]'::jsonb, null, "
+            "'In the CMX-2 district the maximum height is 38 ft.', '', '[]'::jsonb, '[]'::jsonb, "
+            "null, 1, 1, 'x.pdf', 'May 25, 2026')"
+        )
     )
     await add_document(
         db_session,
-        source="title14",
-        section="§ 14-701 (CMX-2)",
+        source="phillycode",
+        section="14-701.5",
+        content="CMX-2.5 max height 55 ft",
+        embedding=_embedding(1.0, 0.0),
+        metadata={"provision_id": "14-701.5", "cite": "14-701.5", "title_number": "14"},
+    )
+    await add_document(
+        db_session,
+        source="phillycode",
+        section="14-701.1",
         content="CMX-2 max height 38 ft",
         embedding=_embedding(0.0, 1.0),
+        metadata={"provision_id": "14-701.1", "cite": "14-701.1", "title_number": "14"},
     )
     await db_session.flush()
 
     generator = _FakeGenerator(
         {
             "answer": "Up to 38 ft.",
-            "citations": [{"source": "Title 14", "section": "§ 14-701 (CMX-2)"}],
-            "confidence": "medium",
+            "citations": [{"source": "Title 14", "section": "14-701.1"}],
+            "confidence": "high",
         }
     )
-    answer = await ask_the_parcel(
+    await ask_the_parcel(
         db_session,
         "000000002",
         "How tall can I build?",
@@ -105,10 +125,12 @@ async def test_ask_the_parcel_pins_parcel_district_over_nearer_neighbor(
         generator=generator,
     )
 
-    assert answer is not None
     prompt = generator.captured_user
     assert prompt is not None
-    assert prompt.index("CMX-2 max height 38 ft") < prompt.index("CMX-2.5 max height 55 ft")
+    assert "CMX-2 max height 38 ft" in prompt
+    assert prompt.index("CMX-2 max height 38 ft") < prompt.index("CMX-2.5 max height 55 ft"), (
+        "the parcel's own district must be anchored ahead of a semantically nearer neighbour"
+    )
 
 
 async def test_ask_the_parcel_rejects_uncited_answer(db_session: AsyncSession) -> None:

@@ -45,18 +45,6 @@ _CITE_SQL = text(
     "ORDER BY array_position((:cites)::text[], section), id "
     "LIMIT :limit"
 )
-_DISTRICT_SQL = text(
-    "SELECT id, source, section, title, content, 0.0 AS distance "
-    "FROM document "
-    "WHERE embedding IS NOT NULL AND ((:source)::text IS NULL OR source = (:source)::text) "
-    + _MARKET_FILTER
-    + "AND upper(regexp_replace(coalesce(substring(section from "
-    r"'\(([^)]+)\)'"
-    "), ''), '[^A-Za-z0-9.]', '', 'g')) "
-    "= upper(regexp_replace(:district, '[^A-Za-z0-9.]', '', 'g')) "
-    "ORDER BY id ASC "
-    "LIMIT :limit"
-)
 
 
 def to_vector_literal(embedding: Sequence[float]) -> str:
@@ -189,31 +177,6 @@ async def fetch_documents_by_cite(
             "titles": list(titles) if titles else None,
             "limit": limit,
         },
-    )
-    return [
-        RetrievedDocument(
-            id=row.id,
-            source=row.source,
-            section=row.section,
-            title=row.title,
-            content=row.content,
-            distance=float(row.distance),
-        )
-        for row in rows
-    ]
-
-
-async def fetch_district_documents(
-    session: AsyncSession,
-    district_code: str,
-    *,
-    limit: int = 2,
-    source: str | None = None,
-    market: str | None = None,
-) -> list[RetrievedDocument]:
-    rows = await session.execute(
-        _DISTRICT_SQL,
-        {"district": district_code, "source": source, "market": market, "limit": limit},
     )
     return [
         RetrievedDocument(

@@ -1,8 +1,8 @@
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.ai.chunking import chunk_text
 from lotscope.ai.client import StructuredGenerator
-from lotscope.ai.corpus import chunk_text
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.retrieval import add_document
 from lotscope.documents.extraction import extract_restrictions

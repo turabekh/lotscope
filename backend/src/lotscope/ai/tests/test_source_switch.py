@@ -57,7 +57,7 @@ async def _seed(session: AsyncSession) -> None:
     await session.execute(_STANDARD)
     await add_document(
         session,
-        source="title14",
+        source="phillycode",
         content="incumbent quick guide body",
         embedding=[0.01] * EMBEDDING_DIMENSIONS,
         section="§ 14-701 / § 14-602 (RSA-5)",
@@ -79,47 +79,15 @@ async def _seed(session: AsyncSession) -> None:
     await session.commit()
 
 
-async def _ask(session: AsyncSession, generator: RecordingGenerator, override: str | None) -> None:
+async def _ask(session: AsyncSession, generator: RecordingGenerator) -> None:
     answer = await ask_the_parcel(
         session,
         "phl:555000001",
         "what is the minimum lot area?",
         embedder=FakeEmbedder(),
         generator=generator,
-        source_override=override,
     )
     assert isinstance(answer, ParcelAnswer)
-
-
-async def test_the_default_still_answers_from_the_quick_guide(db_session: AsyncSession) -> None:
-    await _seed(db_session)
-    generator = RecordingGenerator()
-
-    await _ask(db_session, generator, None)
-
-    assert "incumbent quick guide body" in generator.prompts[0]
-    assert "canonical body of" not in generator.prompts[0]
-
-
-async def test_the_configured_default_of_title14_changes_nothing(db_session: AsyncSession) -> None:
-    await _seed(db_session)
-    unset = RecordingGenerator()
-    configured = RecordingGenerator()
-
-    await _ask(db_session, unset, None)
-    await _ask(db_session, configured, "title14")
-
-    assert configured.prompts[0] == unset.prompts[0]
-
-
-async def test_the_override_reaches_the_canonical_corpus(db_session: AsyncSession) -> None:
-    await _seed(db_session)
-    generator = RecordingGenerator()
-
-    await _ask(db_session, generator, "phillycode")
-
-    assert "canonical body of 14-701" in generator.prompts[0]
-    assert "incumbent quick guide body" not in generator.prompts[0]
 
 
 async def test_the_parcels_own_district_anchors_the_canonical_context(
@@ -128,23 +96,9 @@ async def test_the_parcels_own_district_anchors_the_canonical_context(
     await _seed(db_session)
     generator = RecordingGenerator()
 
-    await _ask(db_session, generator, "phillycode")
+    await _ask(db_session, generator)
 
     assert "canonical body of 14-602" in generator.prompts[0]
-
-
-def test_the_two_arms_cannot_read_each_others_cached_answers() -> None:
-    incumbent = _ask_cache_key("phl:1", "how tall?", "title14", _MODEL)
-    canonical = _ask_cache_key("phl:1", "how tall?", "phillycode", _MODEL)
-
-    assert incumbent != canonical
-
-
-def test_the_incumbent_cache_key_still_identifies_the_same_question() -> None:
-    first = _ask_cache_key("phl:1", "How  TALL?", "title14", _MODEL)
-    second = _ask_cache_key("phl:1", "how tall?", "title14", _MODEL)
-
-    assert first == second
 
 
 def test_every_ai_cache_key_carries_its_prompt_version_and_model() -> None:
@@ -166,10 +120,9 @@ def test_every_ai_cache_key_carries_its_prompt_version_and_model() -> None:
 
 
 def test_a_model_swap_invalidates_a_cached_answer() -> None:
-    from lotscope.api.parcels import _ask_cache_key
 
-    incumbent = _ask_cache_key("phl:1", "how tall?", "title14", "claude-sonnet-4-6")
-    swapped = _ask_cache_key("phl:1", "how tall?", "title14", "claude-opus-5")
+    incumbent = _ask_cache_key("phl:1", "how tall?", "phillycode", "claude-sonnet-4-6")
+    swapped = _ask_cache_key("phl:1", "how tall?", "phillycode", "claude-opus-5")
 
     assert incumbent != swapped
 
