@@ -20,6 +20,7 @@ from lotscope.corpus.service import (
     MINIMUM_REPRESENTED_PCT,
     corpus_health,
 )
+from lotscope.notifications.email import get_email_sender
 from lotscope.ops.service import stale_automated_datasets
 
 router = APIRouter(tags=["health"])
@@ -35,6 +36,7 @@ class ReadinessResponse(BaseModel):
     database: bool
     redis: bool
     ingestion: bool
+    email: bool
     stale_datasets: list[str] = []
 
 
@@ -116,18 +118,21 @@ async def corpus_liveness(
 async def readiness(
     session: Annotated[AsyncSession, Depends(get_session)],
     redis: Annotated[Redis, Depends(get_redis)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> ReadinessResponse:
     database_ok = await _check_database(session)
     redis_ok = await _check_redis(redis)
     stale = await _stale_datasets(session) if database_ok else []
     ingestion_ok = not stale
-    healthy = database_ok and redis_ok and ingestion_ok
+    email_ok = get_email_sender(settings) is not None
+    healthy = database_ok and redis_ok and ingestion_ok and email_ok
     status: Literal["ready", "degraded"] = "ready" if healthy else "degraded"
     return ReadinessResponse(
         status=status,
         database=database_ok,
         redis=redis_ok,
         ingestion=ingestion_ok,
+        email=email_ok,
         stale_datasets=stale,
     )
 
