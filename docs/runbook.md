@@ -62,9 +62,36 @@ parcel rows. Run these in order; do not skip step 2 because step 1 "looked fine"
    container's `/dev/shm` is Docker's 64MB default — `docker-compose.yml` sets `shm_size: 1gb`,
    so recreate the db container and retry.
 
-8. **Corpus load** — Part B, pending the artifacts landing at `/srv/lotscope/corpus/`.
+8. **Load the Philadelphia Code corpus.** Validate the artifacts first; the dry run
+   writes nothing.
+   ```bash
+   docker compose exec -T api lotscope corpus load --path /srv/lotscope/corpus --dry-run
+   docker compose exec -T api lotscope corpus load --path /srv/lotscope/corpus
+   ```
+   Expect **29,297 provisions across 24 titles** and **21,512 documents**, all embedded.
+   A cold load takes about **9 minutes** and needs `VOYAGE_API_KEY` (embeddings are Voyage,
+   not Anthropic). The command exits non-zero and prints INCOMPLETE if it falls short.
 
-9. **`GET /health/corpus`** — Part B, pending.
+   **It is safe to re-run.** Each title commits on its own and an embedding failure rolls
+   back only that title, so a partial run leaves a consistent database. A re-run embeds only
+   documents whose content hash changed and re-tries any row left without a vector —
+   measured, an unchanged re-run takes **under 10 seconds** rather than nine minutes. If a
+   run dies, run it again; do not start from an empty table.
+
+   Then drop the retired quick-guide documents, which nothing reads any more:
+   ```bash
+   docker compose exec -T db psql -U lotscope -d lotscope \
+     -c "DELETE FROM document WHERE source = 'title14'"
+   ```
+
+9. **`GET /health/corpus`** — unauthenticated, like `/health`.
+   ```bash
+   curl -s https://<host>/api/health/corpus | jq '{status, total_provisions, coverage_pct}'
+   ```
+   Expect `status: "ok"`, `total_provisions: 29297`, `coverage_pct: 100.0`. It returns **503**
+   below 25,000 provisions or under 99% coverage. Coverage counts documents that carry a
+   vector — not provisions, because the derivation deliberately skips notes, figures and
+   container nodes; `represented_pct` (~98%) is the separate provision-level figure.
 
 ---
 
