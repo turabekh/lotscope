@@ -45,34 +45,25 @@ describe('authGuard', () => {
 
   it('sends an unauthenticated deep-link to login preserving where it was headed', async () => {
     const router = makeRouter()
-    await router.push('/explore')
+    await router.push('/deals')
     expect(router.currentRoute.value.name).toBe('login')
-    expect(router.currentRoute.value.query.redirect).toBe('/explore')
+    expect(router.currentRoute.value.query.redirect).toBe('/deals')
   })
 
-  it('redirects an authenticated visitor from the landing page to their market home', async () => {
+  it('opens the Analyst at the root for a signed-in buyer', async () => {
     authenticate()
     const router = makeRouter()
     await router.push('/')
-    expect(router.currentRoute.value.name).toBe('home')
-    expect(router.currentRoute.value.fullPath).toBe('/home')
+    expect(router.currentRoute.value.name).toBe('analyst')
   })
 
-  it('redirects the retired watchlist path to the Lists "lots" tab', async () => {
+  it('lands a link to a page Phase 3 deleted on the Analyst rather than a blank 404', async () => {
     authenticate()
     const router = makeRouter()
-    await router.push('/watchlist')
-    expect(router.currentRoute.value.name).toBe('lists')
-    expect(router.currentRoute.value.query.tab).toBe('lots')
-  })
-
-  it('redirects the retired saved-searches path to the Lists "searches" tab, preserving query', async () => {
-    authenticate()
-    const router = makeRouter()
-    await router.push('/saved-searches?vacant=1')
-    expect(router.currentRoute.value.name).toBe('lists')
-    expect(router.currentRoute.value.query.tab).toBe('searches')
-    expect(router.currentRoute.value.query.vacant).toBe('1')
+    for (const gone of ['/explore', '/feed', '/lists', '/top-plays', '/market', '/sheriff-sales']) {
+      await router.push(gone)
+      expect(router.currentRoute.value.name).toBe('analyst')
+    }
   })
 
   it('keeps a non-admin off an admin deep-link on a cold load, before the user resolves', async () => {
@@ -80,7 +71,7 @@ describe('authGuard', () => {
     getMe.mockResolvedValue({ id: 1, email: 'a@b.c', tier: 'pro', role: 'user' })
     const router = makeRouter()
     await router.push('/admin')
-    expect(router.currentRoute.value.name).toBe('home')
+    expect(router.currentRoute.value.name).toBe('analyst')
     expect(getMe).toHaveBeenCalledTimes(1)
   })
 
@@ -88,8 +79,8 @@ describe('authGuard', () => {
     authenticate()
     getMe.mockResolvedValue({ id: 1, email: 'a@b.c', tier: 'pro', role: 'admin' })
     const router = makeRouter()
-    await router.push('/admin/ops')
-    expect(router.currentRoute.value.name).toBe('ops')
+    await router.push('/admin')
+    expect(router.currentRoute.value.name).toBe('admin')
   })
 
   it('sends an admin deep-link away when the stored token is no longer valid', async () => {
@@ -103,23 +94,22 @@ describe('authGuard', () => {
   it('sends an expired session to login instead of into the app', async () => {
     authenticateWithExpiredToken()
     const router = makeRouter()
-    await router.push('/pipeline')
+    await router.push('/deals')
     expect(router.currentRoute.value.name).toBe('login')
-    expect(router.currentRoute.value.query.redirect).toBe('/pipeline')
+    expect(router.currentRoute.value.query.redirect).toBe('/deals')
   })
 
   it('clears the dead token rather than leaving it to fail every request', async () => {
     authenticateWithExpiredToken()
     const router = makeRouter()
-    await router.push('/pipeline')
+    await router.push('/deals')
     expect(useAuthStore().token).toBeNull()
     expect(localStorage.getItem('lotscope_token')).toBeNull()
   })
 
-  it('lets an expired session see the landing page rather than bouncing it to home', async () => {
-    authenticateWithExpiredToken()
+  it('lets a signed-out visitor read the welcome page', async () => {
     const router = makeRouter()
-    await router.push('/')
-    expect(router.currentRoute.value.name).toBe('landing')
+    await router.push('/welcome')
+    expect(router.currentRoute.value.name).toBe('welcome')
   })
 })

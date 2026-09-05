@@ -1374,3 +1374,21 @@ export interface CheckoutPrices {
   configured: boolean
   skus: Record<string, { amount_cents: number; label: string }>
 }
+
+export interface BriefSignal {
+  kind: string
+  parcel_number: string | null
+  headline: string
+  source: string
+  source_url: string | null
+}
+
+export interface BriefRecord {
+  id: number
+  brief_date: string
+  text: string
+  signal_count: number
+  emailed_at: string | null
+  run_id: number | null
+  signals: BriefSignal[]
+}

@@ -17,7 +17,47 @@ declare module 'vue-router' {
 }
 
 export const routes: RouteRecordRaw[] = [
-  { path: '/', name: 'landing', component: () => import('@/pages/LandingPage.vue') },
+  {
+    path: '/',
+    name: 'analyst',
+    component: () => import('@/pages/AnalystPage.vue'),
+    meta: { requiresAuth: true, title: 'Analyst' },
+  },
+  {
+    path: '/lot/:parcelNumber',
+    name: 'lot',
+    component: () => import('@/pages/LotPage.vue'),
+    meta: { requiresAuth: true, title: 'Lot' },
+  },
+  {
+    path: '/deals',
+    name: 'deals',
+    component: () => import('@/pages/DealsPage.vue'),
+    meta: { requiresAuth: true, title: 'Deals' },
+  },
+  {
+    path: '/packets',
+    name: 'packets',
+    component: () => import('@/pages/PacketsPage.vue'),
+    meta: { requiresAuth: true, title: 'Sale packets' },
+  },
+  {
+    path: '/account',
+    name: 'account',
+    component: () => import('@/pages/AccountPage.vue'),
+    meta: { requiresAuth: true, title: 'Account' },
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('@/pages/AdminPage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin console' },
+  },
+  {
+    path: '/welcome',
+    name: 'welcome',
+    component: () => import('@/pages/WelcomePage.vue'),
+  },
   {
     path: '/login',
     name: 'login',
@@ -38,135 +78,13 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/VerifyPage.vue'),
   },
   {
-    path: '/packets',
-    name: 'packets',
-    component: () => import('@/pages/PacketsPage.vue'),
-  },
-  {
-    path: '/account',
-    name: 'account',
-    component: () => import('@/pages/AccountPage.vue'),
-    meta: { requiresAuth: true, title: 'Account' },
-  },
-  {
-    path: '/admin',
-    name: 'admin',
-    component: () => import('@/pages/AdminPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin console' },
-  },
-  {
-    path: '/admin/ops',
-    name: 'ops',
-    component: () => import('@/pages/OpsPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, title: 'Fleet health' },
-  },
-  {
-    path: '/admin/ops/market',
-    name: 'ops-market',
-    component: () => import('@/pages/MarketHealthPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, title: 'Market health' },
-  },
-  {
-    path: '/home',
-    name: 'home',
-    component: () => import('@/pages/HomePage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/explore',
-    name: 'explore',
-    component: () => import('@/pages/ExplorePage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/leads',
-    name: 'leads',
-    component: () => import('@/pages/LeadsPage.vue'),
-    meta: { requiresAuth: true, title: 'Motivated-seller leads' },
-  },
-  {
-    path: '/feed',
-    name: 'feed',
-    component: () => import('@/pages/FeedPage.vue'),
-    meta: { requiresAuth: true, title: 'Deal feed' },
-  },
-  {
-    path: '/sheriff-sales',
-    name: 'sheriff-sales',
-    component: () => import('@/pages/SheriffSalesPage.vue'),
-    meta: { requiresAuth: true, title: 'Sheriff sales' },
-  },
-  {
-    path: '/buyers',
-    name: 'buyers',
-    component: () => import('@/pages/BuyersPage.vue'),
-    meta: { requiresAuth: true, title: 'Cash buyers' },
-  },
-  {
-    path: '/buyers/:buyerKey',
-    name: 'buyer-profile',
-    component: () => import('@/pages/BuyerProfilePage.vue'),
-    meta: { requiresAuth: true, title: 'Buyer profile' },
-  },
-  {
-    path: '/top-plays',
-    name: 'top-plays',
-    component: () => import('@/pages/TopPlaysPage.vue'),
-    meta: { requiresAuth: true, title: 'Top plays' },
-  },
-  {
-    path: '/market',
-    name: 'market',
-    component: () => import('@/pages/MarketPage.vue'),
-    meta: { requiresAuth: true, title: 'Market' },
-  },
-  {
-    path: '/pipeline',
-    name: 'pipeline',
-    component: () => import('@/pages/PipelinePage.vue'),
-    meta: { requiresAuth: true, title: 'Deal pipeline' },
-  },
-  {
-    path: '/lists',
-    name: 'lists',
-    component: () => import('@/pages/ListsPage.vue'),
-    meta: { requiresAuth: true, title: 'Lists' },
-  },
-  {
-    path: '/watchlist',
-    name: 'watchlist',
-    redirect: (to) => ({
-      name: 'lists',
-      query: { ...to.query, tab: 'lots' },
-    }),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/compare',
-    name: 'compare',
-    redirect: (to) => ({ name: 'explore', query: to.query }),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/saved-searches',
-    name: 'saved-searches',
-    redirect: (to) => ({
-      name: 'lists',
-      query: { ...to.query, tab: 'searches' },
-    }),
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/legal/:slug?',
     name: 'legal',
     component: () => import('@/pages/LegalPage.vue'),
   },
-  {
-    path: '/parcel/:id',
-    name: 'parcel',
-    component: () => import('@/pages/ParcelDossierPage.vue'),
-    meta: { requiresAuth: true },
-  },
+  // Everything Phase 3 removed. A saved link should land somewhere honest rather than on
+  // a blank 404, and the Analyst is where all of it now happens.
+  { path: '/:pathMatch(.*)*', redirect: { name: 'analyst' } },
 ]
 
 export const authGuard: NavigationGuard = async (to) => {
@@ -177,16 +95,13 @@ export const authGuard: NavigationGuard = async (to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.meta.guestOnly && auth.hasLiveToken) {
-    return { name: 'home' }
+    return { name: 'analyst' }
   }
   if (to.meta.requiresAdmin) {
     await auth.ensureRestored()
     if (auth.user === null || auth.user.role !== 'admin') {
-      return { name: 'home' }
+      return { name: 'analyst' }
     }
-  }
-  if (to.name === 'landing' && auth.hasLiveToken) {
-    return { name: 'home' }
   }
   return true
 }

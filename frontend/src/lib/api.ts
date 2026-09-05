@@ -7,6 +7,7 @@ import type {
   CheckoutPrices,
   CheckoutSession,
   PacketRecord,
+  BriefRecord,
   BuyBoxRecord,
   BuyBoxMatches,
   OwnedParcelSeedResult,
@@ -448,6 +449,15 @@ export const api = {
 
   getPackets(): Promise<PacketRecord[]> {
     return request('/packets')
+  },
+
+  getBriefs(): Promise<BriefRecord[]> {
+    return request('/briefs')
+  },
+
+  // Null is an answer: nothing changed overnight.
+  todaysBrief(): Promise<BriefRecord | null> {
+    return request('/briefs/today')
   },
 
   downloadPacket(packetId: number, saleDate: string): Promise<void> {
