@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from lotscope.agent.evals import stale as stale_state
 from lotscope.agent.runtime import ModelClient, create_run, ensure_conversation, run_agent
 from lotscope.agent.tools import REGISTRY
 from lotscope.agent.tools.registry import ToolContext
@@ -65,12 +67,21 @@ def check(assertion: dict[str, Any], answer: str, tools: list[str]) -> Assertion
 
     if kind == "tool_called":
         passed = raw in tools
+    elif kind == "tool_called_any":
+        passed = any(option in tools for option in raw)
     elif kind == "contains":
         passed = str(raw).lower() in lowered
     elif kind == "not_contains":
         passed = str(raw).lower() not in lowered
     elif kind == "any_of":
         passed = any(str(option).lower() in lowered for option in raw)
+    elif kind == "precedes":
+        # For a stale-copy answer, naming the wrong value is fine — leading with it is not.
+        first, second = (str(option).lower() for option in raw)
+        if first not in lowered:
+            passed = False
+        else:
+            passed = second not in lowered or lowered.index(first) < lowered.index(second)
     else:
         raise ValueError(f"Unknown assertion kind {kind!r}.")
 
@@ -89,12 +100,14 @@ async def run_task(
     *,
     user_id: int,
     model: str,
+    redis: Redis | None = None,
 ) -> TaskResult:
     buy_box = await read_buy_box(session, user_id)
     context = ToolContext(
         user_id=user_id,
         buy_box=buy_box.model_dump(mode="json"),
         owned_parcels=tuple(buy_box.owned_parcels),
+        redis=redis,
     )
     conversation = await ensure_conversation(session, user_id, None, task["question"])
     run = await create_run(
@@ -143,6 +156,7 @@ async def run_suite(
     spend_cap_usd: float,
     only: str | None = None,
     path: Path | None = None,
+    redis: Redis | None = None,
 ) -> list[TaskResult]:
     tasks = load_tasks(path)
     if only:
@@ -163,8 +177,19 @@ async def run_suite(
                 )
             )
             continue
-        async with factory() as session:
-            result = await run_task(session, client, task, user_id=user_id, model=model)
+        edits = stale_state.parse(task.get("stale"))
+        planted: stale_state.Planted | None = None
+        try:
+            async with factory() as session:
+                if edits:
+                    planted = await stale_state.apply(session, edits)
+                result = await run_task(
+                    session, client, task, user_id=user_id, model=model, redis=redis
+                )
+        finally:
+            if planted is not None:
+                async with factory() as session:
+                    await stale_state.undo(session, planted)
         spent += estimate_cost(result.input_tokens, result.output_tokens)
         results.append(result)
     return results

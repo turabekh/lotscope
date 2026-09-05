@@ -1,6 +1,7 @@
 import asyncio
 from argparse import ArgumentParser, Namespace
 
+from redis.asyncio import Redis
 from sqlalchemy import text
 
 import lotscope.models  # noqa: F401  (registers every table for the ORM)
@@ -46,6 +47,10 @@ def _print_table(results: list[TaskResult]) -> None:
                 print(f"        why it matters: {assertion.why}")
             if not assertion.passed:
                 print(f"        tools called: {result.tools_called}")
+        if any(not assertion.passed for assertion in result.assertions):
+            # Without the answer in front of you, a failing assertion is a guess about
+            # whether the model was wrong or the assertion was.
+            print(f"        answer: {result.answer.strip()}")
 
     ran = [r for r in results if not r.skipped]
     total_in = sum(r.input_tokens for r in ran)
@@ -91,14 +96,19 @@ async def _eval(args: Namespace) -> int:
     model = args.model or settings.analyst_model
     print(f"model {model}   spend cap ${args.spend_cap:.2f}   eval user {user_id}")
 
-    results = await run_suite(
-        factory,
-        AnthropicToolClient(settings),
-        user_id=int(user_id),
-        model=model,
-        spend_cap_usd=args.spend_cap,
-        only=args.only,
-    )
+    redis = Redis.from_url(settings.redis_url, decode_responses=True)
+    try:
+        results = await run_suite(
+            factory,
+            AnthropicToolClient(settings),
+            user_id=int(user_id),
+            model=model,
+            spend_cap_usd=args.spend_cap,
+            only=args.only,
+            redis=redis,
+        )
+    finally:
+        await redis.aclose()
     _print_table(results)
     ran = [r for r in results if not r.skipped]
     return 0 if ran and all(r.passed for r in ran) else 1

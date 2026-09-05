@@ -64,9 +64,9 @@
   question: how many open L&I violations are on 902 S Cecil St
   expect_tools: [get_violations]
   assertions:
-    - kind: tool_called
-      value: get_violations
-      why: Violation counts must come from the L&I tool.
+    - kind: tool_called_any
+      value: [live_li, get_violations]
+      why: A violation count must come from an L&I tool. live_li is the better answer — it reads the source live — so either counts.
     - kind: contains
       value: "7"
       why: There are 7 open violations on this parcel.
@@ -75,9 +75,9 @@
   question: what's wrong with 4851 N Warnock St
   expect_tools: [get_violations]
   assertions:
-    - kind: tool_called
-      value: get_violations
-      why: A question about what is wrong is a violations and risk question.
+    - kind: tool_called_any
+      value: [live_li, get_violations]
+      why: A question about what is wrong is a violations question, answered from stored or live L&I.
     - kind: contains
       value: "4"
       why: There are 4 open violations on this parcel.
@@ -179,3 +179,108 @@
     - kind: any_of
       value: ["14-", "title 14", "rsa-5", "rsa5"]
       why: A code question must cite the code, not paraphrase from memory.
+
+# --- live verification -------------------------------------------------------
+# Each of these edits LotScope's stored copy to something wrong before the task runs and
+# restores it after. The live source is untouched, so the analyst passes only by reading the
+# primary source at answer time and preferring it. `stale` may only touch the columns listed
+# in evals/stale.py.
+
+- id: stale-owner-aspen
+  question: who owns 3862 Aspen St right now
+  expect_tools: [live_opa]
+  stale:
+    - table: parcel
+      where: {parcel_number: "phl:243037700"}
+      set: {owner: "STALE OWNER LLC"}
+  assertions:
+    - kind: tool_called
+      value: live_opa
+      why: Owner is the first thing a buyer checks, so it must be read live, not from our index.
+    - kind: contains
+      value: "ASBELL"
+      why: OPA's live owner is WM ASBELL. Reporting our planted value would be reporting a stale index as fact.
+    - kind: precedes
+      value: ["ASBELL", "STALE OWNER LLC"]
+      why: Naming the stale value to explain what was wrong is right; leading with it is not. The live owner must come first.
+    - kind: any_of
+      value: ["disagree", "differs", "out of date", "stale", "does not match", "doesn't match"]
+      why: A disagreement between live and stored has to be said out loud, not silently resolved.
+
+- id: stale-owner-reed
+  question: who owns 105 Reed St and when was our record last refreshed
+  expect_tools: [live_opa]
+  stale:
+    - table: parcel
+      where: {parcel_number: "phl:011007610"}
+      set: {owner: "OUTDATED HOLDINGS LLC"}
+  assertions:
+    - kind: tool_called
+      value: live_opa
+      why: The question asks for the owner, which is a live-verified fact.
+    - kind: contains
+      value: "CITY OF PHIL"
+      why: OPA live says the city owns it; a city-owned lot is bought a completely different way.
+    - kind: precedes
+      value: ["CITY OF PHIL", "OUTDATED HOLDINGS"]
+      why: The live owner must be the answer; the planted one may only appear afterwards as the thing that was wrong.
+    - kind: any_of
+      value: ["read at", "as of", "ingested", "last refreshed", "fetched"]
+      why: The buyer asked when our copy was read, so both timestamps must appear.
+
+- id: stale-violation-count
+  question: how many L&I violations are open on 602 Sigel St
+  expect_tools: [live_li]
+  stale:
+    - table: li_event
+      where: {parcel_number: "phl:012158100", event_type: "violation"}
+      set: {status: "CLOSED", case_status: "CLOSED"}
+  assertions:
+    - kind: tool_called
+      value: live_li
+      why: An open-violation count is money the buyer inherits; it must be read live.
+    - kind: any_of
+      value: ["3 open", "three open", "3 violations", "three violations"]
+      why: L&I shows three open violations live; our planted copy shows none.
+    - kind: any_of
+      value: ["disagree", "differs", "out of date", "stale", "does not match", "doesn't match", "closed"]
+      why: Saying zero when the source says three is the failure this whole step exists to prevent.
+
+- id: stale-sale-status
+  question: is 1336 S 52nd St still selling at sheriff sale, and on what date
+  expect_tools: [live_sheriff]
+  stale:
+    - table: sheriff_sale
+      where: {case_number: "2503-012"}
+      set: {status: "Active"}
+  assertions:
+    - kind: tool_called
+      value: live_sheriff
+      why: Listings are postponed and stayed between nightly reads; a buyer at an auction pays for that gap.
+    - kind: contains
+      value: "postponed"
+      why: CivilView says Postponed live. Our planted copy says Active.
+    - kind: contains
+      value: "2026-09-16"
+      why: The sale date is the other half of the answer.
+    - kind: any_of
+      value: ["disagree", "differs", "out of date", "stale", "does not match", "doesn't match"]
+      why: The buyer must be told our copy was wrong, not just handed the right answer.
+
+- id: stale-latest-deed
+  question: what is the most recent recorded deed on 3862 Aspen St
+  expect_tools: [live_rtt]
+  stale:
+    - table: sale
+      where: {parcel_number: "phl:243037700"}
+      set: {document_id: "00000000"}
+  assertions:
+    - kind: tool_called
+      value: live_rtt
+      why: A deed recorded since the last ingest is exactly what our stored copy misses.
+    - kind: contains
+      value: "SHLAYEN"
+      why: The live transfer index shows a 2025 deed to SHLAYEN RACHEL.
+    - kind: any_of
+      value: ["2025-03-04", "march 2025", "4 march 2025", "march 4"]
+      why: The recording date is the fact being asked for.
