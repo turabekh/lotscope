@@ -1344,3 +1344,63 @@ export interface BriefRecord {
   run_id: number | null
   signals: BriefSignal[]
 }
+
+export interface AnalystSource {
+  name: string
+  url: string | null
+  fetched_at: string | null
+  ingested_at: string | null
+  computed_at: string | null
+}
+
+export interface AnalystEnvelope {
+  data: Record<string, unknown>
+  sources: AnalystSource[]
+  unverified: string[]
+}
+
+export interface ThreadStep {
+  sequence: number
+  kind: string
+  text: string | null
+  tool_name: string | null
+  tool_input: Record<string, unknown> | null
+  envelope: AnalystEnvelope | null
+  duration_ms: number | null
+}
+
+export interface ThreadTurn {
+  run_id: number
+  question: string
+  answer: string | null
+  status: string
+  created_at: string
+  steps: ThreadStep[]
+}
+
+export interface ThreadRead {
+  conversation_id: number
+  title: string | null
+  turns: ThreadTurn[]
+}
+
+export interface ConversationRead {
+  id: number
+  title: string | null
+  updated_at: string
+  run_count: number
+}
+
+export interface AnalystOpening {
+  text: string
+  needs_buy_box: boolean
+  suggested_prompt: string | null
+  next_sale_date: string | null
+}
+
+export interface RunStarted {
+  run_id: number
+  conversation_id: number
+  status: string
+  events_url: string
+}

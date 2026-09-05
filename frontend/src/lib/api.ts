@@ -8,6 +8,10 @@ import type {
   CheckoutSession,
   PacketRecord,
   BriefRecord,
+  ConversationRead,
+  ThreadRead,
+  AnalystOpening,
+  RunStarted,
   BuyBoxRecord,
   BuyBoxMatches,
   OwnedParcelSeedResult,
@@ -83,6 +87,15 @@ let emailUnverifiedHandler: (() => void) | null = null
 
 export function setAuthToken(token: string | null): void {
   authToken = token
+}
+
+/** The SSE endpoint needs the same base and bearer as every other call. */
+export function apiUrl(path: string): string {
+  return `${BASE_URL}${path}`
+}
+
+export function currentAuthToken(): string | null {
+  return authToken
 }
 
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
@@ -428,6 +441,26 @@ export const api = {
 
   getPackets(): Promise<PacketRecord[]> {
     return request('/packets')
+  },
+
+  getConversations(): Promise<ConversationRead[]> {
+    return request('/analyst/conversations')
+  },
+
+  getThread(conversationId: number): Promise<ThreadRead> {
+    return request(`/analyst/conversations/${conversationId}`)
+  },
+
+  // What the Analyst opens with. Server-side: it depends on the buy box and the calendar.
+  getOpening(): Promise<AnalystOpening> {
+    return request('/analyst/opening')
+  },
+
+  sendMessage(text: string, conversationId: number | null): Promise<RunStarted> {
+    return request('/analyst/messages', {
+      method: 'POST',
+      body: JSON.stringify({ text, conversation_id: conversationId }),
+    })
   },
 
   getBriefs(): Promise<BriefRecord[]> {
