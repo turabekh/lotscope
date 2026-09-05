@@ -90,3 +90,9 @@ Caught by Playwright: the collapse silently killed the home page's "set your buy
 ## 2026-09-05 — Step 1.1 deployed
 Merged --ff-only and deployed ef8364c; CI green on all four jobs. /api/health reports the SHA, /api/health/ready reports ready with email true and email_allowlist_active false.
 Trial user 50 on production has a saved buy box: max_bid 95,000, min_lot_sqft 640, RSA-5/CMX-2, historic and flood excluded, construction 165/sqft, target margin 0.25.
+
+## 2026-09-05 — feat/sale-packet (Step 1.2)
+Shipped: backend/src/lotscope/packet/ (models, schemas, compose, render, service, tests) + migration f7b3d81e60a4 (sale_packet), ARQ generate_sale_packet, POST/GET /packets and /packets/{id}/download. compose.py is pure and owns the BID/LOOK/PASS rule — buy-box exclusions, then by-right, then ceiling vs opening bid, then margin against the buy box's target, with a high-severity flag demoting BID to LOOK. No LLM anywhere in it.
+Caught by running it for real: buy boxes store RSA-5, the parcel table stores RSA5, so 16 of 32 genuinely qualifying lots were passed as "not one of your districts" — a plausible-sounding reason on a packet reporting success. Both sides now go through zoning/codes.normalize_zoning_code; red-checked in packet and matching tests.
+Real run, 2026-09-16, trial buy box (max_bid 95k, RSA-5/CMX-2, 640 sqft floor, historic+flood excluded): 114 listings, 32 vacant, **0 pass** — 11 not buildable by right, 12 wrong district, 4 under the lot floor, 5 whose opening bid already exceeds a $0 MAO. 5 pages, 2.4s. Not a defect: citywide only 38.1% of vacant parcels are by-right buildable and 17.4% carry a positive MAO, and a fully permissive box still yields 0 BID / 1 LOOK on the same date.
+Gates: lint, typecheck 612 files, unit 1686, integration 548 (0 skipped). Verdicts on the local prod copy were computed 2026-08-22, so the offers are two weeks stale.
