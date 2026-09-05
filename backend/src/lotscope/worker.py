@@ -2,6 +2,7 @@ from asyncio import CancelledError
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any, ClassVar
+from zoneinfo import ZoneInfo
 
 from arq import cron, func
 from arq.connections import RedisSettings
@@ -42,6 +43,7 @@ from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
 from lotscope.ops.invariants import breaches, check_invariants
 from lotscope.ops.reconcile import reconcile_against_opa
 from lotscope.ops.stats import snapshot_market_stats
+from lotscope.packet.delivery import send_daily_packets, send_sale_change_alerts
 from lotscope.packet.models import SalePacket
 from lotscope.packet.service import build_packet
 from lotscope.skiptrace.jobs import grant_investor_credits
@@ -113,6 +115,30 @@ async def generate_sale_packet(ctx: dict[str, Any], packet_id: int) -> int:
         await session.commit()
         _logger.info("sale_packet_ready", packet_id=packet_id, path=built.pdf_path)
     return 1
+
+
+PACKET_EMAIL_LOCAL_HOUR = 9
+PACKET_EMAIL_TZ = ZoneInfo("America/New_York")
+
+
+async def send_daily_packet_emails(ctx: dict[str, Any]) -> int:
+    local_hour = datetime.now(PACKET_EMAIL_TZ).hour
+    if local_hour != PACKET_EMAIL_LOCAL_HOUR:
+        _logger.info("packet_emails_skipped_off_hour", local_hour=local_hour)
+        return 0
+    settings = ctx["settings"]
+    count = await send_daily_packets(ctx["session_factory"], get_email_sender(settings), settings)
+    _logger.info("sent_packet_emails", count=count)
+    return count
+
+
+async def send_sheriff_change_emails(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    count = await send_sale_change_alerts(
+        ctx["session_factory"], get_email_sender(settings), settings
+    )
+    _logger.info("sent_sheriff_change_emails", count=count)
+    return count
 
 
 async def recompute_verdicts(ctx: dict[str, Any]) -> int:
@@ -437,6 +463,8 @@ class WorkerSettings:
         run_admin_job,
         sweep_ingestion_retention,
         func(generate_sale_packet, timeout=BULK_JOB_TIMEOUT),
+        func(send_daily_packet_emails, timeout=BULK_JOB_TIMEOUT),
+        func(send_sheriff_change_emails, timeout=BULK_JOB_TIMEOUT),
         func(recompute_verdicts, timeout=BULK_JOB_TIMEOUT),
         func(recompute_vacant_verdicts, timeout=BULK_JOB_TIMEOUT),
         func(recompute_distress, timeout=BULK_JOB_TIMEOUT),
@@ -486,4 +514,11 @@ class WorkerSettings:
         cron(recorded(send_saved_search_match_alerts), hour=9, minute=0),
         cron(recorded(send_feed_digest_emails), hour=13, minute=15),
         cron(recorded(send_deal_reminder_emails), hour=13, minute=45),
+        cron(
+            recorded(send_daily_packet_emails),
+            hour={13, 14},
+            minute=0,
+            timeout=BULK_JOB_TIMEOUT,
+        ),
+        cron(recorded(send_sheriff_change_emails), hour=5, minute=45, timeout=BULK_JOB_TIMEOUT),
     ]
