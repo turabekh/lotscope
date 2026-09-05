@@ -160,3 +160,4 @@ sync-db.sh
 /backend/data/goldset/*
 !/backend/data/goldset/phl-sample.jsonl
 backend/data/packets/
+backend/data/letters/
