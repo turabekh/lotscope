@@ -11,6 +11,7 @@ from lotscope.risk.schemas import (
     RiskFlagSchema,
     RiskResult,
     SheriffSaleCalendar,
+    SheriffSaleChange,
     SheriffSaleDate,
     SheriffSaleDates,
     SheriffSaleItem,
@@ -467,3 +468,44 @@ async def list_sheriff_sale_dates(
         ],
         computed_at=datetime.now(UTC),
     )
+
+
+RECENT_CHANGE_DAYS = 14
+
+_RECENT_CHANGES_SQL = text(
+    "SELECT parcel_number, sale_date, old_status, new_status, old_sale_date, new_sale_date, "
+    "observed_at FROM sheriff_sale_event "
+    "WHERE parcel_number = :parcel_number "
+    "AND observed_at >= now() - make_interval(days => :days) "
+    "ORDER BY observed_at DESC"
+)
+
+
+def _change_summary(row: Any) -> str:
+    if row.new_sale_date is not None and row.old_sale_date != row.new_sale_date:
+        moved = row.new_sale_date.strftime("%b %-d")
+        return f"continued to {moved}"
+    if row.new_status and row.new_status != row.old_status:
+        return str(row.new_status).lower()
+    return "changed"
+
+
+async def recent_sheriff_changes(
+    session: AsyncSession, parcel_number: str, *, days: int = RECENT_CHANGE_DAYS
+) -> list[SheriffSaleChange]:
+    rows = (
+        await session.execute(_RECENT_CHANGES_SQL, {"parcel_number": parcel_number, "days": days})
+    ).all()
+    return [
+        SheriffSaleChange(
+            parcel_number=row.parcel_number,
+            sale_date=row.sale_date,
+            old_status=row.old_status,
+            new_status=row.new_status,
+            old_sale_date=row.old_sale_date,
+            new_sale_date=row.new_sale_date,
+            observed_at=row.observed_at,
+            summary=_change_summary(row),
+        )
+        for row in rows
+    ]

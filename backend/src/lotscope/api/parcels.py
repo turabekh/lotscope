@@ -69,8 +69,8 @@ from lotscope.parcels.service import get_parcel_detail, parcel_market_code
 from lotscope.reports.appeal_packet import appeal_packet_filename
 from lotscope.reports.dossier import dossier_filename
 from lotscope.reports.service import build_appeal_packet, build_parcel_dossier
-from lotscope.risk.schemas import NextSheriffSale
-from lotscope.risk.service import get_next_sheriff_sale
+from lotscope.risk.schemas import NextSheriffSale, SheriffSaleChange
+from lotscope.risk.service import get_next_sheriff_sale, recent_sheriff_changes
 from lotscope.subdivision.schemas import SubdivisionResult
 from lotscope.subdivision.service import analyze_parcel_subdivision
 from lotscope.valuation.schemas import ValuationResult
@@ -230,6 +230,13 @@ async def parcel_next_sheriff_sale(
     parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> NextSheriffSale | None:
     return await get_next_sheriff_sale(session, parcel_number)
+
+
+@router.get("/{parcel_number}/sheriff-changes", response_model=list[SheriffSaleChange])
+async def parcel_sheriff_changes(
+    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
+) -> list[SheriffSaleChange]:
+    return await recent_sheriff_changes(session, parcel_number)
 
 
 @router.get("/{parcel_number}/variance-outlook", response_model=VarianceOutlook)

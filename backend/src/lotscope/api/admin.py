@@ -1,9 +1,11 @@
 import mimetypes
+from datetime import date
 from typing import Annotated
 from urllib.parse import unquote, urlparse
 
 from arq.connections import ArqRedis
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Response, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
@@ -34,6 +36,7 @@ from lotscope.api.deps import (
     require_admin,
 )
 from lotscope.core.errors import ValidationError
+from lotscope.packet.service import enqueue_packet
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -119,4 +122,31 @@ async def admin_fetch_source(
         content=content,
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+class AdminPacketRequest(BaseModel):
+    user_id: int
+    sale_date: date
+
+
+class AdminPacketRead(BaseModel):
+    id: int
+    user_id: int
+    sale_date: date
+    status: str
+
+
+@router.post("/packets", response_model=AdminPacketRead, status_code=status.HTTP_202_ACCEPTED)
+async def request_packet_for_user(
+    data: AdminPacketRequest, session: SessionDep, admin: AdminDep, arq: ArqPoolDep
+) -> AdminPacketRead:
+    packet = await enqueue_packet(session, data.user_id, data.sale_date)
+    await session.commit()
+    await arq.enqueue_job("generate_sale_packet", packet.id)
+    return AdminPacketRead(
+        id=packet.id,
+        user_id=packet.user_id,
+        sale_date=packet.sale_date,
+        status=packet.status,
     )

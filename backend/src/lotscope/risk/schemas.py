@@ -53,6 +53,17 @@ class NextSheriffSale(BaseModel):
     days_until: int
 
 
+class SheriffSaleChange(BaseModel):
+    parcel_number: str
+    sale_date: date | None
+    old_status: str | None
+    new_status: str | None
+    old_sale_date: date | None
+    new_sale_date: date | None
+    observed_at: datetime
+    summary: str
+
+
 class RiskFlagSchema(BaseModel):
     code: str
     severity: Literal["high", "medium", "low", "info"]
