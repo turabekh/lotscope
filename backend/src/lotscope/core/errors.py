@@ -49,3 +49,10 @@ class MissingEconomicsError(ConflictError):
 
 class PaymentRequiredError(LotScopeError):
     pass
+
+
+class BillingUnconfiguredError(LotScopeError):
+    default_message = (
+        "Purchasing is not switched on yet. Nothing was charged and no order was created."
+    )
+    code = "billing_unconfigured"

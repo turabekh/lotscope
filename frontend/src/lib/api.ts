@@ -4,6 +4,7 @@ import type {
   PolicySummary,
   CorrectionRecord,
   BuyBoxPayload,
+  CheckoutPrices,
   CheckoutSession,
   PacketRecord,
   BuyBoxRecord,
@@ -442,6 +443,10 @@ export const api = {
   getOwnCorrections(): Promise<CorrectionRecord[]> {
     return request('/corrections')
   },
+  getCheckoutPrices(): Promise<CheckoutPrices> {
+    return request('/checkout/prices')
+  },
+
   getPackets(): Promise<PacketRecord[]> {
     return request('/packets')
   },

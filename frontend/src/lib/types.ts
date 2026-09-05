@@ -1369,3 +1369,8 @@ export interface PacketRecord {
   generated_at: string | null
   download_url: string | null
 }
+
+export interface CheckoutPrices {
+  configured: boolean
+  skus: Record<string, { amount_cents: number; label: string }>
+}

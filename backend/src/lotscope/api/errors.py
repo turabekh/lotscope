@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from lotscope.core.config import get_settings
 from lotscope.core.errors import (
     AuthError,
+    BillingUnconfiguredError,
     ConfigurationError,
     ConflictError,
     EmailUnverifiedError,
@@ -34,6 +35,7 @@ _STATUS_BY_EXCEPTION: dict[type[LotScopeError], int] = {
     AuthError: 401,
     EmailUnverifiedError: 403,
     ForbiddenError: 403,
+    BillingUnconfiguredError: 503,
     PaymentRequiredError: 402,
     QuotaExceededError: 429,
     ConflictError: 409,

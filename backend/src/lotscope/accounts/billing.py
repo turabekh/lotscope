@@ -5,7 +5,7 @@ import stripe
 
 from lotscope.accounts.purchases import SKU_LABELS, SKU_PRICES_CENTS
 from lotscope.core.config import Settings
-from lotscope.core.errors import ValidationError
+from lotscope.core.errors import BillingUnconfiguredError, ValidationError
 
 
 @dataclass(frozen=True)
@@ -14,8 +14,12 @@ class CheckoutSession:
     url: str
 
 
-class StripeNotConfiguredError(ValidationError):
-    pass
+def billing_is_configured(settings: Settings) -> bool:
+    return bool(
+        settings.stripe_secret_key
+        and settings.stripe_price_packet
+        and settings.stripe_price_diligence
+    )
 
 
 def price_id_for(settings: Settings, sku: str) -> str:
@@ -24,15 +28,15 @@ def price_id_for(settings: Settings, sku: str) -> str:
         "diligence": settings.stripe_price_diligence,
     }.get(sku)
     if not price:
-        raise StripeNotConfiguredError(f"No Stripe price is configured for {sku!r}.")
+        raise BillingUnconfiguredError
     return price
 
 
 def create_checkout_session(
     settings: Settings, *, sku: str, object_ref: str, user_id: int, email: str
 ) -> CheckoutSession:
-    if not settings.stripe_secret_key:
-        raise StripeNotConfiguredError("Stripe is not configured.")
+    if not billing_is_configured(settings):
+        raise BillingUnconfiguredError
     stripe.api_key = settings.stripe_secret_key
     created = stripe.checkout.Session.create(
         mode="payment",
@@ -44,13 +48,13 @@ def create_checkout_session(
         cancel_url=settings.billing_cancel_url,
     )
     if created.url is None:
-        raise StripeNotConfiguredError("Stripe returned no checkout URL.")
+        raise BillingUnconfiguredError
     return CheckoutSession(session_id=created.id, url=created.url)
 
 
 def verify_webhook(settings: Settings, payload: bytes, signature: str) -> dict[str, object]:
     if not settings.stripe_webhook_secret:
-        raise StripeNotConfiguredError("No Stripe webhook secret is configured.")
+        raise BillingUnconfiguredError
     try:
         event = stripe.Webhook.construct_event(  # type: ignore[no-untyped-call]
             payload, signature, settings.stripe_webhook_secret

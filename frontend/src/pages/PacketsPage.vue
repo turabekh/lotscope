@@ -7,13 +7,16 @@ import type { PacketRecord } from '@/lib/types'
 const PACKET_PRICE = '$49'
 
 const packets = ref<PacketRecord[]>([])
+const purchasingEnabled = ref(true)
 const loading = ref(true)
 const busyId = ref<number | null>(null)
 const error = ref<string | null>(null)
 
 async function load(): Promise<void> {
   try {
-    packets.value = await api.getPackets()
+    const [records, prices] = await Promise.all([api.getPackets(), api.getCheckoutPrices()])
+    packets.value = records
+    purchasingEnabled.value = prices.configured
   } catch (cause) {
     error.value = cause instanceof ApiError ? cause.message : 'Your packets could not be loaded.'
   } finally {
@@ -29,6 +32,11 @@ async function download(packet: PacketRecord): Promise<void> {
   } catch (cause) {
     if (cause instanceof ApiError && cause.status === 402) {
       await buy(packet)
+      return
+    }
+    if (cause instanceof ApiError && cause.status === 503) {
+      purchasingEnabled.value = false
+      error.value = cause.message
       return
     }
     error.value = cause instanceof ApiError ? cause.message : 'The download failed.'
@@ -67,35 +75,45 @@ onMounted(load)
         No packet yet. One is built for you before each sale date.
       </q-banner>
 
-      <q-card
-        v-for="packet in packets"
-        v-else
-        :key="packet.id"
-        flat
-        bordered
-        class="q-mb-sm"
-        data-test="packet-card"
-      >
-        <q-card-section class="row items-center">
-          <div>
-            <div class="text-subtitle1">Sheriff sale {{ packet.sale_date }}</div>
-            <div class="text-caption lot-text-muted">
-              {{ packet.status === 'ready' ? 'Ready' : packet.status }}
+      <div v-else>
+        <q-card
+          v-for="packet in packets"
+          :key="packet.id"
+          flat
+          bordered
+          class="q-mb-sm"
+          data-test="packet-card"
+        >
+          <q-card-section class="row items-center">
+            <div>
+              <div class="text-subtitle1">Sheriff sale {{ packet.sale_date }}</div>
+              <div class="text-caption lot-text-muted">
+                {{ packet.status === 'ready' ? 'Ready' : packet.status }}
+              </div>
             </div>
-          </div>
-          <q-space />
-          <q-btn
-            v-if="packet.status === 'ready'"
-            unelevated
-            no-caps
-            color="primary"
-            :label="`Get this packet — ${PACKET_PRICE}`"
-            :loading="busyId === packet.id"
-            data-test="packet-buy"
-            @click="download(packet)"
-          />
-        </q-card-section>
-      </q-card>
+            <q-space />
+            <div v-if="packet.status === 'ready'" class="column items-end">
+              <q-btn
+                unelevated
+                no-caps
+                color="primary"
+                :disable="!purchasingEnabled"
+                :label="`Get this packet — ${PACKET_PRICE}`"
+                :loading="busyId === packet.id"
+                data-test="packet-buy"
+                @click="download(packet)"
+              />
+              <div
+                v-if="!purchasingEnabled"
+                class="text-caption lot-text-muted q-mt-xs"
+                data-test="packet-buy-soon"
+              >
+                Purchasing opens soon
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
 
       <q-banner v-if="error" dense class="bg-red-1 q-mt-md" data-test="packets-error">
         {{ error }}

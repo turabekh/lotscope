@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.accounts.billing import billing_is_configured
 from lotscope.ai.derivation import PHILLYCODE_SOURCE
 from lotscope.api.deps import get_redis, get_session
 from lotscope.core.config import Settings, get_settings
@@ -38,6 +39,7 @@ class ReadinessResponse(BaseModel):
     ingestion: bool
     email: bool
     email_allowlist_active: bool
+    billing: bool
     stale_datasets: list[str] = []
 
 
@@ -127,6 +129,7 @@ async def readiness(
     ingestion_ok = not stale
     email_ok = get_email_sender(settings) is not None
     allowlist_active = bool(settings.email_allowlist)
+    billing_ok = billing_is_configured(settings)
     healthy = database_ok and redis_ok and ingestion_ok and email_ok
     status: Literal["ready", "degraded"] = "ready" if healthy else "degraded"
     return ReadinessResponse(
@@ -136,6 +139,7 @@ async def readiness(
         ingestion=ingestion_ok,
         email=email_ok,
         email_allowlist_active=allowlist_active,
+        billing=billing_ok,
         stale_datasets=stale,
     )
 

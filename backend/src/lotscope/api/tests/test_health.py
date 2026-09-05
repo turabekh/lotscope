@@ -72,6 +72,7 @@ async def test_readiness_is_ready_when_ingestion_is_current() -> None:
     assert body["ingestion"] is True
     assert body["email"] is True
     assert body["email_allowlist_active"] is False
+    assert body["billing"] is False
     assert body["stale_datasets"] == []
 
 
@@ -127,3 +128,55 @@ async def test_readiness_says_when_an_allowlist_is_still_gating_recipients() -> 
     body = response.json()
     assert body["email"] is True
     assert body["email_allowlist_active"] is True
+
+
+async def test_readiness_says_billing_is_off_until_stripe_is_configured() -> None:
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: _StubSession()
+    app.dependency_overrides[get_redis] = lambda: _StubRedis()
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None, smtp_host="smtp.example.test"
+    )
+    with mock.patch("lotscope.api.health.stale_automated_datasets", return_value=[]):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/health/ready")
+
+    assert response.json()["billing"] is False
+
+
+async def test_readiness_says_billing_is_on_once_every_stripe_key_is_present() -> None:
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: _StubSession()
+    app.dependency_overrides[get_redis] = lambda: _StubRedis()
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
+        smtp_host="smtp.example.test",
+        stripe_secret_key="sk_test_x",
+        stripe_price_packet="price_packet",
+        stripe_price_diligence="price_diligence",
+    )
+    with mock.patch("lotscope.api.health.stale_automated_datasets", return_value=[]):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/health/ready")
+
+    assert response.json()["billing"] is True
+
+
+async def test_a_missing_price_alone_is_enough_to_read_billing_off() -> None:
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: _StubSession()
+    app.dependency_overrides[get_redis] = lambda: _StubRedis()
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
+        smtp_host="smtp.example.test",
+        stripe_secret_key="sk_test_x",
+        stripe_price_packet="price_packet",
+    )
+    with mock.patch("lotscope.api.health.stale_automated_datasets", return_value=[]):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/health/ready")
+
+    assert response.json()["billing"] is False

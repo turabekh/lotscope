@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.accounts.billing import create_checkout_session, verify_webhook
+from lotscope.accounts.billing import (
+    billing_is_configured,
+    create_checkout_session,
+    verify_webhook,
+)
 from lotscope.accounts.models import User
 from lotscope.accounts.purchases import (
     SKU_LABELS,
@@ -14,7 +18,7 @@ from lotscope.accounts.purchases import (
 )
 from lotscope.api.deps import get_app_settings, get_current_user, get_session
 from lotscope.core.config import Settings
-from lotscope.core.errors import ValidationError
+from lotscope.core.errors import BillingUnconfiguredError, ValidationError
 from lotscope.core.logging import get_logger
 
 router = APIRouter(tags=["billing"])
@@ -40,10 +44,13 @@ class CheckoutResponse(BaseModel):
 
 
 @router.get("/checkout/prices")
-async def list_prices() -> dict[str, dict[str, object]]:
+async def list_prices(settings: SettingsDep) -> dict[str, object]:
     return {
-        sku: {"amount_cents": SKU_PRICES_CENTS[sku], "label": SKU_LABELS[sku]}
-        for sku in SKU_PRICES_CENTS
+        "configured": billing_is_configured(settings),
+        "skus": {
+            sku: {"amount_cents": SKU_PRICES_CENTS[sku], "label": SKU_LABELS[sku]}
+            for sku in SKU_PRICES_CENTS
+        },
     }
 
 
@@ -51,6 +58,9 @@ async def list_prices() -> dict[str, dict[str, object]]:
 async def start_checkout(
     data: CheckoutRequest, session: SessionDep, user: CurrentUserDep, settings: SettingsDep
 ) -> CheckoutResponse:
+    if not billing_is_configured(settings):
+        raise BillingUnconfiguredError
+
     created = create_checkout_session(
         settings,
         sku=data.sku,
