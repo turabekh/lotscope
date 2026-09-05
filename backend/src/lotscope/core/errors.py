@@ -45,3 +45,7 @@ class ConflictError(LotScopeError):
 
 class MissingEconomicsError(ConflictError):
     default_message = "No verdict economics are available for this parcel."
+
+
+class PaymentRequiredError(LotScopeError):
+    pass
