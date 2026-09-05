@@ -19,12 +19,47 @@ from lotscope.valuation.policy import (
     COMP_SELECTION,
     excluded_document_types,
 )
-from lotscope.valuation.schemas import CompResult, ValuationResult
+from lotscope.valuation.schemas import (
+    CompResult,
+    SheriffClearingEstimate,
+    ValuationResult,
+)
 
 DEFAULT_RADIUS_FT = 1500.0
 DEFAULT_YEARS = 3
 DEFAULT_MIN_PRICE = 1000.0
 DEFAULT_LIMIT = 25
+
+SHERIFF_DEED_DOCUMENT_TYPE = "SHERIFF'S DEED"
+CLEARING_RADIUS_M = 800.0
+CLEARING_RADIUS_FT = CLEARING_RADIUS_M / 0.3048
+CLEARING_MONTHS = 24
+CLEARING_MINIMUM_SAMPLE = 3
+CLEARING_SOURCE = "rtt_summary"
+CLEARING_SOURCE_URL = "https://opendataphilly.org/datasets/real-estate-transfers/"
+
+_CLEARING_SQL = text(
+    "WITH subject AS ("
+    "  SELECT geom_local, "
+    "  regexp_replace(upper(coalesce(nullif(base_zoning_code, ''), resolved_zoning_code)), "
+    "  '[^A-Z].*$', '') AS zoning_class "
+    "  FROM parcel WHERE parcel_number = :parcel_number"
+    ") "
+    "SELECT count(*) AS sample_size, "
+    "percentile_cont(0.5) WITHIN GROUP (ORDER BY s.sale_price) AS median_price, "
+    "min(s.sale_price) AS low, max(s.sale_price) AS high, "
+    "max(subject.zoning_class) AS zoning_class "
+    "FROM subject "
+    "JOIN parcel c ON c.geom_local IS NOT NULL "
+    "AND ST_DWithin(c.geom_local, subject.geom_local, :radius_ft) "
+    "AND c.is_vacant IS TRUE "
+    "AND regexp_replace(upper(coalesce(nullif(c.base_zoning_code, ''), c.resolved_zoning_code)), "
+    "'[^A-Z].*$', '') = subject.zoning_class "
+    "JOIN sale s ON s.parcel_number = c.parcel_number "
+    "AND s.document_type = :document_type "
+    "AND s.sale_date >= current_date - make_interval(months => :months) "
+    "AND s.sale_price > 0"
+)
 
 _SUBJECT_SQL = text(
     "SELECT lot_area_sqft, base_zoning_code, market_code, (geom_local IS NOT NULL) AS has_geometry "
@@ -68,6 +103,64 @@ _COMPS_SQL = text(
 
 def _as_float(value: Any) -> float | None:
     return float(value) if value is not None else None
+
+
+async def sheriff_clearing_estimate(
+    session: AsyncSession, parcel_number: str
+) -> SheriffClearingEstimate:
+    computed_at = datetime.now(UTC)
+    row = (
+        await session.execute(
+            _CLEARING_SQL,
+            {
+                "parcel_number": parcel_number,
+                "radius_ft": CLEARING_RADIUS_FT,
+                "document_type": SHERIFF_DEED_DOCUMENT_TYPE,
+                "months": CLEARING_MONTHS,
+            },
+        )
+    ).one_or_none()
+
+    sample = int(row.sample_size) if row is not None else 0
+    zoning_class = row.zoning_class if row is not None else None
+    base = {
+        "parcel_number": parcel_number,
+        "zoning_class": zoning_class,
+        "sample_size": sample,
+        "radius_m": CLEARING_RADIUS_M,
+        "months": CLEARING_MONTHS,
+        "minimum_sample": CLEARING_MINIMUM_SAMPLE,
+        "source": CLEARING_SOURCE,
+        "source_url": CLEARING_SOURCE_URL,
+        "computed_at": computed_at,
+    }
+
+    if zoning_class is None:
+        return SheriffClearingEstimate(
+            sufficient=False,
+            reason="The parcel has no zoning district recorded, so no comparable class exists.",
+            **base,
+        )
+    if sample < CLEARING_MINIMUM_SAMPLE:
+        return SheriffClearingEstimate(
+            sufficient=False,
+            reason=(
+                f"Only {sample} sheriff's deed"
+                f"{'' if sample == 1 else 's'} on {zoning_class} vacant land within "
+                f"{CLEARING_RADIUS_M:.0f} m in {CLEARING_MONTHS} months; "
+                f"{CLEARING_MINIMUM_SAMPLE} are needed."
+            ),
+            **base,
+        )
+
+    assert row is not None
+    return SheriffClearingEstimate(
+        sufficient=True,
+        estimate=_as_float(row.median_price),
+        low=_as_float(row.low),
+        high=_as_float(row.high),
+        **base,
+    )
 
 
 async def find_comps(

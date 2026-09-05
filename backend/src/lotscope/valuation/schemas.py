@@ -28,3 +28,20 @@ class ValuationResult(BaseModel):
     wide_area: bool = False
     sources: list[dict[str, Any]]
     computed_at: datetime
+
+
+class SheriffClearingEstimate(BaseModel):
+    parcel_number: str
+    zoning_class: str | None
+    sufficient: bool
+    estimate: float | None = None
+    sample_size: int
+    low: float | None = None
+    high: float | None = None
+    radius_m: float
+    months: int
+    minimum_sample: int
+    reason: str | None = None
+    source: str
+    source_url: str
+    computed_at: datetime
