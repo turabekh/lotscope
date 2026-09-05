@@ -1,7 +1,9 @@
 from lotscope.accounts.models import BuyerInvite, Purchase, User
 from lotscope.admin.models import JobRun
 from lotscope.agent.alerts import AgentAlert
+from lotscope.agent.memory import AnalystMemory
 from lotscope.agent.models import AgentConversation, AgentRun, AgentStep
+from lotscope.agent.signals import AnalystBrief, AnalystSignal
 from lotscope.ai.models import Document
 from lotscope.assemblage.models import ParcelAssemblage
 from lotscope.buybox.models import BuyBox
@@ -37,6 +39,9 @@ __all__ = [
     "AgentConversation",
     "AgentRun",
     "AgentStep",
+    "AnalystBrief",
+    "AnalystMemory",
+    "AnalystSignal",
     "BuyBox",
     "BuyerInvite",
     "BuyerProfile",
