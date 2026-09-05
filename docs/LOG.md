@@ -133,3 +133,12 @@ New: purchase (unique on stripe_session_id, so a webhook replay cannot double-re
 Frontend: PricingPlans, UpgradePrompt, the credits store and every tier array deleted; a packet card offers "Get this packet — $49" and a 402 sends the buyer to Checkout; the Lot page carries a disabled "Diligence — $199".
 Gates: lint, typecheck 611 files, unit 1663, integration 546 (0 skipped), vitest 414, Playwright serial 43 passed / 0 skipped — the two skipped Stripe stubs are gone.
 Not done: no Stripe test-mode credentials on this box, so the transcript stubs only Stripe's network call. The signature check, webhook idempotency and the 402/200 gate are exercised for real.
+
+## 2026-09-05 — Step 1.5 shipped without Stripe
+POST /checkout answers 503 billing_unconfigured before touching Stripe or writing a purchase row; a secret key without prices still reads unconfigured. /health/ready carries billing. The packet button renders disabled with "Purchasing opens soon" and a live 503 flips it off.
+Deployed b18e033. /api/health reports the SHA; /api/health/ready: ready, database/redis/ingestion/email true, billing false, no stale datasets. Ingest guard ran clean (0 running).
+comp_until = 2026-11-04 set on users 1 and 50 (both gmail.com) — user 50 is the trial plus-address; there is no separate trial account on production, so id 1, the owner's own, is the second.
+**Production defect found and fixed mid-deploy:** the worker wrote packet PDFs into its own container and the api served a path that did not exist there, so the first comped download 500'd. PACKET_DIR now points at the named volume packet_data mounted into both services, and a missing file reads 404 with the reason. Same shape as the corpus bind-mount. After the fix: GET /packets/1/download → 200, 58,542 bytes.
+Also fixed: the packet card had v-for and v-else on one element, so the list never rendered — caught because QPage renders nothing outside a QLayout and the new spec came back empty.
+Gates: lint, typecheck 612 files, unit 1673, integration 553 (0 skipped), vitest 416.
+Open: Stripe keys not on VM; checkout disabled by design (owner).
