@@ -149,3 +149,11 @@ Tools: get_parcel (parcel number or address, verdict computed on read) and searc
 **Caught before shipping:** tools register by import side-effect and nothing imported them — a fresh app exposed an empty registry, so the analyst would have run with no tools. agent.tools now imports them and a test asserts create_app() sees both.
 Real run, claude-sonnet-5, "what's the story on 2138 N Fairhill St": 1 tool call, 7,844 in / 786 out, 12.2s. Every claim sourced; it caught that the $9,695 delinquency is against the prior owner and predates a 2025-05-08 sheriff's deed, and surfaced the water/gas gap as unverified without being asked.
 Gates: lint, typecheck 620 files, unit 1700, integration 580 (0 skipped), vitest 416.
+
+## 2026-09-05 — Step 2.1 deployed; Step 2.2 (feat/agent-read-tools)
+Deployed ad93621, ingest guard clean, /api/health reports the SHA and readiness is ready (billing false by design). No trial account was named this session, so no comp was set.
+runtime.py now reads the streaming messages API and emits real text deltas; a turn's text is still one persisted step. Twelve read tools added over the existing services — verdict, zoning, code, comps, sheriff clearing, deed chain, violations, delinquency, sheriff listing, neighbours, overlays/flags, owner portfolio — each returning sources with public URLs (Atlas, Carto, L&I history, CivilView, Title 14 provision).
+**Two defects found by running the eval, not by the suite:** the RCO query named a table that does not exist (`zoning_rco`; it is `rco`), and a tool raising inside the session aborted the transaction so the whole run persisted nothing. Tools now run in a savepoint; red-checked with a tool that issues bad SQL.
+Deleted ask_the_parcel, its endpoint and schema use, AskBox.vue and four tests. summarize_parcel and draft_parcel_report kept.
+Eval: 15 tasks / 32 assertions against claude-sonnet-5 under a spend cap. **14/15 tasks, 31/32 assertions on the first run**; the one failure was my assertion, not the model — a bare `not_contains: "vacant lot"` flagged the correct answer "not a vacant lot". Tightened to "is a vacant lot"; 15/15 after. 253,832 in / 13,512 out, about $0.96.
+Gates: lint, typecheck 623 files, unit 1693, integration 573 (0 skipped), vitest 414, Playwright serial 43 passed / 0 skipped.
