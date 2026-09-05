@@ -49,6 +49,32 @@ _OPEN_CORRECTION_SQL = text(
 )
 
 
+# CivilView writes free text: "Scheduled - Tax", "Postponed", "Stayed", "Sold". What each
+# means for a buyer is a judgement the tool makes, not one the model should read off a
+# string it has never been shown the vocabulary for.
+_STATUS_CLASSES: tuple[tuple[str, str], ...] = (
+    ("postpon", "postponed"),
+    ("continu", "postponed"),
+    ("stay", "stayed"),
+    ("withdraw", "withdrawn"),
+    ("cancel", "withdrawn"),
+    ("sold", "sold"),
+    ("schedul", "scheduled"),
+    ("active", "scheduled"),
+)
+
+
+def status_class(raw: str | None) -> str:
+    """One of scheduled, postponed, stayed, withdrawn, sold, or unknown."""
+    text_value = (raw or "").strip().casefold()
+    if not text_value:
+        return "unknown"
+    for needle, label in _STATUS_CLASSES:
+        if needle in text_value:
+            return label
+    return "unknown"
+
+
 class SheriffInput(BaseModel):
     reference: str = Field(
         description=(
@@ -88,6 +114,20 @@ def _iso_date(value: Any) -> str | None:
     return raw[:10]
 
 
+def is_formatting_only(live: Any, stored: Any) -> bool:
+    """True when the two values are the same fact written differently.
+
+    Measured on production: both mailing-address "changes" on the 2026-09-16 vacant list
+    were a unit or floor prefix that our ingest drops — '2ND FL 25 S 19TH ST ...' against
+    '25 S 19TH ST ...'. Neither owner had moved. Reporting those as a change tells a buyer
+    to write to a new address, and files a correction against a value that is not wrong.
+    """
+    left, right = _norm(live), _norm(stored)
+    if left is None or right is None:
+        return False
+    return left in right or right in left
+
+
 def diff_fields(live: dict[str, Any], stored: dict[str, Any]) -> list[dict[str, Any]]:
     """Fields present in both readings whose values do not match.
 
@@ -99,9 +139,24 @@ def diff_fields(live: dict[str, Any], stored: dict[str, Any]) -> list[dict[str, 
         if live_value is None:
             continue
         stored_value = stored.get(field_name)
-        if _norm(live_value) != _norm(stored_value):
-            changes.append({"field": field_name, "live": live_value, "stored": stored_value})
+        if _norm(live_value) == _norm(stored_value):
+            continue
+        changes.append(
+            {
+                "field": field_name,
+                "live": live_value,
+                "stored": stored_value,
+                # The tool decides whether this is a real change; the model must not have
+                # to judge it from two strings.
+                "kind": "formatting" if is_formatting_only(live_value, stored_value) else "changed",
+            }
+        )
     return changes
+
+
+def material(changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Only the differences that mean the stored value is wrong."""
+    return [change for change in changes if change.get("kind") != "formatting"]
 
 
 def _describe(parcel: str, source: str, changes: list[dict[str, Any]]) -> str:
@@ -187,9 +242,11 @@ def _timestamps(result: CachedFetch, ingested: datetime | None) -> dict[str, Any
     description=(
         "Read the city assessment record for one parcel from OPA right now, and put it beside "
         "what LotScope stored: owner, mailing address, market value, land use, and OPA's own "
-        "last sale date and price. Call this before you state an owner or a mailing address — "
-        "a deed recorded since the last ingest is exactly the thing our copy will miss. The "
-        "result carries a diff list; when it is not empty, the live value is the true one."
+        "last sale date and price. Call this before you state an owner or a mailing address. "
+        "Each entry in the diff list is already classified: kind='changed' means the stored "
+        "value is wrong and the live one is true; kind='formatting' means the same fact "
+        "written differently — a unit or floor prefix our ingest drops — and is not a change, "
+        "so do not tell the buyer the owner moved or the record changed."
     ),
     input_model=ParcelInput,
 )
@@ -268,6 +325,7 @@ async def live_opa_tool(
         "land_use": live_row.get("category_code_description"),
     }
     changes = diff_fields(live, stored)
+    real = material(changes)
     correction_id = (
         await _file_correction(
             session,
@@ -275,7 +333,7 @@ async def live_opa_tool(
             parcel_number=row.parcel_number,
             section="ownership",
             source="OPA",
-            changes=changes,
+            changes=real,
         )
         if not result.from_cache
         else None
@@ -287,6 +345,7 @@ async def live_opa_tool(
             "live": live,
             "stored": stored,
             "diff": changes,
+            "material_changes": real,
             "opa_last_sale": {
                 "sale_date": _iso_date(live_row.get("sale_date")),
                 "sale_price": live_row.get("sale_price"),
@@ -442,9 +501,13 @@ async def live_rtt_tool(
     name="live_li",
     description=(
         "Read Licences and Inspections violations for one parcel right now and compare the open "
-        "count with LotScope's. Call this before you state how many violations are open — a "
-        "case closed or opened since the last ingest is exactly what our copy will miss. This "
-        "reads the violations table, which carries the case status on each violation row."
+        "count with LotScope's. Call this before you state how many violations are open. The "
+        "live open count is the one to quote. Where it differs from ours the reason is already "
+        "worked out for you: opened_since_our_last_read and changed_since_our_last_read are "
+        "genuine staleness, while never_stored are violations our ingest has never held at all "
+        "— usually years old. A never_stored violation is a gap in our coverage, not something "
+        "that happened last night, so do not describe it as new. This reads the violations "
+        "table, which carries the case status on each violation row."
     ),
     input_model=ParcelInput,
 )
@@ -462,8 +525,8 @@ async def live_li_tool(
         (
             await session.execute(
                 text(
-                    "SELECT status, case_status, event_date, description FROM li_event "
-                    "WHERE parcel_number = :p AND event_type = 'violation'"
+                    "SELECT external_id, status, case_status, event_date, description "
+                    "FROM li_event WHERE parcel_number = :p AND event_type = 'violation'"
                 ),
                 {"p": row.parcel_number},
             )
@@ -476,6 +539,9 @@ async def live_li_tool(
         "open_violations": sum(
             1 for entry in stored_rows if is_open_violation(entry["status"], entry["case_status"])
         ),
+    }
+    stored_by_id = {
+        str(entry["external_id"]): entry for entry in stored_rows if entry["external_id"]
     }
 
     if isinstance(result, str):
@@ -492,6 +558,35 @@ async def live_li_tool(
         if is_open_violation(entry.get("violationstatus"), entry.get("casestatus"))
     ]
     live = {"violations_on_record": len(live_rows), "open_violations": len(open_rows)}
+
+    # Why the counts differ, computed rather than left to the model. Measured on
+    # production: on three sampled parcels every open violation we were missing was dated
+    # 2018-2022 and none was recorded since the ingest — 61 live rows against 19 stored on
+    # one lot. That is a coverage gap in our ingest, not a case opened last night, and
+    # calling it new would be wrong in exactly the way live_rtt was.
+    cutoff = ingested.date().isoformat() if ingested else None
+    opened_since: list[dict[str, Any]] = []
+    changed_since: list[dict[str, Any]] = []
+    never_stored: list[dict[str, Any]] = []
+    for entry in live_rows:
+        number = str(entry.get("violationnumber") or "")
+        summary = {
+            "violation_number": number or None,
+            "title": entry.get("violationcodetitle"),
+            "status": entry.get("violationstatus"),
+            "case_status": entry.get("casestatus"),
+            "violation_date": _iso_date(entry.get("violationdate")),
+        }
+        held = stored_by_id.get(number)
+        if held is None:
+            recorded = summary["violation_date"] or ""
+            (opened_since if cutoff and recorded >= cutoff else never_stored).append(summary)
+        elif _norm(held["status"]) != _norm(entry.get("violationstatus")) or _norm(
+            held["case_status"]
+        ) != _norm(entry.get("casestatus")):
+            changed_since.append({**summary, "stored_status": held["status"]})
+
+    stale = bool(opened_since or changed_since)
     changes = diff_fields(live, stored)
     correction_id = (
         await _file_correction(
@@ -502,7 +597,7 @@ async def live_li_tool(
             source="L&I",
             changes=changes,
         )
-        if not result.from_cache
+        if not result.from_cache and stale
         else None
     )
 
@@ -512,6 +607,9 @@ async def live_li_tool(
             "live": live,
             "stored": stored,
             "diff": changes,
+            "opened_since_our_last_read": opened_since,
+            "changed_since_our_last_read": changed_since,
+            "never_stored": never_stored,
             "open_violations_detail": [
                 {
                     "violation_number": entry.get("violationnumber"),
@@ -532,7 +630,9 @@ async def live_li_tool(
         ],
         unverified=[
             "L&I records what was reported and inspected. An unreported condition is invisible "
-            "here, live or stored."
+            "here, live or stored.",
+            "LotScope's stored violation history is not complete. A violation under "
+            "never_stored is a gap in our coverage, not a case opened recently.",
         ],
     )
 
@@ -543,7 +643,12 @@ async def live_li_tool(
         "Read one listing off the sheriff's public sale site right now — current status and "
         "sale date — and compare it with LotScope's copy. Call this before you tell a buyer a "
         "lot is still selling, or on what date. Listings are postponed, stayed and withdrawn "
-        "between nightly reads, and a buyer standing at an auction pays for that gap."
+        "between nightly reads, and a buyer standing at an auction pays for that gap. The "
+        "site's status is free text, so live_status_class gives you what it means: scheduled, "
+        "postponed, stayed, withdrawn, sold or unknown — use that rather than reading the raw "
+        "string. stored_cases_on_file says how many cases we hold for the parcel, and "
+        "compared_case says which one the diff is against; when there is more than one, say "
+        "which case you are talking about."
     ),
     input_model=SheriffInput,
 )
@@ -587,6 +692,16 @@ async def live_sheriff_tool(
     result = await _live(context, tool_name="live_sheriff", argument=lookup, fetch=fetch_sheriff)
     ingested = (await _fetched(session)).get("sheriff_sale")
 
+    cases_on_file = 0
+    if stored_row is not None:
+        cases_on_file = int(
+            await session.scalar(
+                text("SELECT count(*) FROM sheriff_sale WHERE parcel_number = :p"),
+                {"p": stored_row["parcel_number"]},
+            )
+            or 0
+        )
+
     stored = (
         {
             "case_number": stored_row["case_number"],
@@ -614,6 +729,35 @@ async def live_sheriff_tool(
             ],
         )
 
+    live_case = result.payload.get("case_number")
+    if (
+        stored_row is not None
+        and live_case
+        and _norm(live_case) != _norm(stored_row["case_number"])
+    ):
+        # A parcel can carry several cases. Comparing the live listing against whichever of
+        # ours sells last would invent a disagreement out of two different auctions.
+        matched = (
+            (
+                await session.execute(
+                    text(
+                        "SELECT parcel_number, case_number, status, sale_date FROM sheriff_sale "
+                        "WHERE parcel_number = :p AND lower(case_number) = lower(:c) LIMIT 1"
+                    ),
+                    {"p": stored_row["parcel_number"], "c": live_case},
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if matched is not None:
+            stored_row = matched
+            stored = {
+                "case_number": matched["case_number"],
+                "status": matched["status"],
+                "sale_date": _iso_date(matched["sale_date"]),
+            }
+
     detail = result.payload.get("detail") or {}
     live = {"status": detail.get("status"), "sale_date": _iso_date(detail.get("sale_date"))}
     changes = diff_fields(live, stored)
@@ -635,7 +779,11 @@ async def live_sheriff_tool(
             "case_number": result.payload.get("case_number") or stored["case_number"],
             "address": result.payload.get("address"),
             "live": live,
+            "live_status_class": status_class(detail.get("status")),
+            "stored_status_class": status_class(stored["status"]),
             "stored": stored,
+            "stored_cases_on_file": cases_on_file,
+            "compared_case": stored["case_number"],
             "diff": changes,
             "opening_bid": detail.get("opening_bid"),
             "correction_filed": correction_id,

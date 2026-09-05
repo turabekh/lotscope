@@ -7,7 +7,7 @@ past.
 
 import json
 from collections.abc import Iterator
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any, cast
 
 import httpx
@@ -24,6 +24,8 @@ from lotscope.agent.tools.live_tools import (
     live_opa_tool,
     live_rtt_tool,
     live_sheriff_tool,
+    material,
+    status_class,
 )
 from lotscope.agent.tools.read_tools import ParcelInput
 from lotscope.agent.tools.registry import ToolContext
@@ -131,9 +133,40 @@ def test_casing_and_spacing_are_not_a_change() -> None:
     assert diff_fields({"owner": "Acme  LLC"}, {"owner": "ACME LLC"}) == []
 
 
-def test_a_real_change_is_reported_with_both_values() -> None:
+def test_a_real_change_is_reported_with_both_values_and_classified() -> None:
     changes = diff_fields({"owner": "NEW LLC"}, {"owner": "ACME LLC"})
-    assert changes == [{"field": "owner", "live": "NEW LLC", "stored": "ACME LLC"}]
+    assert changes == [
+        {"field": "owner", "live": "NEW LLC", "stored": "ACME LLC", "kind": "changed"}
+    ]
+
+
+def test_a_unit_prefix_our_ingest_drops_is_formatting_not_a_move() -> None:
+    """Both production mailing-address diffs were this: nobody had moved."""
+    changes = diff_fields(
+        {"mailing_address": "2ND FL 25 S 19TH ST PHILADELPHIA PA 19103"},
+        {"mailing_address": "25 S 19TH ST PHILADELPHIA PA 19103"},
+    )
+    assert [change["kind"] for change in changes] == ["formatting"]
+    assert material(changes) == []
+
+
+def test_a_genuinely_different_address_is_still_a_change() -> None:
+    changes = diff_fields(
+        {"mailing_address": "9 OTHER ST PHILADELPHIA PA 19104"},
+        {"mailing_address": "25 S 19TH ST PHILADELPHIA PA 19103"},
+    )
+    assert [change["kind"] for change in changes] == ["changed"]
+    assert len(material(changes)) == 1
+
+
+def test_the_sheriff_status_vocabulary_is_decided_in_the_tool() -> None:
+    assert status_class("Scheduled - Tax") == "scheduled"
+    assert status_class("Postponed") == "postponed"
+    assert status_class("Stayed by Court Order") == "stayed"
+    assert status_class("Withdrawn") == "withdrawn"
+    assert status_class("Sold") == "sold"
+    assert status_class("") == "unknown"
+    assert status_class("Reassigned to 2027") == "unknown"
 
 
 # --- live_opa ---------------------------------------------------------------------------
@@ -467,3 +500,141 @@ async def test_a_broken_cache_entry_is_read_live_rather_than_failing(
 
     assert result.data["served_from_cache"] is False
     assert json.loads(redis.store["live:live_opa:phl:191357500"])["payload"]
+
+
+# --- classification computed in the tool, not inferred by the model ----------------------
+
+
+async def test_an_old_violation_we_never_ingested_is_not_reported_as_new(
+    db_session: AsyncSession,
+) -> None:
+    """Measured on production: every missing open violation was dated 2018-2022."""
+    user_id = await _user(db_session, "li-coverage@example.com")
+    await _parcel(db_session)
+    await db_session.execute(
+        text(
+            "INSERT INTO dataset_freshness (market_code, dataset, last_success_at) "
+            "VALUES ('phl', 'violations', now()) ON CONFLICT DO NOTHING"
+        )
+    )
+    await db_session.flush()
+    live_tools.TRANSPORT = carto(
+        [
+            {
+                "violationnumber": "VI-2022-007994",
+                "violationcodetitle": "EXTERIOR STRUCTURE WALLS",
+                "violationstatus": "OPEN",
+                "casestatus": "IN VIOLATION",
+                "violationdate": "2022-02-07T00:00:00Z",
+            }
+        ]
+    )
+
+    result = await live_li_tool(
+        db_session, ToolContext(user_id=user_id), ParcelInput(parcel=PARCEL)
+    )
+
+    assert result.data["live"]["open_violations"] == 1
+    assert result.data["stored"]["open_violations"] == 0
+    assert result.data["opened_since_our_last_read"] == []
+    assert [row["violation_number"] for row in result.data["never_stored"]] == ["VI-2022-007994"]
+    # The counts still disagree, and that is still reported — but nothing was filed, because
+    # our copy is incomplete rather than out of date.
+    assert result.data["correction_filed"] is None
+    assert await _corrections(db_session) == 0
+
+
+async def test_a_violation_opened_since_the_ingest_is_staleness_and_files_one(
+    db_session: AsyncSession,
+) -> None:
+    user_id = await _user(db_session, "li-fresh@example.com")
+    await _parcel(db_session)
+    await db_session.execute(
+        text(
+            "INSERT INTO dataset_freshness (market_code, dataset, last_success_at) "
+            "VALUES ('phl', 'violations', now() - interval '2 days') ON CONFLICT "
+            "(market_code, dataset) DO UPDATE SET last_success_at = excluded.last_success_at"
+        )
+    )
+    await db_session.flush()
+    today = datetime.now(UTC).date().isoformat()
+    live_tools.TRANSPORT = carto(
+        [
+            {
+                "violationnumber": "VI-2026-1",
+                "violationcodetitle": "DANGEROUS WALL",
+                "violationstatus": "OPEN",
+                "casestatus": "IN VIOLATION",
+                "violationdate": f"{today}T00:00:00Z",
+            }
+        ]
+    )
+
+    result = await live_li_tool(
+        db_session, ToolContext(user_id=user_id), ParcelInput(parcel=PARCEL)
+    )
+
+    assert [r["violation_number"] for r in result.data["opened_since_our_last_read"]] == [
+        "VI-2026-1"
+    ]
+    assert result.data["never_stored"] == []
+    assert result.data["correction_filed"] is not None
+
+
+async def test_a_status_change_on_a_violation_we_hold_is_staleness(
+    db_session: AsyncSession,
+) -> None:
+    user_id = await _user(db_session, "li-changed@example.com")
+    await _parcel(db_session)
+    await db_session.execute(
+        text(
+            "INSERT INTO li_event (parcel_number, external_id, event_type, status, "
+            "case_status, event_date) VALUES (:p, 'VI-9', 'violation', 'OPEN', "
+            "'IN VIOLATION', '2025-01-02')"
+        ),
+        {"p": PARCEL},
+    )
+    await db_session.flush()
+    live_tools.TRANSPORT = carto(
+        [
+            {
+                "violationnumber": "VI-9",
+                "violationcodetitle": "TRASH",
+                "violationstatus": "CLOSED",
+                "casestatus": "CLOSED",
+                "violationdate": "2025-01-02T00:00:00Z",
+            }
+        ]
+    )
+
+    result = await live_li_tool(
+        db_session, ToolContext(user_id=user_id), ParcelInput(parcel=PARCEL)
+    )
+
+    assert [r["violation_number"] for r in result.data["changed_since_our_last_read"]] == ["VI-9"]
+    assert result.data["correction_filed"] is not None
+
+
+async def test_the_sheriff_diff_names_which_case_it_compared(db_session: AsyncSession) -> None:
+    user_id = await _user(db_session, "sheriff-multi@example.com")
+    await _parcel(db_session)
+    # Two auctions on one parcel; the newer one is not the one the site is showing.
+    await _sheriff_row(db_session, status="Active", sale_date="2026-09-02")
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale (parcel_number, case_number, status, sale_date) "
+            "VALUES (:p, '2799-9999', 'Scheduled - Tax', :d)"
+        ),
+        {"p": PARCEL, "d": date(2027, 1, 5)},
+    )
+    await db_session.flush()
+    live_tools.TRANSPORT = civilview()
+
+    result = await live_sheriff_tool(
+        db_session, ToolContext(user_id=user_id), SheriffInput(reference="2301-1234")
+    )
+
+    assert result.data["stored_cases_on_file"] == 2
+    assert result.data["compared_case"] == "2301-1234"
+    assert result.data["live_status_class"] == "postponed"
+    assert result.data["stored_status_class"] == "scheduled"
