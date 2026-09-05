@@ -282,6 +282,9 @@ async def run_agent(
                     "tool_finished",
                     {
                         "tool": name,
+                        # The whole envelope, because the screen shows what the tool found
+                        # and not just that it ran. It is already persisted on the step.
+                        "data": envelope.get("data", {}),
                         "sources": envelope.get("sources", []),
                         "unverified": envelope.get("unverified", []),
                         "duration_ms": tool_ms,

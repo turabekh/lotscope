@@ -882,3 +882,68 @@ async def get_owner_portfolio_tool(
             "name merge into one portfolio here, and one person using two spellings splits.",
         ],
     )
+
+
+class NoArgs(BaseModel):
+    pass
+
+
+@tool(
+    name="get_sale_calendar",
+    description=(
+        "The sheriff sale dates coming up, with how many listings and how many vacant lots "
+        "each carries. Call this whenever the buyer says 'the next sale' or 'the upcoming "
+        "sale' rather than naming a date — every other sale tool needs an actual date, and "
+        "guessing one would screen the wrong list."
+    ),
+    input_model=NoArgs,
+)
+async def get_sale_calendar_tool(
+    session: AsyncSession, context: ToolContext, payload: NoArgs
+) -> ToolResult:
+    rows = (
+        (
+            await session.execute(
+                text(
+                    "SELECT s.sale_date, count(*) AS listings, "
+                    "count(*) FILTER (WHERE p.is_vacant IS TRUE) AS vacant "
+                    "FROM sheriff_sale s JOIN parcel p USING (parcel_number) "
+                    "WHERE s.sale_date >= current_date "
+                    "GROUP BY s.sale_date ORDER BY s.sale_date LIMIT 12"
+                )
+            )
+        )
+        .mappings()
+        .all()
+    )
+    fetched = await _fetched(session)
+
+    if not rows:
+        return ToolResult(
+            data={"sales": []},
+            sources=[_source("sheriff_sale", urls.CIVILVIEW, fetched, "sheriff_sale")],
+            unverified=[
+                "No sheriff sale is on our calendar. The sheriff publishes dates ahead of "
+                "time, so an empty calendar may mean our copy is behind rather than that "
+                "nothing is scheduled."
+            ],
+        )
+
+    return ToolResult(
+        data={
+            "next_sale_date": rows[0]["sale_date"].isoformat(),
+            "sales": [
+                {
+                    "sale_date": row["sale_date"].isoformat(),
+                    "listings": int(row["listings"]),
+                    "vacant": int(row["vacant"]),
+                }
+                for row in rows
+            ],
+        },
+        sources=[_source("sheriff_sale", urls.CIVILVIEW, fetched, "sheriff_sale")],
+        unverified=[
+            "Listings move between sales. Use live_sheriff before telling a buyer a "
+            "specific lot is still on a given date."
+        ],
+    )

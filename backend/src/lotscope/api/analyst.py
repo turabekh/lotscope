@@ -1,16 +1,17 @@
 from collections.abc import AsyncIterator
-from typing import Annotated
+from datetime import date, datetime
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.accounts.models import User
 from lotscope.agent.client import AnthropicToolClient
-from lotscope.agent.models import AgentRun, AgentStep
+from lotscope.agent.models import AgentConversation, AgentRun, AgentStep
 from lotscope.agent.runtime import AgentEvent, create_run, ensure_conversation, run_agent
 from lotscope.agent.stream import cancel_run, is_cancelled, sse
 from lotscope.agent.tools.registry import ToolContext
@@ -154,3 +155,186 @@ async def run_steps(run_id: int, session: SessionDep, user: CurrentUserDep) -> l
         )
         for row in rows
     ]
+
+
+class ConversationRead(BaseModel):
+    id: int
+    title: str | None
+    updated_at: datetime
+    run_count: int
+
+
+class ThreadStep(BaseModel):
+    """One step of a run, as the thread renders it."""
+
+    sequence: int
+    kind: str
+    text: str | None = None
+    tool_name: str | None = None
+    tool_input: dict[str, Any] | None = None
+    envelope: dict[str, Any] | None = None
+    duration_ms: int | None = None
+
+
+class ThreadTurn(BaseModel):
+    run_id: int
+    question: str
+    answer: str | None
+    status: str
+    created_at: datetime
+    steps: list[ThreadStep] = []
+
+
+class ThreadRead(BaseModel):
+    conversation_id: int
+    title: str | None
+    turns: list[ThreadTurn] = []
+
+
+class OpeningRead(BaseModel):
+    """What the Analyst says before the buyer has said anything.
+
+    Server-side on purpose: what it opens with depends on whether a buy box exists and
+    when the next sale is, and neither belongs in client copy.
+    """
+
+    text: str
+    needs_buy_box: bool
+    suggested_prompt: str | None = None
+    next_sale_date: date | None = None
+
+
+@router.get("/conversations", response_model=list[ConversationRead])
+async def list_conversations(
+    session: SessionDep, user: CurrentUserDep, limit: int = 40
+) -> list[ConversationRead]:
+    rows = (
+        (
+            await session.execute(
+                text(
+                    "SELECT c.id, c.title, c.updated_at, count(r.id) AS run_count "
+                    "FROM agent_conversation c LEFT JOIN agent_run r ON r.conversation_id = c.id "
+                    "WHERE c.user_id = :u GROUP BY c.id, c.title, c.updated_at "
+                    "ORDER BY c.updated_at DESC LIMIT :limit"
+                ),
+                {"u": user.id, "limit": limit},
+            )
+        )
+        .mappings()
+        .all()
+    )
+    return [ConversationRead.model_validate(dict(row)) for row in rows]
+
+
+@router.get("/conversations/{conversation_id}", response_model=ThreadRead)
+async def read_thread(
+    conversation_id: int, session: SessionDep, user: CurrentUserDep
+) -> ThreadRead:
+    conversation = (
+        await session.execute(
+            select(AgentConversation).where(
+                AgentConversation.id == conversation_id, AgentConversation.user_id == user.id
+            )
+        )
+    ).scalar_one_or_none()
+    if conversation is None:
+        raise NotFoundError(f"Conversation {conversation_id} was not found.")
+
+    runs = list(
+        (
+            await session.execute(
+                select(AgentRun)
+                .where(AgentRun.conversation_id == conversation_id)
+                .order_by(AgentRun.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    steps_by_run: dict[int, list[AgentStep]] = {}
+    if runs:
+        for step in (
+            (
+                await session.execute(
+                    select(AgentStep)
+                    .where(AgentStep.run_id.in_([run.id for run in runs]))
+                    .order_by(AgentStep.run_id, AgentStep.sequence)
+                )
+            )
+            .scalars()
+            .all()
+        ):
+            steps_by_run.setdefault(step.run_id, []).append(step)
+
+    return ThreadRead(
+        conversation_id=conversation.id,
+        title=conversation.title,
+        turns=[
+            ThreadTurn(
+                run_id=run.id,
+                question=run.question,
+                answer=run.answer,
+                status=run.status,
+                created_at=run.created_at,
+                steps=[
+                    ThreadStep(
+                        sequence=step.sequence,
+                        kind=step.kind,
+                        text=step.text,
+                        tool_name=step.tool_name,
+                        tool_input=step.tool_input,
+                        envelope=step.envelope,
+                        duration_ms=step.duration_ms,
+                    )
+                    for step in steps_by_run.get(run.id, [])
+                ],
+            )
+            for run in runs
+        ],
+    )
+
+
+@router.get("/opening", response_model=OpeningRead)
+async def opening(session: SessionDep, user: CurrentUserDep) -> OpeningRead:
+    from lotscope.buybox.service import read_buy_box
+
+    buy_box = await read_buy_box(session, user.id)
+    configured = bool(buy_box.areas or buy_box.max_bid or buy_box.owned_parcels)
+
+    next_sale = await session.scalar(
+        text("SELECT min(sale_date) FROM sheriff_sale WHERE sale_date >= current_date")
+    )
+
+    if not configured:
+        return OpeningRead(
+            text=(
+                "I work Philadelphia vacant land for you. Before I can screen anything I need "
+                "your buy box: where you will buy, what you will pay, and what you are doing "
+                "with the lot. Tell me in your own words and I will set it up."
+            ),
+            needs_buy_box=True,
+            suggested_prompt="I buy vacant lots in ",
+            next_sale_date=next_sale,
+        )
+
+    if next_sale is None:
+        return OpeningRead(
+            text=(
+                "Your buy box is set. There is no sheriff sale on the calendar right now, so "
+                "ask me about a lot and I will read the city's records live."
+            ),
+            needs_buy_box=False,
+            suggested_prompt="What's the story on ",
+            next_sale_date=None,
+        )
+
+    return OpeningRead(
+        text=(
+            f"Your buy box is set. The next sheriff sale is {next_sale.isoformat()}. I can "
+            f"screen every vacant lot on it against your box and tell you which are worth "
+            f"bidding on."
+        ),
+        needs_buy_box=False,
+        suggested_prompt=f"Screen the {next_sale.isoformat()} sale against my buy box",
+        next_sale_date=next_sale,
+    )
