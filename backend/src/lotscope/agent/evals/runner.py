@@ -49,6 +49,11 @@ class TaskResult:
     skipped: bool = False
 
     @property
+    def errored(self) -> bool:
+        """The task could not run — an API error, not something the model got wrong."""
+        return bool(self.error) and not self.skipped
+
+    @property
     def passed(self) -> bool:
         return not self.error and all(a.passed for a in self.assertions)
 
@@ -134,12 +139,18 @@ async def run_task(
     await session.commit()
 
     answer = "".join(answer_parts)
+    # A run that errored has no answer to judge. Checking assertions against an empty
+    # string reports nonsense in both directions: every not_contains trivially passes and
+    # every contains fails, so a broken run looks like a partial behaviour regression.
+    assertions = (
+        [] if error else [check(a, answer, tools_called) for a in task.get("assertions", [])]
+    )
     return TaskResult(
         task_id=task["id"],
         question=task["question"],
         answer=answer,
         tools_called=tools_called,
-        assertions=[check(a, answer, tools_called) for a in task.get("assertions", [])],
+        assertions=assertions,
         input_tokens=run.input_tokens,
         output_tokens=run.output_tokens,
         duration_ms=int((time.monotonic() - started) * 1000),

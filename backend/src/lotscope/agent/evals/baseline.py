@@ -34,12 +34,24 @@ def snapshot(results: list[Any], *, model: str) -> dict[str, Any]:
                 ],
             }
             for result in results
-            if not result.skipped
+            if not result.skipped and not getattr(result, "errored", False)
         },
     }
 
 
+class BrokenRunError(Exception):
+    """The run did not finish cleanly, so it is not a baseline."""
+
+
 def write(results: list[Any], *, model: str, path: Path | None = None) -> Path:
+    # A baseline recorded from a run that errored would encode an outage as behaviour, and
+    # every later run would be compared against it.
+    broken = [result.task_id for result in results if getattr(result, "errored", False)]
+    if broken:
+        raise BrokenRunError(
+            f"{len(broken)} task(s) errored ({', '.join(broken[:5])}), so this run is not a "
+            f"baseline. Fix the cause and record again."
+        )
     target = path or BASELINE_PATH
     target.write_text(json.dumps(snapshot(results, model=model), indent=2, sort_keys=True) + "\n")
     return target

@@ -16,8 +16,12 @@ DEFAULT_SPEND_CAP = 2.00
 EVAL_USER_EMAIL = "agent-eval@lotscope.test"
 
 
-def _mark(passed: bool) -> str:
-    return "PASS" if passed else "FAIL"
+def _mark(result: TaskResult) -> str:
+    # An error is not a failure. Reporting an outage as a behaviour regression is how a
+    # broken run gets mistaken for a broken model.
+    if result.errored:
+        return "ERROR"
+    return "PASS" if result.passed else "FAIL"
 
 
 def _print_table(results: list[TaskResult]) -> None:
@@ -29,7 +33,7 @@ def _print_table(results: list[TaskResult]) -> None:
             print(f"{result.task_id:<{width}}  {'SKIP':<7} {'-':<5} {'-':>7} {'-':>6} {'-':>7}")
             continue
         print(
-            f"{result.task_id:<{width}}  {_mark(result.passed):<7} "
+            f"{result.task_id:<{width}}  {_mark(result):<7} "
             f"{len(result.tools_called):<5} {result.input_tokens:>7} "
             f"{result.output_tokens:>6} {result.duration_ms:>7}"
         )
@@ -54,15 +58,23 @@ def _print_table(results: list[TaskResult]) -> None:
             print(f"        answer: {result.answer.strip()}")
 
     ran = [r for r in results if not r.skipped]
+    graded = [r for r in ran if not r.errored]
+    errored = [r for r in ran if r.errored]
     total_in = sum(r.input_tokens for r in ran)
     total_out = sum(r.output_tokens for r in ran)
-    passed = sum(1 for r in ran if r.passed)
-    checks = [a for r in ran for a in r.assertions]
+    passed = sum(1 for r in graded if r.passed)
+    checks = [a for r in graded for a in r.assertions]
     print(
-        f"\ntasks {passed}/{len(ran)} passed"
+        f"\ntasks {passed}/{len(graded)} passed"
         f"   assertions {sum(1 for a in checks if a.passed)}/{len(checks)} passed"
         f"   skipped {len(results) - len(ran)}"
+        f"   errored {len(errored)}"
     )
+    if errored:
+        print(
+            f"{len(errored)} task(s) could not run and were not graded: "
+            f"{', '.join(r.task_id for r in errored)}"
+        )
     print(
         f"tokens in {total_in:,} out {total_out:,}"
         f"   estimated spend ${estimate_cost(total_in, total_out):.2f}"
@@ -115,15 +127,22 @@ async def _eval(args: Namespace) -> int:
     _print_table(results)
     ran = [r for r in results if not r.skipped]
 
-    if ran:
-        current = baseline_store.snapshot(ran, model=model)
+    graded = [r for r in ran if not r.errored]
+    if graded:
+        current = baseline_store.snapshot(graded, model=model)
         previous = baseline_store.read()
         print("\n" + baseline_store.report(previous, current))
         if args.record:
-            written = baseline_store.write(ran, model=model)
-            print(f"baseline written to {written}")
+            try:
+                written = baseline_store.write(ran, model=model)
+                print(f"baseline written to {written}")
+            except baseline_store.BrokenRunError as cause:
+                print(f"baseline NOT written: {cause}")
+                return 1
 
-    return 0 if ran and all(r.passed for r in ran) else 1
+    if any(r.errored for r in ran):
+        return 1
+    return 0 if graded and all(r.passed for r in graded) else 1
 
 
 def build_parser() -> ArgumentParser:
