@@ -1231,6 +1231,7 @@ _AREA_REQUEST = {
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_search_does_not_disclose_owners_to_anonymous_callers(
     db_session: AsyncSession,
 ) -> None:
@@ -1243,6 +1244,7 @@ async def test_search_does_not_disclose_owners_to_anonymous_callers(
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_search_still_serves_a_signed_in_member(db_session: AsyncSession) -> None:
     app, _ = _authed_app(db_session)
     async with _client(app) as client:

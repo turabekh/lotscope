@@ -143,6 +143,7 @@ def test_violation_event_carries_the_case_status_alongside_the_violation_status(
     assert event["case_status"] == "CLOSED"
 
 
+@pytest.mark.integration
 async def test_case_status_survives_staging_and_the_merge(db_session: AsyncSession) -> None:
     from lotscope.ingestion.loaders.li import _staging_row
     from lotscope.ingestion.merge import merge_li
