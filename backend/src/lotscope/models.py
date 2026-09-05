@@ -1,5 +1,6 @@
 from lotscope.accounts.models import BuyerInvite, Purchase, User
 from lotscope.admin.models import JobRun
+from lotscope.agent.models import AgentConversation, AgentRun, AgentStep
 from lotscope.ai.models import Document
 from lotscope.assemblage.models import ParcelAssemblage
 from lotscope.buybox.models import BuyBox
@@ -31,6 +32,9 @@ from lotscope.zoning.models import Rco, ZoningDistrict, ZoningOverlay, ZoningSta
 metadata = Base.metadata
 
 __all__ = [
+    "AgentConversation",
+    "AgentRun",
+    "AgentStep",
     "BuyBox",
     "BuyerInvite",
     "BuyerProfile",
