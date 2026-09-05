@@ -82,14 +82,6 @@ describe('PipelinePage CSV export', () => {
     exportMock.mockClear()
   })
 
-  it('shows a locked upgrade link for free tier', async () => {
-    useAuthStore().user = { id: 1, email: 'a@b.co', role: 'user', tier: 'free' } as User
-    const wrapper = await mountPage()
-    expect(wrapper.find('a.export-btn').exists()).toBe(true)
-    expect(wrapper.find('button.export-btn').exists()).toBe(false)
-    expect(exportMock).not.toHaveBeenCalled()
-  })
-
   it('exports for a paid tier on click', async () => {
     useAuthStore().user = { id: 1, email: 'a@b.co', role: 'user', tier: 'pro' } as User
     const wrapper = await mountPage()

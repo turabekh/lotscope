@@ -79,12 +79,6 @@ describe('BuyersPage', () => {
     getBuyersMock.mockReset()
   })
 
-  it('gates non-investor tiers with an upgrade prompt', async () => {
-    const wrapper = await mountPage('pro')
-    expect(wrapper.text()).toContain('Investor feature')
-    expect(getBuyersMock).not.toHaveBeenCalled()
-  })
-
   it('renders the roster for investor tier', async () => {
     const wrapper = await mountPage('investor')
     expect(getBuyersMock).toHaveBeenCalled()

@@ -4,30 +4,26 @@ import type {
   PolicySummary,
   CorrectionRecord,
   BuyBoxPayload,
+  CheckoutSession,
+  PacketRecord,
   BuyBoxRecord,
   BuyBoxMatches,
   OwnedParcelSeedResult,
   AdminOverview,
   AdminUserUpdate,
   AdminUsersResponse,
-  AppealPacketStatus,
   AreaSearchRequest,
   AreaSearchResponse,
   AssemblageResult,
   AssemblageTopResponse,
   AssessmentResult,
   BasemapSession,
-  BillingCadence,
   BuyerProfileDetail,
   BuyerRoster,
   BuyersNearby,
-  CheckoutResponse,
-  CheckoutTier,
   CorrectionCreate,
   CorrectionResolve,
   CorrectionStatus,
-  CreditBalance,
-  CreditPackKey,
   DatasetStatus,
   DealActivityItem,
   DealItem,
@@ -60,8 +56,6 @@ import type {
   ParcelSearchResponse,
   ParcelSummaryResult,
   PipelineResponse,
-  PlansResponse,
-  PortalResponse,
   RegisterPayload,
   VerificationPending,
   SavedSearchDetail,
@@ -448,6 +442,21 @@ export const api = {
   getOwnCorrections(): Promise<CorrectionRecord[]> {
     return request('/corrections')
   },
+  getPackets(): Promise<PacketRecord[]> {
+    return request('/packets')
+  },
+
+  downloadPacket(packetId: number, saleDate: string): Promise<void> {
+    return downloadFile(`/packets/${packetId}/download`, `lotscope-sale-packet-${saleDate}.pdf`)
+  },
+
+  startCheckout(sku: 'packet' | 'diligence', objectRef: string): Promise<CheckoutSession> {
+    return request('/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ sku, object_ref: objectRef }),
+    })
+  },
+
   getBuyBox(): Promise<BuyBoxRecord> {
     return request('/me/buy-box')
   },
@@ -641,53 +650,8 @@ export const api = {
   getUsage(): Promise<Usage> {
     return request('/auth/usage')
   },
-  getPlans(): Promise<PlansResponse> {
-    return request('/billing/plans')
-  },
-  createCheckout(tier: CheckoutTier, cadence: BillingCadence): Promise<CheckoutResponse> {
-    return request('/billing/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ tier, cadence }),
-    })
-  },
-  createFoundingCheckout(): Promise<CheckoutResponse> {
-    return request('/billing/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ tier: 'pro', cadence: 'monthly', founding: true }),
-    })
-  },
-  createPortal(): Promise<PortalResponse> {
-    return request('/billing/portal', { method: 'POST' })
-  },
-  getCredits(): Promise<CreditBalance> {
-    return request('/credits')
-  },
   skipTrace(parcelNumber: string): Promise<SkipTraceResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/skip-trace`, { method: 'POST' })
-  },
-  buyCredits(pack: CreditPackKey): Promise<CheckoutResponse> {
-    return request('/billing/credits/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ pack }),
-    })
-  },
-  getAppealPacketStatus(parcelNumber: string): Promise<AppealPacketStatus> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/appeal-packet`)
-  },
-  redeemAppealPacket(parcelNumber: string): Promise<AppealPacketStatus> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/appeal-packet`, { method: 'POST' })
-  },
-  appealPacketCheckout(parcelNumber: string): Promise<CheckoutResponse> {
-    return request('/billing/appeal-packet/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ parcel_number: parcelNumber }),
-    })
-  },
-  downloadAppealPacket(parcelNumber: string): Promise<void> {
-    return downloadFile(
-      `/parcels/${encodeURIComponent(parcelNumber)}/appeal-packet.pdf`,
-      `lotscope-assessment-review-${parcelNumber}.pdf`,
-    )
   },
   getFeed(
     params: { days?: number; savedSearchId?: number; limit?: number } = {},

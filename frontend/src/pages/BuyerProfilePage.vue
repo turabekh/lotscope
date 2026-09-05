@@ -1,19 +1,12 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
 import type { BuyerProfileDetail, BuyerPurchase } from '@/lib/types'
-import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
-const { user } = storeToRefs(auth)
-
-const INVESTOR_TIERS = ['investor', 'enterprise']
-const hasAccess = computed(() => INVESTOR_TIERS.includes(user.value?.tier ?? 'free'))
 
 const profile = ref<BuyerProfileDetail | null>(null)
 const loading = ref(false)
@@ -36,7 +29,6 @@ function when(value: string | null): string {
 }
 
 async function load(): Promise<void> {
-  if (!hasAccess.value || !buyerKey.value) return
   loading.value = true
   error.value = null
   try {
@@ -72,12 +64,7 @@ watch(buyerKey, load)
         class="q-mb-sm"
       />
 
-      <div v-if="!hasAccess" class="empty">
-        <q-icon name="lock" size="40px" color="grey-5" />
-        <div class="text-body1 q-mt-sm">Cash-buyer intelligence is an Investor feature.</div>
-      </div>
-
-      <q-banner v-else-if="error" dense class="bg-red-1 text-negative rounded-borders">
+      <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders">
         {{ error }}
       </q-banner>
 

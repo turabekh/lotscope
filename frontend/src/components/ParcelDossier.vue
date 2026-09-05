@@ -4,7 +4,6 @@ import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
 
 import AskBox from '@/components/AskBox.vue'
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import AssessmentPanel from '@/components/AssessmentPanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
@@ -503,6 +502,17 @@ async function toggleSave(): Promise<void> {
             <ScenariosPanel />
             <CompsPanel />
             <AssessmentPanel />
+            <div class="q-mt-md">
+              <q-btn
+                unelevated
+                no-caps
+                disable
+                color="primary"
+                label="Diligence — $199"
+                data-test="diligence-cta"
+              />
+              <div class="text-caption lot-text-muted q-mt-xs">Coming soon.</div>
+            </div>
             <MarketContextPanel />
             <div v-if="dealEmpty" class="tab-empty">
               <q-icon name="query_stats" size="26px" />
@@ -549,9 +559,7 @@ async function toggleSave(): Promise<void> {
       </div>
     </template>
 
-    <div v-else-if="error && errorStatus === 429 && !loading" class="empty-state">
-      <UpgradePrompt cap="parcel_views" variant="card" cta="View account & plans" />
-    </div>
+    <div v-else-if="error && errorStatus === 429 && !loading" class="empty-state"></div>
 
     <div v-else-if="error && !loading" class="empty-state">
       <q-icon name="error_outline" size="52px" color="grey-5" />

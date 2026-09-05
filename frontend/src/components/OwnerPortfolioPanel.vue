@@ -6,12 +6,10 @@ import { computed, ref } from 'vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SkipTraceResult } from '@/lib/types'
-import { useCreditsStore } from '@/stores/credits'
 import { useParcelStore } from '@/stores/parcel'
 
 const $q = useQuasar()
 const store = useParcelStore()
-const credits = useCreditsStore()
 const { ownerPortfolio, detail } = storeToRefs(store)
 
 const tracing = ref(false)
@@ -24,7 +22,6 @@ async function skipTrace(): Promise<void> {
   try {
     const result = await api.skipTrace(parcelNumber)
     traceResult.value = result
-    credits.set(result.credits_remaining)
     if (result.contacts.phones.length === 0 && result.contacts.emails.length === 0) {
       $q.notify({ type: 'info', message: 'No contact info found for this owner.' })
     }
@@ -121,7 +118,6 @@ function selectParcel(parcelNumber: string): void {
             No contact info on record.
           </div>
           <div class="trace-note">
-            {{ traceResult.credits_spent === 0 ? 'From your earlier trace.' : '1 credit used.' }}
             Not for credit, employment, insurance, or tenant-screening use.
           </div>
         </div>

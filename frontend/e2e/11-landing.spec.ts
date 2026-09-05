@@ -48,11 +48,7 @@ test('landing controls stay legible in dark mode', async ({ page }) => {
       return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
     })
 
-  const eyebrow = page.getByText('Pricing', { exact: true })
-  await expect(eyebrow).toBeVisible()
-  expect(await luminanceOf(eyebrow)).toBeGreaterThan(0.2)
-
-  const outlineCta = page.getByRole('button', { name: 'Get started', exact: true })
+  const outlineCta = page.getByRole('link', { name: /Get started/ }).first()
   await expect(outlineCta).toBeVisible()
   expect(await luminanceOf(outlineCta)).toBeGreaterThan(0.2)
 })

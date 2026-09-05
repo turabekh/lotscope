@@ -2,7 +2,6 @@
 import { storeToRefs } from 'pinia'
 
 import HeroShowcase from '@/components/HeroShowcase.vue'
-import PricingPlans from '@/components/PricingPlans.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -114,16 +113,6 @@ const features = [
               </div>
             </li>
           </ul>
-        </section>
-
-        <section class="pricing-section">
-          <div class="pricing-inner">
-            <div class="pricing-head">
-              <div class="eyebrow eyebrow-dark">Pricing</div>
-              <h2 class="section-title">Start free. Upgrade when you need more.</h2>
-            </div>
-            <PricingPlans />
-          </div>
         </section>
 
         <section class="cta">

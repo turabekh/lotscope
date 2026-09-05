@@ -1353,3 +1353,19 @@ export interface OwnedParcelSeedResult {
   source_url: string
   fetched_at: string
 }
+
+export interface CheckoutSession {
+  url: string
+  session_id: string
+  amount_cents: number
+  label: string
+}
+
+export interface PacketRecord {
+  id: number
+  sale_date: string
+  status: 'pending' | 'ready' | 'failed'
+  error: string | null
+  generated_at: string | null
+  download_url: string | null
+}

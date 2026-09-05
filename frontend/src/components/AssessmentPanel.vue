@@ -1,71 +1,12 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
 
-import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
-import type { AppealPacketStatus, AssessmentStatus } from '@/lib/types'
+import type { AssessmentStatus } from '@/lib/types'
 import { useParcelStore } from '@/stores/parcel'
 
 const { assessment } = storeToRefs(useParcelStore())
-
-const packet = ref<AppealPacketStatus | null>(null)
-const busy = ref(false)
-const error = ref<string | null>(null)
-
-const parcelNumber = computed(() => assessment.value?.parcel_number ?? null)
-const ctaLabel = computed(() =>
-  packet.value && packet.value.packet_credits >= 1
-    ? 'Get appeal packet (1 included)'
-    : 'Get appeal packet · $79',
-)
-
-async function loadPacket(): Promise<void> {
-  if (!parcelNumber.value) {
-    packet.value = null
-    return
-  }
-  try {
-    packet.value = await api.getAppealPacketStatus(parcelNumber.value)
-  } catch {
-    packet.value = null
-  }
-}
-
-async function getPacket(): Promise<void> {
-  if (!parcelNumber.value) return
-  busy.value = true
-  error.value = null
-  try {
-    if (packet.value && packet.value.packet_credits >= 1) {
-      packet.value = await api.redeemAppealPacket(parcelNumber.value)
-      await api.downloadAppealPacket(parcelNumber.value)
-    } else {
-      const { url } = await api.appealPacketCheckout(parcelNumber.value)
-      window.location.href = url
-    }
-  } catch (cause) {
-    error.value = cause instanceof ApiError ? cause.message : 'Could not start the packet.'
-  } finally {
-    busy.value = false
-  }
-}
-
-async function download(): Promise<void> {
-  if (!parcelNumber.value) return
-  busy.value = true
-  error.value = null
-  try {
-    await api.downloadAppealPacket(parcelNumber.value)
-  } catch (cause) {
-    error.value = cause instanceof ApiError ? cause.message : 'Download failed.'
-  } finally {
-    busy.value = false
-  }
-}
-
-onMounted(loadPacket)
-watch(parcelNumber, loadPacket)
 
 interface StatusStyle {
   label: string
@@ -125,32 +66,6 @@ const reason = computed(() => assessment.value?.reasons[0] ?? '')
 
       <div class="text-caption lot-text-faint q-mt-sm">
         {{ assessment.confidence }} confidence · {{ assessment.disclaimer }}
-      </div>
-
-      <div class="q-mt-sm">
-        <q-btn
-          v-if="packet?.entitled"
-          dense
-          unelevated
-          no-caps
-          color="primary"
-          icon="download"
-          :loading="busy"
-          label="Download appeal packet"
-          @click="download"
-        />
-        <q-btn
-          v-else
-          dense
-          unelevated
-          no-caps
-          color="primary"
-          icon="description"
-          :loading="busy"
-          :label="ctaLabel"
-          @click="getPacket"
-        />
-        <div v-if="error" class="text-caption text-negative q-mt-xs">{{ error }}</div>
       </div>
     </q-card-section>
   </q-card>

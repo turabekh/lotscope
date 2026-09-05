@@ -71,13 +71,6 @@ describe('GenerateOfferDialog', () => {
     expect(payload.offer_price).toBe(85000)
   })
 
-  it('gates free tier with an upgrade prompt', async () => {
-    const wrapper = mountDialog('free', 100000)
-    await flushPromises()
-    expect(wrapper.text()).toContain('Pro feature')
-    expect(wrapper.find('input[type="number"]').exists()).toBe(false)
-  })
-
   it('shows the two-path banner and blocks submit when no economics and no price', async () => {
     const wrapper = mountDialog('pro', null)
     await flushPromises()

@@ -9,7 +9,6 @@ const HARDCODED_GREY = /\btext-(?:grey|blue-grey)-\d+\b/g
 const NOT_YET_MIGRATED = new Set([
   'components/CompareTable.vue',
   'components/OutreachMailerDialog.vue',
-  'components/PricingPlans.vue',
   'components/SavedLotsList.vue',
   'components/SavedSearchesList.vue',
   'components/SensitivityHeatmap.vue',

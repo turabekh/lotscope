@@ -5,37 +5,13 @@ import { useRoute, useRouter } from 'vue-router'
 
 import BuyBoxEditor from '@/components/BuyBoxEditor.vue'
 import CorrectionStatus from '@/components/CorrectionStatus.vue'
-import PricingPlans from '@/components/PricingPlans.vue'
-import { ApiError, api } from '@/lib/api'
-import type { CreditPackKey } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
-import { useCreditsStore } from '@/stores/credits'
 import { usePushStore } from '@/stores/push'
 
 const store = useAuthStore()
 const { user, usage } = storeToRefs(store)
-const credits = useCreditsStore()
-const { balance: creditBalance } = storeToRefs(credits)
 const push = usePushStore()
 
-const CREDIT_PACKS: { key: CreditPackKey; credits: number; price: string }[] = [
-  { key: 'small', credits: 25, price: '$12.50' },
-  { key: 'medium', credits: 100, price: '$40' },
-  { key: 'large', credits: 500, price: '$175' },
-]
-const buyingPack = ref<CreditPackKey | null>(null)
-
-async function buyCredits(pack: CreditPackKey): Promise<void> {
-  buyingPack.value = pack
-  try {
-    const { url } = await api.buyCredits(pack)
-    window.location.href = url
-  } catch (cause) {
-    portalError.value = cause instanceof ApiError ? cause.message : 'Could not start checkout.'
-  } finally {
-    buyingPack.value = null
-  }
-}
 const {
   supported: pushSupported,
   enabled: pushEnabled,
@@ -46,11 +22,7 @@ const router = useRouter()
 const route = useRoute()
 
 const checkoutNotice = ref<'success' | 'cancel' | null>(null)
-const portalLoading = ref(false)
-const portalError = ref<string | null>(null)
 const digestSaving = ref(false)
-
-const isPaid = computed(() => (user.value?.tier ?? 'free') !== 'free')
 
 const DIGEST_OPTIONS = [
   { label: 'Weekly', value: 'weekly' as const },
@@ -104,24 +76,10 @@ onMounted(async () => {
   loadSigner()
   await store.fetchUsage()
   await push.refresh()
-  await credits.ensureLoaded()
 })
 
 function togglePush(value: boolean): void {
   void (value ? push.enable() : push.disable())
-}
-
-async function manageBilling(): Promise<void> {
-  portalError.value = null
-  portalLoading.value = true
-  try {
-    const { url } = await api.createPortal()
-    window.location.href = url
-  } catch (cause) {
-    portalError.value = cause instanceof ApiError ? cause.message : 'Could not open billing portal.'
-  } finally {
-    portalLoading.value = false
-  }
 }
 
 const metrics = computed(() => {
@@ -302,77 +260,9 @@ async function signOut(): Promise<void> {
 
       <q-separator />
 
-      <q-card-section v-if="isPaid">
-        <div class="row items-center">
-          <div>
-            <div class="text-subtitle2">Billing</div>
-            <div class="text-caption text-grey-7">
-              Update payment, switch plans, or cancel anytime.
-            </div>
-            <div v-if="portalError" class="text-caption text-negative q-mt-xs">
-              {{ portalError }}
-            </div>
-          </div>
-          <q-space />
-          <q-btn
-            outline
-            color="primary"
-            no-caps
-            icon="credit_card"
-            label="Manage billing"
-            :loading="portalLoading"
-            @click="manageBilling"
-          />
-        </div>
-      </q-card-section>
-
-      <q-separator />
-
-      <q-card-section>
-        <div class="row items-center q-mb-sm">
-          <div>
-            <div class="text-subtitle2">Skip-trace credits</div>
-            <div class="text-caption text-grey-7">
-              Spend 1 credit to reveal an owner's phones and emails.
-            </div>
-          </div>
-          <q-space />
-          <q-chip square color="primary" text-color="white" icon="toll">
-            {{ creditBalance ?? 0 }} credits
-          </q-chip>
-        </div>
-        <div class="row q-gutter-sm">
-          <q-btn
-            v-for="pack in CREDIT_PACKS"
-            :key="pack.key"
-            outline
-            no-caps
-            color="primary"
-            :label="`${pack.credits} · ${pack.price}`"
-            :loading="buyingPack === pack.key"
-            @click="buyCredits(pack.key)"
-          />
-        </div>
-        <div class="text-caption text-grey-5 q-mt-xs">
-          People-search data — not for credit, employment, insurance, or tenant-screening use.
-        </div>
-      </q-card-section>
-
-      <q-separator />
-
       <q-card-actions align="right">
         <q-btn flat no-caps color="negative" icon="logout" label="Sign out" @click="signOut" />
       </q-card-actions>
-    </q-card>
-
-    <q-card v-if="!isPaid" flat bordered class="pricing-card">
-      <q-card-section class="text-center">
-        <div class="text-h6">Upgrade your plan</div>
-        <div class="text-body2 text-grey-7">Unlock unlimited verdicts and more AI questions.</div>
-      </q-card-section>
-      <q-card-section>
-        <PricingPlans />
-      </q-card-section>
     </q-card>
 
     <CorrectionStatus class="q-mt-md" />

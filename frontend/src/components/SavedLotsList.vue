@@ -1,21 +1,17 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import OutreachMailerDialog, { type MailerFields } from '@/components/OutreachMailerDialog.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { WatchlistItem } from '@/lib/types'
-import { useAuthStore } from '@/stores/auth'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const router = useRouter()
 const watchlist = useWatchlistStore()
 const { items, limit, used, loading, alerts } = storeToRefs(watchlist)
-const { user } = storeToRefs(useAuthStore())
-
-const isFree = computed(() => (user.value?.tier ?? 'free') === 'free')
 
 const mailerOpen = ref(false)
 const generatingLetters = ref(false)
@@ -97,20 +93,6 @@ function remove(item: WatchlistItem): void {
       />
       <q-space />
       <q-btn
-        v-if="isFree"
-        outline
-        dense
-        no-caps
-        size="sm"
-        color="deep-purple-6"
-        icon="lock"
-        label="Mail letters"
-        :to="{ name: 'account' }"
-      >
-        <q-tooltip>Direct-mail letters are a Pro feature — upgrade to generate them.</q-tooltip>
-      </q-btn>
-      <q-btn
-        v-else
         unelevated
         dense
         no-caps

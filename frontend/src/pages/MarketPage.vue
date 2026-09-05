@@ -1,18 +1,12 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { NeighborhoodMarketResponse, NeighborhoodMarketStats } from '@/lib/types'
-import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const { user } = storeToRefs(useAuthStore())
-
-const PAID_TIERS = ['pro', 'investor', 'enterprise']
-const hasAccess = computed(() => PAID_TIERS.includes(user.value?.tier ?? 'free'))
 
 const data = ref<NeighborhoodMarketResponse | null>(null)
 const loading = ref(false)
@@ -83,7 +77,7 @@ async function load(): Promise<void> {
 }
 
 onMounted(() => {
-  if (hasAccess.value) void load()
+  void load()
 })
 </script>
 
@@ -96,111 +90,97 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="!hasAccess" class="upgrade">
-      <q-icon name="insights" size="52px" color="grey-4" />
-      <div class="text-h6 q-mt-md">Market intelligence is a Pro feature</div>
-      <div class="text-body2 text-grey-7 q-mb-md">
-        See vacant-lot counts, distress, and value across every Philadelphia neighborhood — so you
-        know where to hunt.
+    <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders q-mb-md">
+      {{ error }}
+    </q-banner>
+
+    <div v-if="data" class="tiles">
+      <div class="tile">
+        <div class="tile-value">{{ num(data.totals.vacant_lots) }}</div>
+        <div class="tile-label">Vacant lots</div>
       </div>
-      <q-btn unelevated no-caps color="primary" label="Upgrade" :to="{ name: 'account' }" />
+      <div class="tile">
+        <div class="tile-value">{{ num(data.totals.neighborhoods) }}</div>
+        <div class="tile-label">Neighborhoods</div>
+      </div>
+      <div class="tile">
+        <div class="tile-value">{{ num(data.totals.tax_delinquent) }}</div>
+        <div class="tile-label">Tax-delinquent</div>
+      </div>
+      <div class="tile">
+        <div class="tile-value">{{ num(data.totals.sheriff_sale) }}</div>
+        <div class="tile-label">In sheriff sale</div>
+      </div>
     </div>
 
-    <template v-else>
-      <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders q-mb-md">
-        {{ error }}
-      </q-banner>
+    <q-inner-loading :showing="loading" color="primary" />
 
-      <div v-if="data" class="tiles">
-        <div class="tile">
-          <div class="tile-value">{{ num(data.totals.vacant_lots) }}</div>
-          <div class="tile-label">Vacant lots</div>
-        </div>
-        <div class="tile">
-          <div class="tile-value">{{ num(data.totals.neighborhoods) }}</div>
-          <div class="tile-label">Neighborhoods</div>
-        </div>
-        <div class="tile">
-          <div class="tile-value">{{ num(data.totals.tax_delinquent) }}</div>
-          <div class="tile-label">Tax-delinquent</div>
-        </div>
-        <div class="tile">
-          <div class="tile-value">{{ num(data.totals.sheriff_sale) }}</div>
-          <div class="tile-label">In sheriff sale</div>
-        </div>
-      </div>
-
-      <q-inner-loading :showing="loading" color="primary" />
-
-      <section v-if="data && topByVacant.length" class="chart">
-        <div class="chart-title">Top neighborhoods by vacant lots</div>
-        <div class="bars">
-          <div
-            v-for="n in topByVacant"
-            :key="n.name"
-            class="bar-row"
-            @click="openNeighborhood(n.name)"
-          >
-            <div class="bar-name">{{ n.name }}</div>
-            <div class="bar-track">
-              <div class="bar-fill" :style="{ width: barPct(n.vacant_lots) }"></div>
-            </div>
-            <span class="bar-value">{{ num(n.vacant_lots) }}</span>
-            <q-tooltip anchor="top middle" self="bottom middle" class="bar-tip">
-              <div class="text-weight-bold">{{ n.name }}</div>
-              <div>{{ num(n.vacant_lots) }} vacant lots</div>
-              <div v-if="n.avg_distress != null">Avg distress {{ n.avg_distress }}</div>
-              <div v-if="n.median_market_value != null">
-                Median {{ formatCurrency(n.median_market_value) }}
-              </div>
-            </q-tooltip>
+    <section v-if="data && topByVacant.length" class="chart">
+      <div class="chart-title">Top neighborhoods by vacant lots</div>
+      <div class="bars">
+        <div
+          v-for="n in topByVacant"
+          :key="n.name"
+          class="bar-row"
+          @click="openNeighborhood(n.name)"
+        >
+          <div class="bar-name">{{ n.name }}</div>
+          <div class="bar-track">
+            <div class="bar-fill" :style="{ width: barPct(n.vacant_lots) }"></div>
           </div>
+          <span class="bar-value">{{ num(n.vacant_lots) }}</span>
+          <q-tooltip anchor="top middle" self="bottom middle" class="bar-tip">
+            <div class="text-weight-bold">{{ n.name }}</div>
+            <div>{{ num(n.vacant_lots) }} vacant lots</div>
+            <div v-if="n.avg_distress != null">Avg distress {{ n.avg_distress }}</div>
+            <div v-if="n.median_market_value != null">
+              Median {{ formatCurrency(n.median_market_value) }}
+            </div>
+          </q-tooltip>
         </div>
-      </section>
-
-      <div v-if="data" class="table-wrap">
-        <table class="market-table">
-          <thead>
-            <tr>
-              <th class="name-col">Neighborhood</th>
-              <th
-                v-for="col in COLUMNS"
-                :key="col.key"
-                class="num-col sortable"
-                @click="sortBy(col.key)"
-              >
-                {{ col.label }}
-                <q-icon
-                  v-if="sortKey === col.key"
-                  :name="sortDir === 'desc' ? 'arrow_drop_down' : 'arrow_drop_up'"
-                  size="18px"
-                />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="row in rows"
-              :key="row.name"
-              class="market-row"
-              @click="openNeighborhood(row.name)"
-            >
-              <td class="name-col">{{ row.name }}</td>
-              <td class="num-col strong">{{ num(row.vacant_lots) }}</td>
-              <td class="num-col">{{ row.avg_distress ?? '—' }}</td>
-              <td class="num-col">{{ row.avg_opportunity ?? '—' }}</td>
-              <td class="num-col">
-                {{
-                  row.median_market_value == null ? '—' : formatCurrency(row.median_market_value)
-                }}
-              </td>
-              <td class="num-col">{{ num(row.tax_delinquent) }}</td>
-              <td class="num-col">{{ num(row.sheriff_sale) }}</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
-    </template>
+    </section>
+
+    <div v-if="data" class="table-wrap">
+      <table class="market-table">
+        <thead>
+          <tr>
+            <th class="name-col">Neighborhood</th>
+            <th
+              v-for="col in COLUMNS"
+              :key="col.key"
+              class="num-col sortable"
+              @click="sortBy(col.key)"
+            >
+              {{ col.label }}
+              <q-icon
+                v-if="sortKey === col.key"
+                :name="sortDir === 'desc' ? 'arrow_drop_down' : 'arrow_drop_up'"
+                size="18px"
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in rows"
+            :key="row.name"
+            class="market-row"
+            @click="openNeighborhood(row.name)"
+          >
+            <td class="name-col">{{ row.name }}</td>
+            <td class="num-col strong">{{ num(row.vacant_lots) }}</td>
+            <td class="num-col">{{ row.avg_distress ?? '—' }}</td>
+            <td class="num-col">{{ row.avg_opportunity ?? '—' }}</td>
+            <td class="num-col">
+              {{ row.median_market_value == null ? '—' : formatCurrency(row.median_market_value) }}
+            </td>
+            <td class="num-col">{{ num(row.tax_delinquent) }}</td>
+            <td class="num-col">{{ num(row.sheriff_sale) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 

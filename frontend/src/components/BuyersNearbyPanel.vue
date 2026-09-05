@@ -3,7 +3,6 @@ import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import type { BuyersNearby, NearbyBuyer } from '@/lib/types'
 import { useParcelStore } from '@/stores/parcel'
@@ -49,9 +48,7 @@ watch(() => detail.value?.parcel_number, load, { immediate: true })
 </script>
 
 <template>
-  <div v-if="gated" class="panel">
-    <UpgradePrompt cap="buyer_intel" variant="card" />
-  </div>
+  <div v-if="gated" class="panel"></div>
 
   <div v-else-if="result && !result.available" class="panel unavailable">
     <q-icon name="lock" size="20px" color="grey-6" />

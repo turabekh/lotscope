@@ -1,26 +1,20 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import GenerateOfferDialog from '@/components/GenerateOfferDialog.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { DealActivityItem, DealItem, DealStage } from '@/lib/types'
-import { useAuthStore } from '@/stores/auth'
-import { useCreditsStore } from '@/stores/credits'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 
 const $q = useQuasar()
 const router = useRouter()
-const auth = useAuthStore()
 const pipeline = usePipelineStore()
-const credits = useCreditsStore()
-const { user } = storeToRefs(auth)
 const { deals, today, loading } = storeToRefs(pipeline)
 
-const isFree = computed(() => (user.value?.tier ?? 'free') === 'free')
 const exporting = ref(false)
 
 async function exportCsv(): Promise<void> {
@@ -162,7 +156,6 @@ async function openDetail(deal: DealItem): Promise<void> {
   activity.value = []
   traceProvenance.value = null
   detailOpen.value = true
-  void credits.ensureLoaded()
   activity.value = await pipeline.loadActivity(deal.parcel_number)
 }
 
@@ -181,7 +174,6 @@ async function skipTraceContact(): Promise<void> {
   traceProvenance.value = null
   try {
     const result = await api.skipTrace(detailDeal.value.parcel_number)
-    credits.set(result.credits_remaining)
     const phone = result.contacts.phones[0] ?? ''
     const email = result.contacts.emails[0] ?? ''
     if (!phone && !email) {
@@ -221,21 +213,6 @@ async function skipTraceContact(): Promise<void> {
       </q-tabs>
       <q-space />
       <q-btn
-        v-if="isFree"
-        outline
-        dense
-        no-caps
-        size="sm"
-        color="primary"
-        icon="lock"
-        label="Export CSV"
-        class="export-btn"
-        :to="{ name: 'account' }"
-      >
-        <q-tooltip>CSV export is a Pro feature — upgrade to download your pipeline.</q-tooltip>
-      </q-btn>
-      <q-btn
-        v-else
         dense
         no-caps
         size="sm"
@@ -471,13 +448,10 @@ async function skipTraceContact(): Promise<void> {
               dense
               color="primary"
               icon="person_search"
-              label="Skip trace owner (1 credit)"
+              label="Skip trace owner"
               :loading="tracing"
               @click="skipTraceContact"
             />
-            <span v-if="credits.balance !== null" class="text-caption text-grey-7">
-              {{ credits.balance }} credits
-            </span>
           </div>
           <div v-if="traceProvenance" class="text-caption text-primary">{{ traceProvenance }}</div>
           <q-input v-model="contactDraft.contact_name" label="Contact name" dense />

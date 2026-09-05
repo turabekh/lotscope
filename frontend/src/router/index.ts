@@ -38,6 +38,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/VerifyPage.vue'),
   },
   {
+    path: '/packets',
+    name: 'packets',
+    component: () => import('@/pages/PacketsPage.vue'),
+  },
+  {
     path: '/account',
     name: 'account',
     component: () => import('@/pages/AccountPage.vue'),

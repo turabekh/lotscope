@@ -3,7 +3,6 @@ import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
 import { computed, ref, watch } from 'vue'
 
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import type { OfferRequest } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
@@ -18,9 +17,6 @@ const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
 const $q = useQuasar()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
-
-const FEED_TIERS = ['pro', 'investor', 'enterprise']
-const isFree = computed(() => !FEED_TIERS.includes(user.value?.tier ?? 'free'))
 
 const offerPrice = ref<number | null>(null)
 const allCash = ref(true)
@@ -111,93 +107,85 @@ async function submit(): Promise<void> {
         <q-btn v-close-popup flat round dense icon="close" />
       </q-card-section>
 
-      <q-card-section v-if="isFree">
-        <UpgradePrompt cap="offer" variant="card" />
-      </q-card-section>
+      <q-card-section class="q-gutter-sm">
+        <q-banner v-if="noEconomics" dense class="bg-amber-1 text-amber-9 rounded-borders">
+          This parcel has no computed verdict. Compute the verdict first, or enter a manual offer
+          price below to generate the letter without the comp appendix framing.
+        </q-banner>
 
-      <template v-else>
-        <q-card-section class="q-gutter-sm">
-          <q-banner v-if="noEconomics" dense class="bg-amber-1 text-amber-9 rounded-borders">
-            This parcel has no computed verdict. Compute the verdict first, or enter a manual offer
-            price below to generate the letter without the comp appendix framing.
-          </q-banner>
-
+        <q-input
+          v-model.number="offerPrice"
+          outlined
+          dense
+          type="number"
+          label="Offer price"
+          prefix="$"
+          :hint="
+            maxAllowableOffer !== null ? 'Defaults to the Maximum Allowable Offer' : 'Manual price'
+          "
+        />
+        <div class="row q-col-gutter-sm">
+          <q-toggle v-model="allCash" label="All cash" class="col" />
+          <q-toggle v-model="asIs" label="As-is" class="col" />
+        </div>
+        <div class="row q-col-gutter-sm">
           <q-input
-            v-model.number="offerPrice"
+            v-model.number="earnestMoney"
             outlined
             dense
             type="number"
-            label="Offer price"
+            label="EMD"
             prefix="$"
-            :hint="
-              maxAllowableOffer !== null
-                ? 'Defaults to the Maximum Allowable Offer'
-                : 'Manual price'
-            "
+            class="col"
           />
-          <div class="row q-col-gutter-sm">
-            <q-toggle v-model="allCash" label="All cash" class="col" />
-            <q-toggle v-model="asIs" label="As-is" class="col" />
-          </div>
-          <div class="row q-col-gutter-sm">
-            <q-input
-              v-model.number="earnestMoney"
-              outlined
-              dense
-              type="number"
-              label="EMD"
-              prefix="$"
-              class="col"
-            />
-            <q-input
-              v-model.number="closeDays"
-              outlined
-              dense
-              type="number"
-              label="Close (days)"
-              class="col"
-            />
-            <q-input
-              v-model.number="inspectionDays"
-              outlined
-              dense
-              type="number"
-              label="Inspect (days)"
-              class="col"
-            />
-          </div>
           <q-input
-            v-model="expiration"
+            v-model.number="closeDays"
             outlined
             dense
-            type="date"
-            label="Offer valid through"
-            stack-label
+            type="number"
+            label="Close (days)"
+            class="col"
           />
-
-          <div class="text-subtitle2 q-mt-sm">Signer</div>
-          <q-input v-model="entityName" outlined dense label="Entity" />
-          <q-input v-model="signerName" outlined dense label="Signer name" />
-          <div class="row q-col-gutter-sm">
-            <q-input v-model="signerPhone" outlined dense label="Phone" class="col" />
-            <q-input v-model="signerEmail" outlined dense label="Email" class="col" />
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat no-caps label="Cancel" @click="close" />
-          <q-btn
-            unelevated
-            no-caps
-            color="primary"
-            label="Download LOI"
-            icon="picture_as_pdf"
-            :loading="submitting"
-            :disable="missingPrice"
-            @click="submit"
+          <q-input
+            v-model.number="inspectionDays"
+            outlined
+            dense
+            type="number"
+            label="Inspect (days)"
+            class="col"
           />
-        </q-card-actions>
-      </template>
+        </div>
+        <q-input
+          v-model="expiration"
+          outlined
+          dense
+          type="date"
+          label="Offer valid through"
+          stack-label
+        />
+
+        <div class="text-subtitle2 q-mt-sm">Signer</div>
+        <q-input v-model="entityName" outlined dense label="Entity" />
+        <q-input v-model="signerName" outlined dense label="Signer name" />
+        <div class="row q-col-gutter-sm">
+          <q-input v-model="signerPhone" outlined dense label="Phone" class="col" />
+          <q-input v-model="signerEmail" outlined dense label="Email" class="col" />
+        </div>
+      </q-card-section>
+
+      <q-card-actions align="right">
+        <q-btn flat no-caps label="Cancel" @click="close" />
+        <q-btn
+          unelevated
+          no-caps
+          color="primary"
+          label="Download LOI"
+          icon="picture_as_pdf"
+          :loading="submitting"
+          :disable="missingPrice"
+          @click="submit"
+        />
+      </q-card-actions>
     </q-card>
   </q-dialog>
 </template>

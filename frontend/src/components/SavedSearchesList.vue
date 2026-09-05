@@ -5,11 +5,9 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import OutreachMailerDialog, { type MailerFields } from '@/components/OutreachMailerDialog.vue'
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { SavedSearchItem, SavedSearchMatchItem, SearchCriteria } from '@/lib/types'
-import { useAuthStore } from '@/stores/auth'
 import { emptyCriteria, useSavedSearchesStore } from '@/stores/savedSearches'
 
 const ZONING_PRESETS = ['RSA5', 'RSA3', 'RM1', 'RM2', 'CMX1', 'CMX2', 'CMX2.5', 'CMX3', 'ICMX']
@@ -18,10 +16,8 @@ const route = useRoute()
 const router = useRouter()
 const $q = useQuasar()
 const store = useSavedSearchesStore()
-const auth = useAuthStore()
 const { searches, limit, used, atLimit, loading } = storeToRefs(store)
 
-const isFree = computed(() => (auth.user?.tier ?? 'free') === 'free')
 const exportingId = ref<number | null>(null)
 
 const mailerSearchId = ref<number | null>(null)
@@ -207,13 +203,6 @@ function asNumber(value: string | number | null): number | null {
       />
     </div>
 
-    <UpgradePrompt
-      v-if="atLimit && !showForm"
-      cap="saved_search"
-      variant="banner"
-      class="q-mb-sm"
-    />
-
     <q-card v-if="showForm" flat bordered class="q-pa-md q-mb-md">
       <div class="text-subtitle2 q-mb-sm">New saved search</div>
       <q-input v-model="name" outlined dense label="Name" autofocus class="q-mb-sm" />
@@ -376,20 +365,6 @@ function asNumber(value: string | number | null): number | null {
                 @click="runNow(search)"
               />
               <q-btn
-                v-if="isFree"
-                flat
-                dense
-                no-caps
-                size="sm"
-                color="primary"
-                icon="lock"
-                label="Export CSV"
-                :to="{ name: 'account' }"
-              >
-                <q-tooltip>CSV export is a Pro feature — upgrade to download.</q-tooltip>
-              </q-btn>
-              <q-btn
-                v-else
                 flat
                 dense
                 no-caps
@@ -401,20 +376,6 @@ function asNumber(value: string | number | null): number | null {
                 @click="exportCsv(search)"
               />
               <q-btn
-                v-if="isFree"
-                flat
-                dense
-                no-caps
-                size="sm"
-                color="deep-purple-6"
-                icon="lock"
-                label="Mail letters"
-                :to="{ name: 'account' }"
-              >
-                <q-tooltip>Direct-mail letters are a Pro feature — upgrade to generate.</q-tooltip>
-              </q-btn>
-              <q-btn
-                v-else
                 flat
                 dense
                 no-caps

@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import OutreachMailerDialog, { type MailerFields } from '@/components/OutreachMailerDialog.vue'
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import type { LeadItem } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
@@ -62,7 +61,6 @@ function openLead(lead: LeadItem): void {
   void router.push({ name: 'parcel', params: { id: lead.parcel_number } })
 }
 
-const isFree = computed(() => (user.value?.tier ?? 'free') === 'free')
 const exporting = ref(false)
 
 async function exportCsv(): Promise<void> {
@@ -157,20 +155,6 @@ onMounted(load)
         <b class="q-mx-xs text-capitalize">{{ user.tier }}</b> plan (max {{ limit }}).
         <q-space />
         <q-btn
-          v-if="isFree"
-          outline
-          dense
-          no-caps
-          size="sm"
-          color="primary"
-          icon="lock"
-          label="Export CSV"
-          :to="{ name: 'account' }"
-        >
-          <q-tooltip>CSV export is a Pro feature — upgrade to download your leads.</q-tooltip>
-        </q-btn>
-        <q-btn
-          v-else
           outline
           dense
           no-caps
@@ -183,20 +167,6 @@ onMounted(load)
           @click="exportCsv"
         />
         <q-btn
-          v-if="isFree"
-          outline
-          dense
-          no-caps
-          size="sm"
-          color="deep-purple-6"
-          icon="lock"
-          label="Mail letters"
-          :to="{ name: 'account' }"
-        >
-          <q-tooltip>Direct-mail letters are a Pro feature — upgrade to generate them.</q-tooltip>
-        </q-btn>
-        <q-btn
-          v-else
           unelevated
           dense
           no-caps
@@ -208,13 +178,6 @@ onMounted(load)
           @click="mailerOpen = true"
         />
       </div>
-
-      <UpgradePrompt
-        v-if="isFree && leads.length > 0"
-        cap="leads"
-        variant="banner"
-        class="q-mb-md"
-      />
 
       <OutreachMailerDialog
         v-model="mailerOpen"

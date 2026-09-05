@@ -3,7 +3,6 @@ import { storeToRefs } from 'pinia'
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { ApiError, api } from '@/lib/api'
 import type { ParcelAnswer } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
@@ -133,8 +132,6 @@ function askSuggestion(text: string): void {
       <q-banner v-if="error" dense class="bg-red-1 text-negative q-mt-sm rounded-borders">
         {{ error }}
       </q-banner>
-
-      <UpgradePrompt v-if="capReached" cap="ask" variant="banner" class="q-mt-sm" />
 
       <q-slide-transition>
         <div v-if="answer" class="answer-block q-mt-md">
