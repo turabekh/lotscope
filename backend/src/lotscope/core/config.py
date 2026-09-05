@@ -113,6 +113,10 @@ class Settings(BaseSettings):
     http_max_retries: int = 3
     http_backoff_seconds: float = 0.5
 
+    # Live verification runs while a buyer waits, so it gets a short leash and no retries.
+    live_verify_timeout_seconds: float = 8.0
+    live_verify_cache_seconds: int = 900
+
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8080"]
 
     @property

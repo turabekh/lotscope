@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.agent.envelope import ToolResult
@@ -18,6 +19,8 @@ class ToolContext:
     buy_box: dict[str, Any] = field(default_factory=dict)
     owned_parcels: tuple[str, ...] = ()
     agent_run_id: int | None = None
+    # Live tools cache their reads here. None simply means every live read goes to the wire.
+    redis: Redis | None = None
 
 
 @dataclass(frozen=True)
