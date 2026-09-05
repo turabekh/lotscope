@@ -1,0 +1,851 @@
+{
+  "model": "claude-sonnet-5",
+  "tasks": {
+    "cecil-violations": {
+      "assertions": [
+        {
+          "kind": "tool_called_any",
+          "passed": true,
+          "value": "['live_li', 'get_violations']"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "7"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "live_li"
+      ]
+    },
+    "cecilbmoore-overlays": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_overlays_and_flags"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['overlay', 'rco', 'historic', 'flood', 'none']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_overlays_and_flags"
+      ]
+    },
+    "chadwick-assemblage": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_neighbors"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['adjacent', 'next door', 'neighbour', 'neighbor', 'combined']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_neighbors",
+        "get_verdict",
+        "live_opa",
+        "live_li",
+        "live_rtt"
+      ]
+    },
+    "city-owned-2nd-1406": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['city of phila', 'city-owned', 'city owned', 'public']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disposition', 'land bank', 'public', 'process', 'cannot']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_verdict",
+        "compute_deal",
+        "live_opa",
+        "live_li",
+        "live_sheriff",
+        "live_rtt",
+        "run_sensitivity"
+      ]
+    },
+    "city-owned-dickinson-230": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['city of phila', 'city-owned', 'city owned', 'public']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disposition', 'land bank', 'public', 'process', 'application']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_verdict",
+        "live_opa",
+        "live_sheriff"
+      ]
+    },
+    "city-owned-reed": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['city of phila', 'city of philadelphia', 'city']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['public', 'disposition', 'land bank', 'city-owned', 'city owned']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa"
+      ]
+    },
+    "city-owned-reed-107": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['city of phila', 'city-owned', 'city owned', 'public']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disposition', 'land bank', 'not for sale', 'public process', 'cannot simply', 'application']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa",
+        "live_li"
+      ]
+    },
+    "city-owned-reed-109": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['city of phila', 'city-owned', 'city owned', 'public']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disposition', 'land bank', 'public', 'process', 'cannot']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa",
+        "get_deed_chain"
+      ]
+    },
+    "city-owned-wharton": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['redevelopment authority', 'publicly', 'public', 'city', 'disposition']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disposition', 'not for sale', 'public', 'authority', 'programme', 'program']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa",
+        "live_li",
+        "live_sheriff"
+      ]
+    },
+    "city-owned-wharton-212": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['redevelopment authority', 'public', 'city', 'land bank']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disposition', 'public', 'process', 'application', 'authority']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa"
+      ]
+    },
+    "code-lookup": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['14-', 'title 14', 'rsa-5', 'rsa5']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_code",
+        "get_code",
+        "get_code",
+        "get_code"
+      ]
+    },
+    "fairhill-deed-date": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_deed_chain"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "2025-05-08"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "live_opa",
+        "get_deed_chain",
+        "live_rtt"
+      ]
+    },
+    "fairhill-delinquency-attribution": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_delinquency"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['9,695', '9695']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['prior owner', 'previous owner', 'not the current owner', 'sheriff']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_delinquency"
+      ]
+    },
+    "fairhill-story": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_parcel"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "2138 N FAIRHILL"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['unverified', 'not in any dataset', 'water']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa",
+        "live_rtt",
+        "live_li",
+        "live_sheriff"
+      ]
+    },
+    "fiftysecond-clearing": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_sheriff_clearing"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['median', \"sheriff's deed\", 'sheriffs deed', 'nearby']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['nominal', 'minimum', 'opening bid']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_sheriff",
+        "get_sheriff_listing",
+        "get_sheriff_clearing",
+        "get_delinquency"
+      ]
+    },
+    "mantua-40th-1101": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_neighbors"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['adjacent', 'next door', 'neighbour', 'neighbor', 'no adjacent', 'none']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_neighbors"
+      ]
+    },
+    "mantua-42nd-1212": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['$', 'no value', 'cannot value', 'too few comps']"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "I think"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_comps"
+      ]
+    },
+    "mantua-43rd-859": {
+      "assertions": [
+        {
+          "kind": "tool_called_any",
+          "passed": true,
+          "value": "['live_li', 'get_violations']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['violation', 'no open', 'none', 'clean']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_li",
+        "get_delinquency"
+      ]
+    },
+    "mantua-brooklyn-844": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_zoning"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['by right', 'by-right', 'variance', 'cannot', 'not permitted']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_zoning"
+      ]
+    },
+    "mantua-cambridge-3947": {
+      "assertions": [
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "3947 CAMBRIDGE"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['distress', 'delinquen', 'violation', 'vacant', 'tax']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa",
+        "live_li",
+        "live_rtt",
+        "get_sheriff_listing"
+      ]
+    },
+    "mantua-girard-3862": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "live_opa"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "GARDINER"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa"
+      ]
+    },
+    "mantua-girard-4037": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_delinquency"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['delinquen', 'owed', '$', 'not delinquent', 'no back tax', 'current']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_delinquency"
+      ]
+    },
+    "mantua-leidy-4142": {
+      "assertions": [
+        {
+          "kind": "tool_called_any",
+          "passed": true,
+          "value": "['get_verdict', 'compute_deal']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['$', 'offer', 'mao', 'margin']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_verdict",
+        "live_opa",
+        "live_li",
+        "live_sheriff"
+      ]
+    },
+    "mantua-parkside-4214": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['flag', 'risk', 'violation', 'flood', 'historic', 'nothing', 'none']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['water', 'unverified', 'not in any dataset']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_verdict",
+        "live_li",
+        "get_delinquency",
+        "live_sheriff"
+      ]
+    },
+    "mantua-wyalusing-3878": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_comps"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['$', 'no comparable', 'no recorded sale', 'too few']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_comps"
+      ]
+    },
+    "motive-refusal": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['cannot', \"can't\", 'no way to know', 'not something', 'records', 'do not know', \"don't know\"]"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "they are motivated"
+        }
+      ],
+      "passed": true,
+      "tools": []
+    },
+    "myrtlewood-by-right": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "get_zoning"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['by right', 'by-right', 'variance']"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "I think"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_zoning"
+      ]
+    },
+    "non-vacant-front-1440": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['not vacant', 'improved', 'structure', 'building', 'house', 'single family', 'demolition']"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "is a vacant lot"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa",
+        "live_li",
+        "get_violations",
+        "compute_deal",
+        "get_zoning",
+        "live_rtt",
+        "get_comps"
+      ]
+    },
+    "non-vacant-front-1442": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['not vacant', 'not a vacant', 'improved', 'structure', 'building', 'house', 'single family']"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "is a vacant lot"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "compute_deal"
+      ]
+    },
+    "non-vacant-gerritt-323": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['not vacant', 'not a vacant', 'improved', 'structure', 'building', 'house', 'single family']"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "is a vacant lot"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_comps"
+      ]
+    },
+    "non-vacant-howard-1433": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['not vacant', 'not a vacant', 'improved', 'structure', 'building', 'house', 'single family']"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "is a vacant lot"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_comps",
+        "get_comps"
+      ]
+    },
+    "non-vacant-reed-306": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['not vacant', 'improved', 'structure', 'building', 'house', 'improvement']"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "is a vacant lot"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_comps"
+      ]
+    },
+    "non-vacant-reed-310": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['not vacant', 'improved', 'structure', 'building', 'house', 'improvement']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_verdict",
+        "live_opa",
+        "get_sheriff_listing",
+        "live_li"
+      ]
+    },
+    "non-vacant-wilder-129": {
+      "assertions": [
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['not vacant', 'not a vacant', 'improved', 'structure', 'building', 'house', 'single family']"
+        },
+        {
+          "kind": "not_contains",
+          "passed": true,
+          "value": "is a vacant lot"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "get_verdict",
+        "compute_deal"
+      ]
+    },
+    "stale-latest-deed": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "live_rtt"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "SHLAYEN"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['2025-03-04', 'march 2025', '4 march 2025', 'march 4']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "live_rtt",
+        "get_deed_chain"
+      ]
+    },
+    "stale-owner-aspen": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "live_opa"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "ASBELL"
+        },
+        {
+          "kind": "precedes",
+          "passed": true,
+          "value": "['ASBELL', 'STALE OWNER LLC']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disagree', 'differs', 'out of date', 'stale', 'does not match', \"doesn't match\"]"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa"
+      ]
+    },
+    "stale-owner-reed": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "live_opa"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "CITY OF PHIL"
+        },
+        {
+          "kind": "precedes",
+          "passed": true,
+          "value": "['CITY OF PHIL', 'OUTDATED HOLDINGS']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['read at', 'as of', 'ingested', 'last refreshed', 'fetched']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_opa"
+      ]
+    },
+    "stale-sale-status": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "live_sheriff"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "postponed"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "2026-09-16"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disagree', 'differs', 'out of date', 'stale', 'does not match', \"doesn't match\"]"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "live_sheriff"
+      ]
+    },
+    "stale-violation-count": {
+      "assertions": [
+        {
+          "kind": "tool_called",
+          "passed": true,
+          "value": "live_li"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['3 open', 'three open', '3 violations', 'three violations']"
+        },
+        {
+          "kind": "any_of",
+          "passed": true,
+          "value": "['disagree', 'differs', 'out of date', 'stale', 'does not match', \"doesn't match\", 'closed']"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "live_li"
+      ]
+    },
+    "warnock-violations": {
+      "assertions": [
+        {
+          "kind": "tool_called_any",
+          "passed": true,
+          "value": "['live_li', 'get_violations']"
+        },
+        {
+          "kind": "contains",
+          "passed": true,
+          "value": "4"
+        }
+      ],
+      "passed": true,
+      "tools": [
+        "get_parcel",
+        "live_li"
+      ]
+    }
+  }
+}
