@@ -165,3 +165,13 @@ Drafting is not sending: both draft tools write a file and say so in the envelop
 Caught by a test: add_to_pipeline took a free-text stage and its description suggested 'watching', which is not a valid stage — the model was being told to send a value the schema rejects. Now a Literal, with the default named.
 Real run over SSE, "screen the 2026-09-16 list against my box and add the BID lots to my pipeline" (no Sept 10 list exists): 4 tool calls, 32,292 in / 978 out, 17.5s. Screened 114 listings / 32 vacant → 3 BID, 3 LOOK, 26 PASS; added the 3 BID lots as leads; all three deal rows carry agent_run_id = 20. It volunteered the LOOK lots it did not add and repeated the nominal-opening-bid and water/gas caveats unprompted.
 Gates: lint, typecheck 625 files, unit 1711, integration 591 (0 skipped), vitest 414.
+
+## 2026-09-05 — Step 2.3 deployed; Step 2.4 (feat/agent-live-verify)
+Deployed e244a89. Ingest guard passed clean, pre-migration backup 2.3 GB, f4c81a6b930e applied, drift guard confirmed. /health/ready: ingestion true, email true, billing false.
+Step 2.4: live_opa, live_rtt, live_li, live_sheriff — async httpx, 8s, no retries, Redis 15 min, failures return unverified instead of raising. Violations read the Carto `violations` table because it carries casestatus per row; no join, no ArcGIS layer. live_sheriff reuses the scraper's own parsers via the list page then the detail page, since CivilView has no lookup by case number.
+Split Source.fetched_at (a live read, now) from Source.ingested_at (when the nightly last read it) — one field cannot carry both meanings without the model guessing which it has.
+Disagreements file a parcel_correction automatically; a cached re-ask does not file a second. A field the live source omits is silence, not a change. OPA's own last-sale fields are shown but never diffed — they are the assessment record, not the deed index, and differ legitimately.
+Contract test: no tool description may name a value its schema rejects. Red-checked by reintroducing stage='watching'; it fails and prints the six accepted stages.
+Eval 20/20 tasks, 50/50 assertions, 595,752 in / 15,966 out, $2.03. Five new tasks plant staleness in the local copy and restore it exactly, withdrawing the corrections the invented diff caused. Two assertions were wrong, not the model: it called live_li where a task demanded get_violations, and named the planted owner while explaining what was stale. New kinds tool_called_any and precedes; the runner now prints the answer under a failure.
+Running the eval surfaced 5 genuine live-vs-stored disagreements on the local copy (3 violation counts, 2 mailing addresses) — left filed.
+Gates: lint, typecheck 640 files, unit 1794, integration 612 (0 skipped), vitest 414.
