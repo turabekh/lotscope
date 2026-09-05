@@ -29,7 +29,7 @@ class AgentEvent:
 
 
 class ModelClient(Protocol):
-    async def complete(
+    def stream(
         self,
         *,
         model: str,
@@ -37,7 +37,7 @@ class ModelClient(Protocol):
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
         max_tokens: int,
-    ) -> dict[str, Any]: ...
+    ) -> AsyncIterator[dict[str, Any]]: ...
 
 
 @dataclass
@@ -156,7 +156,8 @@ async def _run_tool(
     except Exception as cause:
         return empty(f"The input to {name} did not validate: {cause}")
     try:
-        return await registered.handler(session, context, payload)
+        async with session.begin_nested():
+            return await registered.handler(session, context, payload)
     except asyncio.CancelledError:
         raise
     except Exception as cause:
@@ -207,38 +208,42 @@ async def run_agent(
                 break
 
             turn_started = time.monotonic()
-            response = await client.complete(
+            response: dict[str, Any] = {}
+            turn_text: list[str] = []
+            async for chunk in client.stream(
                 model=run.model,
                 system=system,
                 messages=messages,
                 tools=tools.schemas(),
                 max_tokens=limits.max_output_tokens,
-            )
+            ):
+                if chunk.get("type") == "text_delta":
+                    delta = chunk.get("text", "")
+                    if delta:
+                        turn_text.append(delta)
+                        answer_parts.append(delta)
+                        yield AgentEvent("text_delta", {"text": delta})
+                elif chunk.get("type") == "message":
+                    response = chunk
             turn_ms = int((time.monotonic() - turn_started) * 1000)
             usage = response.get("usage", {}) or {}
             limits.record(usage)
 
             blocks = response.get("content", []) or []
-            text_blocks = [b for b in blocks if b.get("type") == "text"]
             tool_blocks = [b for b in blocks if b.get("type") == "tool_use"]
 
-            for block in text_blocks:
-                chunk = block.get("text", "")
-                if not chunk:
-                    continue
-                answer_parts.append(chunk)
+            if turn_text:
                 sequence += 1
                 await _record_step(
                     session,
                     run.id,
                     sequence,
                     kind="text",
-                    text=chunk,
+                    text="".join(turn_text),
                     input_tokens=int(usage.get("input_tokens", 0) or 0),
                     output_tokens=int(usage.get("output_tokens", 0) or 0),
                     duration_ms=turn_ms,
                 )
-                yield AgentEvent("text", {"text": chunk})
 
             if not tool_blocks:
                 stop_reason = response.get("stop_reason") or "end_turn"

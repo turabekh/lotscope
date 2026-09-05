@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
@@ -46,19 +47,28 @@ def _registry() -> ToolRegistry:
 
 
 class FakeModel:
+    """Streams each turn's text one word at a time, then the final message."""
+
     def __init__(self, turns: list[dict[str, Any]]) -> None:
         self._turns = list(turns)
         self.calls: list[dict[str, Any]] = []
 
-    async def complete(self, **kwargs: Any) -> dict[str, Any]:
+    async def stream(self, **kwargs: Any) -> AsyncIterator[dict[str, Any]]:
         self.calls.append(kwargs)
-        if not self._turns:
-            return {
+        turn = (
+            self._turns.pop(0)
+            if self._turns
+            else {
                 "content": [{"type": "text", "text": "done"}],
                 "stop_reason": "end_turn",
                 "usage": {"input_tokens": 1, "output_tokens": 1},
             }
-        return self._turns.pop(0)
+        )
+        for block in list(turn.get("content", [])):
+            if isinstance(block, dict) and block.get("type") == "text":
+                for piece in str(block["text"]).split(" "):
+                    yield {"type": "text_delta", "text": piece + " "}
+        yield {"type": "message", **turn}
 
 
 def _tool_turn(tool_id: str = "tu_1", parcel: str = "phl:1") -> dict[str, Any]:
@@ -156,9 +166,12 @@ async def test_a_tool_call_then_text_runs_the_loop_to_an_answer(
     )
 
     kinds = [event.kind for event in events]
-    assert kinds == ["tool_started", "tool_finished", "text", "final"]
+    assert kinds[0] == "tool_started"
+    assert kinds[1] == "tool_finished"
+    assert set(kinds[2:-1]) == {"text_delta"}
+    assert kinds[-1] == "final"
     assert run.status == "succeeded"
-    assert run.answer == "2138 N Fairhill St is vacant."
+    assert run.answer.strip() == "2138 N Fairhill St is vacant."
     assert run.tool_calls == 1
     assert run.input_tokens == 220
     assert run.output_tokens == 60
@@ -360,16 +373,19 @@ async def test_the_sse_stream_orders_tool_events_before_text_and_ends_with_final
     ]
 
     names = [frame.split("\n")[0].removeprefix("event: ") for frame in frames]
-    assert names == ["tool_started", "tool_finished", "text", "final"]
+    assert names[0] == "tool_started"
+    assert names[1] == "tool_finished"
+    assert set(names[2:-1]) == {"text_delta"}
+    assert names[-1] == "final"
     assert all(frame.endswith("\n\n") for frame in frames)
     assert '"sources"' in frames[1]
     assert '"answer"' in frames[-1]
 
 
 def test_an_sse_frame_is_shaped_for_eventsource() -> None:
-    frame = format_event(AgentEvent("text", {"text": "hello"}))
+    frame = format_event(AgentEvent("text_delta", {"text": "hello"}))
 
-    assert frame == 'event: text\ndata: {"text": "hello"}\n\n'
+    assert frame == 'event: text_delta\ndata: {"text": "hello"}\n\n'
 
 
 async def test_the_buy_box_reaches_the_system_prompt(db_session: AsyncSession) -> None:
@@ -412,8 +428,10 @@ async def test_a_buyer_with_no_buy_box_is_stated_not_invented(db_session: AsyncS
 
 async def test_a_hard_cancel_marks_the_run_and_re_raises(db_session: AsyncSession) -> None:
     class Slow:
-        async def complete(self, **kwargs: Any) -> dict[str, Any]:
-            raise asyncio.CancelledError
+        async def stream(self, **kwargs: Any) -> AsyncIterator[dict[str, Any]]:
+            if kwargs:
+                raise asyncio.CancelledError
+            yield {}
 
     user_id, run = await _run(db_session, "hardcancel@example.com")
 
@@ -429,8 +447,10 @@ async def test_a_hard_cancel_marks_the_run_and_re_raises(db_session: AsyncSessio
 
 async def test_a_model_failure_is_recorded_on_the_run(db_session: AsyncSession) -> None:
     class Broken:
-        async def complete(self, **kwargs: Any) -> dict[str, Any]:
-            raise RuntimeError("model refused")
+        async def stream(self, **kwargs: Any) -> AsyncIterator[dict[str, Any]]:
+            if kwargs:
+                raise RuntimeError("model refused")
+            yield {}
 
     user_id, run = await _run(db_session, "broken@example.com")
 
@@ -471,3 +491,130 @@ async def test_steps_are_numbered_in_the_order_they_happened(db_session: AsyncSe
         == 3
     )
     assert AgentStep.__tablename__ == "agent_step"
+
+
+async def test_text_arrives_as_deltas_that_reassemble_into_the_answer(
+    db_session: AsyncSession,
+) -> None:
+    user_id, run = await _run(db_session, "deltas@example.com")
+    model = FakeModel([_text_turn("the lot is vacant and delinquent")])
+
+    events = await _collect(
+        run_agent(
+            db_session, model, run, context=ToolContext(user_id=user_id), registry=_registry()
+        )
+    )
+
+    deltas = [event.payload["text"] for event in events if event.kind == "text_delta"]
+    assert len(deltas) == 6
+    assert "".join(deltas).strip() == "the lot is vacant and delinquent"
+    assert run.answer.strip() == "the lot is vacant and delinquent"
+
+
+async def test_a_tool_call_lands_between_two_runs_of_deltas(db_session: AsyncSession) -> None:
+    user_id, run = await _run(db_session, "midstream@example.com")
+    model = FakeModel(
+        [
+            {
+                "content": [
+                    {"type": "text", "text": "checking that lot"},
+                    {
+                        "type": "tool_use",
+                        "id": "tu_1",
+                        "name": "echo_parcel",
+                        "input": {"parcel_number": "phl:1"},
+                    },
+                ],
+                "stop_reason": "tool_use",
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+            },
+            _text_turn("it is vacant"),
+        ]
+    )
+
+    kinds = [
+        event.kind
+        for event in await _collect(
+            run_agent(
+                db_session, model, run, context=ToolContext(user_id=user_id), registry=_registry()
+            )
+        )
+    ]
+
+    first_tool = kinds.index("tool_started")
+    assert set(kinds[:first_tool]) == {"text_delta"}
+    assert kinds[first_tool + 1] == "tool_finished"
+    assert set(kinds[first_tool + 2 : -1]) == {"text_delta"}
+    assert kinds[-1] == "final"
+
+
+async def test_each_turns_text_is_persisted_as_one_step_not_one_per_delta(
+    db_session: AsyncSession,
+) -> None:
+    user_id, run = await _run(db_session, "onestep@example.com")
+    model = FakeModel([_text_turn("a b c d e")])
+
+    await _collect(
+        run_agent(
+            db_session, model, run, context=ToolContext(user_id=user_id), registry=_registry()
+        )
+    )
+
+    rows = (
+        await db_session.execute(
+            text("SELECT kind, text FROM agent_step WHERE run_id = :r ORDER BY sequence"),
+            {"r": run.id},
+        )
+    ).all()
+
+    assert len(rows) == 1
+    assert rows[0].kind == "text"
+    assert rows[0].text.strip() == "a b c d e"
+
+
+async def test_a_tool_that_breaks_the_session_does_not_stop_the_run(
+    db_session: AsyncSession,
+) -> None:
+    registry = ToolRegistry()
+
+    @tool(
+        name="bad_sql",
+        description="Runs SQL that fails.",
+        input_model=EchoInput,
+        registry=registry,
+    )
+    async def _bad(session: AsyncSession, context: ToolContext, payload: EchoInput) -> ToolResult:
+        await session.execute(text("SELECT * FROM a_table_that_does_not_exist"))
+        return ToolResult()
+
+    user_id, run = await _run(db_session, "poison@example.com")
+    model = FakeModel(
+        [
+            {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "tu_1",
+                        "name": "bad_sql",
+                        "input": {"parcel_number": "phl:1"},
+                    }
+                ],
+                "stop_reason": "tool_use",
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+            },
+            _text_turn("that lookup failed"),
+        ]
+    )
+
+    events = await _collect(
+        run_agent(db_session, model, run, context=ToolContext(user_id=user_id), registry=registry)
+    )
+
+    finished = next(event for event in events if event.kind == "tool_finished")
+    assert "bad_sql failed" in finished.payload["unverified"][0]
+    assert events[-1].kind == "final"
+    assert run.status == "succeeded"
+    steps = await db_session.scalar(
+        text("SELECT count(*) FROM agent_step WHERE run_id = :r"), {"r": run.id}
+    )
+    assert steps == 2
