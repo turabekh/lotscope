@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     martin_url: str = "http://localhost:3000"
 
     anthropic_api_key: str | None = None
+    analyst_model: str = "claude-sonnet-5"
     anthropic_model: str = "claude-sonnet-4-6"
     anthropic_summary_model: str = "claude-haiku-4-5-20251001"
 
