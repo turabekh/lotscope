@@ -33,6 +33,24 @@ on_failure() {
 }
 trap on_failure EXIT
 
+echo "==> Checking no ingestion is in flight"
+RUNNING_INGESTS=$(docker compose exec -T db psql -U lotscope -d lotscope -tAc \
+  "SELECT count(*) FROM ingest_run WHERE status = 'running' AND started_at > now() - interval '4 hours'" \
+  2>/dev/null || echo 0)
+if [ "${RUNNING_INGESTS:-0}" -gt 0 ]; then
+  if [ "${ALLOW_DEPLOY_DURING_INGEST:-0}" = "1" ]; then
+    echo "==> WARNING: ${RUNNING_INGESTS} ingest job(s) running; continuing because ALLOW_DEPLOY_DURING_INGEST=1"
+  else
+    echo "ABORT: ${RUNNING_INGESTS} ingest job(s) are running." >&2
+    echo "Recreating the worker mid-ingest cancels it and leaves the dataset stale;" >&2
+    echo "that is what happened on 2026-09-05. Wait for the nightly to finish" >&2
+    echo "(it runs roughly 04:08-05:14 UTC) or set ALLOW_DEPLOY_DURING_INGEST=1 to override." >&2
+    docker compose exec -T db psql -U lotscope -d lotscope -c \
+      "SELECT dataset, started_at FROM ingest_run WHERE status = 'running' ORDER BY started_at" >&2 || true
+    exit 1
+  fi
+fi
+
 echo "==> Building images"
 docker compose --profile app build --build-arg GIT_SHA="${GIT_SHA}"
 
