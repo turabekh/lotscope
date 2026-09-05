@@ -312,8 +312,11 @@ async def live_opa_tool(
     description=(
         "Read the last five recorded documents for one parcel from the Department of Records "
         "transfer index right now, and compare them with the deeds LotScope stored. Call this "
-        "before you state who bought a lot, when, or for how much. Any live document id absent "
-        "from our copy is a transfer recorded since the last ingest."
+        "before you state who bought a lot, when, or for how much. Documents we do not hold "
+        "come back split two ways: recorded_since_our_last_read is genuine staleness — a "
+        "transfer that happened after our last ingest — while never_stored is an older deed "
+        "our history simply does not go back far enough to include. Do not call the second "
+        "kind new."
     ),
     input_model=ParcelInput,
 )
@@ -375,15 +378,26 @@ async def live_rtt_tool(
 
     known = {str(entry["document_id"]) for entry in stored if entry["document_id"]}
     unseen = [entry for entry in live if entry["document_id"] and entry["document_id"] not in known]
+
+    # A document we do not hold is not automatically news. Measured against the 2026-09-16
+    # sheriff list, 27 of 27 missing deeds were historical — our sale history does not reach
+    # back that far — and none were recorded since the ingest. Calling those "new" would have
+    # told a buyer a 1976 deed was fresh, and filed a correction for each one.
+    cutoff = ingested.date().isoformat() if ingested else None
+    recent = [
+        entry for entry in unseen if cutoff is None or (entry["recording_date"] or "") >= cutoff
+    ]
+    historical = [entry for entry in unseen if entry not in recent]
+
     changes = (
         [
             {
                 "field": "latest_document_id",
-                "live": live[0]["document_id"],
+                "live": recent[0]["document_id"],
                 "stored": stored[0]["document_id"] if stored else None,
             }
         ]
-        if unseen and live
+        if recent
         else []
     )
     correction_id = (
@@ -404,7 +418,8 @@ async def live_rtt_tool(
             "parcel_number": row.parcel_number,
             "live": live,
             "stored": stored,
-            "documents_not_in_lotscope": unseen,
+            "recorded_since_our_last_read": recent,
+            "never_stored": historical,
             "diff": changes,
             "correction_filed": correction_id,
             **_timestamps(result, ingested),
@@ -415,7 +430,10 @@ async def live_rtt_tool(
         ],
         unverified=[
             "The transfer index records what was recorded. A deed signed and not yet recorded "
-            "is invisible here."
+            "is invisible here.",
+            "LotScope's stored deed history does not reach back to the beginning of the "
+            "index, so a document under never_stored is a gap in our history, not a recent "
+            "transfer.",
         ],
     )
 

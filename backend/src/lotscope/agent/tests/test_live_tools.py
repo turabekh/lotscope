@@ -247,11 +247,48 @@ async def test_live_rtt_flags_a_deed_recorded_since_the_last_ingest(
         db_session, ToolContext(user_id=user_id), ParcelInput(parcel=PARCEL)
     )
 
-    assert [entry["document_id"] for entry in result.data["documents_not_in_lotscope"]] == [
+    assert [entry["document_id"] for entry in result.data["recorded_since_our_last_read"]] == [
         "5400999"
     ]
     assert result.data["diff"][0]["field"] == "latest_document_id"
     assert result.data["correction_filed"] is not None
+
+
+async def test_an_old_deed_we_never_stored_is_not_reported_as_new(
+    db_session: AsyncSession,
+) -> None:
+    """Measured on production: 27 of 27 missing deeds were historical, none were new."""
+    user_id = await _user(db_session, "rtt-historical@example.com")
+    await _parcel(db_session)
+    await db_session.execute(
+        text(
+            "INSERT INTO dataset_freshness (market_code, dataset, last_success_at) "
+            "VALUES ('phl', 'rtt_summary', now()) ON CONFLICT DO NOTHING"
+        )
+    )
+    await db_session.flush()
+    live_tools.TRANSPORT = carto(
+        [
+            {
+                "document_id": "37314983",
+                "document_type": "DEED",
+                "recording_date": "1976-03-24T00:00:00Z",
+                "grantors": "A",
+                "grantees": "DAMUS THOMAS",
+                "total_consideration": 1,
+            }
+        ]
+    )
+
+    result = await live_rtt_tool(
+        db_session, ToolContext(user_id=user_id), ParcelInput(parcel=PARCEL)
+    )
+
+    assert result.data["recorded_since_our_last_read"] == []
+    assert [entry["document_id"] for entry in result.data["never_stored"]] == ["37314983"]
+    assert result.data["diff"] == []
+    assert result.data["correction_filed"] is None
+    assert await _corrections(db_session) == 0
 
 
 async def test_live_rtt_timing_out_still_returns_the_stored_deeds_as_unverified(
