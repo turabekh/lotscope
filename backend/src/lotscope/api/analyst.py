@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -13,7 +14,13 @@ from lotscope.agent.models import AgentRun, AgentStep
 from lotscope.agent.runtime import AgentEvent, create_run, ensure_conversation, run_agent
 from lotscope.agent.stream import cancel_run, is_cancelled, sse
 from lotscope.agent.tools.registry import ToolContext
-from lotscope.api.deps import get_app_settings, get_current_user, get_session, get_session_factory
+from lotscope.api.deps import (
+    get_app_settings,
+    get_current_user,
+    get_redis,
+    get_session,
+    get_session_factory,
+)
 from lotscope.buybox.service import read_buy_box
 from lotscope.core.config import Settings
 from lotscope.core.errors import ConfigurationError, NotFoundError
@@ -24,6 +31,7 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 FactoryDep = Annotated[async_sessionmaker[AsyncSession], Depends(get_session_factory)]
+RedisDep = Annotated[Redis, Depends(get_redis)]
 
 
 class MessageRequest(BaseModel):
@@ -79,6 +87,7 @@ async def run_events(
     user: CurrentUserDep,
     settings: SettingsDep,
     factory: FactoryDep,
+    redis: RedisDep,
 ) -> StreamingResponse:
     run = await _owned_run(session, run_id, user.id)
     buy_box = await read_buy_box(session, user.id)
@@ -86,6 +95,7 @@ async def run_events(
         user_id=user.id,
         buy_box=buy_box.model_dump(mode="json"),
         owned_parcels=tuple(buy_box.owned_parcels),
+        redis=redis,
     )
     client = AnthropicToolClient(settings)
 
