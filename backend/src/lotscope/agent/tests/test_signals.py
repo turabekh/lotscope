@@ -316,3 +316,117 @@ async def test_a_lot_the_buyer_does_not_follow_produces_nothing(db_session: Asyn
     await db_session.flush()
 
     assert await _build(db_session, user_id) == []
+
+
+# --- watched searches ---------------------------------------------------------------------
+
+
+async def test_a_watched_search_reports_a_matching_new_listing(db_session: AsyncSession) -> None:
+    """This is what a saved search became: a standing question answered nightly."""
+    user_id = await _setup(db_session, "sig-watchspec@example.com")
+    alert_id = int(
+        await db_session.scalar(
+            text(
+                "INSERT INTO agent_alert (user_id, kind, scope, target, is_active) VALUES "
+                "(:u, 'new_match', 'area', cast(:t AS jsonb), true) RETURNING id"
+            ),
+            {
+                "u": user_id,
+                "t": json.dumps(
+                    {
+                        "name": "Vacant RSA-5",
+                        "zip_codes": ["19125"],
+                        "zoning_codes": ["RSA-5"],
+                        "vacant_only": True,
+                        "exclude_city_owned": True,
+                    }
+                ),
+            },
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale (parcel_number, case_number, sale_date, created_at) "
+            "VALUES (:p, '2601-888', :d, :at)"
+        ),
+        {
+            "p": FOLLOWED,
+            "d": date(2026, 10, 7),
+            "at": datetime(2026, 9, 5, 5, 0, tzinfo=UTC),
+        },
+    )
+    await db_session.flush()
+
+    signals = await _build(db_session, user_id)
+
+    matched = [s for s in signals if s.kind == "new_listing"]
+    assert len(matched) == 1
+    assert matched[0].detail["alert_id"] == alert_id
+    assert "Vacant RSA-5" in matched[0].headline
+    assert matched[0].detail["screened"] is False
+
+
+async def test_a_watched_search_ignores_a_listing_outside_its_shape(
+    db_session: AsyncSession,
+) -> None:
+    user_id = await _setup(db_session, "sig-watchspec-miss@example.com")
+    await db_session.execute(
+        text(
+            "INSERT INTO agent_alert (user_id, kind, scope, target, is_active) VALUES "
+            "(:u, 'new_match', 'area', cast(:t AS jsonb), true)"
+        ),
+        {
+            "u": user_id,
+            "t": json.dumps(
+                {"name": "CMX only", "zip_codes": ["19125"], "zoning_codes": ["CMX-2"]}
+            ),
+        },
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sheriff_sale (parcel_number, case_number, sale_date, created_at) "
+            "VALUES (:p, '2601-889', :d, :at)"
+        ),
+        {
+            "p": FOLLOWED,
+            "d": date(2026, 10, 7),
+            "at": datetime(2026, 9, 5, 5, 0, tzinfo=UTC),
+        },
+    )
+    await db_session.flush()
+
+    # The buy box has no zoning filter, so it matches this listing and that is correct.
+    # What must not happen is the CMX-2 watch claiming an RSA-5 lot.
+    signals = await _build(db_session, user_id)
+    from_watch = [s for s in signals if s.detail.get("alert_id") is not None]
+    assert from_watch == []
+    assert [s.detail["matched"] for s in signals if s.kind == "new_listing"] == ["in your area"]
+
+
+def test_a_saved_search_carries_across_without_inventing_anything() -> None:
+    from lotscope.agent.watch_spec import from_saved_search
+
+    spec = from_saved_search(
+        "Vacant RSA-5",
+        {
+            "zip_code": None,
+            "vacant_only": True,
+            "zoning_codes": ["RSA-5"],
+            "exclude_city_owned": True,
+            "min_lot_area_sqft": None,
+        },
+    )
+    assert spec.name == "Vacant RSA-5"
+    assert spec.zoning_codes == ["RSA-5"]
+    assert spec.zip_codes == []
+    assert spec.vacant_only is True
+    assert spec.min_lot_area_sqft is None
+
+
+def test_rsa5_and_rsa_dash_5_are_the_same_district() -> None:
+    """Production holds both spellings across the three saved searches."""
+    from lotscope.agent.watch_spec import WatchSpec, spec_conditions
+
+    _, dashed = spec_conditions(WatchSpec(zoning_codes=["RSA-5"]))
+    _, bare = spec_conditions(WatchSpec(zoning_codes=["RSA5"]))
+    assert dashed["spec_zoning"] == bare["spec_zoning"] == ["RSA5"]

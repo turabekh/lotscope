@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.agent.alerts import AgentAlert
 from lotscope.agent.signals import AnalystSignal
 from lotscope.agent.tools import urls
+from lotscope.agent.watch_spec import WatchSpec, spec_conditions
 from lotscope.buybox.schemas import BuyBoxRead
 from lotscope.core.market import MARKET_CODE
 
@@ -372,25 +373,23 @@ async def _zba_filing(
 async def _new_listing(
     session: AsyncSession,
     user_id: int,
-    scope: Scope,
-    buy_box: BuyBoxRead,
     since: datetime,
     on_date: date,
+    *,
+    area_sql: str,
+    area_params: dict[str, Any],
+    spec: WatchSpec,
+    label: str,
+    alert_id: int | None = None,
 ) -> list[dict[str, Any]]:
-    """New sheriff listings inside the buyer's areas that survive the box's hard filters.
+    """New sheriff listings that match one standing description.
 
-    The full grade is what a packet is for; this only says the lot is worth their attention.
-    The headline says "worth a look", never a grade, so the brief cannot imply a screen that
-    was never run.
+    The same query serves the buy box and a watched search: both are an area plus filters.
+    The full grade is what a packet is for, so the headline says "worth a look", never a
+    grade — a brief must not imply a screen that was never run.
     """
-    clause, params = area_clause(scope.areas, "p")
-    conditions = [clause, "p.is_vacant IS TRUE"]
-    if buy_box.min_lot_sqft:
-        conditions.append("p.lot_area_sqft >= :min_lot")
-        params["min_lot"] = buy_box.min_lot_sqft
-    if buy_box.zoning_codes:
-        conditions.append("upper(coalesce(p.base_zoning_code, '')) = ANY(:zoning)")
-        params["zoning"] = [code.upper() for code in buy_box.zoning_codes]
+    conditions, params = spec_conditions(spec, "p")
+    params.update(area_params)
 
     rows = (
         (
@@ -400,7 +399,7 @@ async def _new_listing(
                     "s.created_at, p.address, p.lot_area_sqft FROM sheriff_sale s "
                     "JOIN parcel p USING (parcel_number) "
                     f"WHERE s.created_at >= :since AND p.market_code = :m "
-                    f"AND {' AND '.join(conditions)} "
+                    f"AND {area_sql} AND {' AND '.join(conditions)} "
                     "ORDER BY s.sale_date LIMIT :limit"
                 ),
                 {"since": since, "m": MARKET_CODE, "limit": MAX_SIGNALS_PER_KIND, **params},
@@ -416,7 +415,7 @@ async def _new_listing(
             kind="new_listing",
             parcel_number=row["parcel_number"],
             headline=(
-                f"New sheriff listing in your area worth a look — "
+                f"New sheriff listing {label} worth a look — "
                 f"{row['address'] or row['parcel_number']}, sale {row['sale_date']}"
             ),
             detail={
@@ -428,7 +427,9 @@ async def _new_listing(
                 "lot_area_sqft": float(row["lot_area_sqft"])
                 if row["lot_area_sqft"] is not None
                 else None,
+                "matched": label,
                 "screened": False,
+                **({"alert_id": alert_id} if alert_id is not None else {}),
             },
             source="civilview",
             source_url=urls.CIVILVIEW,
@@ -440,12 +441,24 @@ async def _new_listing(
     ]
 
 
+def buy_box_spec(buy_box: BuyBoxRead) -> WatchSpec:
+    """The buy box, expressed as the same standing description a watch uses."""
+    return WatchSpec(
+        name="your buy box",
+        zoning_codes=list(buy_box.zoning_codes),
+        vacant_only=True,
+        exclude_city_owned=buy_box.exclude_city_neighbor,
+        min_lot_area_sqft=float(buy_box.min_lot_sqft) if buy_box.min_lot_sqft else None,
+    )
+
+
 _ALERT_KIND_TO_SIGNAL = {
     "sale_status": "sale_status",
     "new_violation": "neighbor_violation",
     "new_delinquency": "neighbor_delinquency",
     "neighbor_deed": "neighbor_deed",
     "zba_filing": "zba_filing",
+    "new_match": "new_listing",
 }
 
 
@@ -485,7 +498,17 @@ async def build_signals(
     rows += await _neighbor_violation(session, user_id, neighbors, since, on_date)
     rows += await _neighbor_deed(session, user_id, neighbors, since, on_date)
     rows += await _zba_filing(session, user_id, scope, since, on_date)
-    rows += await _new_listing(session, user_id, scope, buy_box, since, on_date)
+    area_sql, area_params = area_clause(scope.areas, "p")
+    rows += await _new_listing(
+        session,
+        user_id,
+        since,
+        on_date,
+        area_sql=area_sql,
+        area_params=area_params,
+        spec=buy_box_spec(buy_box),
+        label="in your area",
+    )
 
     # Anything the buyer explicitly asked to be alerted about, over its own scope.
     alerts = (
@@ -504,7 +527,7 @@ async def build_signals(
         if signal_kind is None:
             continue
         parcels = await _alert_parcels(session, alert, scope, neighbors)
-        if not parcels:
+        if not parcels and signal_kind != "new_listing":
             continue
         alert_scope = Scope(followed=tuple(parcels), owned=scope.owned, areas=scope.areas)
         if signal_kind == "sale_status":
@@ -515,6 +538,21 @@ async def build_signals(
             found = await _neighbor_delinquency(session, user_id, parcels, since, on_date)
         elif signal_kind == "neighbor_deed":
             found = await _neighbor_deed(session, user_id, parcels, since, on_date)
+        elif signal_kind == "new_listing":
+            spec = WatchSpec.model_validate(alert.target or {})
+            watched_sql, watched_params = area_clause(scope.areas, "p")
+            found = await _new_listing(
+                session,
+                user_id,
+                since,
+                on_date,
+                # A watched spec carries its own zips; the buyer's areas do not narrow it.
+                area_sql="TRUE" if spec.zip_codes else watched_sql,
+                area_params={} if spec.zip_codes else watched_params,
+                spec=spec,
+                label=f"matching “{spec.name}”",
+                alert_id=alert.id,
+            )
         else:
             found = await _zba_filing(session, user_id, alert_scope, since, on_date)
         for row in found:

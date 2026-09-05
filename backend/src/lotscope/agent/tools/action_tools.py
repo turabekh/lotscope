@@ -11,6 +11,7 @@ from lotscope.agent.envelope import Source, ToolResult, empty
 from lotscope.agent.tools import urls
 from lotscope.agent.tools.read_tools import _fetched, _resolve
 from lotscope.agent.tools.registry import ToolContext, tool
+from lotscope.agent.watch_spec import WatchSpec
 from lotscope.core.market import MARKET_CODE
 
 MAX_SCREEN_PARCELS = 200
@@ -449,22 +450,86 @@ async def list_pipeline_tool(
 
 
 class WatchInput(BaseModel):
-    parcel: str = Field(description="Parcel number or Philadelphia street address to watch.")
+    parcel: str | None = Field(
+        default=None, description="Parcel number or Philadelphia street address to watch."
+    )
+    search_spec: WatchSpec | None = Field(
+        default=None,
+        description=(
+            "A standing search to watch instead of one lot: zip codes, zoning codes, lot "
+            "size and value bounds. Every new sheriff listing that matches turns up in the "
+            "morning brief."
+        ),
+    )
     note: str | None = Field(default=None, max_length=500)
 
 
 @tool(
     name="watch",
     description=(
-        "Add a lot to this buyer's saved list so changes to it reach them. Safe to call twice."
+        "Watch something for this buyer so changes reach them in the morning brief. Give "
+        "either parcel, for one lot, or search_spec, for a standing search — an area plus "
+        "the filters that decide whether a new listing is worth their attention. Safe to "
+        "call twice; watching the same thing again does not duplicate it."
     ),
     input_model=WatchInput,
 )
+async def _watch_spec(session: AsyncSession, context: ToolContext, spec: WatchSpec) -> ToolResult:
+    """Store a standing search as a new_match alert, which the nightly builder reads."""
+    existing = (
+        await session.execute(
+            select(AgentAlert).where(
+                AgentAlert.user_id == context.user_id,
+                AgentAlert.kind == "new_match",
+                AgentAlert.is_active.is_(True),
+            )
+        )
+    ).scalars()
+    payload_json = spec.model_dump(mode="json")
+    for alert in existing:
+        if alert.target == payload_json:
+            return ToolResult(
+                data={"watching": True, "alert_id": alert.id, "spec": payload_json},
+                sources=[_computed("lotscope_watchlist")],
+                unverified=["That search was already being watched; nothing was added."],
+            )
+
+    alert = AgentAlert(
+        user_id=context.user_id,
+        kind="new_match",
+        scope="area",
+        target=payload_json,
+        agent_run_id=context.agent_run_id,
+    )
+    session.add(alert)
+    await session.flush()
+
+    return ToolResult(
+        data={
+            "watching": True,
+            "alert_id": alert.id,
+            "spec": payload_json,
+            "description": spec.describe(),
+            "added_by_run": context.agent_run_id,
+        },
+        sources=[_computed("lotscope_watchlist")],
+        unverified=[
+            "A watched search reports new sheriff listings that match its shape. It does "
+            "not screen them against the buy box; that is what a packet does."
+        ],
+    )
+
+
 async def watch_tool(
     session: AsyncSession, context: ToolContext, payload: WatchInput
 ) -> ToolResult:
     from lotscope.watchlist.schemas import SavedParcelCreate
     from lotscope.watchlist.service import add_saved
+
+    if payload.search_spec is not None:
+        return await _watch_spec(session, context, payload.search_spec)
+    if not payload.parcel:
+        return empty("Give either a parcel to watch or a search_spec to watch.")
 
     row = await _resolve(session, payload.parcel)
     if row is None:
@@ -495,8 +560,9 @@ async def watch_tool(
 @tool(
     name="unwatch",
     description=(
-        "Take a lot off this buyer's saved list so changes to it stop reaching them. Safe to "
-        "call on a lot that was never saved — it reports that rather than failing."
+        "Stop watching something: give parcel for one lot, or search_spec for a standing "
+        "search. Safe to call on something that was never watched — it reports that rather "
+        "than failing."
     ),
     input_model=WatchInput,
 )
@@ -504,6 +570,33 @@ async def unwatch_tool(
     session: AsyncSession, context: ToolContext, payload: WatchInput
 ) -> ToolResult:
     from lotscope.watchlist.service import remove_saved
+
+    if payload.search_spec is not None:
+        wanted = payload.search_spec.model_dump(mode="json")
+        alerts = (
+            await session.execute(
+                select(AgentAlert).where(
+                    AgentAlert.user_id == context.user_id,
+                    AgentAlert.kind == "new_match",
+                    AgentAlert.is_active.is_(True),
+                )
+            )
+        ).scalars()
+        for alert in alerts:
+            if alert.target == wanted:
+                alert.is_active = False
+                await session.flush()
+                return ToolResult(
+                    data={"watching": False, "was_watching": True, "alert_id": alert.id},
+                    sources=[_computed("lotscope_watchlist")],
+                )
+        return ToolResult(
+            data={"watching": False, "was_watching": False},
+            sources=[_computed("lotscope_watchlist")],
+            unverified=["No watched search matches that shape, so nothing was removed."],
+        )
+    if not payload.parcel:
+        return empty("Give either a parcel to stop watching or a search_spec.")
 
     row = await _resolve(session, payload.parcel)
     if row is None:

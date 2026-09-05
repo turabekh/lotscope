@@ -13,6 +13,9 @@ ALERT_KINDS = (
     "new_delinquency",
     "neighbor_deed",
     "zba_filing",
+    # A standing search: tell me when a new listing matches this shape. The target holds
+    # a WatchSpec, which is where a saved search's criteria live now.
+    "new_match",
 )
 ALERT_SCOPES = ("parcel", "area", "owned_neighbors")
 
