@@ -157,3 +157,11 @@ runtime.py now reads the streaming messages API and emits real text deltas; a tu
 Deleted ask_the_parcel, its endpoint and schema use, AskBox.vue and four tests. summarize_parcel and draft_parcel_report kept.
 Eval: 15 tasks / 32 assertions against claude-sonnet-5 under a spend cap. **14/15 tasks, 31/32 assertions on the first run**; the one failure was my assertion, not the model — a bare `not_contains: "vacant lot"` flagged the correct answer "not a vacant lot". Tightened to "is a vacant lot"; 15/15 after. 253,832 in / 13,512 out, about $0.96.
 Gates: lint, typecheck 623 files, unit 1693, integration 573 (0 skipped), vitest 414, Playwright serial 43 passed / 0 skipped.
+
+## 2026-09-05 — Step 2.2 deployed; Step 2.3 (feat/agent-action-tools)
+Deployed 8f018f5. First CI run failed with all 43 e2e green: the job starts `uv run uvicorn ... &` and never stops it, so setup-uv's post-job `cache prune` waited 300s for the lock and exited 2. ci.yml now stops the api before the post steps.
+Step 2.3: thirteen action tools — compute_deal and run_sensitivity with per-call overrides, screen_sale, screen_parcels, add_to_pipeline / update_deal / list_pipeline, watch / unwatch, draft_loi, draft_letter, create_alert, export_csv. 27 tools registered in total. Migration f4c81a6b930e adds agent_alert and an agent_run_id column on deal, saved_parcel, saved_search and sale_packet, so anything the analyst creates points back at the conversation that created it.
+Drafting is not sending: both draft tools write a file and say so in the envelope; the prompt confirms only for things that would reach a third party.
+Caught by a test: add_to_pipeline took a free-text stage and its description suggested 'watching', which is not a valid stage — the model was being told to send a value the schema rejects. Now a Literal, with the default named.
+Real run over SSE, "screen the 2026-09-16 list against my box and add the BID lots to my pipeline" (no Sept 10 list exists): 4 tool calls, 32,292 in / 978 out, 17.5s. Screened 114 listings / 32 vacant → 3 BID, 3 LOOK, 26 PASS; added the 3 BID lots as leads; all three deal rows carry agent_run_id = 20. It volunteered the LOOK lots it did not add and repeated the nominal-opening-bid and water/gas caveats unprompted.
+Gates: lint, typecheck 625 files, unit 1711, integration 591 (0 skipped), vitest 414.
