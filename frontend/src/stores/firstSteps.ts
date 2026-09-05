@@ -33,10 +33,8 @@ export const useFirstStepsStore = defineStore('firstSteps', () => {
   async function refresh(): Promise<void> {
     await Promise.all([watchlist.ensureLoaded(), savedSearches.ensureLoaded()])
     try {
-      const profiles = await api.listUnderwritingProfiles()
-      assumptionsSet.value = profiles.some(
-        (profile) => Object.keys(profile.assumptions ?? {}).length > 0,
-      )
+      const buyBox = await api.getBuyBox()
+      assumptionsSet.value = Object.keys(buyBox.assumptions ?? {}).length > 0
     } catch {
       assumptionsSet.value = false
     }
@@ -59,7 +57,7 @@ export const useFirstStepsStore = defineStore('firstSteps', () => {
     },
     {
       code: 'assumptions',
-      label: 'Set your underwriting assumptions',
+      label: 'Set your buy box',
       detail: 'Your construction costs and target margin drive every offer figure we show you.',
       done: assumptionsSet.value,
       routeName: 'account',

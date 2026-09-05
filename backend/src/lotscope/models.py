@@ -22,7 +22,6 @@ from lotscope.risk.models import FloodZone, LiEvent, SheriffSaleEvent, TaxStatus
 from lotscope.savedsearch.models import SavedSearch, SavedSearchMatch
 from lotscope.skiptrace.models import CreditLedgerEntry, SkipTraceResult
 from lotscope.streets.models import StreetCenterline
-from lotscope.underwriting.models import UnderwritingProfile
 from lotscope.valuation.models import Sale
 from lotscope.verdict.models import ParcelVerdict
 from lotscope.watchlist.models import SavedParcel
@@ -66,7 +65,6 @@ __all__ = [
     "SkipTraceResult",
     "StreetCenterline",
     "TaxStatus",
-    "UnderwritingProfile",
     "User",
     "ZbaAppeal",
     "ZoningDistrict",

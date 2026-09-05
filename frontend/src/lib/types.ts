@@ -1248,14 +1248,6 @@ export interface Usage {
   parcel_views: UsageMetric
 }
 
-export interface BuyBox {
-  max_acquisition_price?: number | null
-  min_margin?: number | null
-  min_units?: number | null
-  max_units?: number | null
-  risk_tolerance?: string | null
-}
-
 export interface BuyBoxMatch {
   parcel_number: string
   address: string | null
@@ -1272,14 +1264,6 @@ export interface BuyBoxMatches {
   matches: BuyBoxMatch[]
   criteria_applied: string[]
   has_profile: boolean
-}
-
-export interface UnderwritingProfile {
-  id: number
-  name: string
-  is_default: boolean
-  assumptions: Record<string, number>
-  buy_box: BuyBox
 }
 
 export type CorrectionStatus = 'open' | 'triaged' | 'resolved' | 'rejected'

@@ -33,7 +33,7 @@ describe('FirstSteps', () => {
 
   it('renders every step as a link the router can actually resolve', async () => {
     stubStores()
-    vi.spyOn(api, 'listUnderwritingProfiles').mockResolvedValue([])
+    vi.spyOn(api, 'getBuyBox').mockResolvedValue({ assumptions: {} } as never)
     const wrapper = await mountSteps()
 
     const links = wrapper.findAll('a.step')
@@ -47,23 +47,23 @@ describe('FirstSteps', () => {
 
   it('links assumptions to the unscoped account route', async () => {
     stubStores()
-    vi.spyOn(api, 'listUnderwritingProfiles').mockResolvedValue([])
+    vi.spyOn(api, 'getBuyBox').mockResolvedValue({ assumptions: {} } as never)
     const wrapper = await mountSteps()
     expect(wrapper.find('[data-test="first-step-assumptions"]').attributes('href')).toBe('/account')
   })
 
   it('reports progress out of the total', async () => {
     stubStores()
-    vi.spyOn(api, 'listUnderwritingProfiles').mockResolvedValue([])
+    vi.spyOn(api, 'getBuyBox').mockResolvedValue({ assumptions: {} } as never)
     const wrapper = await mountSteps()
     expect(wrapper.find('[data-test="first-steps-count"]').text()).toBe('0 of 4')
   })
 
   it('disappears once every step is done', async () => {
     stubStores()
-    vi.spyOn(api, 'listUnderwritingProfiles').mockResolvedValue([
-      { id: 1, name: 'Mine', is_default: true, assumptions: { target_margin: 0.2 }, buy_box: {} },
-    ] as Awaited<ReturnType<typeof api.listUnderwritingProfiles>>)
+    vi.spyOn(api, 'getBuyBox').mockResolvedValue({
+      assumptions: { target_margin: 0.2 },
+    } as unknown as Awaited<ReturnType<typeof api.getBuyBox>>)
     const watchlist = useWatchlistStore()
     const savedSearches = useSavedSearchesStore()
     watchlist.items = [{ parcel_number: 'phl:1' }] as typeof watchlist.items
@@ -78,9 +78,9 @@ describe('FirstSteps', () => {
 
   it('collapses to a single prompt once most of the setup is done', async () => {
     stubStores()
-    vi.spyOn(api, 'listUnderwritingProfiles').mockResolvedValue([
-      { id: 1, name: 'Mine', is_default: true, assumptions: { margin: 0.2 }, buy_box: {} },
-    ] as never)
+    vi.spyOn(api, 'getBuyBox').mockResolvedValue({
+      assumptions: { target_margin: 0.2 },
+    } as never)
     useFirstStepsStore().markVerdictSeen()
 
     const wrapper = await mountSteps()
@@ -92,7 +92,7 @@ describe('FirstSteps', () => {
 
   it('keeps every step in view while the user is still new', async () => {
     stubStores()
-    vi.spyOn(api, 'listUnderwritingProfiles').mockResolvedValue([])
+    vi.spyOn(api, 'getBuyBox').mockResolvedValue({ assumptions: {} } as never)
 
     const wrapper = await mountSteps()
 
