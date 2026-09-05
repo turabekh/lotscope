@@ -17,6 +17,9 @@ from lotscope.admin.catalog import (
 )
 from lotscope.admin.models import JobRun
 from lotscope.admin.service import mark_job_finished, mark_job_running
+from lotscope.agent.brief import build_and_brief, send_daily_briefs
+from lotscope.agent.client import AnthropicToolClient
+from lotscope.agent.summarise import summarise_long_conversations
 from lotscope.assemblage.jobs import recompute_all_assemblage
 from lotscope.buyers.jobs import recompute_all_buyers
 from lotscope.core.config import get_settings
@@ -117,6 +120,47 @@ async def generate_sale_packet(ctx: dict[str, Any], packet_id: int) -> int:
 
 PACKET_EMAIL_LOCAL_HOUR = 9
 PACKET_EMAIL_TZ = ZoneInfo("America/New_York")
+BRIEF_EMAIL_LOCAL_HOUR = 7
+
+
+async def build_daily_signals(ctx: dict[str, Any]) -> int:
+    """Runs after the ingest and the sheriff scraper, so the day's rows are all in."""
+    count = await build_and_brief(ctx["session_factory"], ctx["settings"])
+    _logger.info("built_daily_signals", count=count)
+    return count
+
+
+async def send_morning_briefs(ctx: dict[str, Any]) -> int:
+    # Same shape as the packet job: cron fires on both candidate UTC hours and the local
+    # clock decides, so the brief lands at 07:00 in Philadelphia on either side of DST.
+    local_hour = datetime.now(PACKET_EMAIL_TZ).hour
+    if local_hour != BRIEF_EMAIL_LOCAL_HOUR:
+        _logger.info("briefs_skipped_off_hour", local_hour=local_hour)
+        return 0
+    settings = ctx["settings"]
+    if not settings.anthropic_api_key:
+        _logger.warning("briefs_skipped_no_model_key")
+        return 0
+    count = await send_daily_briefs(
+        ctx["session_factory"],
+        AnthropicToolClient(settings),
+        get_email_sender(settings),
+        settings,
+    )
+    _logger.info("sent_morning_briefs", count=count)
+    return count
+
+
+async def summarise_conversations(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    if not settings.anthropic_api_key:
+        _logger.warning("summaries_skipped_no_model_key")
+        return 0
+    count = await summarise_long_conversations(
+        ctx["session_factory"], AnthropicToolClient(settings), settings
+    )
+    _logger.info("summarised_conversations", memories=count)
+    return count
 
 
 async def send_daily_packet_emails(ctx: dict[str, Any]) -> int:
@@ -449,6 +493,9 @@ class WorkerSettings:
         func(generate_sale_packet, timeout=BULK_JOB_TIMEOUT),
         func(send_daily_packet_emails, timeout=BULK_JOB_TIMEOUT),
         func(send_sheriff_change_emails, timeout=BULK_JOB_TIMEOUT),
+        func(build_daily_signals, timeout=BULK_JOB_TIMEOUT),
+        func(send_morning_briefs, timeout=BULK_JOB_TIMEOUT),
+        func(summarise_conversations, timeout=BULK_JOB_TIMEOUT),
         func(recompute_verdicts, timeout=BULK_JOB_TIMEOUT),
         func(recompute_vacant_verdicts, timeout=BULK_JOB_TIMEOUT),
         func(recompute_distress, timeout=BULK_JOB_TIMEOUT),
@@ -501,4 +548,14 @@ class WorkerSettings:
             timeout=BULK_JOB_TIMEOUT,
         ),
         cron(recorded(send_sheriff_change_emails), hour=5, minute=45, timeout=BULK_JOB_TIMEOUT),
+        # After the ingest (04:00, ~1h) and the sheriff change pass (05:45).
+        cron(recorded(build_daily_signals), hour=6, minute=15, timeout=BULK_JOB_TIMEOUT),
+        # 07:00 America/New_York on both sides of DST; the job checks the local clock.
+        cron(
+            recorded(send_morning_briefs),
+            hour={11, 12},
+            minute=0,
+            timeout=BULK_JOB_TIMEOUT,
+        ),
+        cron(recorded(summarise_conversations), hour=3, minute=30, timeout=BULK_JOB_TIMEOUT),
     ]

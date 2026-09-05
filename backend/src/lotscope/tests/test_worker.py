@@ -33,6 +33,9 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "reconcile_upstream_sample",
         "send_ops_health_digest",
         "send_ops_alerts",
+        "build_daily_signals",
+        "send_morning_briefs",
+        "summarise_conversations",
     }
 
 

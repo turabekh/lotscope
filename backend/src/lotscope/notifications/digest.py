@@ -586,3 +586,43 @@ def render_sale_change_html(
         f'<a href="{escape(unsubscribe_url)}" style="color:#90a4ae;">Unsubscribe</a> · '
         f"{escape(postal_address)}</div></div></div>"
     )
+
+
+@dataclass(frozen=True)
+class BriefContent:
+    brief_date: date
+    body: str
+    signal_count: int
+    analyst_url: str
+
+
+def brief_subject(content: BriefContent) -> str:
+    return f"LotScope brief — {content.brief_date.strftime('%a %-d %b')}"
+
+
+def render_brief_text(content: BriefContent, unsubscribe_url: str) -> str:
+    return (
+        f"{content.body.strip()}\n\n"
+        f"{content.signal_count} change{'' if content.signal_count == 1 else 's'} "
+        f"overnight. Open the analyst: {content.analyst_url}\n\n"
+        f"Stop these emails: {unsubscribe_url}\n"
+    )
+
+
+def render_brief_html(content: BriefContent, unsubscribe_url: str) -> str:
+    paragraphs = "".join(
+        f'<p style="margin:0 0 10px">{escape(line)}</p>'
+        for line in content.body.strip().splitlines()
+        if line.strip()
+    )
+    return (
+        '<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;'
+        'line-height:1.5;color:#1a1a1a">'
+        f'<h2 style="margin:0 0 12px;font-size:16px">{escape(brief_subject(content))}</h2>'
+        f"{paragraphs}"
+        f'<p style="margin:16px 0 0"><a href="{escape(content.analyst_url)}">'
+        "Open the analyst</a></p>"
+        f'<p style="margin:12px 0 0;color:#666;font-size:12px">'
+        f'<a href="{escape(unsubscribe_url)}">Stop these emails</a></p>'
+        "</div>"
+    )
