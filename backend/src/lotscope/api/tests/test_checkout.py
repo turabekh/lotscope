@@ -134,3 +134,76 @@ async def test_the_price_list_says_whether_purchasing_is_on(db_session: AsyncSes
     assert body["configured"] is False
     assert body["skus"]["packet"]["amount_cents"] == 4900
     assert body["skus"]["diligence"]["amount_cents"] == 19900
+
+
+async def _packet_for(session: AsyncSession, user_id: int, pdf_path: str) -> int:
+    await session.execute(
+        text(
+            "INSERT INTO sale_packet (user_id, sale_date, status, pdf_path, generated_at) "
+            "VALUES (:u, current_date + 7, 'ready', :p, now())"
+        ),
+        {"u": user_id, "p": pdf_path},
+    )
+    await session.flush()
+    return int(await session.scalar(text("SELECT max(id) FROM sale_packet")))
+
+
+async def test_a_comped_user_gets_the_packet(db_session: AsyncSession, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    settings = _settings()
+    user_id = await _user(db_session, "comp-download@example.com")
+    await db_session.execute(
+        text("UPDATE app_user SET comp_until = now() + interval '30 days' WHERE id = :u"),
+        {"u": user_id},
+    )
+    pdf = tmp_path / "packet.pdf"
+    pdf.write_bytes(b"%PDF-1.4 test")
+    packet_id = await _packet_for(db_session, user_id, str(pdf))
+    app = _app(db_session, settings)
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            f"/packets/{packet_id}/download", headers=_auth(settings, user_id)
+        )
+
+    assert response.status_code == 200
+    assert response.content.startswith(b"%PDF")
+
+
+async def test_an_uncomped_unpaid_user_is_402(db_session: AsyncSession, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    settings = _settings()
+    user_id = await _user(db_session, "unpaid-download@example.com")
+    pdf = tmp_path / "packet.pdf"
+    pdf.write_bytes(b"%PDF-1.4 test")
+    packet_id = await _packet_for(db_session, user_id, str(pdf))
+    app = _app(db_session, settings)
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            f"/packets/{packet_id}/download", headers=_auth(settings, user_id)
+        )
+
+    assert response.status_code == 402
+
+
+async def test_a_packet_whose_pdf_is_unreachable_says_so_rather_than_crashing(
+    db_session: AsyncSession,
+) -> None:
+    settings = _settings()
+    user_id = await _user(db_session, "missing-pdf@example.com")
+    await db_session.execute(
+        text("UPDATE app_user SET comp_until = now() + interval '30 days' WHERE id = :u"),
+        {"u": user_id},
+    )
+    packet_id = await _packet_for(db_session, user_id, "/nowhere/packet.pdf")
+    app = _app(db_session, settings)
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            f"/packets/{packet_id}/download", headers=_auth(settings, user_id)
+        )
+
+    assert response.status_code == 404
+    assert "not readable from this service" in response.json()["detail"]

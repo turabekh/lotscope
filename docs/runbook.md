@@ -49,6 +49,12 @@ curl -s https://parcelphl.online/api/health/ready \
 Required for open registration: `{'email': True, 'email_allowlist_active': False}`. A non-empty
 allowlist is legitimate only while registration is closed to everyone but the listed addresses.
 
+**Packet storage.** Generated Sale Packet PDFs are written by the `worker` and served by
+`api`, so they must live on a volume both mount. `docker-compose.yml` declares the named volume
+`packet_data` at `/srv/lotscope/packets` in both services and sets `PACKET_DIR` to match. With
+the default (a path inside the image) the worker writes a file the api cannot see and the
+download 500s — which is what happened on 2026-09-05.
+
 **VM prerequisite — do this before step 3.** `/srv/lotscope/corpus` must exist on the VM and
 be readable inside the container, or step 8 fails after production has already been purged.
 Compose bind-mounts it read-only into `api` and `worker` at the same path; a bind mount whose

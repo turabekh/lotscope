@@ -54,6 +54,7 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
+      PACKET_DIR: ${PACKET_DIR:-/srv/lotscope/packets}
     depends_on:
       db:
         condition: service_healthy
@@ -78,6 +79,7 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
+      PACKET_DIR: ${PACKET_DIR:-/srv/lotscope/packets}
     depends_on:
       db:
         condition: service_healthy
@@ -90,10 +92,12 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
+      PACKET_DIR: ${PACKET_DIR:-/srv/lotscope/packets}
       REDIS_URL: redis://redis:6379/0
       MARTIN_URL: http://martin:3000
     volumes:
       - ${CORPUS_DIR:-/srv/lotscope/corpus}:/srv/lotscope/corpus:ro
+      - packet_data:/srv/lotscope/packets
     depends_on:
       db:
         condition: service_healthy
@@ -122,10 +126,12 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lotscope}:${POSTGRES_PASSWORD:-lotscope}@db:5432/${POSTGRES_DB:-lotscope}
+      PACKET_DIR: ${PACKET_DIR:-/srv/lotscope/packets}
       REDIS_URL: redis://redis:6379/0
       MARTIN_URL: http://martin:3000
     volumes:
       - ${CORPUS_DIR:-/srv/lotscope/corpus}:/srv/lotscope/corpus:ro
+      - packet_data:/srv/lotscope/packets
     depends_on:
       db:
         condition: service_healthy
@@ -135,6 +141,7 @@ services:
         condition: service_completed_successfully
 
 volumes:
+  packet_data:
   db_data:
   redis_data:
   caddy_data:
