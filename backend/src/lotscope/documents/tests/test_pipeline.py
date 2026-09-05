@@ -6,7 +6,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
-from lotscope.ai.service import ask_the_parcel
 from lotscope.documents.models import DeedDocument
 from lotscope.documents.pipeline import process_deed_text
 from lotscope.documents.service import get_deed_restrictions
@@ -188,32 +187,3 @@ async def test_process_deed_text_is_idempotent_on_restrictions(db_session: Async
         db_session, "000000001", record_url_template=_URL_TEMPLATE
     )
     assert restrictions.count == 1
-
-
-async def test_ask_the_parcel_includes_deed_context(db_session: AsyncSession) -> None:
-    deed = await _seed_deed(db_session)
-    await process_deed_text(
-        db_session,
-        deed,
-        "No multi-family dwellings permitted on the lot.",
-        embedder=_FakeEmbedder(),
-        generator=_FakeGenerator(_EXTRACTION),
-    )
-
-    generator = _FakeGenerator(
-        {
-            "answer": "The deed forbids multi-family use.",
-            "citations": [{"source": "deed", "section": "DEED-1"}],
-            "confidence": "high",
-        }
-    )
-    answer = await ask_the_parcel(
-        db_session,
-        "000000001",
-        "Are there deed restrictions?",
-        embedder=_FakeEmbedder(),
-        generator=generator,
-    )
-    assert answer is not None
-    assert generator.captured_user is not None
-    assert "multi-family" in generator.captured_user.lower()

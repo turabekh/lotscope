@@ -49,7 +49,6 @@ import type {
   OpsMarketHealthDetail,
   OpsSheriffCoverage,
   OwnerPortfolio,
-  ParcelAnswer,
   ParcelChecklist,
   ParcelCompareResponse,
   ParcelDetail,
@@ -590,12 +589,6 @@ export const api = {
   },
   getDeedRestrictions(parcelNumber: string): Promise<DeedRestrictionsResponse> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/deed-restrictions`)
-  },
-  ask(parcelNumber: string, question: string): Promise<ParcelAnswer> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/ask`, {
-      method: 'POST',
-      body: JSON.stringify({ question }),
-    })
   },
   getLayers(): Promise<LayersResponse> {
     return request('/layers')

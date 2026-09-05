@@ -3,7 +3,6 @@ import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
 
-import AskBox from '@/components/AskBox.vue'
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import AssessmentPanel from '@/components/AssessmentPanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
@@ -553,7 +552,6 @@ async function toggleSave(): Promise<void> {
             />
             <ReportPanel :parcel-number="detail.parcel_number" />
             <DeedRestrictionsPanel />
-            <AskBox :parcel-number="detail.parcel_number" />
           </q-tab-panel>
         </q-tab-panels>
       </div>

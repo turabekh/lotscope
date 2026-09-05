@@ -120,7 +120,6 @@ function mountDossier(detail: ParcelDetail, distress: DistressResult | null = nu
         OwnerPortfolioPanel: true,
         ReportPanel: true,
         DeedRestrictionsPanel: true,
-        AskBox: true,
       },
     },
   })

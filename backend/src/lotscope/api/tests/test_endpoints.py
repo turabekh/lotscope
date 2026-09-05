@@ -10,12 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
 from lotscope.ai.models import EMBEDDING_DIMENSIONS
-from lotscope.ai.retrieval import add_document
 from lotscope.api.app import create_app
 from lotscope.api.deps import (
     get_app_settings,
     get_current_user,
-    get_embedder,
     get_generator,
     get_redis,
     get_session,
@@ -293,62 +291,6 @@ class _FakeGenerator:
             "citations": [{"source": "Title 14", "section": "14-701"}],
             "confidence": "high",
         }
-
-
-@pytest.mark.integration
-async def test_ask_endpoint(db_session: AsyncSession) -> None:
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, base_zoning_code) VALUES ('phl:000000001', 'RSA-5')"
-        )
-    )
-    await add_document(
-        db_session,
-        source="phillycode",
-        section="14-701",
-        content="RSA-5 minimum lot area is 1,440 sqft.",
-        embedding=[1.0] + [0.0] * (EMBEDDING_DIMENSIONS - 1),
-    )
-    await db_session.flush()
-
-    app = _app_with_session(db_session)
-    generator = _FakeGenerator()
-    fake_redis = _FakeRedis()
-    app.dependency_overrides[get_embedder] = _FakeEmbedder
-    app.dependency_overrides[get_generator] = lambda: generator
-    app.dependency_overrides[get_redis] = lambda: fake_redis
-    app.dependency_overrides[get_current_user] = _fake_user
-
-    async with _client(app) as client:
-        resp = await client.post(
-            "/parcels/phl:000000001/ask", json={"question": "Can I build a house?"}
-        )
-        # repeat the same question — should be served from cache, not recomputed
-        repeat = await client.post(
-            "/parcels/phl:000000001/ask", json={"question": "Can I  build a HOUSE?"}
-        )
-
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["citations"][0]["section"] == "14-701"
-    assert body["is_informational"] is True
-    assert repeat.status_code == 200
-    assert repeat.json() == body
-    assert generator.calls == 1
-
-
-@pytest.mark.integration
-async def test_ask_endpoint_requires_authentication(db_session: AsyncSession) -> None:
-    app = _app_with_session(db_session)
-    app.dependency_overrides[get_app_settings] = lambda: Settings(
-        _env_file=None, secret_key="test-secret-key-that-is-at-least-32-bytes-long"
-    )
-    app.dependency_overrides[get_embedder] = _FakeEmbedder
-    app.dependency_overrides[get_generator] = lambda: _FakeGenerator()
-    app.dependency_overrides[get_redis] = lambda: _FakeRedis()
-    async with _client(app) as client:
-        resp = await client.post("/parcels/phl:000000001/ask", json={"question": "Hi?"})
-    assert resp.status_code == 401
 
 
 def _fake_pro_user() -> User:

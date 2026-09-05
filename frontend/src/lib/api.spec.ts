@@ -29,24 +29,6 @@ describe('api', () => {
     )
   })
 
-  it('ask posts the question', async () => {
-    const fetchMock = mockFetch(200, {
-      answer: 'Yes',
-      citations: [{ source: 'Title 14', section: '14-701' }],
-      confidence: 'high',
-      is_informational: true,
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    const answer = await api.ask('001', 'Can I build?')
-
-    expect(answer.citations[0]?.section).toBe('14-701')
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/parcels/001/ask'),
-      expect.objectContaining({ method: 'POST' }),
-    )
-  })
-
   it('getSheriffSales builds the query and returns the calendar', async () => {
     const fetchMock = mockFetch(200, { total: 1, returned: 1, items: [] })
     vi.stubGlobal('fetch', fetchMock)

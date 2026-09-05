@@ -9,19 +9,15 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.usage import (
-    increment_ask_usage,
-)
 from lotscope.ai.client import StructuredGenerator
-from lotscope.ai.derivation import PHILLYCODE_SOURCE
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.prompts import (
     PROMPT_VERSION,
     REPORT_PROMPT_VERSION,
     SUMMARY_PROMPT_VERSION,
 )
-from lotscope.ai.schemas import ParcelAnswer, ParcelReportResult, ParcelSummaryResult
-from lotscope.ai.service import ask_the_parcel, draft_parcel_report, summarize_parcel
+from lotscope.ai.schemas import ParcelReportResult, ParcelSummaryResult
+from lotscope.ai.service import draft_parcel_report, summarize_parcel
 from lotscope.api.deps import (
     ParcelKeyDep,
     get_app_settings,
@@ -606,39 +602,3 @@ async def parcel_scenarios(
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result
-
-
-@router.post("/{parcel_number}/ask", response_model=ParcelAnswer)
-async def ask_parcel(
-    parcel_number: ParcelKeyDep,
-    body: AskRequest,
-    session: SessionDep,
-    embedder: Annotated[Embedder, Depends(get_embedder)],
-    generator: Annotated[StructuredGenerator, Depends(get_generator)],
-    redis: Annotated[Redis, Depends(get_redis)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    settings: SettingsDep,
-) -> ParcelAnswer:
-    cache_key = _ask_cache_key(
-        parcel_number, body.question, PHILLYCODE_SOURCE, settings.anthropic_model
-    )
-    try:
-        cached = await redis.get(cache_key)
-    except RedisError:
-        cached = None
-    if cached is not None:
-        return ParcelAnswer.model_validate_json(cached)
-
-    answer = await ask_the_parcel(
-        session,
-        parcel_number,
-        body.question,
-        embedder=embedder,
-        generator=generator,
-    )
-    if answer is None:
-        raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    with contextlib.suppress(RedisError):
-        await increment_ask_usage(redis, current_user.id)
-        await redis.set(cache_key, answer.model_dump_json(), ex=_ASK_CACHE_TTL_SECONDS)
-    return answer
