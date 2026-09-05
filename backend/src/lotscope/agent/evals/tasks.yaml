@@ -1,0 +1,181 @@
+# Eval tasks for the LotScope analyst. Each task is one question put to the real
+# model. Assertions are checked against the answer text and the tools it called.
+#
+# assert kinds:
+#   contains      — the answer must contain this string (case-insensitive)
+#   not_contains  — the answer must not contain it
+#   any_of        — the answer must contain at least one of these
+#   tool_called   — the named tool must have been called
+
+- id: fairhill-story
+  question: what's the story on 2138 N Fairhill St
+  expect_tools: [get_parcel, get_verdict]
+  assertions:
+    - kind: tool_called
+      value: get_parcel
+      why: A question about one lot must start from the parcel record.
+    - kind: contains
+      value: "2138 N FAIRHILL"
+      why: It must name the lot it was asked about.
+    - kind: any_of
+      value: ["unverified", "not in any dataset", "water"]
+      why: The water and gas gap is in every get_parcel envelope and must be surfaced.
+
+- id: fairhill-delinquency-attribution
+  question: who owes the back taxes on 2138 N Fairhill St
+  expect_tools: [get_delinquency]
+  assertions:
+    - kind: tool_called
+      value: get_delinquency
+      why: Delinquency questions must read the tax record, not the verdict summary.
+    - kind: any_of
+      value: ["9,695", "9695"]
+      why: The recorded amount is $9,695 in tax_status.
+    - kind: any_of
+      value: ["prior owner", "previous owner", "not the current owner", "sheriff"]
+      why: The debt names a prior owner and predates a 2025-05-08 sheriff's deed.
+
+- id: fairhill-deed-date
+  question: when did the current owner of 2138 N Fairhill St buy it, and for how much
+  expect_tools: [get_deed_chain]
+  assertions:
+    - kind: tool_called
+      value: get_deed_chain
+      why: A transfer question must read recorded deeds.
+    - kind: contains
+      value: "2025-05-08"
+      why: The most recent recorded transfer is dated 2025-05-08.
+
+- id: myrtlewood-by-right
+  question: can I build a house by right on 2307 N Myrtlewood St
+  expect_tools: [get_zoning]
+  assertions:
+    - kind: tool_called
+      value: get_zoning
+      why: A by-right question must read the zoning standards.
+    - kind: any_of
+      value: ["by right", "by-right", "variance"]
+      why: It must answer the by-right question in those terms.
+    - kind: not_contains
+      value: "I think"
+      why: The answer comes from the standard, not from a guess.
+
+- id: cecil-violations
+  question: how many open L&I violations are on 902 S Cecil St
+  expect_tools: [get_violations]
+  assertions:
+    - kind: tool_called
+      value: get_violations
+      why: Violation counts must come from the L&I tool.
+    - kind: contains
+      value: "7"
+      why: There are 7 open violations on this parcel.
+
+- id: warnock-violations
+  question: what's wrong with 4851 N Warnock St
+  expect_tools: [get_violations]
+  assertions:
+    - kind: tool_called
+      value: get_violations
+      why: A question about what is wrong is a violations and risk question.
+    - kind: contains
+      value: "4"
+      why: There are 4 open violations on this parcel.
+
+- id: fiftysecond-clearing
+  question: what will 1336 S 52nd St actually cost me at sheriff sale
+  expect_tools: [get_sheriff_clearing]
+  assertions:
+    - kind: tool_called
+      value: get_sheriff_clearing
+      why: What a sale clears is the clearing estimate, not the opening bid.
+    - kind: any_of
+      value: ["median", "sheriff's deed", "sheriffs deed", "nearby"]
+      why: The estimate must be explained as a median of nearby sheriff's deeds.
+    - kind: any_of
+      value: ["nominal", "minimum", "opening bid"]
+      why: The published opening bid must be named as a nominal minimum.
+
+- id: chadwick-assemblage
+  question: is 2241 N Chadwick St worth buying if I want to assemble
+  expect_tools: [get_neighbors]
+  assertions:
+    - kind: tool_called
+      value: get_neighbors
+      why: Assemblage questions must read adjacency.
+    - kind: any_of
+      value: ["adjacent", "next door", "neighbour", "neighbor", "combined"]
+      why: It must speak about the neighbouring lots it found.
+
+- id: cecilbmoore-overlays
+  question: what extra review does 620 Cecil B Moore Ave carry
+  expect_tools: [get_overlays_and_flags]
+  assertions:
+    - kind: tool_called
+      value: get_overlays_and_flags
+      why: Overlay and RCO questions must read the overlay tool.
+    - kind: any_of
+      value: ["overlay", "rco", "historic", "flood", "none"]
+      why: It must name what it found, or say there is nothing.
+
+- id: city-owned-wharton
+  question: can I buy 212-18 Wharton St
+  expect_tools: [get_parcel, get_owner_portfolio]
+  assertions:
+    - kind: any_of
+      value: ["redevelopment authority", "publicly", "public", "city", "disposition"]
+      why: This is publicly held; the answer must say so rather than price it as a private sale.
+    - kind: any_of
+      value: ["disposition", "not for sale", "public", "authority", "programme", "program"]
+      why: A public owner sells through a disposition process, not the open market.
+
+- id: city-owned-reed
+  question: who owns 105 Reed St and can I make an offer
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["city of phila", "city of philadelphia", "city"]
+      why: The recorded owner is the City of Philadelphia.
+    - kind: any_of
+      value: ["public", "disposition", "land bank", "city-owned", "city owned"]
+      why: It must flag public ownership rather than treating it as a normal seller.
+
+- id: non-vacant-reed-306
+  question: what's the land worth at 306 Reed St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["not vacant", "improved", "structure", "building", "house", "improvement"]
+      why: This parcel carries a structure; it must decline to price it as bare land.
+    - kind: not_contains
+      value: "is a vacant lot"
+      why: >-
+        Calling an improved parcel a vacant lot would be wrong. The check is on the
+        assertion, not the word: "not a vacant lot" is the correct answer and must pass.
+
+- id: non-vacant-reed-310
+  question: should I bid on 310 Reed St as a vacant lot
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["not vacant", "improved", "structure", "building", "house", "improvement"]
+      why: It must correct the premise rather than answer as if the lot were bare.
+
+- id: motive-refusal
+  question: why is the owner of 902 S Cecil St selling, are they desperate
+  expect_tools: []
+  assertions:
+    - kind: any_of
+      value: ["cannot", "can't", "no way to know", "not something", "records", "do not know", "don't know"]
+      why: Owner motive is never knowable from records and the prompt forbids inferring it.
+    - kind: not_contains
+      value: "they are motivated"
+      why: Asserting motive is exactly the failure this task guards.
+
+- id: code-lookup
+  question: what does Title 14 say about the minimum lot area in RSA-5
+  expect_tools: [get_code, get_zoning]
+  assertions:
+    - kind: any_of
+      value: ["14-", "title 14", "rsa-5", "rsa5"]
+      why: A code question must cite the code, not paraphrase from memory.
