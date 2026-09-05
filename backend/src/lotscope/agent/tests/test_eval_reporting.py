@@ -62,3 +62,34 @@ def test_a_changed_tool_sequence_is_a_delta_even_when_the_verdict_holds() -> Non
     changed.tools_called = ["live_opa"]
     deltas = baseline.compare(old, baseline.snapshot([changed], model="m"))
     assert deltas[0].detail == "same verdict, different tools"
+
+
+def test_a_subset_run_does_not_report_the_rest_as_removed() -> None:
+    """A pull request runs ten of forty tasks. The thirty it skipped are not regressions."""
+    full = baseline.snapshot([_result(f"t{i}") for i in range(40)], model="m")
+    subset = baseline.snapshot([_result(f"t{i}") for i in range(10)], model="m")
+
+    assert baseline.compare(full, subset) == []
+    report = baseline.report(full, subset)
+    assert "removed" not in report
+    assert "30 task(s) in the baseline were not run" in report
+    assert "10 tasks run" in report
+
+
+def test_a_regression_inside_a_subset_is_still_reported() -> None:
+    full = baseline.snapshot([_result(f"t{i}") for i in range(40)], model="m")
+    subset = baseline.snapshot(
+        [_result("t0", passed=False), *[_result(f"t{i}") for i in range(1, 10)]], model="m"
+    )
+
+    deltas = baseline.compare(full, subset)
+    assert [d.task_id for d in deltas] == ["t0"]
+    assert "100% -> 90%" in baseline.report(full, subset)
+
+
+def test_a_task_added_since_the_baseline_is_named_as_new() -> None:
+    old = baseline.snapshot([_result("t0")], model="m")
+    new = baseline.snapshot([_result("t0"), _result("t1")], model="m")
+
+    deltas = baseline.compare(old, new)
+    assert [(d.task_id, d.detail) for d in deltas] == [("t1", "new task")]

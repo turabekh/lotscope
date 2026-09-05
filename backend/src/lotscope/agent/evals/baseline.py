@@ -73,20 +73,20 @@ def pass_rate(snapshot_data: dict[str, Any]) -> float:
 
 
 def compare(old: dict[str, Any], new: dict[str, Any]) -> list[Delta]:
-    """Every task whose verdict or tool sequence moved. Order matters in a tool sequence."""
+    """Every task whose verdict or tool sequence moved. Order matters in a tool sequence.
+
+    Only tasks the run actually covered are compared. A pull request runs ten of forty, and
+    reporting the other thirty as "removed" would bury a real regression under thirty lines
+    of noise — the same failure as a suite that skipped everything, pointed the other way.
+    """
     deltas: list[Delta] = []
     old_tasks, new_tasks = old.get("tasks", {}), new.get("tasks", {})
 
-    for task_id in sorted(set(old_tasks) | set(new_tasks)):
-        before, after = old_tasks.get(task_id), new_tasks.get(task_id)
+    for task_id in sorted(new_tasks):
+        before, after = old_tasks.get(task_id), new_tasks[task_id]
         if before is None:
             deltas.append(
                 Delta(task_id, "absent", "pass" if after["passed"] else "fail", "new task")
-            )
-            continue
-        if after is None:
-            deltas.append(
-                Delta(task_id, "pass" if before["passed"] else "fail", "absent", "removed")
             )
             continue
         if before["passed"] != after["passed"]:
@@ -118,9 +118,18 @@ def report(old: dict[str, Any] | None, new: dict[str, Any]) -> str:
         lines.append(f"No baseline recorded. This run: {rate:.0%} of tasks passed.")
         return "\n".join(lines)
 
-    was = pass_rate(old)
+    covered = set(new.get("tasks", {}))
+    recorded = set(old.get("tasks", {}))
+    # Compare like with like: a subset run's pass rate only means something against the
+    # same subset of the baseline.
+    shared = {k: v for k, v in old.get("tasks", {}).items() if k in covered}
+    was = pass_rate({"tasks": shared}) if shared else rate
     arrow = "no change" if abs(rate - was) < 1e-9 else f"{was:.0%} -> {rate:.0%}"
-    lines.append(f"Pass rate {arrow} ({len(new.get('tasks', {}))} tasks).")
+    lines.append(f"Pass rate {arrow} ({len(covered)} tasks run).")
+
+    not_run = recorded - covered
+    if not_run:
+        lines.append(f"{len(not_run)} task(s) in the baseline were not run and are not compared.")
 
     deltas = compare(old, new)
     if not deltas:
