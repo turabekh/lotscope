@@ -59,10 +59,7 @@ import type {
   PipelineResponse,
   RegisterPayload,
   VerificationPending,
-  SavedSearchDetail,
-  SavedSearchListResponse,
   ScenariosResult,
-  SearchCriteria,
   SheriffSalesResponse,
   SignerProfile,
   SkipTraceResult,
@@ -283,9 +280,6 @@ export const api = {
     if (params.zipCode) query.set('zip_code', params.zipCode)
     return downloadFile(`/leads/export?${query.toString()}`, 'lotscope-leads.csv')
   },
-  exportSavedSearch(id: number): Promise<void> {
-    return downloadFile(`/saved-searches/${id}/export`, `lotscope-search-${id}.csv`)
-  },
   exportPipeline(): Promise<void> {
     return downloadFile('/pipeline/export', 'lotscope-pipeline.csv')
   },
@@ -320,21 +314,6 @@ export const api = {
       message: params.message || undefined,
       one_per_owner: params.onePerOwner,
     })
-  },
-  generateSavedSearchLetters(
-    searchId: number,
-    params: { fromName: string; fromContact: string; message?: string; onePerOwner?: boolean },
-  ): Promise<void> {
-    return downloadFile(
-      `/outreach/letters/saved-search/${searchId}`,
-      'lotscope-outreach-letters.pdf',
-      {
-        from_name: params.fromName,
-        from_contact: params.fromContact,
-        message: params.message || undefined,
-        one_per_owner: params.onePerOwner,
-      },
-    )
   },
   getLeads(params: {
     minScore?: number
@@ -556,31 +535,6 @@ export const api = {
   },
   updateSigner(payload: SignerProfile): Promise<User> {
     return request('/auth/signer', { method: 'PATCH', body: JSON.stringify(payload) })
-  },
-  getSavedSearches(): Promise<SavedSearchListResponse> {
-    return request('/saved-searches')
-  },
-  createSavedSearch(payload: {
-    name: string
-    criteria: SearchCriteria
-    alerts_enabled?: boolean
-  }): Promise<SavedSearchDetail> {
-    return request('/saved-searches', { method: 'POST', body: JSON.stringify(payload) })
-  },
-  getSavedSearch(id: number): Promise<SavedSearchDetail> {
-    return request(`/saved-searches/${id}`)
-  },
-  updateSavedSearch(
-    id: number,
-    payload: { name?: string; criteria?: SearchCriteria; alerts_enabled?: boolean },
-  ): Promise<SavedSearchDetail> {
-    return request(`/saved-searches/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
-  },
-  runSavedSearch(id: number): Promise<SavedSearchDetail> {
-    return request(`/saved-searches/${id}/run`, { method: 'POST' })
-  },
-  deleteSavedSearch(id: number): Promise<void> {
-    return request(`/saved-searches/${id}`, { method: 'DELETE' })
   },
   getOwnerPortfolio(parcelNumber: string): Promise<OwnerPortfolio> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/owner-portfolio`)

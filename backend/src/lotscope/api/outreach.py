@@ -12,7 +12,6 @@ from lotscope.core.errors import NotFoundError
 from lotscope.outreach.schemas import MailMergeRequest, WatchlistMailRequest
 from lotscope.outreach.service import (
     render_letter_campaign,
-    render_saved_search_campaign,
     render_watchlist_campaign,
 )
 from lotscope.reports.mailer import letters_filename
@@ -51,30 +50,6 @@ async def outreach_watchlist_letters(
     pdf = await render_watchlist_campaign(session, current_user.id, request)
     if pdf is None:
         raise NotFoundError("No mailable owners on your watchlist yet.")
-    return Response(
-        content=pdf,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{letters_filename()}"'},
-    )
-
-
-@router.post("/letters/saved-search/{search_id}")
-async def outreach_saved_search_letters(
-    search_id: int,
-    request: WatchlistMailRequest,
-    session: SessionDep,
-    current_user: CurrentUserDep,
-    redis: RedisDep,
-) -> Response:
-    pdf = await render_saved_search_campaign(
-        session,
-        current_user.id,
-        search_id,
-        request,
-        row_limit=EXPORT_ROW_LIMIT,
-    )
-    if pdf is None:
-        raise NotFoundError("No mailable owners matched this saved search.")
     return Response(
         content=pdf,
         media_type="application/pdf",

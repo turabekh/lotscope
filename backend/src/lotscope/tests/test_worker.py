@@ -23,7 +23,6 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "send_sheriff_change_emails",
         "send_daily_digests",
         "send_weekly_digests",
-        "send_saved_search_match_alerts",
         "send_deal_reminder_emails",
         "send_sales_week_emails",
         "snapshot_stats",

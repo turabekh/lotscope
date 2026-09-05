@@ -34,7 +34,6 @@ _COUNTS_SQL = text(
     "(SELECT count(*) FROM parcel WHERE coalesce(is_vacant, false)) AS parcels_vacant, "
     "(SELECT count(*) FROM parcel_verdict) AS verdicts_total, "
     "(SELECT count(*) FROM deed_document) AS deeds_total, "
-    "(SELECT count(*) FROM saved_search) AS saved_searches_total, "
     "(SELECT count(*) FROM neighborhood) AS neighborhoods_total"
 )
 
@@ -63,7 +62,6 @@ async def platform_overview(session: AsyncSession) -> AdminOverview:
         parcels_vacant=int(counts.parcels_vacant or 0),
         verdicts_total=int(counts.verdicts_total or 0),
         deeds_total=int(counts.deeds_total or 0),
-        saved_searches_total=int(counts.saved_searches_total or 0),
         neighborhoods_total=int(counts.neighborhoods_total or 0),
     )
 

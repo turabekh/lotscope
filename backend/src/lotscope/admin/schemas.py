@@ -25,7 +25,6 @@ class AdminOverview(BaseModel):
     parcels_vacant: int
     verdicts_total: int
     deeds_total: int
-    saved_searches_total: int
     neighborhoods_total: int
 
 

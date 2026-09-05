@@ -344,54 +344,6 @@ export interface WatchlistResponse {
   items: WatchlistItem[]
 }
 
-export interface SearchCriteria {
-  vacant_only: boolean
-  exclude_city_owned: boolean
-  zoning_codes: string[]
-  zip_code: string | null
-  min_market_value: number | null
-  max_market_value: number | null
-  min_lot_area_sqft: number | null
-  max_lot_area_sqft: number | null
-  min_opportunity_score: number | null
-  min_distress_score: number | null
-  is_delinquent: boolean | null
-  in_sheriff_sale: boolean | null
-}
-
-export interface SavedSearchMatchItem {
-  parcel_number: string
-  address: string | null
-  owner: string | null
-  base_zoning_code: string | null
-  is_vacant: boolean | null
-  market_value: number | null
-  opportunity_score: number | null
-  first_seen_at: string
-  is_new: boolean
-}
-
-export interface SavedSearchItem {
-  id: number
-  name: string
-  criteria: SearchCriteria
-  alerts_enabled: boolean
-  created_at: string
-  last_run_at: string | null
-  match_count: number
-  new_count: number
-}
-
-export interface SavedSearchDetail extends SavedSearchItem {
-  matches: SavedSearchMatchItem[]
-}
-
-export interface SavedSearchListResponse {
-  limit: number | null
-  used: number
-  searches: SavedSearchItem[]
-}
-
 export interface GeoPoint {
   lat: number
   lng: number

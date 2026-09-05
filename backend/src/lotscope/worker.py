@@ -36,7 +36,6 @@ from lotscope.notifications.service import (
     send_deal_reminders,
     send_digests,
     send_sales_week_digest,
-    send_saved_search_alerts,
 )
 from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
 from lotscope.ops.invariants import breaches, check_invariants
@@ -344,14 +343,6 @@ async def send_daily_digests(ctx: dict[str, Any]) -> int:
     return await send_digests(ctx["session_factory"], sender, settings, frequency="daily")
 
 
-async def send_saved_search_match_alerts(ctx: dict[str, Any]) -> int:
-    settings = ctx["settings"]
-    sender = get_email_sender(settings)
-    count = await send_saved_search_alerts(ctx["session_factory"], sender, settings)
-    _logger.info("sent_saved_search_alerts", count=count)
-    return count
-
-
 async def send_deal_reminder_emails(ctx: dict[str, Any]) -> int:
     settings = ctx["settings"]
     sender = get_email_sender(settings)
@@ -489,7 +480,6 @@ class WorkerSettings:
         reconcile_upstream_sample,
         send_weekly_digests,
         send_daily_digests,
-        send_saved_search_match_alerts,
         send_deal_reminder_emails,
         send_sales_week_emails,
         send_ops_health_digest,
@@ -518,7 +508,6 @@ class WorkerSettings:
         ),
         cron(recorded(send_daily_digests), hour=13, minute=0),
         cron(recorded(send_weekly_digests), weekday="mon", hour=13, minute=30),
-        cron(recorded(send_saved_search_match_alerts), hour=9, minute=0),
         cron(recorded(send_deal_reminder_emails), hour=13, minute=45),
         cron(
             recorded(send_daily_packet_emails),

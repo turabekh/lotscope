@@ -13,7 +13,6 @@ from lotscope.core.market import MARKET_CODE
 from lotscope.distress.service import LEADS_EXPORT_HEADER, export_leads
 from lotscope.pipeline.service import PIPELINE_EXPORT_HEADER, export_deals
 from lotscope.reports.csv_export import EXPORT_DISCLAIMER, stream_csv
-from lotscope.savedsearch.service import SAVED_SEARCH_EXPORT_HEADER, export_search_matches
 
 EXPORT_ROW_LIMIT = 10_000
 
@@ -78,16 +77,3 @@ async def export_pipeline_csv(
 ) -> StreamingResponse:
     rows = await export_deals(session, current_user.id, row_limit=EXPORT_ROW_LIMIT)
     return _csv_response(PIPELINE_EXPORT_HEADER, rows, "lotscope-pipeline.csv")
-
-
-@router.get("/saved-searches/{search_id}/export")
-async def export_saved_search_csv(
-    search_id: int,
-    session: SessionDep,
-    current_user: CurrentUserDep,
-    redis: RedisDep,
-) -> StreamingResponse:
-    rows = await export_search_matches(
-        session, current_user.id, search_id, row_limit=EXPORT_ROW_LIMIT
-    )
-    return _csv_response(SAVED_SEARCH_EXPORT_HEADER, rows, f"lotscope-search-{search_id}.csv")

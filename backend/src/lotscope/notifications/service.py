@@ -13,20 +13,14 @@ from lotscope.notifications.digest import (
     DigestChange,
     DigestContent,
     DigestParcel,
-    MatchAlertContent,
-    MatchAlertParcel,
-    MatchAlertSearch,
     SalesWeekContent,
     SalesWeekItem,
     deal_reminder_subject,
     digest_subject,
-    match_alert_subject,
     render_deal_reminder_html,
     render_deal_reminder_text,
     render_digest_html,
     render_digest_text,
-    render_match_alert_html,
-    render_match_alert_text,
     render_sales_week_html,
     render_sales_week_text,
     sales_week_subject,
@@ -34,13 +28,6 @@ from lotscope.notifications.digest import (
 from lotscope.notifications.email import EmailSender
 from lotscope.pipeline.service import deals_due
 from lotscope.risk.service import list_sheriff_sales
-from lotscope.savedsearch.schemas import SavedSearchAlert
-from lotscope.savedsearch.service import (
-    alerting_user_ids,
-    mark_user_notified,
-    pending_alerts_for_user,
-    run_user_matches,
-)
 from lotscope.watchlist.schemas import WatchlistItem
 from lotscope.watchlist.service import acknowledge, list_saved
 
@@ -124,89 +111,6 @@ async def send_digests(
                 logger.exception("digest_send_failed", user_id=user.id)
 
     logger.info("digests_sent", frequency=frequency, count=sent)
-    return sent
-
-
-def _match_alert_content(alerts: list[SavedSearchAlert]) -> MatchAlertContent:
-    return MatchAlertContent(
-        searches=[
-            MatchAlertSearch(
-                name=alert.name,
-                parcels=[
-                    MatchAlertParcel(
-                        parcel_number=match.parcel_number,
-                        address=match.address,
-                        opportunity_score=match.opportunity_score,
-                    )
-                    for match in alert.new_matches
-                ],
-            )
-            for alert in alerts
-        ]
-    )
-
-
-async def send_user_match_alert(
-    session: AsyncSession, sender: EmailSender, settings: Settings, user: User
-) -> bool:
-    await run_user_matches(session, user.id)
-    alerts = await pending_alerts_for_user(session, user.id)
-    if not alerts:
-        return False
-    content = _match_alert_content(alerts)
-    token = create_unsubscribe_token(settings, user_id=user.id)
-    searches_url = f"{settings.app_base_url.rstrip('/')}/saved-searches"
-    unsubscribe_url = f"{settings.api_base_url.rstrip('/')}/digests/unsubscribe?token={token}"
-    await sender.send(
-        to=user.email,
-        subject=match_alert_subject(content),
-        html=render_match_alert_html(
-            content,
-            searches_url=searches_url,
-            unsubscribe_url=unsubscribe_url,
-            postal_address=settings.company_postal_address,
-        ),
-        text=render_match_alert_text(
-            content,
-            searches_url=searches_url,
-            unsubscribe_url=unsubscribe_url,
-            postal_address=settings.company_postal_address,
-        ),
-        list_unsubscribe=unsubscribe_url,
-    )
-    await mark_user_notified(session, user.id)
-    return True
-
-
-async def send_saved_search_alerts(
-    session_factory: async_sessionmaker[AsyncSession],
-    sender: EmailSender | None,
-    settings: Settings,
-) -> int:
-    logger = get_logger("notifications")
-    if sender is None:
-        logger.info("match_alert_skipped_unconfigured")
-        return 0
-
-    async with session_factory() as session:
-        user_ids = await alerting_user_ids(session)
-
-    sent = 0
-    for user_id in user_ids:
-        async with session_factory() as session:
-            user = await session.get(User, user_id)
-            if user is None or not user.is_active:
-                continue
-            try:
-                if await send_user_match_alert(session, sender, settings, user):
-                    await session.commit()
-                    sent += 1
-                else:
-                    await session.commit()
-            except Exception:
-                logger.exception("match_alert_failed", user_id=user_id)
-
-    logger.info("match_alerts_sent", count=sent)
     return sent
 
 

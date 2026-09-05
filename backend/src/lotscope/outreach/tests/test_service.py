@@ -2,19 +2,14 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.core.errors import NotFoundError
 from lotscope.distress.service import list_mail_recipients
 from lotscope.outreach.schemas import MailMergeRequest, WatchlistMailRequest
 from lotscope.outreach.service import (
     DEFAULT_MESSAGE,
     merge_message,
     render_letter_campaign,
-    render_saved_search_campaign,
     render_watchlist_campaign,
 )
-from lotscope.savedsearch.schemas import SavedSearchCreate, SearchCriteria
-from lotscope.savedsearch.service import create_search
-from lotscope.savedsearch.service import list_mail_recipients as list_saved_search_recipients
 from lotscope.watchlist.service import list_mail_recipients as list_watchlist_recipients
 
 
@@ -216,65 +211,3 @@ async def _seed_search_parcel(
             "mailing": mailing,
         },
     )
-
-
-@pytest.mark.integration
-async def test_saved_search_recipients_and_campaign(db_session: AsyncSession) -> None:
-    user_id = await db_session.scalar(
-        text(
-            "INSERT INTO app_user (email, hashed_password, role, tier, is_active) "
-            "VALUES ('ss@example.com', 'x', 'user', 'pro', true) RETURNING id"
-        )
-    )
-    await _seed_search_parcel(db_session, "000000001", owner="Jane Doe", mailing="PO Box 1")
-    await _seed_search_parcel(db_session, "000000002", owner="No Mail", mailing=None)
-    await db_session.flush()
-
-    search = await create_search(
-        db_session,
-        int(user_id),
-        SavedSearchCreate(name="Vacant", criteria=SearchCriteria(vacant_only=True)),
-        limit=None,
-    )
-
-    recipients = await list_saved_search_recipients(
-        db_session, int(user_id), search.id, row_limit=100
-    )
-    assert [r.parcel_number for r in recipients] == ["000000001"]
-
-    request = WatchlistMailRequest(from_name="Sam", from_contact="555-0100")
-    pdf = await render_saved_search_campaign(
-        db_session, int(user_id), search.id, request, row_limit=100
-    )
-    assert pdf is not None
-    assert pdf[:4] == b"%PDF"
-
-
-@pytest.mark.integration
-async def test_saved_search_campaign_rejects_other_users_search(db_session: AsyncSession) -> None:
-    owner_id = await db_session.scalar(
-        text(
-            "INSERT INTO app_user (email, hashed_password, role, tier, is_active) "
-            "VALUES ('owner@example.com', 'x', 'user', 'pro', true) RETURNING id"
-        )
-    )
-    other_id = await db_session.scalar(
-        text(
-            "INSERT INTO app_user (email, hashed_password, role, tier, is_active) "
-            "VALUES ('other@example.com', 'x', 'user', 'pro', true) RETURNING id"
-        )
-    )
-    await _seed_search_parcel(db_session, "000000001", owner="Jane", mailing="PO Box 1")
-    await db_session.flush()
-    search = await create_search(
-        db_session,
-        int(owner_id),
-        SavedSearchCreate(name="Mine", criteria=SearchCriteria(vacant_only=True)),
-        limit=None,
-    )
-
-    request = WatchlistMailRequest(from_name="Sam", from_contact="x")
-    with pytest.raises(NotFoundError):
-        await render_saved_search_campaign(
-            db_session, int(other_id), search.id, request, row_limit=100
-        )
