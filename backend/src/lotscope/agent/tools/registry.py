@@ -17,6 +17,7 @@ class ToolContext:
     user_id: int
     buy_box: dict[str, Any] = field(default_factory=dict)
     owned_parcels: tuple[str, ...] = ()
+    agent_run_id: int | None = None
 
 
 @dataclass(frozen=True)

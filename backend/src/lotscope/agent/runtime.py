@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections.abc import AsyncIterator, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -180,6 +180,7 @@ async def run_agent(
     limits = budget or RunBudget()
     started = time.monotonic()
     sequence = 0
+    context = replace(context, agent_run_id=run.id)
     system = system_blocks(context.buy_box, list(context.owned_parcels))
     messages: list[dict[str, Any]] = list(history or [])
     messages.append({"role": "user", "content": run.question})
