@@ -34,6 +34,9 @@ class SalePacket(Base, TimestampMixin):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     emailed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    agent_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agent_run.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class SaleChangeNotice(Base):

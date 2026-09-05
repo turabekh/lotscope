@@ -26,3 +26,6 @@ class SavedParcel(Base, TimestampMixin):
     note: Mapped[str | None] = mapped_column(Text)
     snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     snapshot_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    agent_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agent_run.id", ondelete="SET NULL"), nullable=True
+    )

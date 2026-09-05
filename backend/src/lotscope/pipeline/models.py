@@ -25,6 +25,9 @@ class Deal(Base, TimestampMixin):
     contact_name: Mapped[str | None] = mapped_column(String(160))
     contact_phone: Mapped[str | None] = mapped_column(String(40))
     contact_email: Mapped[str | None] = mapped_column(String(255))
+    agent_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agent_run.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class DealActivity(Base, TimestampMixin):

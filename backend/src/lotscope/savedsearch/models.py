@@ -25,6 +25,9 @@ class SavedSearch(Base, TimestampMixin):
         Boolean, nullable=False, default=True, server_default="true"
     )
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    agent_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agent_run.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class SavedSearchMatch(Base):
