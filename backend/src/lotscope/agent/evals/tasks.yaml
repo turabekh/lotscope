@@ -284,3 +284,235 @@
     - kind: any_of
       value: ["2025-03-04", "march 2025", "4 march 2025", "march 4"]
       why: The recording date is the fact being asked for.
+
+# --- Mantua: the ten most distressed vacant lots ------------------------------
+# Distress is our own computed score, so these test that the Analyst reads the
+# distress and zoning tools rather than narrating the address back.
+
+- id: mantua-cambridge-3947
+  question: what's the deal with 3947 Cambridge St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: contains
+      value: "3947 CAMBRIDGE"
+      why: It must name the lot it was asked about.
+    - kind: any_of
+      value: ["distress", "delinquen", "violation", "vacant", "tax"]
+      why: A high-distress lot must have its distress surfaced, not just its dimensions.
+
+- id: mantua-leidy-4142
+  question: is 4142 Leidy Ave worth bidding on
+  expect_tools: [get_verdict]
+  assertions:
+    - kind: tool_called_any
+      value: [get_verdict, compute_deal]
+      why: '"Worth bidding on" is a deal question and must reach the deal maths.'
+    - kind: any_of
+      value: ["$", "offer", "mao", "margin"]
+      why: A bid question is answered with a number, not a description.
+
+- id: mantua-girard-3862
+  question: who owns 3862 W Girard Ave and how do I reach them
+  expect_tools: [live_opa]
+  assertions:
+    - kind: tool_called
+      value: live_opa
+      why: Owner and mailing address are live-verified facts.
+    - kind: contains
+      value: "GARDINER"
+      why: OPA records Antoine Gardiner as the owner.
+
+- id: mantua-brooklyn-844
+  question: can I build a single house on 844 Brooklyn St
+  expect_tools: [get_zoning]
+  assertions:
+    - kind: tool_called
+      value: get_zoning
+      why: A by-right question must read zoning, not guess from the district letter.
+    - kind: any_of
+      value: ["by right", "by-right", "variance", "cannot", "not permitted"]
+      why: The answer has to land on permitted or not.
+
+- id: mantua-43rd-859
+  question: what would I have to clean up on 859 N 43rd St
+  expect_tools: [live_li]
+  assertions:
+    - kind: tool_called_any
+      value: [live_li, get_violations]
+      why: What a buyer inherits is an L&I question.
+    - kind: any_of
+      value: ["violation", "no open", "none", "clean"]
+      why: It must answer with the violation posture either way.
+
+- id: mantua-wyalusing-3878
+  question: what are the comps around 3878 Wyalusing Ave
+  expect_tools: [get_comps]
+  assertions:
+    - kind: tool_called
+      value: get_comps
+      why: Comps come from the comp selector with its inclusion reasons.
+    - kind: any_of
+      value: ["$", "no comparable", "no recorded sale", "too few"]
+      why: Either a price range or an honest statement that there is none.
+
+- id: mantua-girard-4037
+  question: does 4037 W Girard Ave have a tax problem
+  expect_tools: [get_delinquency]
+  assertions:
+    - kind: tool_called
+      value: get_delinquency
+      why: Delinquency posture comes from the tax record, not the verdict summary.
+    - kind: any_of
+      value: ["delinquen", "owed", "$", "not delinquent", "no back tax", "current"]
+      why: It must state the posture, including when there is nothing owed.
+
+- id: mantua-40th-1101
+  question: is 1101 N 40th St next to anything else I could pick up
+  expect_tools: [get_neighbors]
+  assertions:
+    - kind: tool_called
+      value: get_neighbors
+      why: Assemblage is an adjacency question.
+    - kind: any_of
+      value: ["adjacent", "next door", "neighbour", "neighbor", "no adjacent", "none"]
+      why: It must answer about the neighbours specifically.
+
+- id: mantua-42nd-1212
+  question: what is 1212 N 42nd St actually worth as land
+  expect_tools: [get_verdict]
+  assertions:
+    - kind: any_of
+      value: ["$", "no value", "cannot value", "too few comps"]
+      why: A value question needs a figure or a reason there is none.
+    - kind: not_contains
+      value: "I think"
+      why: A valuation is computed, never guessed.
+
+- id: mantua-parkside-4214
+  question: any red flags on 4214 Parkside Ave
+  expect_tools: [get_verdict]
+  assertions:
+    - kind: any_of
+      value: ["flag", "risk", "violation", "flood", "historic", "nothing", "none"]
+      why: A red-flag question must enumerate them or say there are none.
+    - kind: any_of
+      value: ["water", "unverified", "not in any dataset"]
+      why: The water and gas gap is in every parcel envelope and must be surfaced.
+
+# --- city-owned: never a private sale ----------------------------------------
+# The failure these guard against is telling a buyer to offer a private price on
+# a lot that can only move through a public disposition process.
+
+- id: city-owned-reed-107
+  question: how much should I offer for 107 Reed St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["city of phila", "city-owned", "city owned", "public"]
+      why: The buyer must be told who owns it before anything else.
+    - kind: any_of
+      value: ["disposition", "land bank", "not for sale", "public process", "cannot simply", "application"]
+      why: A city lot moves through a disposition process; an offer price is the wrong answer.
+
+- id: city-owned-reed-109
+  question: can I just buy 109 Reed St off the owner
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["city of phila", "city-owned", "city owned", "public"]
+      why: It has to identify the public owner.
+    - kind: any_of
+      value: ["disposition", "land bank", "public", "process", "cannot"]
+      why: '"Just buy it off the owner" is exactly the assumption that must be corrected.'
+
+- id: city-owned-dickinson-230
+  question: what's my move on 230-34 Dickinson St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["city of phila", "city-owned", "city owned", "public"]
+      why: Public ownership changes the whole play and must lead.
+    - kind: any_of
+      value: ["disposition", "land bank", "public", "process", "application"]
+      why: The move is an application, not a bid.
+
+- id: city-owned-2nd-1406
+  question: make me an offer plan for 1406 S 2nd St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["city of phila", "city-owned", "city owned", "public"]
+      why: An offer plan for a city lot is the wrong artefact; it must say so.
+    - kind: any_of
+      value: ["disposition", "land bank", "public", "process", "cannot"]
+      why: It must redirect to the public route rather than produce a private offer.
+
+- id: city-owned-wharton-212
+  question: who do I talk to about 212-18 Wharton St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["redevelopment authority", "public", "city", "land bank"]
+      why: The Redevelopment Authority holds it; naming the right body is the answer.
+    - kind: any_of
+      value: ["disposition", "public", "process", "application", "authority"]
+      why: The route is the public process, not a private approach.
+
+# --- non-vacant: decline to price as land -------------------------------------
+# Each of these carries a house. Pricing it as a vacant lot would be wrong by the
+# value of the structure, so the Analyst must refuse the framing.
+
+- id: non-vacant-gerritt-323
+  question: what's the land worth at 323 Gerritt St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["not vacant", "not a vacant", "improved", "structure", "building", "house", "single family"]
+      why: It carries a house; pricing it as land would be wrong by the whole structure.
+    - kind: not_contains
+      value: "is a vacant lot"
+      why: Asserting vacancy on an improved parcel is the failure being tested.
+
+- id: non-vacant-wilder-129
+  question: price 129 Wilder St as a vacant lot for me
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["not vacant", "not a vacant", "improved", "structure", "building", "house", "single family"]
+      why: The question asserts a false premise and the answer must correct it.
+    - kind: not_contains
+      value: "is a vacant lot"
+      why: Accepting the premise is the failure.
+
+- id: non-vacant-front-1442
+  question: what would I pay for the dirt at 1442 S Front St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["not vacant", "not a vacant", "improved", "structure", "building", "house", "single family"]
+      why: '"The dirt" is still a land framing on an improved parcel.'
+    - kind: not_contains
+      value: "is a vacant lot"
+      why: It must not confirm vacancy.
+
+- id: non-vacant-front-1440
+  question: is 1440 S Front St a teardown I can price as land
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["not vacant", "improved", "structure", "building", "house", "single family", "demolition"]
+      why: A teardown is a judgement about a building that is standing; it must acknowledge it.
+    - kind: not_contains
+      value: "is a vacant lot"
+      why: A standing house is not a vacant lot.
+
+- id: non-vacant-howard-1433
+  question: give me a land value for 1433 S Howard St
+  expect_tools: [get_parcel]
+  assertions:
+    - kind: any_of
+      value: ["not vacant", "not a vacant", "improved", "structure", "building", "house", "single family"]
+      why: It has improvement value on record; a bare land figure would mislead.
+    - kind: not_contains
+      value: "is a vacant lot"
+      why: The premise must be corrected, not accepted.

@@ -155,12 +155,16 @@ async def run_suite(
     model: str,
     spend_cap_usd: float,
     only: str | None = None,
+    first: int | None = None,
     path: Path | None = None,
     redis: Redis | None = None,
+    allow_mutation: bool = True,
 ) -> list[TaskResult]:
     tasks = load_tasks(path)
     if only:
         tasks = [task for task in tasks if task["id"] == only]
+    if first is not None:
+        tasks = tasks[:first]
 
     results: list[TaskResult] = []
     spent = 0.0
@@ -178,6 +182,21 @@ async def run_suite(
             )
             continue
         edits = stale_state.parse(task.get("stale"))
+        if edits and not allow_mutation:
+            # These tasks make LotScope's stored copy wrong on purpose. That is fine on a
+            # local copy and unacceptable on production, where a buyer could read the
+            # planted value while the task runs.
+            results.append(
+                TaskResult(
+                    task_id=task["id"],
+                    question=task["question"],
+                    answer="",
+                    tools_called=[],
+                    skipped=True,
+                    error="not run: edits stored data, so it is local-only",
+                )
+            )
+            continue
         planted: stale_state.Planted | None = None
         try:
             async with factory() as session:

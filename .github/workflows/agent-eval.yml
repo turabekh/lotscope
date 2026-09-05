@@ -1,0 +1,49 @@
+name: Agent eval
+
+# The eval is the only gate that reads what the Analyst actually says, and it only means
+# anything against the real Philadelphia data. CI has an empty database, so it runs on the
+# VM inside the api container. It costs real money, so the full suite runs once a night and
+# pull requests run a cheap subset.
+on:
+  schedule:
+    # 05:20 UTC: after the nightly ingest and the sheriff pass, before the 07:00 ET brief.
+    - cron: '20 5 * * *'
+  pull_request:
+    paths:
+      - 'backend/src/lotscope/agent/**'
+  workflow_dispatch:
+    inputs:
+      spend_cap:
+        description: 'Spend cap in USD'
+        default: '5.00'
+
+concurrency:
+  group: agent-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    # A fork's pull request cannot reach the VM, and a run that could not happen must not
+    # report a green.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Run the eval on the VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          command_timeout: 40m
+          envs: EVAL_ARGS
+          # --no-mutate is not optional here. Five tasks make LotScope's stored copy wrong
+          # on purpose to prove the live tools catch it; doing that to production would let
+          # a buyer read a planted value.
+          script: |
+            cd ~/lotscope
+            docker compose exec -T api lotscope agent eval --no-mutate $EVAL_ARGS
+        env:
+          EVAL_ARGS: >-
+            ${{ github.event_name == 'pull_request'
+              && '--spend-cap 1.00 --first 10'
+              || format('--spend-cap {0}', github.event.inputs.spend_cap || '5.00') }}

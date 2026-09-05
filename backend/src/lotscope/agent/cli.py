@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 import lotscope.models  # noqa: F401  (registers every table for the ORM)
 from lotscope.agent.client import AnthropicToolClient
+from lotscope.agent.evals import baseline as baseline_store
 from lotscope.agent.evals.runner import TaskResult, estimate_cost, run_suite
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
@@ -105,12 +106,23 @@ async def _eval(args: Namespace) -> int:
             model=model,
             spend_cap_usd=args.spend_cap,
             only=args.only,
+            first=args.first,
             redis=redis,
+            allow_mutation=not args.no_mutate,
         )
     finally:
         await redis.aclose()
     _print_table(results)
     ran = [r for r in results if not r.skipped]
+
+    if ran:
+        current = baseline_store.snapshot(ran, model=model)
+        previous = baseline_store.read()
+        print("\n" + baseline_store.report(previous, current))
+        if args.record:
+            written = baseline_store.write(ran, model=model)
+            print(f"baseline written to {written}")
+
     return 0 if ran and all(r.passed for r in ran) else 1
 
 
@@ -121,6 +133,22 @@ def build_parser() -> ArgumentParser:
     evaluate.add_argument("--spend-cap", type=float, default=DEFAULT_SPEND_CAP)
     evaluate.add_argument("--model", default=None)
     evaluate.add_argument("--only", default=None, help="Run one task by id.")
+    evaluate.add_argument(
+        "--first",
+        type=int,
+        default=None,
+        help="Run only the first N tasks, for a cheap subset in CI.",
+    )
+    evaluate.add_argument(
+        "--no-mutate",
+        action="store_true",
+        help="Skip tasks that edit stored data. Required when pointing at production.",
+    )
+    evaluate.add_argument(
+        "--record",
+        action="store_true",
+        help="Overwrite evals/baseline.json with this run.",
+    )
     return parser
 
 
