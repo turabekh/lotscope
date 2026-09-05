@@ -85,7 +85,7 @@ async def compute_deal_tool(
         },
         sources=[
             _computed("lotscope_deal"),
-            Source(name="rtt_summary", url=urls.RTT_URL, fetched_at=fetched.get("rtt_summary")),
+            Source(name="rtt_summary", url=urls.RTT_URL, ingested_at=fetched.get("rtt_summary")),
         ],
         unverified=(
             ["These figures use overrides you supplied, not the buyer's saved assumptions."]

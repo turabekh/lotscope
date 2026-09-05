@@ -47,7 +47,7 @@ async def _fetched(session: AsyncSession) -> dict[str, datetime]:
 
 
 def _source(name: str, url: str, fetched: dict[str, datetime], dataset: str) -> Source:
-    return Source(name=name, url=url, fetched_at=fetched.get(dataset))
+    return Source(name=name, url=url, ingested_at=fetched.get(dataset))
 
 
 def _computed(name: str) -> Source:

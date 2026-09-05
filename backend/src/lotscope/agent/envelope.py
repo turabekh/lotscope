@@ -10,7 +10,18 @@ class Source(BaseModel):
         default=None, description="Where a person can check this value themselves."
     )
     fetched_at: datetime | None = Field(
-        default=None, description="When the ingest last read this source successfully."
+        default=None,
+        description=(
+            "When this value was read live from the primary source, at answer time. "
+            "Only live tools set this."
+        ),
+    )
+    ingested_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When the nightly ingest last read this source successfully. A stored value is "
+            "only as current as this timestamp."
+        ),
     )
     computed_at: datetime | None = Field(
         default=None, description="When LotScope derived this value, for derived facts."

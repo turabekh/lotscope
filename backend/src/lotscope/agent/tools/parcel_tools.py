@@ -82,7 +82,7 @@ async def _freshness(session: AsyncSession) -> dict[str, datetime]:
 
 def _sources(fetched: dict[str, datetime], names: list[tuple[str, str, str]]) -> list[Source]:
     return [
-        Source(name=label, url=url, fetched_at=fetched.get(dataset))
+        Source(name=label, url=url, ingested_at=fetched.get(dataset))
         for label, url, dataset in names
     ]
 
