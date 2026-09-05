@@ -10,7 +10,6 @@ const NOT_YET_MIGRATED = new Set([
   'components/SensitivityHeatmap.vue',
   'pages/AccountPage.vue',
   'pages/AdminPage.vue',
-  'pages/AnalystPage.vue',
   'pages/AuthPage.vue',
   'pages/DealsPage.vue',
 ])

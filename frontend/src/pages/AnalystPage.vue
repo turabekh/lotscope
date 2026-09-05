@@ -1,71 +1,167 @@
 <script setup lang="ts">
-// Step 3.1 gives the Analyst its route and nothing more. Step 3.2 builds the conversation:
-// the thread, the streaming tool cards, the evidence drawer. Until then this says what it
-// is rather than pretending to be finished.
-import { onMounted, ref } from 'vue'
+import { useQuasar } from 'quasar'
+import { computed, onMounted, ref } from 'vue'
 
-import { api, ApiError } from '@/lib/api'
+import AnalystComposer from '@/components/analyst/AnalystComposer.vue'
+import ConversationList from '@/components/analyst/ConversationList.vue'
+import EvidenceDrawer from '@/components/analyst/EvidenceDrawer.vue'
+import MessageThread from '@/components/analyst/MessageThread.vue'
+import { api } from '@/lib/api'
 import type { BriefRecord } from '@/lib/types'
+import { useAnalystStore } from '@/stores/analyst'
+
+const $q = useQuasar()
+const analyst = useAnalystStore()
 
 const brief = ref<BriefRecord | null>(null)
-const loading = ref(true)
-const error = ref<string | null>(null)
+const drawerParcel = ref<string | null>(null)
+const railOpen = ref(false)
+
+const isMobile = computed(() => $q.screen.lt.md)
 
 onMounted(async () => {
-  try {
-    brief.value = await api.todaysBrief()
-  } catch (cause) {
-    error.value = cause instanceof ApiError ? cause.message : 'Could not load today’s brief.'
-  } finally {
-    loading.value = false
-  }
+  await Promise.all([
+    analyst.loadConversations(),
+    analyst.loadOpening(),
+    api
+      .todaysBrief()
+      .then((value) => {
+        brief.value = value
+      })
+      .catch(() => {
+        brief.value = null
+      }),
+  ])
 })
+
+function openLot(parcelNumber: string): void {
+  drawerParcel.value = parcelNumber
+}
+
+async function openConversation(id: number): Promise<void> {
+  railOpen.value = false
+  await analyst.openConversation(id)
+}
+
+function startNew(): void {
+  railOpen.value = false
+  analyst.startNew()
+}
+
+/** The brief is a message in the thread, not a separate screen. */
+function openBrief(): void {
+  railOpen.value = false
+  if (!brief.value) return
+  analyst.startNew()
+  analyst.turns.push({
+    runId: null,
+    question: "What's in today's brief?",
+    answer: brief.value.text,
+    status: 'succeeded',
+    tools: [],
+    error: null,
+  })
+}
 </script>
 
 <template>
-  <q-page class="q-pa-lg">
-    <h1 class="text-h6 q-mt-none q-mb-md">Analyst</h1>
+  <div class="analyst" :class="{ 'analyst--mobile': isMobile }">
+    <button
+      v-if="isMobile"
+      type="button"
+      class="analyst__rail-toggle"
+      data-test="analyst-rail-toggle"
+      @click="railOpen = !railOpen"
+    >
+      Conversations
+    </button>
 
-    <q-banner class="bg-grey-2 q-mb-lg" dense>
-      The conversation lands in the next step. Today's brief is below.
-    </q-banner>
+    <aside v-if="!isMobile || railOpen" class="analyst__rail">
+      <ConversationList
+        :conversations="analyst.conversations"
+        :active-id="analyst.conversationId"
+        :brief="brief"
+        @open="openConversation"
+        @open-brief="openBrief"
+        @start-new="startNew"
+      />
+    </aside>
 
-    <q-spinner v-if="loading" size="24px" />
-    <q-banner v-else-if="error" class="bg-red-1 text-red-9" dense>{{ error }}</q-banner>
-
-    <template v-else-if="brief">
-      <div class="text-subtitle2 q-mb-xs">
-        Brief for {{ brief.brief_date }} — {{ brief.signal_count }} change<span
-          v-if="brief.signal_count !== 1"
-          >s</span
-        >
-        overnight
+    <main class="analyst__centre">
+      <div class="analyst__scroll">
+        <MessageThread
+          :turns="analyst.turns"
+          :opening="analyst.opening?.text ?? null"
+          :streaming="analyst.streaming"
+          @open-lot="openLot"
+        />
       </div>
-      <p class="brief-body">{{ brief.text }}</p>
+      <AnalystComposer
+        :busy="analyst.streaming"
+        :suggestion="analyst.opening?.suggested_prompt ?? null"
+        @send="analyst.send"
+        @stop="analyst.cancel"
+      />
+    </main>
 
-      <div v-if="brief.signals.length" class="q-mt-md">
-        <div class="text-caption text-grey-8 q-mb-xs">What it was built from</div>
-        <q-list bordered separator dense>
-          <q-item v-for="signal in brief.signals" :key="signal.headline">
-            <q-item-section>
-              <q-item-label>{{ signal.headline }}</q-item-label>
-              <q-item-label caption>{{ signal.source }}</q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </div>
-    </template>
-
-    <p v-else class="text-grey-8">
-      Nothing changed overnight on anything you are watching, so there is no brief today.
-    </p>
-  </q-page>
+    <EvidenceDrawer
+      v-if="drawerParcel"
+      :parcel-number="drawerParcel"
+      :bottom-sheet="isMobile"
+      class="analyst__evidence"
+      @close="drawerParcel = null"
+    />
+  </div>
 </template>
 
 <style scoped>
-.brief-body {
-  white-space: pre-wrap;
-  line-height: 1.6;
-  max-width: 46rem;
+.analyst {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr) auto;
+  height: calc(100vh - var(--ls-topbar, 48px));
+  overflow: hidden;
+}
+.analyst__rail {
+  border-right: 1px solid var(--ls-line, #e0e0e0);
+  overflow: hidden;
+}
+.analyst__centre {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.analyst__scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+.analyst__evidence {
+  width: min(460px, 40vw);
+}
+.analyst__rail-toggle {
+  display: none;
+}
+
+.analyst--mobile {
+  grid-template-columns: minmax(0, 1fr);
+}
+.analyst--mobile .analyst__rail-toggle {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--ls-line, #e0e0e0);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  min-height: 40px;
+  cursor: pointer;
+}
+.analyst--mobile .analyst__rail {
+  border-right: 0;
+  border-bottom: 1px solid var(--ls-line, #e0e0e0);
+  max-height: 40vh;
+}
+.analyst--mobile .analyst__evidence {
+  width: 100%;
 }
 </style>
