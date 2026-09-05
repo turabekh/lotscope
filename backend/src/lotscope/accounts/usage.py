@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Sequence
+from collections.abc import Awaitable
 from datetime import UTC, datetime
 from typing import cast
 
@@ -75,28 +75,6 @@ async def register_parcel_view(
     added = int(await cast("Awaitable[int]", redis.sadd(key, parcel_number)))
     if added and int(await cast("Awaitable[int]", redis.scard(key))) == 1:
         await redis.expire(key, _TTL_SECONDS)
-    return True
-
-
-def area_search_key(user_id: int, day: str) -> str:
-    return f"usage:area-search:{user_id}:{day}"
-
-
-async def get_area_search_parcels(redis: Redis, user_id: int) -> int:
-    return int(await cast("Awaitable[int]", redis.scard(area_search_key(user_id, _today()))))
-
-
-async def register_area_search_parcels(
-    redis: Redis, user_id: int, parcel_numbers: Sequence[str], limit: int | None
-) -> bool:
-    key = area_search_key(user_id, _today())
-    disclosed = int(await cast("Awaitable[int]", redis.scard(key)))
-    if limit is not None and disclosed >= limit:
-        return False
-    if parcel_numbers:
-        await cast("Awaitable[int]", redis.sadd(key, *parcel_numbers))
-        if disclosed == 0:
-            await redis.expire(key, _TTL_SECONDS)
     return True
 
 

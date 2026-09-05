@@ -5,10 +5,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import area_search_daily_parcel_limit
-from lotscope.accounts.usage import register_area_search_parcels
 from lotscope.api.deps import get_current_user, get_redis, get_session
-from lotscope.core.errors import QuotaExceededError
 from lotscope.core.market import MARKET_CODE
 from lotscope.search.schemas import (
     AreaSearchRequest,
@@ -46,17 +43,6 @@ async def search_within_area(
 ) -> AreaSearchResponse:
     scoped = request.model_copy(update={"market": MARKET_CODE})
     results, total = await search_area(session, scoped)
-    within_quota = await register_area_search_parcels(
-        redis,
-        current_user.id,
-        [result.parcel_number for result in results],
-        area_search_daily_parcel_limit(current_user.tier),
-    )
-    if not within_quota:
-        raise QuotaExceededError(
-            "You have reached today's limit for parcels returned by area search. "
-            "The limit resets tomorrow, and higher tiers raise it."
-        )
     return AreaSearchResponse(
         count=len(results),
         total=total,

@@ -17,7 +17,6 @@ from lotscope.admin.catalog import (
 )
 from lotscope.admin.models import JobRun
 from lotscope.admin.service import mark_job_finished, mark_job_running
-from lotscope.appeal.jobs import grant_investor_appeal_packets
 from lotscope.assemblage.jobs import recompute_all_assemblage
 from lotscope.buyers.jobs import recompute_all_buyers
 from lotscope.core.config import get_settings
@@ -46,7 +45,6 @@ from lotscope.ops.stats import snapshot_market_stats
 from lotscope.packet.delivery import send_daily_packets, send_sale_change_alerts
 from lotscope.packet.models import SalePacket
 from lotscope.packet.service import build_packet
-from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
 from lotscope.verdict.jobs import recompute_all_verdicts
 from lotscope.zoning.seed import seed_all_zoning_standards
@@ -293,20 +291,6 @@ async def run_admin_job(ctx: dict[str, Any], job_run_id: int) -> int:
     return rows
 
 
-async def grant_investor_skiptrace_credits(ctx: dict[str, Any]) -> int:
-    month = datetime.now(UTC).strftime("%Y-%m")
-    count = await grant_investor_credits(ctx["session_factory"], month=month)
-    _logger.info("granted_investor_credits", count=count, month=month)
-    return count
-
-
-async def grant_investor_packet_credits(ctx: dict[str, Any]) -> int:
-    month = datetime.now(UTC).strftime("%Y-%m")
-    count = await grant_investor_appeal_packets(ctx["session_factory"], month=month)
-    _logger.info("granted_investor_packets", count=count, month=month)
-    return count
-
-
 async def send_weekly_digests(ctx: dict[str, Any]) -> int:
     settings = ctx["settings"]
     sender = get_email_sender(settings)
@@ -473,8 +457,6 @@ class WorkerSettings:
         snapshot_stats,
         check_verdict_invariants,
         reconcile_upstream_sample,
-        grant_investor_skiptrace_credits,
-        grant_investor_packet_credits,
         send_weekly_digests,
         send_daily_digests,
         send_push_notifications,
@@ -503,8 +485,6 @@ class WorkerSettings:
         cron(recorded(send_ops_alerts), hour=5, minute=30),
         cron(recorded(send_ops_health_digest), hour=10, minute=0),
         cron(recorded(send_sales_week_emails), weekday="mon", hour=8, minute=0),
-        cron(recorded(grant_investor_skiptrace_credits), day=1, hour=5, minute=0),
-        cron(recorded(grant_investor_packet_credits), day=1, hour=5, minute=10),
         cron(
             recorded(recompute_verdicts), weekday="sun", hour=5, minute=0, timeout=BULK_JOB_TIMEOUT
         ),

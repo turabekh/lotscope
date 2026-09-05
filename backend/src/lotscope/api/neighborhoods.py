@@ -7,9 +7,7 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import market_stats_access
 from lotscope.api.deps import get_current_user, get_redis, get_session
-from lotscope.core.errors import QuotaExceededError
 from lotscope.core.market import MARKET_CODE
 from lotscope.neighborhoods.schemas import (
     NeighborhoodListResponse,
@@ -36,10 +34,6 @@ async def get_neighborhood_market(
     current_user: Annotated[User, Depends(get_current_user)],
     redis: Annotated[Redis, Depends(get_redis)],
 ) -> NeighborhoodMarketResponse:
-    if not market_stats_access(current_user.tier):
-        raise QuotaExceededError(
-            "Market intelligence is a Pro feature — upgrade to see neighborhood opportunity stats."
-        )
 
     code = MARKET_CODE
     cache_key = f"{_MARKET_CACHE_KEY_PREFIX}:{code}"

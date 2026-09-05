@@ -68,14 +68,6 @@ async def _parcel(db_session: AsyncSession, local: str, *, mao: float | None) ->
     await db_session.flush()
 
 
-async def test_offer_requires_pro(db_session: AsyncSession) -> None:
-    await _parcel(db_session, "100", mao=100000.0)
-    app = _app(db_session, tier="free")
-    async with _client(app) as client:
-        resp = await client.post("/pipeline/100/offer", json={})
-    assert resp.status_code == 429
-
-
 async def test_offer_generates_pdf_and_logs_activity(db_session: AsyncSession) -> None:
     await _seed_user(db_session)
     await _parcel(db_session, "100", mao=100000.0)

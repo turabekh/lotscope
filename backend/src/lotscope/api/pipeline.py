@@ -5,9 +5,8 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import offer_generation_access, pipeline_limit
 from lotscope.api.deps import ParcelKeyDep, canonicalize_parcel_key, get_current_user, get_session
-from lotscope.core.errors import NotFoundError, QuotaExceededError
+from lotscope.core.errors import NotFoundError
 from lotscope.pipeline.schemas import (
     DealActivityItem,
     DealCreate,
@@ -38,7 +37,7 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 @router.get("", response_model=PipelineResponse)
 async def get_pipeline(session: SessionDep, user: CurrentUserDep) -> PipelineResponse:
     deals = await list_deals(session, user.id)
-    return PipelineResponse(limit=pipeline_limit(user.tier), used=len(deals), deals=deals)
+    return PipelineResponse(limit=None, used=len(deals), deals=deals)
 
 
 @router.get("/today", response_model=TodayResponse)
@@ -67,7 +66,7 @@ async def get_pipeline_deal(
 @router.post("", response_model=DealItem, status_code=201)
 async def add_to_pipeline(data: DealCreate, session: SessionDep, user: CurrentUserDep) -> DealItem:
     data = data.model_copy(update={"parcel_number": canonicalize_parcel_key(data.parcel_number)})
-    await add_deal(session, user.id, data, limit=pipeline_limit(user.tier))
+    await add_deal(session, user.id, data, limit=None)
     await session.commit()
     deal = await get_deal(session, user.id, data.parcel_number)
     assert deal is not None
@@ -92,10 +91,6 @@ async def generate_pipeline_offer(
     session: SessionDep,
     user: CurrentUserDep,
 ) -> Response:
-    if not offer_generation_access(user.tier):
-        raise QuotaExceededError(
-            "Offer letters are a Pro feature — upgrade to generate a letter of intent."
-        )
     default_signer = LoiSigner(
         entity_name=user.entity_name,
         signer_name=user.signer_name or user.full_name,

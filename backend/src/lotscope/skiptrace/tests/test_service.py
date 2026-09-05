@@ -1,11 +1,10 @@
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.core.errors import QuotaExceededError, ValidationError
-from lotscope.skiptrace.models import REASON_INVESTOR_GRANT, REASON_PACK_PURCHASE
+from lotscope.core.errors import ValidationError
 from lotscope.skiptrace.provider import SkipTraceContacts
-from lotscope.skiptrace.service import credit_balance, grant_credits, trace_owner
+from lotscope.skiptrace.service import trace_owner
 
 pytestmark = pytest.mark.integration
 
@@ -44,119 +43,56 @@ async def _add_parcel(
     )
 
 
-async def test_grant_credits_is_idempotent_on_ref(db_session: AsyncSession) -> None:
+async def test_a_trace_hits_the_provider_and_caches_the_result(
+    db_session: AsyncSession,
+) -> None:
     await _add_user(db_session, 1)
+    await _add_parcel(db_session, "phl:1", owner="ACME LLC")
     await db_session.flush()
-    assert await grant_credits(db_session, 1, 100, REASON_PACK_PURCHASE, "pay_1") is True
-    assert await grant_credits(db_session, 1, 100, REASON_PACK_PURCHASE, "pay_1") is False
-    assert await credit_balance(db_session, 1) == 100
+    provider = _FakeProvider(["215-555-0100"], ["owner@example.com"])
 
+    first = await trace_owner(db_session, provider, 1, "phl:1")
 
-async def test_trace_burns_one_credit_and_caches(db_session: AsyncSession) -> None:
-    await _add_user(db_session, 1)
-    await _add_parcel(db_session, "000000001", owner="JANE DOE")
-    await grant_credits(db_session, 1, 5, REASON_PACK_PURCHASE, "pay_1")
-    await db_session.flush()
-
-    provider = _FakeProvider(["215-555-0100"], ["jane@example.com"])
-    result = await trace_owner(db_session, provider, 1, "000000001")
-    assert result.credits_spent == 1
-    assert result.credits_remaining == 4
-    assert result.contacts.phones == ["215-555-0100"]
+    assert first.cached is False
     assert provider.calls == 1
+    assert first.contacts.phones == ["215-555-0100"]
 
 
-async def test_second_trace_same_user_is_free_from_cache(db_session: AsyncSession) -> None:
+async def test_a_second_trace_of_the_same_owner_comes_from_cache(
+    db_session: AsyncSession,
+) -> None:
     await _add_user(db_session, 1)
-    await _add_parcel(db_session, "000000001", owner="JANE DOE")
-    await grant_credits(db_session, 1, 5, REASON_PACK_PURCHASE, "pay_1")
+    await _add_parcel(db_session, "phl:1", owner="ACME LLC")
     await db_session.flush()
-
     provider = _FakeProvider(["215-555-0100"], [])
-    await trace_owner(db_session, provider, 1, "000000001")
-    again = await trace_owner(db_session, provider, 1, "000000001")
-    assert again.credits_spent == 0
-    assert again.cached is True
-    assert again.credits_remaining == 4
+
+    await trace_owner(db_session, provider, 1, "phl:1")
+    second = await trace_owner(db_session, provider, 1, "phl:1")
+
+    assert second.cached is True
     assert provider.calls == 1
 
 
-async def test_different_user_burns_on_cache_hit(db_session: AsyncSession) -> None:
+async def test_another_user_also_reads_the_cache_rather_than_paying_again(
+    db_session: AsyncSession,
+) -> None:
     await _add_user(db_session, 1)
     await _add_user(db_session, 2)
-    await _add_parcel(db_session, "000000001", owner="JANE DOE")
-    await grant_credits(db_session, 1, 5, REASON_PACK_PURCHASE, "pay_1")
-    await grant_credits(db_session, 2, 5, REASON_PACK_PURCHASE, "pay_2")
+    await _add_parcel(db_session, "phl:1", owner="ACME LLC")
     await db_session.flush()
-
     provider = _FakeProvider(["215-555-0100"], [])
-    await trace_owner(db_session, provider, 1, "000000001")
-    other = await trace_owner(db_session, provider, 2, "000000001")
-    assert other.credits_spent == 1
+
+    await trace_owner(db_session, provider, 1, "phl:1")
+    other = await trace_owner(db_session, provider, 2, "phl:1")
+
     assert other.cached is True
     assert provider.calls == 1
 
 
-async def test_insufficient_credits_raises(db_session: AsyncSession) -> None:
-    await _add_user(db_session, 1)
-    await _add_parcel(db_session, "000000001", owner="JANE DOE")
-    await db_session.flush()
-
-    provider = _FakeProvider([], [])
-    with pytest.raises(QuotaExceededError):
-        await trace_owner(db_session, provider, 1, "000000001")
-
-
 async def test_missing_owner_key_raises(db_session: AsyncSession) -> None:
     await _add_user(db_session, 1)
-    await _add_parcel(db_session, "000000001", owner=None)
-    await grant_credits(db_session, 1, 5, REASON_INVESTOR_GRANT, "2026-07")
+    await _add_parcel(db_session, "phl:2", owner=None)
     await db_session.flush()
 
-    provider = _FakeProvider([], [])
     with pytest.raises(ValidationError):
-        await trace_owner(db_session, provider, 1, "000000001")
-
-
-async def test_packet_and_skiptrace_balances_do_not_cross_contaminate(
-    db_session: AsyncSession,
-) -> None:
-    from lotscope.skiptrace.models import REASON_APPEAL_PACKET_GRANT
-    from lotscope.skiptrace.service import appeal_packet_balance, spend_appeal_packet_credit
-
-    await _add_user(db_session, 1)
-    await grant_credits(db_session, 1, 100, REASON_PACK_PURCHASE, "pay_1")
-    await grant_credits(db_session, 1, 1, REASON_APPEAL_PACKET_GRANT, "2026-07")
-    await db_session.flush()
-
-    assert await credit_balance(db_session, 1) == 100
-    assert await appeal_packet_balance(db_session, 1) == 1
-
-    assert await spend_appeal_packet_credit(db_session, 1, "000000001") is True
-    await db_session.flush()
-
-    assert await appeal_packet_balance(db_session, 1) == 0
-    assert await credit_balance(db_session, 1) == 100  # skiptrace balance untouched
-
-
-async def test_no_hit_refunds_the_credit(db_session: AsyncSession) -> None:
-    from lotscope.skiptrace.models import CreditLedgerEntry
-
-    await _add_user(db_session, 1)
-    await _add_parcel(db_session, "000000001", owner="JANE DOE")
-    await grant_credits(db_session, 1, 5, REASON_PACK_PURCHASE, "pay_1")
-    await db_session.flush()
-
-    provider = _FakeProvider([], [])
-    result = await trace_owner(db_session, provider, 1, "000000001")
-    assert result.credits_spent == 0
-    assert result.credits_remaining == 5
-    assert result.contacts.phones == []
-
-    reasons = (
-        (await db_session.execute(select(CreditLedgerEntry.reason).order_by(CreditLedgerEntry.id)))
-        .scalars()
-        .all()
-    )
-    assert "skiptrace_burn" in reasons
-    assert "refund" in reasons
+        await trace_owner(db_session, _FakeProvider([], []), 1, "phl:2")

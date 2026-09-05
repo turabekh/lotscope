@@ -53,13 +53,6 @@ async def _seed_buyer(db_session: AsyncSession, market: str = "phl") -> None:
     await db_session.flush()
 
 
-async def test_roster_requires_investor_tier(db_session: AsyncSession) -> None:
-    app = _app(db_session, tier="pro")
-    async with _client(app) as client:
-        resp = await client.get("/buyers")
-    assert resp.status_code == 429
-
-
 async def test_investor_sees_roster(db_session: AsyncSession) -> None:
     await _seed_buyer(db_session)
     app = _app(db_session, tier="investor")
@@ -83,13 +76,6 @@ async def test_roster_by_url_slug_returns_the_same_buyers_as_the_market_code(
     assert by_slug.status_code == 200
     assert by_slug.json() == by_code.json()
     assert by_slug.json()["total"] == 1
-
-
-async def test_export_requires_investor(db_session: AsyncSession) -> None:
-    app = _app(db_session, tier="pro")
-    async with _client(app) as client:
-        resp = await client.get("/buyers/export")
-    assert resp.status_code == 429
 
 
 async def test_export_returns_csv_for_investor(db_session: AsyncSession) -> None:

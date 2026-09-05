@@ -9,11 +9,8 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import ask_daily_limit, parcel_view_daily_limit, report_access
 from lotscope.accounts.usage import (
-    get_ask_usage,
     increment_ask_usage,
-    register_parcel_view,
 )
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.derivation import PHILLYCODE_SOURCE
@@ -35,8 +32,6 @@ from lotscope.api.deps import (
     get_session,
     get_summary_generator,
 )
-from lotscope.appeal.schemas import AppealPacketStatus
-from lotscope.appeal.service import has_entitlement, packet_status, redeem_packet
 from lotscope.assemblage.schemas import AssemblageResult
 from lotscope.assemblage.service import compute_assemblage
 from lotscope.assessment.schemas import AssessmentResult
@@ -46,7 +41,7 @@ from lotscope.checklist.service import build_parcel_checklist
 from lotscope.compare.schemas import ParcelCompareResponse
 from lotscope.compare.service import MAX_COMPARE_PARCELS, compare_parcels
 from lotscope.core.config import Settings
-from lotscope.core.errors import ForbiddenError, NotFoundError, QuotaExceededError
+from lotscope.core.errors import NotFoundError
 from lotscope.corrections.schemas import CorrectionCreate, CorrectionRead
 from lotscope.corrections.service import report_correction
 from lotscope.deal.schemas import DealResult, ScenariosResult
@@ -66,9 +61,8 @@ from lotscope.owners.schemas import OwnerPortfolio
 from lotscope.owners.service import get_owner_portfolio
 from lotscope.parcels.schemas import ParcelDetail, SourceFreshness
 from lotscope.parcels.service import get_parcel_detail, parcel_market_code
-from lotscope.reports.appeal_packet import appeal_packet_filename
 from lotscope.reports.dossier import dossier_filename
-from lotscope.reports.service import build_appeal_packet, build_parcel_dossier
+from lotscope.reports.service import build_parcel_dossier
 from lotscope.risk.schemas import NextSheriffSale, SheriffSaleChange
 from lotscope.risk.service import get_next_sheriff_sale, recent_sheriff_changes
 from lotscope.subdivision.schemas import SubdivisionResult
@@ -160,16 +154,6 @@ async def parcel_detail(
     detail = await get_parcel_detail(session, parcel_number)
     if detail is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    limit = parcel_view_daily_limit(current_user.tier)
-    if limit is not None:
-        allowed = True
-        with contextlib.suppress(RedisError):
-            allowed = await register_parcel_view(redis, current_user.id, parcel_number, limit)
-        if not allowed:
-            raise QuotaExceededError(
-                f"You've reached your {current_user.tier} plan's limit of {limit} parcels per "
-                "day. Upgrade to explore more lots."
-            )
     return detail
 
 
@@ -341,10 +325,6 @@ async def parcel_report(
     settings: SettingsDep,
     generator: Annotated[StructuredGenerator, Depends(get_generator)],
 ) -> ParcelReportResult:
-    if not report_access(current_user.tier):
-        raise QuotaExceededError(
-            "The AI investment report is a Pro feature — upgrade to draft a full memo."
-        )
     if not settings.anthropic_api_key:
         raise NotFoundError("The AI report is not available.")
 
@@ -534,7 +514,7 @@ async def parcel_dossier(
     generator: Annotated[StructuredGenerator, Depends(get_generator)],
 ) -> Response:
     report = None
-    if settings.anthropic_api_key and report_access(current_user.tier):
+    if settings.anthropic_api_key:
         report = await _resolve_report(
             session,
             parcel_number,
@@ -550,43 +530,6 @@ async def parcel_dossier(
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{dossier_filename(parcel_number)}"'
-        },
-    )
-
-
-@router.get("/{parcel_number}/appeal-packet", response_model=AppealPacketStatus)
-async def parcel_appeal_packet_status(
-    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
-) -> AppealPacketStatus:
-    return await packet_status(session, current_user.id, parcel_number)
-
-
-@router.post("/{parcel_number}/appeal-packet", response_model=AppealPacketStatus)
-async def redeem_parcel_appeal_packet(
-    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
-) -> AppealPacketStatus:
-    detail = await get_parcel_detail(session, parcel_number)
-    if detail is None:
-        raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    status = await redeem_packet(session, current_user.id, parcel_number)
-    await session.commit()
-    return status
-
-
-@router.get("/{parcel_number}/appeal-packet.pdf")
-async def download_parcel_appeal_packet(
-    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
-) -> Response:
-    if not await has_entitlement(session, current_user.id, parcel_number):
-        raise ForbiddenError("Purchase or redeem the Assessment Review Packet to download it.")
-    pdf = await build_appeal_packet(session, parcel_number)
-    if pdf is None:
-        raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    return Response(
-        content=pdf,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="{appeal_packet_filename(parcel_number)}"'
         },
     )
 
@@ -685,17 +628,6 @@ async def ask_parcel(
         cached = None
     if cached is not None:
         return ParcelAnswer.model_validate_json(cached)
-
-    limit = ask_daily_limit(current_user.tier)
-    if limit is not None:
-        used = 0
-        with contextlib.suppress(RedisError):
-            used = await get_ask_usage(redis, current_user.id)
-        if used >= limit:
-            raise QuotaExceededError(
-                f"You've reached your {current_user.tier} plan's daily limit of "
-                f"{limit} AI questions. It resets tomorrow."
-            )
 
     answer = await ask_the_parcel(
         session,

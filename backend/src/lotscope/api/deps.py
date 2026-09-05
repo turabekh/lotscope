@@ -8,7 +8,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from lotscope.accounts.billing import StripeApiGateway, StripeGateway
 from lotscope.accounts.models import User
 from lotscope.accounts.security import decode_access_token
 from lotscope.accounts.service import get_user_by_id
@@ -90,10 +89,6 @@ def get_generator(request: Request) -> StructuredGenerator:
 def get_summary_generator(request: Request) -> StructuredGenerator:
     settings = get_app_settings(request)
     return AnthropicGenerator(settings, model=settings.anthropic_summary_model, max_tokens=512)
-
-
-def get_stripe_gateway(request: Request) -> StripeGateway:
-    return StripeApiGateway(get_app_settings(request))
 
 
 _VERIFICATION_EXEMPT_PREFIXES = ("/auth/", "/health", "/legal")

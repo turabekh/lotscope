@@ -1,24 +1,14 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.core.errors import QuotaExceededError, ValidationError
-from lotscope.skiptrace.models import (
-    APPEAL_PACKET_REASONS,
-    REASON_APPEAL_PACKET_BURN,
-    REASON_REFUND,
-    REASON_SKIPTRACE_BURN,
-    SKIPTRACE_REASONS,
-    CreditLedgerEntry,
-    SkipTraceResult,
-)
+from lotscope.core.errors import ValidationError
+from lotscope.skiptrace.models import SkipTraceResult
 from lotscope.skiptrace.provider import SkipTraceProvider
 from lotscope.skiptrace.schemas import (
-    CreditBalance,
-    CreditLedgerItem,
     SkipTraceContactsOut,
     SkipTraceResultOut,
 )
@@ -39,80 +29,6 @@ _HAS_TRACED_SQL = text(
 )
 
 
-async def credit_balance(session: AsyncSession, user_id: int) -> int:
-    return int(
-        await session.scalar(_BALANCE_SQL, {"user_id": user_id, "reasons": list(SKIPTRACE_REASONS)})
-        or 0
-    )
-
-
-async def appeal_packet_balance(session: AsyncSession, user_id: int) -> int:
-    return int(
-        await session.scalar(
-            _BALANCE_SQL, {"user_id": user_id, "reasons": list(APPEAL_PACKET_REASONS)}
-        )
-        or 0
-    )
-
-
-async def spend_appeal_packet_credit(session: AsyncSession, user_id: int, ref: str) -> bool:
-    statement = (
-        insert(CreditLedgerEntry)
-        .values(user_id=user_id, delta=-1, reason=REASON_APPEAL_PACKET_BURN, ref=ref)
-        .on_conflict_do_nothing(
-            index_elements=["user_id", "reason", "ref"],
-            index_where=text("reason <> 'skiptrace_burn' AND ref IS NOT NULL"),
-        )
-        .returning(CreditLedgerEntry.id)
-    )
-    inserted = (await session.execute(statement)).scalar_one_or_none()
-    return inserted is not None
-
-
-async def get_credit_balance(
-    session: AsyncSession, user_id: int, *, limit: int = 20
-) -> CreditBalance:
-    balance = await credit_balance(session, user_id)
-    rows = (
-        await session.execute(
-            select(CreditLedgerEntry)
-            .where(CreditLedgerEntry.user_id == user_id)
-            .order_by(CreditLedgerEntry.created_at.desc())
-            .limit(limit)
-        )
-    ).scalars()
-    entries = [
-        CreditLedgerItem(delta=e.delta, reason=e.reason, ref=e.ref, created_at=e.created_at)
-        for e in rows
-    ]
-    return CreditBalance(balance=balance, entries=entries)
-
-
-async def grant_credits(
-    session: AsyncSession, user_id: int, amount: int, reason: str, ref: str | None
-) -> bool:
-    statement = (
-        insert(CreditLedgerEntry)
-        .values(user_id=user_id, delta=amount, reason=reason, ref=ref)
-        .on_conflict_do_nothing(
-            index_elements=["user_id", "reason", "ref"],
-            index_where=text("reason <> 'skiptrace_burn' AND ref IS NOT NULL"),
-        )
-        .returning(CreditLedgerEntry.id)
-    )
-    inserted = (await session.execute(statement)).scalar_one_or_none()
-    return inserted is not None
-
-
-async def _has_traced(session: AsyncSession, user_id: int, owner_key: str) -> bool:
-    return bool(
-        await session.scalar(
-            _HAS_TRACED_SQL,
-            {"user_id": user_id, "reason": REASON_SKIPTRACE_BURN, "owner_key": owner_key},
-        )
-    )
-
-
 async def _cached_payload(
     session: AsyncSession, owner_key: str, ttl_days: int
 ) -> dict[str, Any] | None:
@@ -121,19 +37,6 @@ async def _cached_payload(
     if result is None or result.traced_at < cutoff:
         return None
     return result.payload
-
-
-async def _burn(session: AsyncSession, user_id: int, owner_key: str) -> int:
-    entry = CreditLedgerEntry(
-        user_id=user_id, delta=-1, reason=REASON_SKIPTRACE_BURN, ref=owner_key
-    )
-    session.add(entry)
-    await session.flush()
-    return entry.id
-
-
-def _is_no_hit(payload: dict[str, Any]) -> bool:
-    return not (payload.get("phones") or payload.get("emails"))
 
 
 def _contacts_out(payload: dict[str, Any]) -> SkipTraceContactsOut:
@@ -158,54 +61,32 @@ async def trace_owner(
     owner_key = subject.owner_key
 
     cached = await _cached_payload(session, owner_key, ttl_days)
-    if cached is not None and await _has_traced(session, user_id, owner_key):
-        balance = await credit_balance(session, user_id)
+    if cached is not None:
         return SkipTraceResultOut(
             parcel_number=parcel_number,
             owner=subject.owner,
             contacts=_contacts_out(cached),
-            credits_spent=0,
-            credits_remaining=balance,
             cached=True,
         )
 
-    if await credit_balance(session, user_id) < 1:
-        raise QuotaExceededError("Not enough skip-trace credits. Buy a credit pack to continue.")
-
-    if cached is not None:
-        payload = cached
-        provider_used = "cache"
-    else:
-        contacts = await provider.trace(
-            owner=subject.owner, mailing_address=subject.mailing_address
+    contacts = await provider.trace(owner=subject.owner, mailing_address=subject.mailing_address)
+    payload = {"phones": contacts.phones, "emails": contacts.emails}
+    await session.execute(
+        insert(SkipTraceResult)
+        .values(owner_key=owner_key, payload=payload, provider=provider.name)
+        .on_conflict_do_update(
+            index_elements=["owner_key"],
+            set_={
+                "payload": payload,
+                "provider": provider.name,
+                "traced_at": datetime.now(UTC),
+            },
         )
-        payload = {"phones": contacts.phones, "emails": contacts.emails}
-        await session.execute(
-            insert(SkipTraceResult)
-            .values(owner_key=owner_key, payload=payload, provider=provider.name)
-            .on_conflict_do_update(
-                index_elements=["owner_key"],
-                set_={
-                    "payload": payload,
-                    "provider": provider.name,
-                    "traced_at": datetime.now(UTC),
-                },
-            )
-        )
-        provider_used = provider.name
+    )
 
-    burn_id = await _burn(session, user_id, owner_key)
-    credits_spent = 1
-    if _is_no_hit(payload):
-        await grant_credits(session, user_id, 1, REASON_REFUND, f"nohit:{burn_id}")
-        credits_spent = 0
-
-    balance = await credit_balance(session, user_id)
     return SkipTraceResultOut(
         parcel_number=parcel_number,
         owner=subject.owner,
         contacts=_contacts_out(payload),
-        credits_spent=credits_spent,
-        credits_remaining=balance,
-        cached=provider_used == "cache",
+        cached=False,
     )

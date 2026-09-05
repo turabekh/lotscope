@@ -15,7 +15,7 @@ async def test_register_normalizes_email_and_authenticates(db_session: AsyncSess
     await db_session.flush()
     assert created.email == "jane@example.com"
     assert created.role == "user"
-    assert created.tier == "free"
+    assert created.tier == "user"
 
     authenticated = await authenticate_user(db_session, "jane@example.com", "hunter2-strong")
     assert authenticated.id == created.id

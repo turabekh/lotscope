@@ -5,11 +5,9 @@ from redis.asyncio import Redis
 from lotscope.accounts.usage import (
     RESEND_LIMIT_PER_HOUR,
     claim_resend_slot,
-    get_area_search_parcels,
     get_ask_usage,
     get_export_usage,
     increment_ask_usage,
-    register_area_search_parcels,
     reserve_export,
 )
 
@@ -82,40 +80,6 @@ async def test_reserve_export_unlimited_always_allows() -> None:
     redis = cast(Redis, fake)
     assert all([await reserve_export(redis, 5, None) for _ in range(5)])
     assert await get_export_usage(redis, 5) == 5
-
-
-async def test_area_search_quota_counts_distinct_parcels_not_requests() -> None:
-    fake = _Redis()
-    redis = cast(Redis, fake)
-    for _ in range(5):
-        assert await register_area_search_parcels(redis, 1, ["phl:1", "phl:2"], 3) is True
-    assert await get_area_search_parcels(redis, 1) == 2
-
-    assert await register_area_search_parcels(redis, 1, ["phl:3", "phl:4"], 3) is True
-    assert await register_area_search_parcels(redis, 1, ["phl:5"], 3) is False
-
-
-async def test_area_search_quota_unlimited_always_allows() -> None:
-    fake = _Redis()
-    redis = cast(Redis, fake)
-    assert await register_area_search_parcels(redis, 1, [f"phl:{n}" for n in range(50)], None)
-    assert await register_area_search_parcels(redis, 1, ["phl:999"], None) is True
-
-
-async def test_area_search_quota_is_scoped_per_user() -> None:
-    fake = _Redis()
-    redis = cast(Redis, fake)
-    assert await register_area_search_parcels(redis, 1, ["phl:1", "phl:2"], 2) is True
-    assert await register_area_search_parcels(redis, 1, ["phl:3"], 2) is False
-    assert await register_area_search_parcels(redis, 2, ["phl:3"], 2) is True
-
-
-async def test_area_search_ttl_is_set_only_once() -> None:
-    fake = _Redis()
-    redis = cast(Redis, fake)
-    await register_area_search_parcels(redis, 1, ["phl:1"], None)
-    await register_area_search_parcels(redis, 1, ["phl:2"], None)
-    assert len(fake.expires) == 1
 
 
 async def test_verification_resends_are_capped_per_hour_per_address() -> None:

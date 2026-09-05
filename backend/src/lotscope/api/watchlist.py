@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import watchlist_limit
 from lotscope.api.deps import ParcelKeyDep, canonicalize_parcel_key, get_current_user, get_session
 from lotscope.watchlist.schemas import (
     SavedParcelCreate,
@@ -31,7 +30,7 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 async def get_watchlist(session: SessionDep, user: CurrentUserDep) -> WatchlistResponse:
     items = await list_saved(session, user.id)
     return WatchlistResponse(
-        limit=watchlist_limit(user.tier),
+        limit=None,
         used=len(items),
         alerts=sum(1 for item in items if item.has_alerts),
         items=items,
@@ -50,7 +49,7 @@ async def add_to_watchlist(
     data: SavedParcelCreate, session: SessionDep, user: CurrentUserDep
 ) -> WatchlistItem:
     data = data.model_copy(update={"parcel_number": canonicalize_parcel_key(data.parcel_number)})
-    saved = await add_saved(session, user.id, data, limit=watchlist_limit(user.tier))
+    saved = await add_saved(session, user.id, data, limit=None)
     await session.commit()
     return WatchlistItem(
         parcel_number=saved.parcel_number,

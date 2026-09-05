@@ -4,14 +4,15 @@ from datetime import date, datetime
 from fpdf.enums import XPos, YPos
 
 from lotscope.core.errors import MissingEconomicsError
-from lotscope.reports.appeal_packet import _comp_table
 from lotscope.reports.dossier import (
     _BRAND,
     _INK,
+    _LINE,
     _MUTED,
     _Dossier,
     _kv,
     _money,
+    _num,
     _s,
     _section,
 )
@@ -61,6 +62,32 @@ class LoiDocument:
     has_appendix: bool
     disclaimer: str
     generated_at: datetime
+
+
+def _comp_table(pdf: _Dossier, valuation: ValuationResult) -> None:
+    headers = [("Address", 62), ("Dist (ft)", 22), ("Sold", 24), ("Price", 26), ("$/sqft", 22)]
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_text_color(*_MUTED)
+    for label, width in headers:
+        pdf.cell(width, 5, _s(label))
+    pdf.ln(5)
+    pdf.set_draw_color(*_LINE)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+    pdf.ln(1)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(*_INK)
+    for comp in valuation.comps:
+        sold = comp.sale_date.strftime("%Y-%m") if comp.sale_date is not None else "-"
+        row = [
+            (_s(comp.address or comp.parcel_number)[:34], 62),
+            (_num(comp.distance_ft), 22),
+            (sold, 24),
+            (_money(comp.sale_price), 26),
+            (_num(comp.price_per_sqft), 22),
+        ]
+        for value, width in row:
+            pdf.cell(width, 5, value)
+        pdf.ln(5)
 
 
 def compose_loi(

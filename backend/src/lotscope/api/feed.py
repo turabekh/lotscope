@@ -5,9 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import feed_access
 from lotscope.api.deps import get_current_user, get_session
-from lotscope.core.errors import QuotaExceededError
 from lotscope.feed.schemas import FeedResponse
 from lotscope.feed.service import get_feed
 from lotscope.savedsearch.schemas import SearchCriteria
@@ -30,10 +28,6 @@ async def feed(
     saved_search_id: int | None = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 200,
 ) -> FeedResponse:
-    if not feed_access(current_user.tier):
-        raise QuotaExceededError(
-            "The Deal Feed is a Pro feature — upgrade to see citywide changes."
-        )
     since = datetime.now(UTC) - timedelta(days=days)
     criteria = (
         await criteria_for(session, current_user.id, saved_search_id)

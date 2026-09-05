@@ -4,6 +4,7 @@ from pathlib import Path
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.accounts.models import BuyerInvite
 from lotscope.accounts.security import buyer_invite_code, create_buyer_invite_token
 from lotscope.buyers.derivation import REPEAT_WINDOW_MONTHS, RepeatBuyer
 from lotscope.buyers.repeat import (
@@ -153,10 +154,23 @@ async def build_letter(
         sources=_LETTER_SOURCES,
     )
 
+    if invite_code is not None:
+        await _record_invite(session, buyer, invite_code)
+
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / letter_filename(buyer.buyer_key)
     path.write_bytes(render_buyer_letter(context))
     return path
+
+
+async def _record_invite(session: AsyncSession, buyer: RepeatBuyer, code: str) -> None:
+    existing = await session.get(BuyerInvite, buyer.buyer_key)
+    if existing is not None:
+        existing.code = code
+        existing.display_name = buyer.display_name
+        return
+    session.add(BuyerInvite(buyer_key=buyer.buyer_key, code=code, display_name=buyer.display_name))
+    await session.flush()
 
 
 def source_labels() -> list[str]:

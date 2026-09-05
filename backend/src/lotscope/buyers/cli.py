@@ -141,6 +141,7 @@ async def _letters(args: Namespace) -> int:
                 session, settings, buyer, out_dir=out_dir, window_months=months
             )
             print(f"{buyer.purchase_count:3d}  {buyer.display_name[:38]:38s}  {path}")
+        await session.commit()
     print(f"\n{len(buyers)} letters written to {out_dir}")
     return 0
 

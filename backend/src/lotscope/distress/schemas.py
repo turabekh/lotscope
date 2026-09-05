@@ -41,7 +41,6 @@ class LeadItem(BaseModel):
 
 
 class LeadsResponse(BaseModel):
-    tier: str
     limit: int
     returned: int
     leads: list[LeadItem]

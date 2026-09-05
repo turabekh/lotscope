@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
-from lotscope.accounts.tiers import saved_search_limit
 from lotscope.api.deps import get_current_user, get_session
 from lotscope.savedsearch.schemas import (
     SavedSearchCreate,
@@ -31,7 +30,7 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 async def get_saved_searches(session: SessionDep, user: CurrentUserDep) -> SavedSearchListResponse:
     searches = await list_searches(session, user.id)
     return SavedSearchListResponse(
-        limit=saved_search_limit(user.tier),
+        limit=None,
         used=len(searches),
         searches=searches,
     )
@@ -41,7 +40,7 @@ async def get_saved_searches(session: SessionDep, user: CurrentUserDep) -> Saved
 async def create_saved_search(
     data: SavedSearchCreate, session: SessionDep, user: CurrentUserDep
 ) -> SavedSearchDetail:
-    search = await create_search(session, user.id, data, limit=saved_search_limit(user.tier))
+    search = await create_search(session, user.id, data, limit=None)
     detail = await get_search(session, user.id, search.id)
     await session.commit()
     return detail

@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.accounts.models import User
 from lotscope.accounts.security import create_unsubscribe_token
-from lotscope.accounts.tiers import feed_access
 from lotscope.core.config import Settings
 from lotscope.core.logging import get_logger
 from lotscope.feed.service import get_feed
@@ -372,7 +371,7 @@ async def send_feed_digests(
     for user_id in user_ids:
         async with session_factory() as session:
             user = await session.get(User, user_id)
-            if user is None or not user.is_active or not feed_access(user.tier):
+            if user is None or not user.is_active:
                 continue
             try:
                 if await send_user_feed_digest(session, sender, settings, user):
@@ -532,8 +531,6 @@ async def send_sales_week_digest(
     calendar_url = f"{settings.app_base_url.rstrip('/')}/philadelphia/sheriff-sales"
     sent = 0
     for user in users:
-        if not feed_access(user.tier):
-            continue
         token = create_unsubscribe_token(settings, user_id=user.id)
         unsubscribe_url = f"{settings.api_base_url.rstrip('/')}/digests/unsubscribe?token={token}"
         try:
