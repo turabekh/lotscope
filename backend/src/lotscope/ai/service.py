@@ -14,23 +14,19 @@ from lotscope.ai.context import (
 )
 from lotscope.ai.districts import district_anchor_cites
 from lotscope.ai.embeddings import Embedder
-from lotscope.ai.errors import GenerationError, UngroundedAnswerError
+from lotscope.ai.errors import GenerationError
 from lotscope.ai.prompts import (
     REPORT_SYSTEM_PROMPT,
     SUMMARY_SYSTEM_PROMPT,
-    SYSTEM_PROMPT,
     build_report_prompt,
     build_summary_prompt,
-    build_user_prompt,
 )
 from lotscope.ai.query_terms import extract_cites, extract_districts
 from lotscope.ai.retrieval import (
     embed_and_search,
     fetch_documents_by_cite,
-    search_parcel_documents,
 )
 from lotscope.ai.schemas import (
-    ParcelAnswer,
     ParcelReport,
     ParcelReportResult,
     ParcelSummary,
@@ -43,6 +39,7 @@ from lotscope.ai.scope import (
 )
 from lotscope.assessment.schemas import AssessmentResult
 from lotscope.assessment.service import analyze_parcel_assessment
+from lotscope.core.market import MARKET_CODE
 from lotscope.distress.schemas import DistressResult
 from lotscope.distress.service import assess_parcel_distress
 from lotscope.parcels.schemas import ParcelDetail
@@ -366,48 +363,20 @@ async def _canonical_context(
     return fit_to_budget(leads + windows + referenced, ContextBudget())
 
 
-async def ask_the_parcel(
+async def retrieve_code_context(
     session: AsyncSession,
-    parcel_number: str,
+    embedder: Embedder,
     question: str,
     *,
-    embedder: Embedder,
-    generator: StructuredGenerator,
+    zoning_code: str | None = None,
     document_limit: int = 5,
-) -> ParcelAnswer | None:
-    detail = await get_parcel_detail(session, parcel_number)
-    if detail is None:
-        return None
-
-    verdict = await get_verdict(session, parcel_number)
-    scope = zoning_retrieval_scope()
-    zoning_code = detail.resolved_zoning_code or detail.base_zoning_code
-    documents = await _canonical_context(
+) -> list[RetrievedDocument]:
+    return await _canonical_context(
         session,
         embedder,
         question,
-        scope=scope,
-        market_code=detail.market_code,
+        scope=zoning_retrieval_scope(),
+        market_code=MARKET_CODE,
         zoning_code=zoning_code,
         document_limit=document_limit,
     )
-
-    deeds = await search_parcel_documents(
-        session, embedder, question, parcel_number, source=DEED_SOURCE, limit=3
-    )
-    documents = documents + deeds
-    user_prompt = build_user_prompt(question, _parcel_facts(detail, verdict), documents)
-
-    raw = await generator.generate(
-        system=SYSTEM_PROMPT,
-        user=user_prompt,
-        schema=ParcelAnswer,
-    )
-    try:
-        answer = ParcelAnswer.model_validate(raw)
-    except ValidationError as error:
-        raise GenerationError(f"The model returned an invalid answer: {error}") from error
-
-    if not answer.citations:
-        raise UngroundedAnswerError
-    return answer

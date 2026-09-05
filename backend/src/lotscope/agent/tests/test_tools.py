@@ -133,5 +133,22 @@ def test_importing_the_api_registers_the_tools() -> None:
 
     create_app()
 
-    assert REGISTRY.names() == ["get_parcel", "search_area"]
-    assert len(REGISTRY.schemas()) == 2
+    names = REGISTRY.names()
+    assert "get_parcel" in names
+    assert "search_area" in names
+    for expected in (
+        "get_verdict",
+        "get_zoning",
+        "get_code",
+        "get_comps",
+        "get_sheriff_clearing",
+        "get_deed_chain",
+        "get_violations",
+        "get_delinquency",
+        "get_sheriff_listing",
+        "get_neighbors",
+        "get_overlays_and_flags",
+        "get_owner_portfolio",
+    ):
+        assert expected in names, expected
+    assert len(REGISTRY.schemas()) == len(names)
