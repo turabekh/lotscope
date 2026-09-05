@@ -9,6 +9,7 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
+from lotscope.accounts.purchases import INVITE_COMP_DAYS, redeem_invite
 from lotscope.accounts.schemas import (
     _EMAIL_PATTERN,
     DigestPreference,
@@ -23,6 +24,7 @@ from lotscope.accounts.schemas import (
 from lotscope.accounts.security import (
     create_access_token,
     create_email_verification_token,
+    verify_buyer_invite_token,
     verify_email_verification_token,
 )
 from lotscope.accounts.service import (
@@ -32,7 +34,6 @@ from lotscope.accounts.service import (
     rotate_verification_nonce,
     verify_email,
 )
-from lotscope.accounts.tiers import ask_daily_limit, parcel_view_daily_limit
 from lotscope.accounts.usage import claim_resend_slot, get_ask_usage, get_parcel_views
 from lotscope.api.deps import (
     get_app_settings,
@@ -95,6 +96,11 @@ async def register(
     sender: Annotated[EmailSender | None, Depends(get_email_sender_dep)],
 ) -> VerificationPending:
     user = await register_user(session, data)
+    decoded = verify_buyer_invite_token(settings, data.invite) if data.invite else None
+    if await redeem_invite(
+        session, user, token_key=decoded[0] if decoded else None, code=data.invite_code
+    ):
+        _logger.info("invite_comp_granted", user_id=user.id, days=INVITE_COMP_DAYS)
     await session.commit()
     await _send_verification(
         settings,
@@ -214,7 +220,6 @@ async def usage(
         ask_used = await get_ask_usage(redis, user.id)
         views_used = await get_parcel_views(redis, user.id)
     return UsageResponse(
-        tier=user.tier,
-        ask=_metric(ask_daily_limit(user.tier), ask_used),
-        parcel_views=_metric(parcel_view_daily_limit(user.tier), views_used),
+        ask=_metric(None, ask_used),
+        parcel_views=_metric(None, views_used),
     )

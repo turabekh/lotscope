@@ -65,19 +65,8 @@ class Settings(BaseSettings):
 
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
-    stripe_price_pro_monthly: str | None = None
-    stripe_price_pro_annual: str | None = None
-    stripe_price_pro_legacy: str | None = None
-    stripe_price_pro_founding: str | None = None
-    founding_cap: int = 50
-    founding_cutoff: str | None = None
-    founding_price_monthly_cents: int = 4900
-    stripe_price_investor_monthly: str | None = None
-    stripe_price_investor_annual: str | None = None
-    stripe_price_credits_25: str | None = None
-    stripe_price_credits_100: str | None = None
-    stripe_price_credits_500: str | None = None
-    stripe_price_appeal_packet: str | None = None
+    stripe_price_packet: str | None = None
+    stripe_price_diligence: str | None = None
     skiptrace_provider: str | None = None
     skiptrace_api_key: str | None = None
     skiptrace_api_url: str = "https://api.batchdata.com/api/v1/property/skip-trace"

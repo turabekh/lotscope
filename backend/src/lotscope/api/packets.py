@@ -8,8 +8,9 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
+from lotscope.accounts.purchases import PACKET_SKU, SKU_PRICES_CENTS, may_download
 from lotscope.api.deps import get_arq_pool, get_current_user, get_session
-from lotscope.core.errors import NotFoundError
+from lotscope.core.errors import NotFoundError, PaymentRequiredError
 from lotscope.packet.models import SalePacket
 from lotscope.packet.service import enqueue_packet, get_packet, list_packets
 
@@ -69,6 +70,11 @@ async def download_own_packet(
     packet = await get_packet(session, packet_id, user.id)
     if packet.status != "ready" or packet.pdf_path is None:
         raise NotFoundError(f"Packet {packet_id} is not ready to download.")
+    if not await may_download(session, user, PACKET_SKU, str(packet.id)):
+        raise PaymentRequiredError(
+            f"This packet costs ${SKU_PRICES_CENTS[PACKET_SKU] / 100:,.0f}. "
+            "Buy it from the packet card to download the PDF."
+        )
     return FileResponse(
         packet.pdf_path,
         media_type="application/pdf",

@@ -1,218 +1,110 @@
-from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.accounts.billing import (
-    StripeGateway,
-    appeal_packet_from_checkout,
-    credit_grant_from_checkout,
-    founding_offer_available,
-    founding_offer_configured,
-    interpret_event,
-    price_id_for_cadence,
-)
+from lotscope.accounts.billing import create_checkout_session, verify_webhook
 from lotscope.accounts.models import User
-from lotscope.accounts.schemas import (
-    CheckoutRequest,
-    CheckoutResponse,
-    FoundingOffer,
-    PlanInfo,
-    PlansResponse,
-    PortalResponse,
+from lotscope.accounts.purchases import (
+    SKU_LABELS,
+    SKU_PRICES_CENTS,
+    mark_paid,
+    record_session,
 )
-from lotscope.accounts.service import (
-    apply_subscription_state,
-    ensure_stripe_customer,
-    get_user_by_stripe_customer,
-)
-from lotscope.accounts.tiers import PLAN_CATALOG
-from lotscope.api.deps import (
-    canonicalize_parcel_key,
-    get_app_settings,
-    get_current_user,
-    get_optional_user,
-    get_session,
-    get_stripe_gateway,
-)
-from lotscope.appeal.delivery import email_appeal_packet
-from lotscope.appeal.service import SOURCE_PURCHASE, record_entitlement
+from lotscope.api.deps import get_app_settings, get_current_user, get_session
 from lotscope.core.config import Settings
-from lotscope.core.errors import ConfigurationError, ValidationError
+from lotscope.core.errors import ValidationError
 from lotscope.core.logging import get_logger
-from lotscope.notifications.email import get_email_sender
-from lotscope.skiptrace.models import REASON_PACK_PURCHASE
-from lotscope.skiptrace.service import grant_credits
 
-_logger = get_logger("billing")
-
-router = APIRouter(prefix="/billing", tags=["billing"])
+router = APIRouter(tags=["billing"])
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
-SettingsDep = Annotated[Settings, Depends(get_app_settings)]
-GatewayDep = Annotated[StripeGateway, Depends(get_stripe_gateway)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+SettingsDep = Annotated[Settings, Depends(get_app_settings)]
+
+_logger = get_logger(__name__)
+_PAID_EVENT = "checkout.session.completed"
 
 
-@router.get("/plans", response_model=PlansResponse)
-async def plans(
-    settings: SettingsDep,
-    user: Annotated[User | None, Depends(get_optional_user)],
-) -> PlansResponse:
-    current_tier = user.tier if user is not None else None
-    founding_offer = None
-    if founding_offer_configured(settings, today=datetime.now(UTC).date()):
-        founding_offer = FoundingOffer(
-            price_monthly_cents=settings.founding_price_monthly_cents,
-            cutoff=settings.founding_cutoff,
-        )
-    return PlansResponse(
-        contact_url=settings.enterprise_contact_url,
-        founding_offer=founding_offer,
-        plans=[
-            PlanInfo(
-                tier=entry.tier,
-                name=entry.name,
-                tagline=entry.tagline,
-                price_monthly_cents=entry.price_monthly_cents,
-                price_annual_cents=entry.price_annual_cents,
-                action=entry.action,
-                highlights=list(entry.highlights),
-                is_current=entry.tier == current_tier,
-            )
-            for entry in PLAN_CATALOG
-        ],
-    )
+class CheckoutRequest(BaseModel):
+    sku: Literal["packet", "diligence"]
+    object_ref: str = Field(min_length=1, max_length=80)
 
 
-async def _resolve_founding_price(settings: Settings, gateway: StripeGateway) -> str:
-    price_id = settings.stripe_price_pro_founding
-    if not price_id:
-        raise ConfigurationError("The founding-member offer is not configured.")
-    active_count = await gateway.count_active_subscriptions_for_price(price_id=price_id)
-    if not founding_offer_available(
-        settings, active_count=active_count, today=datetime.now(UTC).date()
-    ):
-        raise ValidationError("The founding-member offer has ended.")
-    return price_id
+class CheckoutResponse(BaseModel):
+    url: str
+    session_id: str
+    amount_cents: int
+    label: str
+
+
+@router.get("/checkout/prices")
+async def list_prices() -> dict[str, dict[str, object]]:
+    return {
+        sku: {"amount_cents": SKU_PRICES_CENTS[sku], "label": SKU_LABELS[sku]}
+        for sku in SKU_PRICES_CENTS
+    }
 
 
 @router.post("/checkout", response_model=CheckoutResponse)
-async def checkout(
-    data: CheckoutRequest,
-    user: CurrentUserDep,
-    session: SessionDep,
-    settings: SettingsDep,
-    gateway: GatewayDep,
+async def start_checkout(
+    data: CheckoutRequest, session: SessionDep, user: CurrentUserDep, settings: SettingsDep
 ) -> CheckoutResponse:
-    if data.founding:
-        price_id = await _resolve_founding_price(settings, gateway)
-    else:
-        price_id = price_id_for_cadence(settings, data.tier, data.cadence)
-    customer_id = await ensure_stripe_customer(session, gateway, user)
-    url = await gateway.create_checkout_session(
-        customer_id=customer_id,
-        price_id=price_id,
-        success_url=settings.billing_success_url,
-        cancel_url=settings.billing_cancel_url,
+    created = create_checkout_session(
+        settings,
+        sku=data.sku,
+        object_ref=data.object_ref,
+        user_id=user.id,
+        email=user.email,
+    )
+    await record_session(
+        session,
+        user_id=user.id,
+        sku=data.sku,
+        object_ref=data.object_ref,
+        stripe_session_id=created.session_id,
     )
     await session.commit()
-    return CheckoutResponse(url=url)
-
-
-class AppealPacketCheckoutRequest(BaseModel):
-    parcel_number: str = Field(min_length=1, max_length=40)
-
-
-@router.post("/appeal-packet/checkout", response_model=CheckoutResponse)
-async def appeal_packet_checkout(
-    data: AppealPacketCheckoutRequest,
-    user: CurrentUserDep,
-    session: SessionDep,
-    settings: SettingsDep,
-    gateway: GatewayDep,
-) -> CheckoutResponse:
-    if not settings.stripe_price_appeal_packet:
-        raise ConfigurationError("The assessment review packet is not configured for purchase.")
-    customer_id = await ensure_stripe_customer(session, gateway, user)
-    url = await gateway.create_appeal_packet_checkout_session(
-        customer_id=customer_id,
-        price_id=settings.stripe_price_appeal_packet,
-        parcel_number=canonicalize_parcel_key(data.parcel_number),
-        success_url=settings.billing_success_url,
-        cancel_url=settings.billing_cancel_url,
+    return CheckoutResponse(
+        url=created.url,
+        session_id=created.session_id,
+        amount_cents=SKU_PRICES_CENTS[data.sku],
+        label=SKU_LABELS[data.sku],
     )
-    await session.commit()
-    return CheckoutResponse(url=url)
 
 
-@router.post("/portal", response_model=PortalResponse)
-async def portal(
-    user: CurrentUserDep,
-    session: SessionDep,
-    settings: SettingsDep,
-    gateway: GatewayDep,
-) -> PortalResponse:
-    if user.stripe_customer_id is None:
-        raise ValidationError("No billing account exists for this user yet.")
-    url = await gateway.create_portal_session(
-        customer_id=user.stripe_customer_id,
-        return_url=settings.billing_portal_return_url,
-    )
-    return PortalResponse(url=url)
-
-
-@router.post("/webhook", status_code=200)
-async def webhook(
+@router.post("/billing/webhook")
+async def stripe_webhook(
     request: Request,
     session: SessionDep,
     settings: SettingsDep,
-    gateway: GatewayDep,
     stripe_signature: Annotated[str | None, Header(alias="Stripe-Signature")] = None,
-) -> dict[str, bool]:
-    if stripe_signature is None:
-        raise ValidationError("Missing Stripe signature.")
-    payload = await request.body()
-    event = gateway.parse_event(payload=payload, signature=stripe_signature)
+) -> dict[str, str]:
+    if not stripe_signature:
+        raise ValidationError("The Stripe signature header is missing.")
+    event = verify_webhook(settings, await request.body(), stripe_signature)
 
-    purchase = appeal_packet_from_checkout(event)
-    if purchase is not None:
-        buyer = await get_user_by_stripe_customer(session, purchase.customer_id)
-        if buyer is not None:
-            await record_entitlement(
-                session,
-                buyer.id,
-                purchase.parcel_number,
-                source=SOURCE_PURCHASE,
-                ref=purchase.ref,
-            )
-            await session.commit()
-            sender = get_email_sender(settings)
-            if sender is not None:
-                try:
-                    await email_appeal_packet(
-                        session, sender, to=buyer.email, parcel_number=purchase.parcel_number
-                    )
-                except Exception as error:  # best-effort; download is the guaranteed path
-                    _logger.warning("appeal_packet_email_failed", error=str(error))
-        return {"handled": buyer is not None}
+    if event.get("type") != _PAID_EVENT:
+        return {"status": "ignored"}
 
-    grant = credit_grant_from_checkout(event)
-    if grant is not None:
-        buyer = await get_user_by_stripe_customer(session, grant.customer_id)
-        if buyer is not None:
-            await grant_credits(session, buyer.id, grant.credits, REASON_PACK_PURCHASE, grant.ref)
-            await session.commit()
-        return {"handled": buyer is not None}
+    data = event.get("data")
+    obj = data.get("object") if isinstance(data, dict) else None
+    session_id = obj.get("id") if isinstance(obj, dict) else None
+    if not isinstance(session_id, str):
+        raise ValidationError("The Stripe event carried no checkout session id.")
 
-    outcome = interpret_event(event)
-    if outcome is None:
-        return {"handled": False}
-    user = await get_user_by_stripe_customer(session, outcome.customer_id)
-    if user is None or outcome.state is None:
-        return {"handled": user is not None}
-    apply_subscription_state(settings, user, outcome.state)
+    purchase = await mark_paid(session, session_id)
+    if purchase is None:
+        _logger.warning("stripe_session_unknown", stripe_session_id=session_id)
+        await session.commit()
+        return {"status": "unknown_session"}
+
     await session.commit()
-    return {"handled": True}
+    _logger.info(
+        "purchase_paid",
+        purchase_id=purchase.id,
+        sku=purchase.sku,
+        object_ref=purchase.object_ref,
+    )
+    return {"status": "paid"}

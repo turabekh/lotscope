@@ -1,373 +1,74 @@
-from __future__ import annotations
-
-from collections.abc import Callable
+import json
 from dataclasses import dataclass
-from datetime import date
-from typing import Any, Literal, Protocol, cast
 
 import stripe
 
+from lotscope.accounts.purchases import SKU_LABELS, SKU_PRICES_CENTS
 from lotscope.core.config import Settings
-from lotscope.core.errors import ConfigurationError, ValidationError
-
-Cadence = Literal["monthly", "annual"]
-CheckoutTier = Literal["pro", "investor"]
-
-_GRANTING_STATUSES = frozenset({"active", "trialing", "past_due"})
-_HANDLED_EVENTS = frozenset(
-    {
-        "checkout.session.completed",
-        "customer.subscription.created",
-        "customer.subscription.updated",
-        "customer.subscription.deleted",
-    }
-)
+from lotscope.core.errors import ValidationError
 
 
-def _parse_price_list(raw: str | None) -> frozenset[str]:
-    if not raw:
-        return frozenset()
-    return frozenset(token.strip() for token in raw.split(",") if token.strip())
+@dataclass(frozen=True)
+class CheckoutSession:
+    session_id: str
+    url: str
 
 
-def pro_price_ids(settings: Settings) -> frozenset[str]:
-    current = frozenset(
-        price
-        for price in (
-            settings.stripe_price_pro_monthly,
-            settings.stripe_price_pro_annual,
-            settings.stripe_price_pro_founding,
-        )
-        if price
-    )
-    return current | _parse_price_list(settings.stripe_price_pro_legacy)
+class StripeNotConfiguredError(ValidationError):
+    pass
 
 
-def _cutoff_passed(cutoff_raw: str | None, today: date) -> bool:
-    if not cutoff_raw:
-        return False
-    try:
-        return today > date.fromisoformat(cutoff_raw)
-    except ValueError:
-        return True
-
-
-def founding_offer_configured(settings: Settings, *, today: date) -> bool:
-    if not settings.stripe_price_pro_founding:
-        return False
-    return not _cutoff_passed(settings.founding_cutoff, today)
-
-
-def founding_offer_available(settings: Settings, *, active_count: int, today: date) -> bool:
-    if not founding_offer_configured(settings, today=today):
-        return False
-    return active_count < settings.founding_cap
-
-
-def investor_price_ids(settings: Settings) -> frozenset[str]:
-    return frozenset(
-        price
-        for price in (
-            settings.stripe_price_investor_monthly,
-            settings.stripe_price_investor_annual,
-        )
-        if price
-    )
-
-
-def granting_price_ids(settings: Settings) -> tuple[tuple[str, frozenset[str]], ...]:
-    return (
-        ("investor", investor_price_ids(settings)),
-        ("pro", pro_price_ids(settings)),
-    )
-
-
-def _cadence_price(settings: Settings, tier: CheckoutTier, cadence: Cadence) -> str | None:
-    prices: dict[tuple[CheckoutTier, Cadence], str | None] = {
-        ("pro", "monthly"): settings.stripe_price_pro_monthly,
-        ("pro", "annual"): settings.stripe_price_pro_annual,
-        ("investor", "monthly"): settings.stripe_price_investor_monthly,
-        ("investor", "annual"): settings.stripe_price_investor_annual,
-    }
-    return prices[(tier, cadence)]
-
-
-def price_id_for_cadence(settings: Settings, tier: CheckoutTier, cadence: Cadence) -> str:
-    price = _cadence_price(settings, tier, cadence)
+def price_id_for(settings: Settings, sku: str) -> str:
+    price = {
+        "packet": settings.stripe_price_packet,
+        "diligence": settings.stripe_price_diligence,
+    }.get(sku)
     if not price:
-        raise ConfigurationError(
-            f"No Stripe price configured for the {cadence} {tier.capitalize()} plan."
-        )
+        raise StripeNotConfiguredError(f"No Stripe price is configured for {sku!r}.")
     return price
 
 
-def tier_for_subscription(
-    status: str | None,
-    price_id: str | None,
-    granting: tuple[tuple[str, frozenset[str]], ...],
-) -> str:
-    if status not in _GRANTING_STATUSES or price_id is None:
-        return "free"
-    for tier, price_ids in granting:
-        if price_id in price_ids:
-            return tier
-    return "free"
-
-
-@dataclass(frozen=True)
-class SubscriptionState:
-    customer_id: str
-    subscription_id: str | None
-    status: str | None
-    price_id: str | None
-
-
-@dataclass(frozen=True)
-class WebhookOutcome:
-    customer_id: str
-    state: SubscriptionState | None
-
-
-def _extract_price_id(subscription: dict[str, Any]) -> str | None:
-    items = subscription.get("items", {}).get("data", [])
-    if not items:
-        return None
-    price = items[0].get("price")
-    if isinstance(price, dict):
-        value = price.get("id")
-        return value if isinstance(value, str) else None
-    return price if isinstance(price, str) else None
-
-
-def subscription_state_from_object(subscription: dict[str, Any]) -> SubscriptionState | None:
-    customer = subscription.get("customer")
-    if not isinstance(customer, str):
-        return None
-    return SubscriptionState(
-        customer_id=customer,
-        subscription_id=subscription.get("id"),
-        status=subscription.get("status"),
-        price_id=_extract_price_id(subscription),
+def create_checkout_session(
+    settings: Settings, *, sku: str, object_ref: str, user_id: int, email: str
+) -> CheckoutSession:
+    if not settings.stripe_secret_key:
+        raise StripeNotConfiguredError("Stripe is not configured.")
+    stripe.api_key = settings.stripe_secret_key
+    created = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{"price": price_id_for(settings, sku), "quantity": 1}],
+        customer_email=email,
+        client_reference_id=str(user_id),
+        metadata={"user_id": str(user_id), "sku": sku, "object_ref": object_ref},
+        success_url=settings.billing_success_url,
+        cancel_url=settings.billing_cancel_url,
     )
+    if created.url is None:
+        raise StripeNotConfiguredError("Stripe returned no checkout URL.")
+    return CheckoutSession(session_id=created.id, url=created.url)
 
 
-@dataclass(frozen=True)
-class CreditGrant:
-    customer_id: str
-    credits: int
-    ref: str
-
-
-def credit_grant_from_checkout(event: dict[str, Any]) -> CreditGrant | None:
-    if event.get("type") != "checkout.session.completed":
-        return None
-    obj = event.get("data", {}).get("object", {})
-    if not isinstance(obj, dict) or obj.get("mode") != "payment":
-        return None
-    customer = obj.get("customer")
-    metadata = obj.get("metadata") or {}
-    credits_raw = metadata.get("credits")
-    if not isinstance(customer, str) or credits_raw is None:
-        return None
+def verify_webhook(settings: Settings, payload: bytes, signature: str) -> dict[str, object]:
+    if not settings.stripe_webhook_secret:
+        raise StripeNotConfiguredError("No Stripe webhook secret is configured.")
     try:
-        credit_amount = int(credits_raw)
-    except (TypeError, ValueError):
-        return None
-    if credit_amount <= 0:
-        return None
-    ref = obj.get("payment_intent") or obj.get("id")
-    return CreditGrant(customer_id=customer, credits=credit_amount, ref=str(ref))
-
-
-@dataclass(frozen=True)
-class AppealPacketPurchase:
-    customer_id: str
-    parcel_number: str
-    ref: str
-
-
-def appeal_packet_from_checkout(event: dict[str, Any]) -> AppealPacketPurchase | None:
-    if event.get("type") != "checkout.session.completed":
-        return None
-    obj = event.get("data", {}).get("object", {})
-    if not isinstance(obj, dict) or obj.get("mode") != "payment":
-        return None
-    customer = obj.get("customer")
-    metadata = obj.get("metadata") or {}
-    parcel_number = metadata.get("parcel_number")
-    if (
-        not isinstance(customer, str)
-        or metadata.get("product") != "appeal_packet"
-        or not isinstance(parcel_number, str)
-    ):
-        return None
-    ref = obj.get("payment_intent") or obj.get("id")
-    return AppealPacketPurchase(customer_id=customer, parcel_number=parcel_number, ref=str(ref))
-
-
-class StripeGateway(Protocol):
-    async def create_customer(self, *, email: str, user_id: int) -> str: ...
-
-    async def create_checkout_session(
-        self, *, customer_id: str, price_id: str, success_url: str, cancel_url: str
-    ) -> str: ...
-
-    async def create_credit_checkout_session(
-        self,
-        *,
-        customer_id: str,
-        price_id: str,
-        credit_amount: int,
-        success_url: str,
-        cancel_url: str,
-    ) -> str: ...
-
-    async def create_appeal_packet_checkout_session(
-        self,
-        *,
-        customer_id: str,
-        price_id: str,
-        parcel_number: str,
-        success_url: str,
-        cancel_url: str,
-    ) -> str: ...
-
-    async def create_portal_session(self, *, customer_id: str, return_url: str) -> str: ...
-
-    async def count_active_subscriptions_for_price(self, *, price_id: str) -> int: ...
-
-    def parse_event(self, *, payload: bytes, signature: str) -> dict[str, Any]: ...
-
-
-class StripeApiGateway:
-    def __init__(self, settings: Settings) -> None:
-        if not settings.stripe_secret_key:
-            raise ConfigurationError("Billing is not configured.")
-        self._client = stripe.StripeClient(settings.stripe_secret_key)
-        self._webhook_secret = settings.stripe_webhook_secret
-
-    async def create_customer(self, *, email: str, user_id: int) -> str:
-        customer = await self._client.v1.customers.create_async(
-            params={"email": email, "metadata": {"user_id": str(user_id)}}
+        event = stripe.Webhook.construct_event(  # type: ignore[no-untyped-call]
+            payload, signature, settings.stripe_webhook_secret
         )
-        return customer.id
-
-    async def create_checkout_session(
-        self, *, customer_id: str, price_id: str, success_url: str, cancel_url: str
-    ) -> str:
-        session = await self._client.v1.checkout.sessions.create_async(
-            params={
-                "mode": "subscription",
-                "customer": customer_id,
-                "line_items": [{"price": price_id, "quantity": 1}],
-                "success_url": success_url,
-                "cancel_url": cancel_url,
-                "allow_promotion_codes": True,
-            }
-        )
-        if session.url is None:
-            raise ValidationError("Stripe did not return a checkout URL.")
-        return session.url
-
-    async def create_credit_checkout_session(
-        self,
-        *,
-        customer_id: str,
-        price_id: str,
-        credit_amount: int,
-        success_url: str,
-        cancel_url: str,
-    ) -> str:
-        session = await self._client.v1.checkout.sessions.create_async(
-            params={
-                "mode": "payment",
-                "customer": customer_id,
-                "line_items": [{"price": price_id, "quantity": 1}],
-                "success_url": success_url,
-                "cancel_url": cancel_url,
-                "metadata": {"credits": str(credit_amount)},
-                "payment_intent_data": {"metadata": {"credits": str(credit_amount)}},
-            }
-        )
-        if session.url is None:
-            raise ValidationError("Stripe did not return a checkout URL.")
-        return session.url
-
-    async def create_appeal_packet_checkout_session(
-        self,
-        *,
-        customer_id: str,
-        price_id: str,
-        parcel_number: str,
-        success_url: str,
-        cancel_url: str,
-    ) -> str:
-        metadata = {"product": "appeal_packet", "parcel_number": parcel_number}
-        session = await self._client.v1.checkout.sessions.create_async(
-            params={
-                "mode": "payment",
-                "customer": customer_id,
-                "line_items": [{"price": price_id, "quantity": 1}],
-                "success_url": success_url,
-                "cancel_url": cancel_url,
-                "metadata": metadata,
-                "payment_intent_data": {"metadata": metadata},
-            }
-        )
-        if session.url is None:
-            raise ValidationError("Stripe did not return a checkout URL.")
-        return session.url
-
-    async def create_portal_session(self, *, customer_id: str, return_url: str) -> str:
-        session = await self._client.v1.billing_portal.sessions.create_async(
-            params={"customer": customer_id, "return_url": return_url}
-        )
-        return session.url
-
-    async def count_active_subscriptions_for_price(self, *, price_id: str) -> int:
-        count = 0
-        params: dict[str, Any] = {"price": price_id, "status": "active", "limit": 100}
-        while True:
-            page = await self._client.v1.subscriptions.list_async(params=cast("Any", params))
-            count += len(page.data)
-            if not page.has_more or not page.data:
-                return count
-            params["starting_after"] = page.data[-1].id
-
-    def parse_event(self, *, payload: bytes, signature: str) -> dict[str, Any]:
-        if not self._webhook_secret:
-            raise ConfigurationError("Stripe webhook secret is not configured.")
-        construct: Callable[..., Any] = stripe.Webhook.construct_event
-        try:
-            event = construct(payload, signature, self._webhook_secret)
-        except (ValueError, stripe.SignatureVerificationError) as error:
-            raise ValidationError("Invalid Stripe webhook signature.") from error
-        return cast("dict[str, Any]", event.to_dict_recursive())
+    except (ValueError, AttributeError, KeyError) as cause:
+        raise ValidationError("The Stripe event could not be read.") from cause
+    except stripe.SignatureVerificationError as cause:
+        raise ValidationError("The Stripe signature did not verify.") from cause
+    del event
+    parsed = json.loads(payload)
+    if not isinstance(parsed, dict):
+        raise ValidationError("The Stripe event was not an object.")
+    return parsed
 
 
-def interpret_event(event: dict[str, Any]) -> WebhookOutcome | None:
-    event_type = event.get("type")
-    if event_type not in _HANDLED_EVENTS:
-        return None
-    obj = event.get("data", {}).get("object", {})
-    if not isinstance(obj, dict):
-        return None
-    if event_type == "checkout.session.completed":
-        customer = obj.get("customer")
-        if not isinstance(customer, str):
-            return None
-        return WebhookOutcome(customer_id=customer, state=None)
-    state = subscription_state_from_object(obj)
-    if state is None:
-        return None
-    if event_type == "customer.subscription.deleted":
-        return WebhookOutcome(
-            customer_id=state.customer_id,
-            state=SubscriptionState(
-                customer_id=state.customer_id,
-                subscription_id=state.subscription_id,
-                status="canceled",
-                price_id=state.price_id,
-            ),
-        )
-    return WebhookOutcome(customer_id=state.customer_id, state=state)
+def label_for(sku: str) -> str:
+    return SKU_LABELS.get(sku, sku)
+
+
+def amount_for(sku: str) -> int:
+    return SKU_PRICES_CENTS[sku]

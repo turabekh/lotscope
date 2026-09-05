@@ -10,6 +10,8 @@ class UserCreate(BaseModel):
     email: str = Field(pattern=_EMAIL_PATTERN, max_length=255)
     password: str = Field(min_length=8, max_length=128)
     full_name: str | None = Field(default=None, max_length=255)
+    invite: str | None = Field(default=None, max_length=1024)
+    invite_code: str | None = Field(default=None, max_length=32)
 
 
 class LoginRequest(BaseModel):
@@ -59,7 +61,6 @@ class UsageMetric(BaseModel):
 
 
 class UsageResponse(BaseModel):
-    tier: str
     ask: UsageMetric
     parcel_views: UsageMetric
 
