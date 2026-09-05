@@ -86,3 +86,7 @@ Frontend: one BuyBoxEditor on /account. BuyBoxOnboarding.vue, its spec and BuyBo
 Verified: lint, typecheck (604 files), unit 1677, integration 560 (0 skipped), vitest 420, Playwright serial 43 passed / 2 skipped (billing's pre-existing test.skip). Curl on phl:99900002: platform_default MAO 165,708 -> buy_box MAO 149,620 at 145/sqft and 0.30 margin.
 Then collapsed underwriting_profile into it (migration e4a9c26b17d5): max_acquisition_price backfills to max_bid, min_margin becomes the target_margin assumption, and the table plus its unused /underwriting/profiles CRUD are dropped. Removed with their readers: min_units/max_units (_units_outcome), risk_tolerance (_risk_outcome + RISK_CEILINGS), and markets/property_types/excluded_conditions/variance_tolerance, which had no reader anywhere. Matching gained exclude_historic and exclude_flood, the latter reusing risk/scoring.py's SFHA zone rule rather than a second one.
 Caught by Playwright: the collapse silently killed the home page's "set your buy box" prompt, which inferred configuration from the matches payload; BuyBoxRead now carries is_configured.
+
+## 2026-09-05 — Step 1.1 deployed
+Merged --ff-only and deployed ef8364c; CI green on all four jobs. /api/health reports the SHA, /api/health/ready reports ready with email true and email_allowlist_active false.
+Trial user 50 on production has a saved buy box: max_bid 95,000, min_lot_sqft 640, RSA-5/CMX-2, historic and flood excluded, construction 165/sqft, target margin 0.25.
