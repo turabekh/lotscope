@@ -1340,6 +1340,7 @@ export interface BuyBoxPayload {
 
 export interface BuyBoxRecord extends BuyBoxPayload {
   user_id: number
+  is_configured: boolean
   created_at: string
   updated_at: string
 }

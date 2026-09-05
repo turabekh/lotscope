@@ -50,6 +50,10 @@ def _defaults(user_id: int) -> BuyBox:
     )
 
 
+def _to_read(row: BuyBox) -> BuyBoxRead:
+    return BuyBoxRead.model_validate({**row.__dict__, "is_configured": True})
+
+
 async def _row(session: AsyncSession, user_id: int) -> BuyBox | None:
     return (
         await session.execute(select(BuyBox).where(BuyBox.user_id == user_id))
@@ -64,11 +68,12 @@ async def read_buy_box(session: AsyncSession, user_id: int) -> BuyBoxRead:
             {
                 **BuyBoxWrite().model_dump(),
                 "user_id": user_id,
+                "is_configured": False,
                 "created_at": now,
                 "updated_at": now,
             }
         )
-    return BuyBoxRead.model_validate(row)
+    return _to_read(row)
 
 
 async def write_buy_box(session: AsyncSession, user_id: int, data: BuyBoxWrite) -> BuyBoxRead:
@@ -89,7 +94,7 @@ async def write_buy_box(session: AsyncSession, user_id: int, data: BuyBoxWrite) 
     row.owned_parcels = list(data.owned_parcels)
     await session.flush()
     await session.refresh(row)
-    return BuyBoxRead.model_validate(row)
+    return _to_read(row)
 
 
 async def buy_box_assumptions(session: AsyncSession, user_id: int | None) -> dict[str, float]:

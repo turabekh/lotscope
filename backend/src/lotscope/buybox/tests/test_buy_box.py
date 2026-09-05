@@ -47,6 +47,17 @@ async def test_a_user_with_no_row_reads_the_documented_defaults(db_session: Asyn
     assert box.zoning_codes == []
     assert box.assumptions == {}
     assert box.owned_parcels == []
+    assert box.is_configured is False
+
+
+async def test_saving_marks_the_box_configured(db_session: AsyncSession) -> None:
+    user_id = await _user(db_session, "configured@example.com")
+    assert (await read_buy_box(db_session, user_id)).is_configured is False
+
+    saved = await write_buy_box(db_session, user_id, BuyBoxWrite(max_bid=1000))
+
+    assert saved.is_configured is True
+    assert (await read_buy_box(db_session, user_id)).is_configured is True
 
 
 async def test_writing_twice_keeps_one_row_per_user(db_session: AsyncSession) -> None:

@@ -162,6 +162,12 @@ class BuyBoxRead(BuyBoxWrite):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: int
+    is_configured: bool = Field(
+        description=(
+            "False until the buyer saves a box of their own. The defaults are usable, so the "
+            "difference is invisible in the numbers and has to be carried explicitly."
+        )
+    )
     created_at: datetime
     updated_at: datetime
 

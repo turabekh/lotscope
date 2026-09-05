@@ -115,8 +115,7 @@ const needsBuyBox = ref(false)
 
 async function refreshBuyBoxState(): Promise<void> {
   try {
-    const matches = await api.getBuyBoxMatches(1)
-    needsBuyBox.value = !matches.has_profile || matches.criteria_applied.length === 0
+    needsBuyBox.value = !(await api.getBuyBox()).is_configured
   } catch {
     needsBuyBox.value = false
   }

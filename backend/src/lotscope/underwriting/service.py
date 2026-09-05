@@ -49,5 +49,5 @@ async def find_buy_box_matches(
         total=total,
         matches=matches,
         criteria_applied=sorted(params.keys() - {"market"}),
-        has_profile=True,
+        has_profile=buy_box.is_configured,
     )

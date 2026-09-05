@@ -17,16 +17,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
       getSavedSearches: vi.fn(() => Promise.resolve({ limit: null, used: 0, searches: [] })),
       getPipeline: vi.fn(() => Promise.resolve({ limit: null, used: 0, deals: [] })),
       getLeads: vi.fn(() => Promise.resolve({ tier: 'free', limit: 8, returned: 0, leads: [] })),
-      listUnderwritingProfiles: vi.fn(() => Promise.resolve([])),
-      getBuyBoxMatches: vi.fn(() =>
-        Promise.resolve({
-          market: 'phl',
-          total: 0,
-          matches: [],
-          criteria_applied: ['max_acquisition_price'],
-          has_profile: true,
-        }),
-      ),
+      getBuyBox: vi.fn(() => Promise.resolve({ is_configured: true, assumptions: {} })),
     },
   }
 })

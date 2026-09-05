@@ -15,7 +15,13 @@ def _buy_box(**overrides: object) -> BuyBoxRead:
     written = BuyBoxWrite(**overrides)
     now = datetime.now(UTC)
     return BuyBoxRead.model_validate(
-        {**written.model_dump(), "user_id": 1, "created_at": now, "updated_at": now}
+        {
+            **written.model_dump(),
+            "user_id": 1,
+            "is_configured": True,
+            "created_at": now,
+            "updated_at": now,
+        }
     )
 
 
