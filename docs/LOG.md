@@ -104,3 +104,9 @@ Caught while testing: the min_lot_sqft floor was screening lots out before the a
 2026-09-16, 32 vacant, trial buy box: build 0 BID / 12 LOOK / 20 PASS (28 pages, 6.4s); assemble 9 BID / 0 LOOK / 23 PASS (23 pages, 4.7s); hold 12 BID / 0 LOOK / 20 PASS (28 pages, 5.8s).
 **The hold/flip result is not a real signal: 113 of the 114 listings publish an opening bid of exactly $1,600, the nominal tax-sale upset price, so "bid <= 70% of comp low" fires on almost everything.** The rule is as specified; its input is not a market price on a tax sale.
 Gates: lint, typecheck 613 files, unit 1702, integration 550 (0 skipped).
+
+## 2026-09-05 — packet: expected clearing replaces the opening bid
+valuation.sheriff_clearing_estimate: median consideration of SHERIFF'S DEED rows on vacant land of the same zoning class within 800 m over 24 months, with n and the min-max band; under 3 rows it returns insufficient. Median not mean — the sample's mean is $2.37M against a $21,300 median.
+The hold/flip lens grades on that estimate. Opening bid is printed as a nominal minimum and gates nothing; insufficient data reads LOOK and can never read BID. Every packet's verify-before-bidding list now carries the opening-bid note and the water/gas gap unconditionally.
+2026-09-16, trial box, hold lens: 3 BID / 3 LOOK / 26 PASS (was 12 BID on the nominal bid), 17 pages, 4.4s. BIDs: 902 S CECIL ST clearing $24,300 n=6 range $4,400-$85,000 vs comp low $50,000; 4851 N WARNOCK ST $8,600 n=12 $4,500-$55,800 vs $22,600; 2320 DUNCAN ST $48,050 n=6 $11,900-$107,000 vs $107,000.
+Gates: lint, typecheck 614 files, unit 1715, integration 559 (0 skipped).
