@@ -72,6 +72,27 @@ class SensitiveInput(BaseModel):
     swing: float
 
 
+class LiveCheck(BaseModel):
+    """One fact read from the primary source while the packet was being built.
+
+    A packet is read at an auction, hours or days after the nightly ingest. For the lots a
+    buyer might actually bid on, the two facts that move — open violations and whether the
+    sale is still on — are re-read from the source and both timestamps are kept, so the
+    reader can see how old each number is rather than assuming they are the same age.
+    """
+
+    field: Literal["open_violations", "sale_status"]
+    stored: str | None = None
+    live: str | None = None
+    agrees: bool
+    note: str
+    source: str
+    source_url: str | None = None
+    ingested_at: datetime | None = None
+    fetched_at: datetime | None = None
+    correction_id: int | None = None
+
+
 class PacketLot(BaseModel):
     parcel_number: str
     address: str | None = None
@@ -122,6 +143,7 @@ class PacketLot(BaseModel):
     also: list[str] = Field(default_factory=list)
     computed_at: datetime
     verify_before_bidding: list[str] = Field(default_factory=list)
+    live_checks: list[LiveCheck] = Field(default_factory=list)
 
 
 class PassedLot(BaseModel):

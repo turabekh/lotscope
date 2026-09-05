@@ -15,6 +15,10 @@ from lotscope.reports.dossier import (
     _tag,
 )
 
+# A live check that disagrees with our copy is the one line on the page a buyer must not
+# skim past, so it is set in the same red the packet uses for a high-severity flag.
+_ALERT = (185, 28, 28)
+
 _VERDICT_COLOR = {
     "BID": (21, 128, 61),
     "LOOK": (180, 128, 9),
@@ -230,6 +234,31 @@ def _lot_page(pdf: _Dossier, lot: PacketLot) -> None:
         pdf.set_font("Helvetica", "", 8.5)
         pdf.multi_cell(0, 4, _s(flag.detail), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         _footnote(pdf, f"{flag.source} - {flag.source_url}")
+
+    if lot.live_checks:
+        _section(pdf, "Checked against the source just now")
+        for check in lot.live_checks:
+            label = "open violations" if check.field == "open_violations" else "sale status"
+            pdf.set_font("Helvetica", "B" if not check.agrees else "", 9)
+            pdf.set_text_color(*(_INK if check.agrees else _ALERT))
+            pdf.multi_cell(
+                0,
+                4,
+                _s(
+                    f"{label}: live {check.live or 'not available'} / "
+                    f"our copy {check.stored or 'unknown'}"
+                ),
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
+            )
+            _note(pdf, check.note)
+            read_live = (
+                check.fetched_at.strftime("%Y-%m-%d %H:%M UTC") if check.fetched_at else "not read"
+            )
+            ingested = (
+                check.ingested_at.strftime("%Y-%m-%d %H:%M UTC") if check.ingested_at else "unknown"
+            )
+            _footnote(pdf, f"{check.source} read {read_live}; our copy ingested {ingested}")
 
     _section(pdf, "Comparable sales")
     if not lot.comps:

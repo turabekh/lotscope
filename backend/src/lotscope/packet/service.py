@@ -4,12 +4,14 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
+from redis.asyncio import Redis
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.buybox.service import buy_box_assumptions, read_buy_box
 from lotscope.core.config import get_settings
 from lotscope.core.errors import NotFoundError, ValidationError
+from lotscope.core.logging import get_logger
 from lotscope.core.market import MARKET_CODE
 from lotscope.deal.analysis import DealAssumptions, DealInputs
 from lotscope.deal.schemas import DealResult
@@ -25,6 +27,7 @@ from lotscope.packet.compose import (
     LotInputs,
     compose_packet,
 )
+from lotscope.packet.live_verify import verify_lots
 from lotscope.packet.models import SalePacket
 from lotscope.packet.render import packet_filename, render_packet_pdf
 from lotscope.packet.schemas import AdjacentParcel, DataAsOf, PacketComp, PacketModel
@@ -35,6 +38,8 @@ from lotscope.zba.schemas import VarianceOutlook
 from lotscope.zba.service import variance_outlook
 from lotscope.zoning.schemas import BuildabilityResult
 from lotscope.zoning.service import assess_parcel as assess_zoning
+
+_logger = get_logger(__name__)
 
 MAX_COMPS_PER_LOT = 3
 _FAVOURABLE_GRANT_RATE = 0.5
@@ -404,7 +409,14 @@ def _outlook_read(outlook: VarianceOutlook | None) -> tuple[bool | None, str | N
     return rate >= _FAVOURABLE_GRANT_RATE, basis
 
 
-async def build_packet(session: AsyncSession, user_id: int, sale_date: date) -> SalePacket:
+async def build_packet(
+    session: AsyncSession,
+    user_id: int,
+    sale_date: date,
+    *,
+    redis: Redis | None = None,
+    verify_live: bool = True,
+) -> SalePacket:
     packet = (
         await session.execute(
             select(SalePacket).where(
@@ -419,6 +431,16 @@ async def build_packet(session: AsyncSession, user_id: int, sale_date: date) -> 
 
     try:
         model = await build_packet_model(session, user_id, sale_date)
+        if verify_live:
+            # Only the lots worth bidding on. Verifying the PASS index would spend a
+            # buyer's build time re-checking lots they have already been told to skip.
+            disagreed = await verify_lots(session, model.lots, user_id=user_id, redis=redis)
+            _logger.info(
+                "packet_live_verified",
+                sale_date=sale_date.isoformat(),
+                lots=len(model.lots),
+                disagreed=disagreed,
+            )
         pdf = render_packet_pdf(model)
     except Exception as cause:
         packet.status = "failed"

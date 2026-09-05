@@ -103,7 +103,7 @@ async def generate_sale_packet(ctx: dict[str, Any], packet_id: int) -> int:
             return 0
         user_id, sale_date = packet.user_id, packet.sale_date
         try:
-            built = await build_packet(session, user_id, sale_date)
+            built = await build_packet(session, user_id, sale_date, redis=ctx.get("redis"))
         except Exception as cause:
             await session.commit()
             _logger.error(
