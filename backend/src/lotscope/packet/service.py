@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -10,6 +11,10 @@ from lotscope.buybox.service import buy_box_assumptions, read_buy_box
 from lotscope.core.config import get_settings
 from lotscope.core.errors import NotFoundError, ValidationError
 from lotscope.core.market import MARKET_CODE
+from lotscope.deal.analysis import DealAssumptions, DealInputs
+from lotscope.deal.schemas import DealResult
+from lotscope.deal.sensitivity import build_grid
+from lotscope.deal.service import build_deal
 from lotscope.packet.compose import (
     LI_URL,
     OPA_URL,
@@ -22,11 +27,17 @@ from lotscope.packet.compose import (
 )
 from lotscope.packet.models import SalePacket
 from lotscope.packet.render import packet_filename, render_packet_pdf
-from lotscope.packet.schemas import DataAsOf, PacketComp, PacketModel
+from lotscope.packet.schemas import AdjacentParcel, DataAsOf, PacketComp, PacketModel
 from lotscope.risk.service import NOT_SCHEDULED_STATUSES
 from lotscope.underwriting.matching import required_margin
+from lotscope.valuation.service import value_parcel
+from lotscope.zba.schemas import VarianceOutlook
+from lotscope.zba.service import variance_outlook
+from lotscope.zoning.schemas import BuildabilityResult
+from lotscope.zoning.service import assess_parcel as assess_zoning
 
 MAX_COMPS_PER_LOT = 3
+_FAVOURABLE_GRANT_RATE = 0.5
 
 _LISTINGS_SQL = text(
     "SELECT DISTINCT ON (ss.parcel_number) ss.parcel_number, ss.case_number, ss.sale_type, "
@@ -38,10 +49,25 @@ _LISTINGS_SQL = text(
     "ORDER BY ss.parcel_number, ss.updated_at DESC"
 )
 
-_VERDICT_SQL = text(
-    "SELECT parcel_number, can_build_by_right, by_right_units, max_allowable_offer, est_margin "
-    "FROM parcel_verdict WHERE parcel_number = ANY(:parcels)"
+_SUBJECT_SQL = text(
+    "SELECT parcel_number, base_zoning_code, market_value FROM parcel "
+    "WHERE parcel_number = ANY(:parcels)"
 )
+
+_ADJACENT_SQL = text(
+    "SELECT t.parcel_number AS subject, n.parcel_number, n.address, n.lot_area_sqft, "
+    "coalesce(n.is_city_owned, false) AS is_city_owned, coalesce(n.is_vacant, false) AS is_vacant, "
+    "n.owner_key, "
+    "ST_Length(ST_CollectionExtract(ST_Intersection(n.geom_local, t.geom_local), 2)) "
+    "AS shared_boundary_ft "
+    "FROM parcel t JOIN parcel n ON n.parcel_number <> t.parcel_number "
+    "AND n.geom_local IS NOT NULL AND ST_Intersects(n.geom_local, t.geom_local) "
+    "WHERE t.parcel_number = ANY(:parcels) AND t.geom_local IS NOT NULL "
+    "AND n.market_code = :market_code "
+    "ORDER BY t.parcel_number, shared_boundary_ft DESC NULLS LAST"
+)
+
+_PUBLIC_OWNER_PATTERN = "(CITY OF PHILA|PHILADELPHIA HOUSING|REDEVELOPMENT AUTH|LAND BANK|PHDC)"
 
 _VIOLATIONS_SQL = text(
     "SELECT parcel_number, count(*) AS open_count, max(event_date) AS most_recent, "
@@ -88,6 +114,7 @@ _COMPS_SQL = text(
     "AND ST_DWithin(c.geom_local, subject.geom_local, :radius_ft) "
     "JOIN sale s ON s.parcel_number = c.parcel_number "
     "WHERE subject.parcel_number = ANY(:parcels) "
+    "AND c.is_vacant IS TRUE "
     "AND s.sale_price >= :min_price "
     "AND s.sale_date >= current_date - make_interval(years => :years) "
     "ORDER BY subject.parcel_number, ST_Distance(c.geom_local, subject.geom_local)"
@@ -137,12 +164,34 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
     parcels = [row["parcel_number"] for row in listings]
     keyed = {"parcels": parcels}
 
-    verdicts = {row["parcel_number"]: row for row in await _rows(session, _VERDICT_SQL, keyed)}
+    subjects = {row["parcel_number"]: row for row in await _rows(session, _SUBJECT_SQL, keyed)}
     violations = {row["parcel_number"]: row for row in await _rows(session, _VIOLATIONS_SQL, keyed)}
     taxes = {row["parcel_number"]: row for row in await _rows(session, _TAX_SQL, keyed)}
     historic = {row["parcel_number"] for row in await _rows(session, _HISTORIC_SQL, keyed)}
     flood = {row["parcel_number"] for row in await _rows(session, _FLOOD_SQL, keyed)}
     city = {row["parcel_number"] for row in await _rows(session, _CITY_NEIGHBOUR_SQL, keyed)}
+
+    owned = {parcel.lower() for parcel in (await read_buy_box(session, user_id)).owned_parcels}
+    adjacent: dict[str, list[AdjacentParcel]] = defaultdict(list)
+    for row in await _rows(session, _ADJACENT_SQL, {**keyed, "market_code": MARKET_CODE}):
+        owner_key = row["owner_key"] or ""
+        if row["parcel_number"].lower() in owned:
+            owner_class = "owned_by_you"
+        elif row["is_city_owned"] or re.search(_PUBLIC_OWNER_PATTERN, owner_key):
+            owner_class = "public"
+        elif row["is_vacant"]:
+            owner_class = "vacant"
+        else:
+            continue
+        adjacent[row["subject"]].append(
+            AdjacentParcel(
+                parcel_number=row["parcel_number"],
+                address=row["address"],
+                owner_class=owner_class,
+                shared_boundary_ft=_as_float(row["shared_boundary_ft"]),
+                lot_area_sqft=_as_float(row["lot_area_sqft"]),
+            )
+        )
 
     overlays: dict[str, list[str]] = defaultdict(list)
     for row in await _rows(session, _OVERLAY_SQL, keyed):
@@ -197,12 +246,54 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
         for dataset, row in sorted(freshness.items())
     ]
 
+    buy_box = await read_buy_box(session, user_id)
+    assumptions = await buy_box_assumptions(session, user_id)
+    margin = assumptions.get("target_margin", required_margin(buy_box))
+    computed_at = datetime.now(UTC)
+
     lots: list[LotInputs] = []
     for row in listings:
         parcel = row["parcel_number"]
-        verdict = verdicts.get(parcel)
         violation = violations.get(parcel)
         tax = taxes.get(parcel)
+        vacant = bool(row["is_vacant"])
+
+        buildability = None
+        deal = None
+        grid = None
+        variance_needed = None
+        outlook_favourable = None
+        outlook_basis = None
+        if vacant:
+            subject = subjects.get(parcel)
+            buildability = await assess_zoning(session, parcel)
+            valuation = await value_parcel(session, parcel)
+            deal = await build_deal(
+                session,
+                parcel,
+                user_id=user_id,
+                base_zoning_code=subject["base_zoning_code"] if subject else None,
+                market_value=_as_float(subject["market_value"]) if subject else None,
+                buildability=buildability,
+                valuation=valuation,
+            )
+            grid = build_grid(
+                DealInputs(
+                    units=deal.units,
+                    buildable_area_sqft=buildability.buildable_area_sqft if buildability else None,
+                    estimated_floors=None,
+                    finished_comp_prices=_comp_prices(comps.get(parcel, [])),
+                    land_value=deal.acquisition_cost,
+                    acquisition_price=None,
+                ),
+                _deal_assumptions(deal),
+                computed_at=computed_at,
+            )
+            if buildability is not None and buildability.can_build_by_right is not True:
+                variance_needed = _variance_needed(buildability)
+                outlook = await variance_outlook(session, parcel)
+                outlook_favourable, outlook_basis = _outlook_read(outlook)
+
         lots.append(
             LotInputs(
                 parcel_number=parcel,
@@ -213,14 +304,17 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
                 opening_bid=_as_float(row["opening_bid"]),
                 status=row["status"],
                 plaintiff=row["plaintiff"],
-                is_vacant=bool(row["is_vacant"]),
+                is_vacant=vacant,
                 lot_area_sqft=_as_float(row["lot_area_sqft"]),
                 zoning_code=row["base_zoning_code"],
                 overlays=tuple(sorted(overlays.get(parcel, []))),
-                can_build_by_right=verdict["can_build_by_right"] if verdict else None,
-                by_right_units=verdict["by_right_units"] if verdict else None,
-                max_allowable_offer=_as_float(verdict["max_allowable_offer"]) if verdict else None,
-                est_margin=_as_float(verdict["est_margin"]) if verdict else None,
+                can_build_by_right=buildability.can_build_by_right if buildability else None,
+                by_right_units=buildability.by_right_units if buildability else None,
+                dimensional_reason=_dimensional_reason(buildability),
+                provision_id=buildability.cited_section if buildability else None,
+                max_allowable_offer=deal.max_allowable_offer if deal else None,
+                est_margin=deal.margin if deal else None,
+                sensitivity=grid,
                 open_violation_count=int(violation["open_count"]) if violation else 0,
                 most_recent_violation=violation["most_recent"] if violation else None,
                 has_unsafe_structure=bool(violation["unsafe"]) if violation else False,
@@ -231,13 +325,14 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
                 in_historic_district=parcel in historic,
                 in_flood_zone=parcel in flood,
                 comps=tuple(comps.get(parcel, [])),
+                adjacent=tuple(adjacent.get(parcel, [])),
+                variance_needed=variance_needed,
+                variance_outlook_favourable=outlook_favourable,
+                variance_outlook_basis=outlook_basis,
+                computed_at=computed_at,
                 sources_fetched_at={k: v for k, v in fetched_by_source.items() if v is not None},
             )
         )
-
-    buy_box = await read_buy_box(session, user_id)
-    assumptions = await buy_box_assumptions(session, user_id)
-    margin = assumptions.get("target_margin", required_margin(buy_box))
 
     return compose_packet(
         sale_date=sale_date,
@@ -245,12 +340,58 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
         required_margin=margin,
         lots=lots,
         data_as_of=data_as_of,
-        generated_at=datetime.now(UTC),
+        generated_at=computed_at,
     )
 
 
 def _as_float(value: Any) -> float | None:
     return float(value) if value is not None else None
+
+
+def _comp_prices(entries: list[PacketComp]) -> list[float]:
+    return [comp.sale_price for comp in entries if comp.sale_price is not None]
+
+
+def _deal_assumptions(deal: DealResult) -> DealAssumptions:
+    return DealAssumptions(
+        construction_cost_per_sqft=deal.assumptions.construction_cost_per_sqft,
+        soft_cost_pct=deal.assumptions.soft_cost_pct,
+        selling_cost_pct=deal.assumptions.selling_cost_pct,
+        target_margin=deal.assumptions.target_margin,
+        default_unit_sqft=deal.assumptions.default_unit_sqft,
+        max_unit_sqft=deal.assumptions.max_unit_sqft,
+    )
+
+
+def _dimensional_reason(buildability: BuildabilityResult | None) -> str | None:
+    if buildability is None:
+        return None
+    for reason in buildability.reasons:
+        if "minimum" in reason or "dimensional minimums" in reason:
+            return reason
+    return buildability.reasons[0] if buildability.reasons else None
+
+
+def _variance_needed(buildability: BuildabilityResult) -> str | None:
+    shortfalls = [reason for reason in buildability.reasons if "is below the" in reason]
+    if not shortfalls:
+        return None
+    return " ".join(shortfalls)
+
+
+def _outlook_read(outlook: VarianceOutlook | None) -> tuple[bool | None, str | None]:
+    if outlook is None:
+        return None, None
+    rate = outlook.local_grant_rate if outlook.local_grant_rate is not None else outlook.grant_rate
+    if rate is None:
+        return None, outlook.reason
+    scope = outlook.local_scope or outlook.population_label
+    decided = outlook.local_decided if outlook.local_decided is not None else outlook.decided
+    basis = (
+        f"{rate:.0%} of {decided} decided appeals granted over {outlook.window_months} months "
+        f"for {scope}"
+    )
+    return rate >= _FAVOURABLE_GRANT_RATE, basis
 
 
 async def build_packet(session: AsyncSession, user_id: int, sale_date: date) -> SalePacket:
