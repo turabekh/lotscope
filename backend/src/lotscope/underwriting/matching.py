@@ -3,6 +3,7 @@ from typing import Any, Literal
 
 from lotscope.buybox.schemas import BuyBoxRead
 from lotscope.core.config import get_settings
+from lotscope.zoning.codes import normalize_zoning_code
 
 MATCH_VERSION = "m2"
 
@@ -99,7 +100,9 @@ def _lot_area_outcome(candidate: MatchCandidate, minimum: int) -> CriterionOutco
 def _zoning_outcome(candidate: MatchCandidate, codes: list[str]) -> CriterionOutcome:
     if candidate.base_zoning_code is None:
         return CriterionOutcome("zoning_codes", "not_evaluated", _UNKNOWN_ZONING)
-    if candidate.base_zoning_code.upper() in {code.upper() for code in codes}:
+    if normalize_zoning_code(candidate.base_zoning_code) in {
+        normalize_zoning_code(code) for code in codes
+    }:
         return CriterionOutcome(
             "zoning_codes", "met", f"{candidate.base_zoning_code} is one of your districts."
         )
@@ -137,8 +140,10 @@ def match_conditions(buy_box: BuyBoxRead) -> tuple[list[str], dict[str, Any]]:
         conditions.append("p.lot_area_sqft >= :min_lot_sqft")
         params["min_lot_sqft"] = buy_box.min_lot_sqft
     if buy_box.zoning_codes:
-        conditions.append("upper(p.base_zoning_code) = ANY(:zoning_codes)")
-        params["zoning_codes"] = [code.upper() for code in buy_box.zoning_codes]
+        conditions.append(
+            "replace(replace(upper(p.base_zoning_code), '-', ''), ' ', '') = ANY(:zoning_codes)"
+        )
+        params["zoning_codes"] = [normalize_zoning_code(code) for code in buy_box.zoning_codes]
     if buy_box.exclude_historic:
         conditions.append(
             "NOT EXISTS (SELECT 1 FROM historic_district h "

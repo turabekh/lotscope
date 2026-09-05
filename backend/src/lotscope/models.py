@@ -14,6 +14,7 @@ from lotscope.ingestion.models import DatasetFreshness
 from lotscope.neighborhoods.models import Neighborhood
 from lotscope.notifications.models import PushSubscription
 from lotscope.ops.models import MarketStats, OpsAlertState
+from lotscope.packet.models import SalePacket
 from lotscope.parcels.models import Parcel
 from lotscope.pipeline.models import Deal, DealActivity
 from lotscope.policies.models import PolicyDocument
@@ -58,6 +59,7 @@ __all__ = [
     "PushSubscription",
     "Rco",
     "Sale",
+    "SalePacket",
     "SavedParcel",
     "SavedSearch",
     "SavedSearchMatch",

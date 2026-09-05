@@ -42,6 +42,8 @@ from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
 from lotscope.ops.invariants import breaches, check_invariants
 from lotscope.ops.reconcile import reconcile_against_opa
 from lotscope.ops.stats import snapshot_market_stats
+from lotscope.packet.models import SalePacket
+from lotscope.packet.service import build_packet
 from lotscope.skiptrace.jobs import grant_investor_credits
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
 from lotscope.verdict.jobs import recompute_all_verdicts
@@ -88,6 +90,29 @@ async def sweep_ingestion_retention(ctx: dict[str, Any]) -> int:
         events_deleted=result.events_deleted,
     )
     return result.raw_deleted + result.events_deleted
+
+
+async def generate_sale_packet(ctx: dict[str, Any], packet_id: int) -> int:
+    async with ctx["session_factory"]() as session:
+        packet = await session.get(SalePacket, packet_id)
+        if packet is None:
+            _logger.warning("sale_packet_missing", packet_id=packet_id)
+            return 0
+        user_id, sale_date = packet.user_id, packet.sale_date
+        try:
+            built = await build_packet(session, user_id, sale_date)
+        except Exception as cause:
+            await session.commit()
+            _logger.error(
+                "sale_packet_failed",
+                packet_id=packet_id,
+                error=str(cause),
+                error_type=type(cause).__name__,
+            )
+            raise
+        await session.commit()
+        _logger.info("sale_packet_ready", packet_id=packet_id, path=built.pdf_path)
+    return 1
 
 
 async def recompute_verdicts(ctx: dict[str, Any]) -> int:
@@ -411,6 +436,7 @@ class WorkerSettings:
         func(ingest_all, timeout=INGEST_JOB_TIMEOUT),
         run_admin_job,
         sweep_ingestion_retention,
+        func(generate_sale_packet, timeout=BULK_JOB_TIMEOUT),
         func(recompute_verdicts, timeout=BULK_JOB_TIMEOUT),
         func(recompute_vacant_verdicts, timeout=BULK_JOB_TIMEOUT),
         func(recompute_distress, timeout=BULK_JOB_TIMEOUT),

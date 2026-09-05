@@ -1,0 +1,115 @@
+from datetime import date, datetime
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+LotVerdict = Literal["BID", "LOOK", "PASS"]
+
+VERIFY_BEFORE_BIDDING: tuple[str, ...] = (
+    "Water and sewer liens — the Water Revenue Bureau does not publish them per parcel and we "
+    "do not hold them. A vacant lot can carry years of unbilled service charges.",
+    "Gas liens and PGW balances — not in any dataset we ingest.",
+    "Other municipal liens and judgments not in the tax delinquency file.",
+    "The upset price and any changes announced on the sale day itself.",
+    "Physical condition, encroachments and access, which need an in-person look.",
+    "Title — the deed chain, easements and restrictions beyond what we record.",
+)
+
+
+class SourceRef(BaseModel):
+    source: str
+    source_url: str
+    fetched_at: datetime | None = None
+
+
+class DataAsOf(BaseModel):
+    source: str
+    source_url: str
+    fetched_at: datetime | None = None
+    data_vintage: date | None = None
+
+
+class RedFlag(BaseModel):
+    code: str
+    label: str
+    detail: str
+    severity: Literal["high", "medium", "low"]
+    source: str
+    source_url: str
+    fetched_at: datetime | None = None
+
+
+class PacketComp(BaseModel):
+    parcel_number: str
+    address: str | None = None
+    sale_date: date | None = None
+    sale_price: float | None = None
+    distance_ft: float | None = None
+    reason: str
+    source: str
+    source_url: str
+
+
+class SensitiveInput(BaseModel):
+    name: str
+    detail: str
+    swing: float
+
+
+class PacketLot(BaseModel):
+    parcel_number: str
+    address: str | None = None
+    case_number: str | None = None
+    sale_type: str | None = None
+    opening_bid: float | None = None
+    status: str | None = None
+    is_scheduled: bool
+    plaintiff: str | None = None
+
+    is_vacant: bool
+    lot_area_sqft: float | None = None
+    zoning_code: str | None = None
+    overlays: list[str] = Field(default_factory=list)
+
+    can_build_by_right: bool | None = None
+    by_right_units: int | None = None
+    dimensional_reason: str | None = None
+    provision_id: str | None = None
+
+    max_allowable_offer: float | None = None
+    est_margin: float | None = None
+    sensitive_inputs: list[SensitiveInput] = Field(default_factory=list)
+
+    red_flags: list[RedFlag] = Field(default_factory=list)
+    comps: list[PacketComp] = Field(default_factory=list)
+    comp_range_low: float | None = None
+    comp_range_high: float | None = None
+
+    verdict: LotVerdict
+    verdict_reason: str
+    verify_before_bidding: list[str] = Field(default_factory=list)
+
+
+class PassedLot(BaseModel):
+    parcel_number: str
+    address: str | None = None
+    reason: str
+
+
+class PacketHeader(BaseModel):
+    sale_date: date
+    sale_types: list[str]
+    listings: int
+    vacant: int
+    passing_buy_box: int
+    generated_at: datetime
+    data_as_of: list[DataAsOf]
+
+
+class PacketModel(BaseModel):
+    header: PacketHeader
+    lots: list[PacketLot]
+    passed: list[PassedLot]
+    non_vacant_appendix: list[PassedLot]
+    buy_box_summary: dict[str, object]
+    verify_before_bidding: list[str] = Field(default_factory=lambda: list(VERIFY_BEFORE_BIDDING))

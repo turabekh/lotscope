@@ -95,6 +95,17 @@ def test_a_district_outside_the_list_does_not_match() -> None:
     assert next(o for o in result.criteria if o.name == "zoning_codes").status == "not_met"
 
 
+def test_a_hyphenated_buy_box_code_matches_the_hyphenless_one_the_city_stores() -> None:
+    hyphenless = evaluate_buy_box(
+        _candidate(base_zoning_code="RSA5"), _buy_box(zoning_codes=["RSA-5"])
+    )
+    conditions, params = match_conditions(_buy_box(zoning_codes=["RSA-5"]))
+
+    assert hyphenless.matched is True
+    assert params["zoning_codes"] == ["RSA5"]
+    assert any("replace(" in condition for condition in conditions)
+
+
 def test_a_missing_input_is_not_evaluated_rather_than_silently_passed() -> None:
     result = evaluate_buy_box(
         _candidate(max_allowable_offer=None, est_margin=None, lot_area_sqft=None),
@@ -113,8 +124,8 @@ def test_the_sql_conditions_mirror_the_criteria() -> None:
     assert "v.max_allowable_offer <= :max_bid" in conditions
     assert "v.est_margin >= :target_margin" in conditions
     assert "p.lot_area_sqft >= :min_lot_sqft" in conditions
-    assert "upper(p.base_zoning_code) = ANY(:zoning_codes)" in conditions
-    assert params["zoning_codes"] == ["RSA-5"]
+    assert any("base_zoning_code" in condition for condition in conditions)
+    assert params["zoning_codes"] == ["RSA5"]
     assert params["target_margin"] == PLATFORM_TARGET_MARGIN
 
 

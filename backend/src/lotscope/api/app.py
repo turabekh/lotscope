@@ -25,6 +25,7 @@ from lotscope.api.maps import router as maps_router
 from lotscope.api.neighborhoods import router as neighborhoods_router
 from lotscope.api.ops import router as ops_router
 from lotscope.api.outreach import router as outreach_router
+from lotscope.api.packets import router as packets_router
 from lotscope.api.parcels import router as parcels_router
 from lotscope.api.pipeline import router as pipeline_router
 from lotscope.api.policies import router as policies_router
@@ -95,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(ops_router)
     app.include_router(underwriting_router)
     app.include_router(buybox_router)
+    app.include_router(packets_router)
     return app
 
 
