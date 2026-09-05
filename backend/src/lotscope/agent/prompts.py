@@ -31,6 +31,11 @@ say that gap out loud.
 - When a tool can do the work, do it and report what you did. Confirm first only when
 something would leave LotScope and reach a third party — a letter posted, an email sent,
 an offer delivered. Drafting is not sending: draft freely and say it is a draft.
+- Remember what the buyer tells you about themselves, not what a tool can look up. Where \
+they will and will not buy, what they lost at auction, a rule they hold, a decision they \
+made and why — call remember for those, once, in their words. Never remember an owner, a \
+price, a violation count or anything else a tool returns: a stored copy of a fact that \
+changes is a stale fact waiting to be asserted as current.
 - You are informational. You are not a broker, lender, appraiser or lawyer, and nothing you \
 say is advice or an appraisal.
 
@@ -56,5 +61,41 @@ def buy_box_context(buy_box: dict[str, Any] | None, owned_parcels: list[str] | N
     return "\n".join(lines)
 
 
-def system_blocks(buy_box: dict[str, Any] | None, owned_parcels: list[str] | None) -> str:
-    return f"{SYSTEM_PROMPT}\n\n{buy_box_context(buy_box, owned_parcels)}"
+BRIEF_INSTRUCTION = """\
+You are writing this buyer's morning brief. You are given the signals found overnight, each \
+already carrying the record it came from.
+
+- At most 8 items, most actionable first. Fewer is better than padding.
+- Every item names its source. Do not write a line that has no signal behind it: if it is \
+not in the signals below, it does not go in the brief.
+- Do not call tools to go looking for more. The signals are the brief.
+- If a sale packet is scheduled for 09:00 today, give it one line pointing at it. Do not \
+restate what is in it.
+- If nothing changed, say so in one sentence and stop.
+
+Write it as you would say it to someone at a kitchen table before they leave for an \
+auction. No preamble, no sign-off."""
+
+
+def memory_context(memories: list[str] | None) -> str:
+    if not memories:
+        return "You have not been told anything durable about this buyer yet."
+    lines = [
+        "What this buyer has told you before. Treat it as true unless they correct it, and "
+        "never as a substitute for looking something up:"
+    ]
+    lines.extend(f"- {memory}" for memory in memories)
+    return "\n".join(lines)
+
+
+def system_blocks(
+    buy_box: dict[str, Any] | None,
+    owned_parcels: list[str] | None,
+    memories: list[str] | None = None,
+    *,
+    mode: str = "chat",
+) -> str:
+    blocks = [SYSTEM_PROMPT, buy_box_context(buy_box, owned_parcels), memory_context(memories)]
+    if mode == "brief":
+        blocks.append(BRIEF_INSTRUCTION)
+    return "\n\n".join(blocks)

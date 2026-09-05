@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.agent.envelope import ToolResult, empty
+from lotscope.agent.memory_service import recent_memories
 from lotscope.agent.models import AgentConversation, AgentRun, AgentStep
 from lotscope.agent.prompts import system_blocks
 from lotscope.agent.tools.registry import REGISTRY, ToolContext, ToolRegistry
@@ -175,13 +176,15 @@ async def run_agent(
     registry: ToolRegistry | None = None,
     budget: RunBudget | None = None,
     should_cancel: Callable[[], bool] | None = None,
+    mode: str = "chat",
 ) -> AsyncIterator[AgentEvent]:
     tools = registry or REGISTRY
     limits = budget or RunBudget()
     started = time.monotonic()
     sequence = 0
     context = replace(context, agent_run_id=run.id)
-    system = system_blocks(context.buy_box, list(context.owned_parcels))
+    memories = [memory.text for memory in await recent_memories(session, context.user_id)]
+    system = system_blocks(context.buy_box, list(context.owned_parcels), memories, mode=mode)
     messages: list[dict[str, Any]] = list(history or [])
     messages.append({"role": "user", "content": run.question})
     answer_parts: list[str] = []
