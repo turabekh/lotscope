@@ -15,7 +15,7 @@ on:
     inputs:
       spend_cap:
         description: 'Spend cap in USD'
-        default: '5.00'
+        default: '8.00'
 
 concurrency:
   group: agent-eval-${{ github.ref }}
@@ -46,4 +46,4 @@ jobs:
           EVAL_ARGS: >-
             ${{ github.event_name == 'pull_request'
               && '--spend-cap 1.00 --first 10'
-              || format('--spend-cap {0}', github.event.inputs.spend_cap || '5.00') }}
+              || format('--spend-cap {0}', github.event.inputs.spend_cap || '8.00') }}

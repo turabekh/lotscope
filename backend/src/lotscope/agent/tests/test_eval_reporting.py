@@ -93,3 +93,32 @@ def test_a_task_added_since_the_baseline_is_named_as_new() -> None:
 
     deltas = baseline.compare(old, new)
     assert [(d.task_id, d.detail) for d in deltas] == [("t1", "new task")]
+
+
+def test_a_task_the_cap_cut_off_is_distinguishable_from_one_deliberately_not_run() -> None:
+    """The nightly cap truncating the suite is a failure; --no-mutate skipping is not."""
+    from lotscope.agent.evals.runner import CAP_REACHED, TaskResult
+
+    cut_off = TaskResult(
+        task_id="a",
+        question="q",
+        answer="",
+        tools_called=[],
+        skipped=True,
+        error=CAP_REACHED.format(cap=5.0),
+    )
+    by_choice = TaskResult(
+        task_id="b",
+        question="q",
+        answer="",
+        tools_called=[],
+        skipped=True,
+        error="not run: edits stored data, so it is local-only",
+    )
+
+    marker = CAP_REACHED.split("$")[0]
+    assert marker in (cut_off.error or "")
+    assert marker not in (by_choice.error or "")
+    # Neither is graded, and neither counts as an error.
+    assert cut_off.errored is False
+    assert by_choice.errored is False

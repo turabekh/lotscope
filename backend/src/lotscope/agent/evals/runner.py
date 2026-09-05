@@ -15,6 +15,10 @@ from lotscope.buybox.service import read_buy_box
 
 TASKS_PATH = Path(__file__).with_name("tasks.yaml")
 
+# Marks a task the cap cut off, as opposed to one deliberately not run. The first is a
+# gate that did not run and must fail the suite; the second is a choice.
+CAP_REACHED = "spend cap ${cap:.2f} reached"
+
 # Sonnet list price per million tokens, used only to enforce the spend cap.
 INPUT_COST_PER_MTOK = 3.0
 OUTPUT_COST_PER_MTOK = 15.0
@@ -188,7 +192,7 @@ async def run_suite(
                     answer="",
                     tools_called=[],
                     skipped=True,
-                    error=f"spend cap ${spend_cap_usd:.2f} reached",
+                    error=CAP_REACHED.format(cap=spend_cap_usd),
                 )
             )
             continue

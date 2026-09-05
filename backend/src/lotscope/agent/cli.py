@@ -7,7 +7,7 @@ from sqlalchemy import text
 import lotscope.models  # noqa: F401  (registers every table for the ORM)
 from lotscope.agent.client import AnthropicToolClient
 from lotscope.agent.evals import baseline as baseline_store
-from lotscope.agent.evals.runner import TaskResult, estimate_cost, run_suite
+from lotscope.agent.evals.runner import CAP_REACHED, TaskResult, estimate_cost, run_suite
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging
@@ -139,6 +139,18 @@ async def _eval(args: Namespace) -> int:
             except baseline_store.BrokenRunError as cause:
                 print(f"baseline NOT written: {cause}")
                 return 1
+
+    # A run the spend cap cut short has not checked what it claims to check. The full
+    # suite costs $5.05, so a $5.00 cap would truncate and still exit zero — a green that
+    # means "we ran out of money", which is the same lie as a suite that skipped itself.
+    truncated = [r for r in results if r.skipped and CAP_REACHED.split("$")[0] in (r.error or "")]
+    if truncated:
+        print(
+            f"\n{len(truncated)} task(s) were cut off by the spend cap and did not run: "
+            f"{', '.join(r.task_id for r in truncated[:5])}"
+            f"{' ...' if len(truncated) > 5 else ''}. Raise --spend-cap."
+        )
+        return 1
 
     if any(r.errored for r in ran):
         return 1
