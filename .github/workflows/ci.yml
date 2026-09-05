@@ -186,6 +186,15 @@ jobs:
         working-directory: frontend
         run: pnpm exec playwright test
 
+      - name: Stop the api
+        if: always()
+        run: |
+          # The api runs under `uv run`, which holds the uv cache lock. Left alive it
+          # blocks setup-uv's post-job `cache prune` until that times out and fails the
+          # job — with every test already green.
+          pkill -f "uvicorn lotscope.api.app:app" || true
+          sleep 2
+
       - name: Upload the report on failure
         if: failure()
         uses: actions/upload-artifact@v4
