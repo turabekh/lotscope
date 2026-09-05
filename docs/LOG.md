@@ -142,3 +142,10 @@ comp_until = 2026-11-04 set on users 1 and 50 (both gmail.com) — user 50 is th
 Also fixed: the packet card had v-for and v-else on one element, so the list never rendered — caught because QPage renders nothing outside a QLayout and the new spec came back empty.
 Gates: lint, typecheck 612 files, unit 1673, integration 553 (0 skipped), vitest 416.
 Open: Stripe keys not on VM; checkout disabled by design (owner).
+
+## 2026-09-05 — feat/agent-runtime (Step 2.1)
+backend/src/lotscope/agent/: registry.py (@tool over async functions with Pydantic inputs, emitting Anthropic schemas), envelope.py (ToolResult{data, sources, unverified} passed to the model verbatim), runtime.py (tool-use loop, ≤25 calls, 120k token budget, cancellation, every step persisted), stream.py + api/analyst.py (POST /analyst/messages, GET /analyst/runs/{id}/events as SSE, cancel, steps). Migration e1b7c93df248 adds agent_conversation, agent_run, agent_step. ANALYST_MODEL defaults to claude-sonnet-5.
+Tools: get_parcel (parcel number or address, verdict computed on read) and search_area (centre+radius or polygon, filters defaulting from the caller's buy box and saying so in the envelope).
+**Caught before shipping:** tools register by import side-effect and nothing imported them — a fresh app exposed an empty registry, so the analyst would have run with no tools. agent.tools now imports them and a test asserts create_app() sees both.
+Real run, claude-sonnet-5, "what's the story on 2138 N Fairhill St": 1 tool call, 7,844 in / 786 out, 12.2s. Every claim sourced; it caught that the $9,695 delinquency is against the prior owner and predates a 2025-05-08 sheriff's deed, and surfaced the water/gas gap as unverified without being asked.
+Gates: lint, typecheck 620 files, unit 1700, integration 580 (0 skipped), vitest 416.
