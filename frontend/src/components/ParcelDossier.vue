@@ -4,19 +4,15 @@ import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
 
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
-import AssessmentPanel from '@/components/AssessmentPanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
 import DevelopmentProgramPanel from '@/components/DevelopmentProgramPanel.vue'
 import CompsPanel from '@/components/CompsPanel.vue'
 import DealCard from '@/components/DealCard.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
-import ReportPanel from '@/components/ReportPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
 import FreshnessPanel from '@/components/FreshnessPanel.vue'
 import ReportCorrectionDialog from '@/components/ReportCorrectionDialog.vue'
 import HistoricPanel from '@/components/HistoricPanel.vue'
-import MarketContextPanel from '@/components/MarketContextPanel.vue'
-import BuyersNearbyPanel from '@/components/BuyersNearbyPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import RiskPanel from '@/components/RiskPanel.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
@@ -26,11 +22,9 @@ import OverlayPanel from '@/components/OverlayPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import VerdictHero from '@/components/VerdictHero.vue'
 import VerdictPanel from '@/components/VerdictPanel.vue'
-import WhyScoreDrawer from '@/components/WhyScoreDrawer.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { DistressTier } from '@/lib/types'
-import { MAX_COMPARE, useCompareStore } from '@/stores/compare'
 import { useParcelStore } from '@/stores/parcel'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -43,7 +37,6 @@ const pipeline = usePipelineStore()
 
 const props = withDefaults(defineProps<{ showBack?: boolean }>(), { showBack: false })
 const emit = defineEmits<{ back: [] }>()
-const compare = useCompareStore()
 const $q = useQuasar()
 const saving = ref(false)
 const whyOpen = ref(false)
@@ -168,26 +161,6 @@ const isSaved = computed(() =>
   detail.value ? watchlist.isSaved(detail.value.parcel_number) : false,
 )
 
-const inCompare = computed(() => (detail.value ? compare.has(detail.value.parcel_number) : false))
-
-function toggleCompare(): void {
-  if (detail.value === null) return
-  if (inCompare.value) {
-    compare.remove(detail.value.parcel_number)
-    $q.notify({ message: 'Removed from compare', color: 'grey-8', icon: 'compare_arrows' })
-    return
-  }
-  if (compare.add(detail.value.parcel_number, detail.value.address)) {
-    $q.notify({ message: 'Added to compare', color: 'positive', icon: 'compare_arrows' })
-  } else {
-    $q.notify({
-      message: `Compare holds up to ${MAX_COMPARE} lots`,
-      color: 'warning',
-      icon: 'info',
-    })
-  }
-}
-
 onMounted(() => {
   void watchlist.ensureLoaded()
   void pipeline.ensureLoaded()
@@ -252,19 +225,6 @@ async function toggleSave(): Promise<void> {
               @click="toggleSave"
             />
             <q-btn
-              class="act"
-              :class="{ 'act-on': inCompare }"
-              flat
-              dense
-              no-caps
-              size="sm"
-              icon="compare_arrows"
-              :label="inCompare ? 'Comparing' : 'Compare'"
-              :aria-label="inCompare ? 'In compare' : 'Add to compare'"
-              data-test="parcel-action-compare"
-              @click="toggleCompare"
-            />
-            <q-btn
               v-if="!currentDeal"
               class="act"
               flat
@@ -287,7 +247,7 @@ async function toggleSave(): Promise<void> {
               icon="view_kanban"
               :label="dealStageLabel"
               data-test="parcel-action-pipeline"
-              :to="{ name: 'pipeline' }"
+              :to="{ name: 'deals' }"
             />
             <q-btn
               class="act"
@@ -458,12 +418,6 @@ async function toggleSave(): Promise<void> {
               :checklist="checklist"
               @explain="whyOpen = true"
             />
-            <WhyScoreDrawer
-              v-if="verdict"
-              v-model="whyOpen"
-              :verdict="verdict"
-              :checklist="checklist"
-            />
             <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
               <template #avatar><q-icon name="info" color="grey-7" /></template>
               No verdict yet.
@@ -481,7 +435,6 @@ async function toggleSave(): Promise<void> {
             <DevelopmentProgramPanel />
             <DistressPanel />
             <ChecklistPanel />
-            <BuyersNearbyPanel />
             <div class="tab-foot">
               <q-btn
                 flat
@@ -500,7 +453,6 @@ async function toggleSave(): Promise<void> {
             <DealCard />
             <ScenariosPanel />
             <CompsPanel />
-            <AssessmentPanel />
             <div class="q-mt-md">
               <q-btn
                 unelevated
@@ -512,7 +464,6 @@ async function toggleSave(): Promise<void> {
               />
               <div class="text-caption lot-text-muted q-mt-xs">Coming soon.</div>
             </div>
-            <MarketContextPanel />
             <div v-if="dealEmpty" class="tab-empty">
               <q-icon name="query_stats" size="26px" />
               <span>No deal, comp, or market data for this lot yet.</span>
@@ -550,7 +501,6 @@ async function toggleSave(): Promise<void> {
               v-model="correctionOpen"
               :parcel-number="detail.parcel_number"
             />
-            <ReportPanel :parcel-number="detail.parcel_number" />
             <DeedRestrictionsPanel />
           </q-tab-panel>
         </q-tab-panels>

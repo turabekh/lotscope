@@ -7,25 +7,12 @@ const SRC = join(process.cwd(), 'src')
 const HARDCODED_GREY = /\btext-(?:grey|blue-grey)-\d+\b/g
 
 const NOT_YET_MIGRATED = new Set([
-  'components/CompareTable.vue',
-  'components/OutreachMailerDialog.vue',
-  'components/SavedLotsList.vue',
-  'components/SavedSearchesList.vue',
   'components/SensitivityHeatmap.vue',
   'pages/AccountPage.vue',
   'pages/AdminPage.vue',
+  'pages/AnalystPage.vue',
   'pages/AuthPage.vue',
-  'pages/BuyerProfilePage.vue',
-  'pages/BuyersPage.vue',
-  'pages/FeedPage.vue',
-  'pages/HomePage.vue',
-  'pages/LeadsPage.vue',
-  'pages/MarketHealthPage.vue',
-  'pages/MarketPage.vue',
-  'pages/OpsPage.vue',
-  'pages/PipelinePage.vue',
-  'pages/SheriffSalesPage.vue',
-  'pages/TopPlaysPage.vue',
+  'pages/DealsPage.vue',
 ])
 
 function vueFilesUnder(dir: string): string[] {

@@ -20,7 +20,7 @@ onMounted(async () => {
   }
   try {
     await store.verifyEmail(token)
-    await router.push({ name: 'home' })
+    await router.push({ name: 'analyst' })
   } catch {
     state.value = 'failed'
     message.value = store.error ?? 'This link is invalid or has expired.'

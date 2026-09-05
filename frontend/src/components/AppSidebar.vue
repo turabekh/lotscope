@@ -4,7 +4,6 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
-import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 withDefaults(defineProps<{ collapsed: boolean; mobile?: boolean }>(), { mobile: false })
@@ -14,7 +13,6 @@ const route = useRoute()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 const { alerts } = storeToRefs(useWatchlistStore())
-const { newTotal } = storeToRefs(useSavedSearchesStore())
 
 interface NavLink {
   label: string
@@ -24,23 +22,9 @@ interface NavLink {
 }
 
 const sections = computed<NavLink[]>(() => [
-  { label: 'Home', icon: 'home', name: 'home' },
-  { label: 'Find lots', icon: 'travel_explore', name: 'explore' },
-  { label: 'Leads', icon: 'sell', name: 'leads' },
-  { label: 'Pipeline', icon: 'view_kanban', name: 'pipeline' },
-  { label: 'Lists', icon: 'bookmark', name: 'lists', badge: () => alerts.value + newTotal.value },
-])
-
-const researchSections = computed<NavLink[]>(() => [
-  {
-    label: 'Sheriff sales',
-    icon: 'gavel',
-    name: 'sheriff-sales',
-  },
-  { label: 'Feed', icon: 'bolt', name: 'feed' },
-  { label: 'Top plays', icon: 'dashboard_customize', name: 'top-plays' },
-  { label: 'Cash buyers', icon: 'real_estate_agent', name: 'buyers' },
-  { label: 'Market', icon: 'insights', name: 'market' },
+  { label: 'Analyst', icon: 'forum', name: 'analyst' },
+  { label: 'Deals', icon: 'view_kanban', name: 'deals' },
+  { label: 'Packets', icon: 'description', name: 'packets', badge: () => alerts.value },
 ])
 
 function visible(links: NavLink[]): NavLink[] {
@@ -48,20 +32,15 @@ function visible(links: NavLink[]): NavLink[] {
 }
 
 const visibleSections = computed<NavLink[]>(() => visible(sections.value))
-const visibleResearch = computed<NavLink[]>(() => visible(researchSections.value))
 
 function isActive(name: string): boolean {
   return route.name === name
 }
-
-const researchOpen = computed<boolean>(() =>
-  visibleResearch.value.some((item) => isActive(item.name)),
-)
 </script>
 
 <template>
   <div class="sidebar column no-wrap fit">
-    <router-link :to="{ name: 'home' }" class="brand" aria-label="LotScope home">
+    <router-link :to="{ name: 'analyst' }" class="brand" aria-label="LotScope analyst">
       <span class="brand-mark">◧</span>
       <span v-if="!collapsed" class="brand-name">LotScope <span class="brand-sub">PHL</span></span>
     </router-link>
@@ -97,35 +76,6 @@ const researchOpen = computed<boolean>(() =>
           {{ item.label }}
         </q-tooltip>
       </q-item>
-      <q-expansion-item
-        v-if="visibleResearch.length"
-        :model-value="researchOpen"
-        :label="collapsed ? '' : 'Research'"
-        icon="query_stats"
-        dense
-        class="research"
-        data-test="nav-research"
-      >
-        <q-item
-          v-for="item in visibleResearch"
-          :key="item.name"
-          v-ripple
-          clickable
-          :active="isActive(item.name)"
-          active-class="nav-active"
-          class="nav-item nav-nested"
-          :to="{ name: item.name }"
-          @click="emit('navigate')"
-        >
-          <q-item-section avatar class="nav-avatar">
-            <q-icon :name="item.icon" size="19px" />
-          </q-item-section>
-          <q-item-section v-if="!collapsed">{{ item.label }}</q-item-section>
-          <q-tooltip v-if="collapsed" anchor="center right" self="center left">
-            {{ item.label }}
-          </q-tooltip>
-        </q-item>
-      </q-expansion-item>
     </q-list>
 
     <q-space />

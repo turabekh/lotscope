@@ -13,7 +13,7 @@ const open = ref(false)
 
 function onSelect(parcelNumber: string): void {
   open.value = false
-  void router.push({ name: 'parcel', params: { id: parcelNumber } })
+  void router.push({ name: 'lot', params: { parcelNumber } })
 }
 </script>
 

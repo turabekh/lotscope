@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { ApiError, api } from '@/lib/api'
-import { useFirstStepsStore } from '@/stores/firstSteps'
 import type {
   DealOverrides,
   UnderwritingAnalysis,
@@ -50,7 +49,6 @@ export const useParcelStore = defineStore('parcel', () => {
   const errorStatus = ref<number | null>(null)
 
   async function select(parcelNumber: string): Promise<void> {
-    useFirstStepsStore().markVerdictSeen()
     loading.value = true
     error.value = null
     errorStatus.value = null

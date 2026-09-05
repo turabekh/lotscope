@@ -6,18 +6,10 @@ import { useRoute, useRouter } from 'vue-router'
 import BuyBoxEditor from '@/components/BuyBoxEditor.vue'
 import CorrectionStatus from '@/components/CorrectionStatus.vue'
 import { useAuthStore } from '@/stores/auth'
-import { usePushStore } from '@/stores/push'
 
 const store = useAuthStore()
 const { user, usage } = storeToRefs(store)
-const push = usePushStore()
 
-const {
-  supported: pushSupported,
-  enabled: pushEnabled,
-  busy: pushBusy,
-  error: pushError,
-} = storeToRefs(push)
 const router = useRouter()
 const route = useRoute()
 
@@ -75,12 +67,7 @@ onMounted(async () => {
   await store.refreshUser()
   loadSigner()
   await store.fetchUsage()
-  await push.refresh()
 })
-
-function togglePush(value: boolean): void {
-  void (value ? push.enable() : push.disable())
-}
 
 const metrics = computed(() => {
   if (!usage.value) return []
@@ -231,30 +218,6 @@ async function signOut(): Promise<void> {
             :loading="signerSaving"
             @click="saveSigner"
           />
-        </div>
-      </q-card-section>
-
-      <q-separator />
-
-      <q-card-section>
-        <div class="row items-center">
-          <q-icon name="notifications" size="18px" color="grey-7" class="q-mr-xs" />
-          <div>
-            <div class="text-subtitle2">Browser push notifications</div>
-            <div class="text-caption text-grey-7">
-              Get a push on this device when your watched lots change.
-            </div>
-            <div v-if="pushError" class="text-caption text-negative q-mt-xs">{{ pushError }}</div>
-          </div>
-          <q-space />
-          <q-toggle
-            v-if="pushSupported"
-            :model-value="pushEnabled"
-            :disable="pushBusy"
-            color="primary"
-            @update:model-value="togglePush"
-          />
-          <q-chip v-else dense color="grey-3" text-color="grey-8">Not supported</q-chip>
         </div>
       </q-card-section>
 

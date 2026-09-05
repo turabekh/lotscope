@@ -15,25 +15,25 @@ const $q = useQuasar()
 const isMobile = computed(() => $q.screen.lt.md)
 
 function load(): void {
-  const id = route.params.id
+  const id = route.params.parcelNumber
   if (typeof id === 'string' && id !== '') void store.select(id)
 }
 
 function goBack(): void {
   if (window.history.length > 1) router.back()
-  else void router.push({ name: 'explore' })
+  else void router.push({ name: 'analyst' })
 }
 
 function onSelect(parcelNumber: string): void {
-  if (parcelNumber === route.params.id) return
+  if (parcelNumber === route.params.parcelNumber) return
   void router.replace({
-    name: 'parcel',
-    params: { id: parcelNumber },
+    name: 'lot',
+    params: { parcelNumber },
   })
 }
 
 onMounted(load)
-watch(() => route.params.id, load)
+watch(() => route.params.parcelNumber, load)
 </script>
 
 <template>

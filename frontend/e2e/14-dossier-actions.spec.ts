@@ -2,12 +2,12 @@ import { expect, test } from '@playwright/test'
 
 import { registerAndSettle, SEEDED } from './support/app'
 
-const ACTIONS = ['save', 'compare', 'pipeline', 'report']
+const ACTIONS = ['save', 'pipeline', 'report']
 
 test('every parcel action is labelled and tappable on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'actions')
-  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
+  await page.goto(`/lot/${SEEDED.bestMargin.number}`)
 
   for (const action of ACTIONS) {
     const button = page.locator(`[data-test="parcel-action-${action}"]`)
@@ -17,26 +17,22 @@ test('every parcel action is labelled and tappable on a phone', async ({ page })
   }
 
   await expect(page.locator('[data-test="parcel-action-save"]')).toContainText('Save')
-  await expect(page.locator('[data-test="parcel-action-compare"]')).toContainText('Compare')
   await expect(page.locator('[data-test="parcel-action-report"]')).toContainText('Report')
 })
 
-test('saving and comparing announce themselves', async ({ page }) => {
+test('saving announces itself', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'actions-state')
-  await page.goto(`/parcel/${SEEDED.midMargin.number}`)
+  await page.goto(`/lot/${SEEDED.midMargin.number}`)
 
   await page.locator('[data-test="parcel-action-save"]').click()
   await expect(page.locator('[data-test="parcel-action-save"]')).toContainText('Saved')
-
-  await page.locator('[data-test="parcel-action-compare"]').click()
-  await expect(page.locator('[data-test="parcel-action-compare"]')).toContainText('Comparing')
 })
 
 test('the actions stay on one row beside the address on a desktop', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   await registerAndSettle(page, 'actions-desktop')
-  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
+  await page.goto(`/lot/${SEEDED.bestMargin.number}`)
 
   const save = await page.locator('[data-test="parcel-action-save"]').boundingBox()
   const report = await page.locator('[data-test="parcel-action-report"]').boundingBox()
@@ -46,7 +42,7 @@ test('the actions stay on one row beside the address on a desktop', async ({ pag
 test('the back control keeps its row for the actions rather than a word', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'actions-back')
-  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
+  await page.goto(`/lot/${SEEDED.bestMargin.number}`)
 
   const back = page.locator('[data-test="dossier-back"]')
   await expect(back).toBeVisible()
@@ -62,7 +58,7 @@ test('the back control keeps its row for the actions rather than a word', async 
 test('a long address is not squeezed by the actions', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'actions-long')
-  await page.goto(`/parcel/${SEEDED.longAddress.number}`)
+  await page.goto(`/lot/${SEEDED.longAddress.number}`)
 
   const address = page.getByText(SEEDED.longAddress.address).first()
   await expect(address).toBeVisible()
@@ -73,7 +69,7 @@ test('a long address is not squeezed by the actions', async ({ page }) => {
 test('a laptop gets the map beside the dossier, not dead space', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await registerAndSettle(page, 'split-desktop')
-  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
+  await page.goto(`/lot/${SEEDED.bestMargin.number}`)
 
   const map = page.locator('[data-test="dossier-map"]')
   await expect(map).toBeVisible()
@@ -88,7 +84,7 @@ test('a laptop gets the map beside the dossier, not dead space', async ({ page }
 test('a phone keeps the dossier full width with no map', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'split-mobile')
-  await page.goto(`/parcel/${SEEDED.bestMargin.number}`)
+  await page.goto(`/lot/${SEEDED.bestMargin.number}`)
 
   await expect(page.locator('[data-test="dossier-map"]')).toHaveCount(0)
   const frame = await page.locator('.dossier-frame').boundingBox()

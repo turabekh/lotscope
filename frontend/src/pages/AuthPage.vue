@@ -37,7 +37,7 @@ async function submit(): Promise<void> {
       return
     }
     const fallback = router.resolve({
-      name: 'home',
+      name: 'analyst',
     }).fullPath
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : fallback
     await router.push(redirect)
@@ -135,7 +135,7 @@ async function submit(): Promise<void> {
         </template>
       </q-card-section>
       <q-card-section class="text-center q-pt-none">
-        <q-btn flat dense no-caps color="grey-7" icon="arrow_back" label="Back to map" to="/" />
+        <q-btn flat dense no-caps color="grey-7" icon="arrow_back" label="Back" to="/welcome" />
       </q-card-section>
     </q-card>
   </div>

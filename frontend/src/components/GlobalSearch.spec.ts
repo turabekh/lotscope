@@ -10,7 +10,7 @@ import SearchBox from '@/components/SearchBox.vue'
 function makeRouter(): Router {
   return createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/parcel/:id', name: 'parcel', component: { template: '<div />' } }],
+    routes: [{ path: '/lot/:parcelNumber', name: 'lot', component: { template: '<div />' } }],
   })
 }
 
@@ -20,7 +20,7 @@ describe('GlobalSearch', () => {
     localStorage.clear()
   })
 
-  it('navigates to the parcel dossier route on select', () => {
+  it('navigates to the lot page on select', () => {
     const router = makeRouter()
     const push = vi.spyOn(router, 'push')
     const wrapper = mount(GlobalSearch, { global: { plugins: [router, [Quasar, {}]] } })
@@ -28,8 +28,8 @@ describe('GlobalSearch', () => {
     wrapper.findComponent(SearchBox).vm.$emit('select', '000012345')
 
     expect(push).toHaveBeenCalledWith({
-      name: 'parcel',
-      params: { id: '000012345' },
+      name: 'lot',
+      params: { parcelNumber: '000012345' },
     })
   })
 })

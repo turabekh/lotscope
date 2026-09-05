@@ -5,15 +5,12 @@ import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
-import { useSavedSearchesStore } from '@/stores/savedSearches'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useAuthStore()
 const { user, isAuthenticated } = storeToRefs(store)
 const watchlist = useWatchlistStore()
 const { alerts } = storeToRefs(watchlist)
-const savedSearches = useSavedSearchesStore()
-const { newTotal } = storeToRefs(savedSearches)
 const router = useRouter()
 const theme = useThemeStore()
 
@@ -24,7 +21,6 @@ watch(
   (value) => {
     if (value) {
       void watchlist.ensureLoaded()
-      void savedSearches.ensureLoaded()
     }
   },
   { immediate: true },
@@ -39,20 +35,8 @@ function goAccount(): void {
   void router.push({ name: 'account' })
 }
 
-function goLeads(): void {
-  void router.push({ name: 'leads' })
-}
-
-function goWatchlist(): void {
-  void router.push({ name: 'watchlist' })
-}
-
-function goPipeline(): void {
-  void router.push({ name: 'pipeline' })
-}
-
-function goSavedSearches(): void {
-  void router.push({ name: 'saved-searches' })
+function goDeals(): void {
+  void router.push({ name: 'deals' })
 }
 
 function goAdmin(): void {
@@ -74,9 +58,7 @@ function goAdmin(): void {
     <q-avatar size="30px" color="primary" text-color="white" class="text-weight-bold">
       {{ initial }}
     </q-avatar>
-    <q-badge v-if="alerts + newTotal > 0" color="negative" floating rounded>
-      {{ alerts + newTotal }}
-    </q-badge>
+    <q-badge v-if="alerts > 0" color="negative" floating rounded>{{ alerts }}</q-badge>
     <q-menu anchor="bottom right" self="top right">
       <q-list style="min-width: 200px">
         <q-item>
@@ -86,27 +68,9 @@ function goAdmin(): void {
           </q-item-section>
         </q-item>
         <q-separator />
-        <q-item v-close-popup clickable @click="goWatchlist">
-          <q-item-section avatar><q-icon name="bookmark" /></q-item-section>
-          <q-item-section>My watchlist</q-item-section>
-          <q-item-section v-if="alerts > 0" side>
-            <q-badge color="negative" rounded>{{ alerts }}</q-badge>
-          </q-item-section>
-        </q-item>
-        <q-item v-close-popup clickable @click="goPipeline">
+        <q-item v-close-popup clickable @click="goDeals">
           <q-item-section avatar><q-icon name="view_kanban" /></q-item-section>
-          <q-item-section>Deal pipeline</q-item-section>
-        </q-item>
-        <q-item v-close-popup clickable @click="goSavedSearches">
-          <q-item-section avatar><q-icon name="saved_search" /></q-item-section>
-          <q-item-section>Saved searches</q-item-section>
-          <q-item-section v-if="newTotal > 0" side>
-            <q-badge color="negative" rounded>{{ newTotal }}</q-badge>
-          </q-item-section>
-        </q-item>
-        <q-item v-close-popup clickable @click="goLeads">
-          <q-item-section avatar><q-icon name="sell" /></q-item-section>
-          <q-item-section>Motivated-seller leads</q-item-section>
+          <q-item-section>Deals</q-item-section>
         </q-item>
         <q-item v-close-popup clickable @click="goAccount">
           <q-item-section avatar><q-icon name="manage_accounts" /></q-item-section>

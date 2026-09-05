@@ -4,37 +4,37 @@ import { Quasar } from 'quasar'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 
-import ParcelDossierPage from '@/pages/ParcelDossierPage.vue'
+import LotPage from '@/pages/LotPage.vue'
 import { useParcelStore } from '@/stores/parcel'
 
 function makeRouter(): Router {
   return createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/parcel/:market/:id', name: 'parcel', component: ParcelDossierPage }],
+    routes: [{ path: '/lot/:parcelNumber', name: 'lot', component: LotPage }],
   })
 }
 
-describe('ParcelDossierPage', () => {
+describe('LotPage', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
   })
 
-  it('fetches the parcel from the route id and renders the dossier standalone', async () => {
+  it('fetches the parcel from the route parcel number and renders the dossier standalone', async () => {
     const store = useParcelStore()
     const selectSpy = vi.spyOn(store, 'select').mockResolvedValue()
     const router = makeRouter()
-    await router.push('/parcel/philadelphia/000012345')
+    await router.push('/lot/phl:000012345')
     await router.isReady()
 
-    const wrapper = mount(ParcelDossierPage, {
+    const wrapper = mount(LotPage, {
       global: {
         plugins: [router, [Quasar, {}]],
         stubs: { ParcelDossier: true, MapView: true },
       },
     })
 
-    expect(selectSpy).toHaveBeenCalledWith('000012345')
+    expect(selectSpy).toHaveBeenCalledWith('phl:000012345')
     expect(wrapper.find('.dossier-frame').exists()).toBe(true)
   })
 
@@ -42,10 +42,10 @@ describe('ParcelDossierPage', () => {
     const store = useParcelStore()
     vi.spyOn(store, 'select').mockResolvedValue()
     const router = makeRouter()
-    await router.push('/parcel/philadelphia/000012345')
+    await router.push('/lot/phl:000012345')
     await router.isReady()
 
-    const wrapper = mount(ParcelDossierPage, {
+    const wrapper = mount(LotPage, {
       global: {
         plugins: [router, [Quasar, {}]],
         stubs: { ParcelDossier: true, MapView: true },

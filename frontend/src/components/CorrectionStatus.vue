@@ -64,8 +64,8 @@ onMounted(async () => {
         <div class="record-head">
           <router-link
             :to="{
-              name: 'parcel',
-              params: { id: record.parcel_number },
+              name: 'lot',
+              params: { parcelNumber: record.parcel_number },
             }"
             class="record-parcel"
           >

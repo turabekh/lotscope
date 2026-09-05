@@ -9,7 +9,7 @@ export const SEEDED = {
   longAddress: { number: 'phl:99900006', address: '2909-11 E2E LONG FIXTURE BOULEVARD' },
 } as const
 
-export const PRIMARY_DESTINATIONS = ['Home', 'Find lots', 'Leads', 'Pipeline', 'Lists'] as const
+export const PRIMARY_DESTINATIONS = ['Analyst', 'Deals', 'Packets'] as const
 
 export interface TestAccount {
   email: string
@@ -64,7 +64,7 @@ export async function register(page: Page, account: TestAccount): Promise<void> 
 
   const link = await verificationLink(page, account.email)
   await page.goto(new URL(link).pathname + new URL(link).search)
-  await expect(page).toHaveURL(/\/home/)
+  await expect(page).toHaveURL(/\/$/)
 }
 
 export async function signIn(page: Page, account: TestAccount): Promise<void> {
@@ -72,27 +72,12 @@ export async function signIn(page: Page, account: TestAccount): Promise<void> {
   await page.getByLabel('Email').fill(account.email)
   await page.getByLabel('Password').fill(account.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/home/)
-}
-
-export async function dismissTour(page: Page): Promise<void> {
-  const skip = page.getByRole('button', { name: 'Skip' })
-  try {
-    await skip.waitFor({ state: 'visible', timeout: 8_000 })
-  } catch {
-    return
-  }
-  await Promise.all([
-    page.waitForResponse((response) => response.url().includes('/auth/onboarded') && response.ok()),
-    skip.click(),
-  ])
-  await expect(page.locator('.q-dialog__backdrop')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/$/)
 }
 
 export async function registerAndSettle(page: Page, label: string): Promise<TestAccount> {
   const account = newAccount(label)
   await register(page, account)
-  await dismissTour(page)
   return account
 }
 
@@ -101,8 +86,7 @@ export function navItem(page: Page, label: string) {
 }
 
 export async function openDossier(page: Page, parcelNumber: string): Promise<void> {
-  await page.goto(`/parcel/${parcelNumber}`)
-  await dismissTour(page)
+  await page.goto(`/lot/${parcelNumber}`)
   const localKey = parcelNumber.split(':')[1] ?? parcelNumber
   await expect(page.getByText(`Parcel ${localKey}`)).toBeVisible()
 }

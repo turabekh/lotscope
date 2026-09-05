@@ -7,7 +7,7 @@ test('flow 1 — a new visitor can register and lands in the app', async ({ page
 
   await register(page, account)
 
-  await expect(page).toHaveURL(new RegExp(`/home`))
+  await expect(page).toHaveURL(/\/$/)
   for (const destination of PRIMARY_DESTINATIONS) {
     await expect(navItem(page, destination)).toBeVisible()
   }

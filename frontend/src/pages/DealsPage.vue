@@ -108,7 +108,7 @@ function openOffer(deal: DealItem): void {
 }
 
 function openParcel(deal: DealItem): void {
-  void router.push({ name: 'parcel', params: { id: deal.parcel_number } })
+  void router.push({ name: 'lot', params: { parcelNumber: deal.parcel_number } })
 }
 
 function onDragStart(event: DragEvent, deal: DealItem): void {
@@ -239,7 +239,7 @@ async function skipTraceContact(): Promise<void> {
         no-caps
         color="primary"
         label="Browse the map"
-        :to="{ name: 'explore' }"
+        :to="{ name: 'analyst' }"
       />
     </div>
 

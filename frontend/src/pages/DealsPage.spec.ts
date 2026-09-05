@@ -4,7 +4,7 @@ import { Notify, Quasar } from 'quasar'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 
-import PipelinePage from '@/pages/PipelinePage.vue'
+import DealsPage from '@/pages/DealsPage.vue'
 import type { DealItem, User } from '@/lib/types'
 import { useAuthStore } from '@/stores/auth'
 
@@ -53,7 +53,7 @@ function makeRouter(): Router {
   return createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/:market/pipeline', name: 'pipeline', component: PipelinePage },
+      { path: '/:market/pipeline', name: 'pipeline', component: DealsPage },
       { path: '/account', name: 'account', component: { template: '<div />' } },
       { path: '/:market/explore', name: 'explore', component: { template: '<div />' } },
       { path: '/:market/parcel/:id', name: 'parcel', component: { template: '<div />' } },
@@ -65,7 +65,7 @@ async function mountPage() {
   const router = makeRouter()
   await router.push('/philadelphia/pipeline')
   await router.isReady()
-  const wrapper = mount(PipelinePage, {
+  const wrapper = mount(DealsPage, {
     global: {
       plugins: [router, [Quasar, { plugins: { Notify } }]],
       stubs: { QPage: { template: '<div><slot /></div>' } },
@@ -75,7 +75,7 @@ async function mountPage() {
   return wrapper
 }
 
-describe('PipelinePage CSV export', () => {
+describe('DealsPage CSV export', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()

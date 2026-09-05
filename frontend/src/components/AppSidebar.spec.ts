@@ -37,19 +37,18 @@ describe('AppSidebar', () => {
     const router = makeRouter()
     const wrapper = await mountSidebar(router)
     const html = wrapper.html()
-    expect(html).toContain('href="/home"')
-    expect(html).toContain('href="/explore"')
-    expect(html).toContain('href="/leads"')
-    expect(html).toContain('href="/lists"')
+    expect(html).toContain('href="/"')
+    expect(html).toContain('href="/deals"')
+    expect(html).toContain('href="/packets"')
     expect(html).toContain('href="/account"')
   })
 
   it('marks the active section from the current route', async () => {
     setUser('user')
     const router = makeRouter()
-    await router.push({ name: 'leads' })
+    await router.push({ name: 'deals' })
     const wrapper = await mountSidebar(router)
-    expect(wrapper.find('.nav-active').text()).toContain('Leads')
+    expect(wrapper.find('.nav-active').text()).toContain('Deals')
   })
 
   it('hides Admin for non-admins and shows it for admins', async () => {
@@ -64,35 +63,31 @@ describe('AppSidebar', () => {
     expect(asAdmin.text()).toContain('Admin')
   })
 
-  it('keeps primary navigation to five destinations', async () => {
+  it('keeps primary navigation to three destinations', async () => {
     setUser('user')
     const wrapper = await mountSidebar(makeRouter())
     const primary = wrapper.findAll('[data-test="nav-primary"] > .nav-item')
-    expect(primary).toHaveLength(5)
+    expect(primary).toHaveLength(3)
     const labels = primary.map((item) => item.text())
-    ;['Home', 'Find lots', 'Leads', 'Pipeline', 'Lists'].forEach((label, index) => {
+    ;['Analyst', 'Deals', 'Packets'].forEach((label, index) => {
       expect(labels[index]).toContain(label)
     })
   })
 
-  it('keeps the consolidated surfaces reachable under Research', async () => {
+  it('offers no route Phase 3 deleted', async () => {
     setUser('user')
-    const wrapper = await mountSidebar(makeRouter())
-    const research = wrapper.find('[data-test="nav-research"]')
-    expect(research.exists()).toBe(true)
-    const html = research.html()
-    expect(html).toContain('href="/feed"')
-    expect(html).toContain('href="/sheriff-sales"')
-    expect(html).toContain('href="/top-plays"')
-    expect(html).toContain('href="/buyers"')
-    expect(html).toContain('href="/market"')
-  })
-
-  it('opens Research when one of its surfaces is the active route', async () => {
-    setUser('user')
-    const router = makeRouter()
-    await router.push({ name: 'buyers' })
-    const wrapper = await mountSidebar(router)
-    expect(wrapper.find('.nav-active').text()).toContain('Cash buyers')
+    const html = (await mountSidebar(makeRouter())).html()
+    for (const gone of [
+      '/explore',
+      '/feed',
+      '/leads',
+      '/lists',
+      '/top-plays',
+      '/buyers',
+      '/market',
+      '/sheriff-sales',
+    ]) {
+      expect(html).not.toContain(`href="${gone}"`)
+    }
   })
 })

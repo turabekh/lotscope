@@ -5,7 +5,7 @@ import { registerAndSettle } from './support/app'
 test('search opens a usable field on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await registerAndSettle(page, 'header')
-  await page.goto(`/home`)
+  await page.goto(`/`)
 
   await page.locator('[data-test="global-search-open"]').click()
 

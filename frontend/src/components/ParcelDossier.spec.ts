@@ -105,11 +105,8 @@ function mountDossier(detail: ParcelDetail, distress: DistressResult | null = nu
         SnapshotPanel: true,
         ChecklistPanel: true,
         DealCard: true,
-        BuyersNearbyPanel: true,
         ScenariosPanel: true,
         CompsPanel: true,
-        AssessmentPanel: true,
-        MarketContextPanel: true,
         SubdivisionPanel: true,
         AssemblagePanel: true,
         HistoricPanel: true,
@@ -203,11 +200,6 @@ describe('ParcelDossier deal-tab composition', () => {
 
   const vacant = () => makeDetail({ land_use: 'VACANT LAND', is_vacant: true })
 
-  it('surfaces buyers alongside the verdict rather than inside the deal tab', () => {
-    const wrapper = mountDossier(vacant())
-    expect(wrapper.findComponent({ name: 'BuyersNearbyPanel' }).exists()).toBe(true)
-  })
-
   it('gives the deal tab a single card in place of the two retired panels', async () => {
     const wrapper = mountDossier(vacant())
     await openDealTab(wrapper)
@@ -217,11 +209,11 @@ describe('ParcelDossier deal-tab composition', () => {
     expect(wrapper.findComponent({ name: 'UnderwritingPanel' }).exists()).toBe(false)
   })
 
-  it('orders the deal tab card first, ahead of scenarios, comps and assessment', async () => {
+  it('orders the deal tab card first, ahead of scenarios and comps', async () => {
     const wrapper = mountDossier(vacant())
     await openDealTab(wrapper)
 
-    const order = ['DealCard', 'ScenariosPanel', 'CompsPanel', 'AssessmentPanel'].map((name) =>
+    const order = ['DealCard', 'ScenariosPanel', 'CompsPanel'].map((name) =>
       wrapper.html().indexOf(name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()),
     )
     expect(order.every((index) => index >= 0)).toBe(true)

@@ -3,7 +3,6 @@ import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-import DataCoverageChip from '@/components/DataCoverageChip.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import { useThemeStore } from '@/stores/theme'
@@ -35,8 +34,6 @@ const title = computed(() => {
       <slot name="actions" />
 
       <GlobalSearch v-if="isNarrow" />
-
-      <DataCoverageChip v-if="!isMobile" class="q-mr-xs" />
 
       <q-btn
         v-if="!isMobile"
