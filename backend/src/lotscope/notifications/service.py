@@ -1,23 +1,18 @@
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import delete, select
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.accounts.models import User
 from lotscope.accounts.security import create_unsubscribe_token
 from lotscope.core.config import Settings
 from lotscope.core.logging import get_logger
-from lotscope.feed.service import get_feed
 from lotscope.notifications.digest import (
     DealReminderContent,
     DealReminderItem,
     DigestChange,
     DigestContent,
     DigestParcel,
-    FeedDigestContent,
-    FeedDigestLine,
-    FeedDigestSearch,
     MatchAlertContent,
     MatchAlertParcel,
     MatchAlertSearch,
@@ -25,14 +20,11 @@ from lotscope.notifications.digest import (
     SalesWeekItem,
     deal_reminder_subject,
     digest_subject,
-    feed_digest_subject,
     match_alert_subject,
     render_deal_reminder_html,
     render_deal_reminder_text,
     render_digest_html,
     render_digest_text,
-    render_feed_digest_html,
-    render_feed_digest_text,
     render_match_alert_html,
     render_match_alert_text,
     render_sales_week_html,
@@ -40,14 +32,11 @@ from lotscope.notifications.digest import (
     sales_week_subject,
 )
 from lotscope.notifications.email import EmailSender
-from lotscope.notifications.models import PushSubscription
-from lotscope.notifications.push import PushExpiredError, PushSender, PushSubscriptionInfo
 from lotscope.pipeline.service import deals_due
 from lotscope.risk.service import list_sheriff_sales
 from lotscope.savedsearch.schemas import SavedSearchAlert
 from lotscope.savedsearch.service import (
     alerting_user_ids,
-    list_searches,
     mark_user_notified,
     pending_alerts_for_user,
     run_user_matches,
@@ -138,87 +127,6 @@ async def send_digests(
     return sent
 
 
-async def save_push_subscription(
-    session: AsyncSession, user_id: int, *, endpoint: str, p256dh: str, auth: str
-) -> None:
-    statement = insert(PushSubscription).values(
-        user_id=user_id, endpoint=endpoint, p256dh=p256dh, auth=auth
-    )
-    statement = statement.on_conflict_do_update(
-        index_elements=["endpoint"],
-        set_={"user_id": user_id, "p256dh": p256dh, "auth": auth},
-    )
-    await session.execute(statement)
-
-
-async def remove_push_subscription(session: AsyncSession, user_id: int, endpoint: str) -> None:
-    await session.execute(
-        delete(PushSubscription).where(
-            PushSubscription.user_id == user_id, PushSubscription.endpoint == endpoint
-        )
-    )
-
-
-async def send_user_push(
-    session: AsyncSession, sender: PushSender, settings: Settings, user: User
-) -> int:
-    alerted = [item for item in await list_saved(session, user.id) if item.has_alerts]
-    if not alerted:
-        return 0
-    subscriptions = list(
-        (await session.execute(select(PushSubscription).where(PushSubscription.user_id == user.id)))
-        .scalars()
-        .all()
-    )
-    if not subscriptions:
-        return 0
-    lots = len(alerted)
-    title = "LotScope — watchlist updates"
-    body = f"{lots} watched lot{'' if lots == 1 else 's'} changed. Open to review."
-    url = f"{settings.app_base_url.rstrip('/')}/watchlist"
-    sent = 0
-    for subscription in subscriptions:
-        info = PushSubscriptionInfo(
-            endpoint=subscription.endpoint, p256dh=subscription.p256dh, auth=subscription.auth
-        )
-        try:
-            await sender.send(info, title=title, body=body, url=url)
-            sent += 1
-        except PushExpiredError:
-            await session.delete(subscription)
-    return sent
-
-
-async def send_push_alerts(
-    session_factory: async_sessionmaker[AsyncSession],
-    sender: PushSender | None,
-    settings: Settings,
-) -> int:
-    logger = get_logger("notifications")
-    if sender is None:
-        logger.info("push_skipped_unconfigured")
-        return 0
-    async with session_factory() as session:
-        user_ids = list(
-            (await session.execute(select(PushSubscription.user_id).distinct())).scalars().all()
-        )
-
-    sent = 0
-    for user_id in user_ids:
-        async with session_factory() as session:
-            user = await session.get(User, user_id)
-            if user is None or not user.is_active:
-                continue
-            try:
-                sent += await send_user_push(session, sender, settings, user)
-                await session.commit()
-            except Exception:
-                logger.exception("push_send_failed", user_id=user_id)
-
-    logger.info("push_alerts_sent", count=sent)
-    return sent
-
-
 def _match_alert_content(alerts: list[SavedSearchAlert]) -> MatchAlertContent:
     return MatchAlertContent(
         searches=[
@@ -299,87 +207,6 @@ async def send_saved_search_alerts(
                 logger.exception("match_alert_failed", user_id=user_id)
 
     logger.info("match_alerts_sent", count=sent)
-    return sent
-
-
-_FEED_DIGEST_WINDOW = timedelta(days=1)
-_FEED_DIGEST_LIMIT = 5
-
-
-async def send_user_feed_digest(
-    session: AsyncSession, sender: EmailSender, settings: Settings, user: User
-) -> bool:
-    since = datetime.now(UTC) - _FEED_DIGEST_WINDOW
-    searches = [s for s in await list_searches(session, user.id) if s.alerts_enabled]
-    digest_searches: list[FeedDigestSearch] = []
-    for search in searches:
-        result = await get_feed(
-            session, criteria=search.criteria, since=since, limit=_FEED_DIGEST_LIMIT
-        )
-        if result.total == 0:
-            continue
-        digest_searches.append(
-            FeedDigestSearch(
-                name=search.name,
-                total=result.total,
-                lines=[
-                    FeedDigestLine(label=item.label, count=item.count) for item in result.summary
-                ],
-            )
-        )
-    if not digest_searches:
-        return False
-
-    content = FeedDigestContent(searches=digest_searches)
-    token = create_unsubscribe_token(settings, user_id=user.id)
-    feed_url = f"{settings.app_base_url.rstrip('/')}/philadelphia/feed"
-    unsubscribe_url = f"{settings.api_base_url.rstrip('/')}/digests/unsubscribe?token={token}"
-    await sender.send(
-        to=user.email,
-        subject=feed_digest_subject(content),
-        html=render_feed_digest_html(
-            content,
-            feed_url=feed_url,
-            unsubscribe_url=unsubscribe_url,
-            postal_address=settings.company_postal_address,
-        ),
-        text=render_feed_digest_text(
-            content,
-            feed_url=feed_url,
-            unsubscribe_url=unsubscribe_url,
-            postal_address=settings.company_postal_address,
-        ),
-        list_unsubscribe=unsubscribe_url,
-    )
-    return True
-
-
-async def send_feed_digests(
-    session_factory: async_sessionmaker[AsyncSession],
-    sender: EmailSender | None,
-    settings: Settings,
-) -> int:
-    logger = get_logger("notifications")
-    if sender is None:
-        logger.info("feed_digest_skipped_unconfigured")
-        return 0
-
-    async with session_factory() as session:
-        user_ids = await alerting_user_ids(session)
-
-    sent = 0
-    for user_id in user_ids:
-        async with session_factory() as session:
-            user = await session.get(User, user_id)
-            if user is None or not user.is_active:
-                continue
-            try:
-                if await send_user_feed_digest(session, sender, settings, user):
-                    sent += 1
-            except Exception:
-                logger.exception("feed_digest_failed", user_id=user_id)
-
-    logger.info("feed_digests_sent", count=sent)
     return sent
 
 

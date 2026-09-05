@@ -14,12 +14,10 @@ from lotscope.api.auth import router as auth_router
 from lotscope.api.billing import router as billing_router
 from lotscope.api.briefs import router as briefs_router
 from lotscope.api.buybox import router as buybox_router
-from lotscope.api.buyers import router as buyers_router
 from lotscope.api.corrections import router as corrections_router
 from lotscope.api.digests import router as digests_router
 from lotscope.api.errors import register_exception_handlers
 from lotscope.api.exports import router as exports_router
-from lotscope.api.feed import router as feed_router
 from lotscope.api.health import router as health_router
 from lotscope.api.layers import router as layers_router
 from lotscope.api.leads import router as leads_router
@@ -31,7 +29,6 @@ from lotscope.api.packets import router as packets_router
 from lotscope.api.parcels import router as parcels_router
 from lotscope.api.pipeline import router as pipeline_router
 from lotscope.api.policies import router as policies_router
-from lotscope.api.push import router as push_router
 from lotscope.api.saved_searches import router as saved_searches_router
 from lotscope.api.search import router as search_router
 from lotscope.api.sheriff_sales import router as sheriff_sales_router
@@ -76,7 +73,6 @@ def create_app() -> FastAPI:
     app.include_router(billing_router)
     app.include_router(search_router)
     app.include_router(exports_router)
-    app.include_router(buyers_router)
     app.include_router(parcels_router)
     app.include_router(layers_router)
     app.include_router(corrections_router)
@@ -84,13 +80,11 @@ def create_app() -> FastAPI:
     app.include_router(policies_router)
     app.include_router(outreach_router)
     app.include_router(skiptrace_router)
-    app.include_router(feed_router)
     app.include_router(sheriff_sales_router)
     app.include_router(assemblage_router)
     app.include_router(maps_router)
     app.include_router(watchlist_router)
     app.include_router(digests_router)
-    app.include_router(push_router)
     app.include_router(pipeline_router)
     app.include_router(saved_searches_router)
     app.include_router(neighborhoods_router)

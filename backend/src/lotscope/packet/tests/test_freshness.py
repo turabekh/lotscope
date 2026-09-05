@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import text
@@ -108,6 +108,9 @@ async def test_the_packet_states_when_it_was_computed_not_when_the_verdict_was(
 
     model = await build_packet_model(db_session, user_id, SALE_DATE)
 
-    assert model.header.computed_at.date() == date.today()
+    # The packet stamps datetime.now(UTC), so compare against the UTC date. date.today()
+    # is local, and the two disagree for eight hours of every day here.
+    today_utc = datetime.now(UTC).date()
+    assert model.header.computed_at.date() == today_utc
     for lot in model.lots:
-        assert lot.computed_at.date() == date.today()
+        assert lot.computed_at.date() == today_utc

@@ -532,33 +532,6 @@ async def test_neighborhood_market_returns_stats_for_paid_tier(db_session: Async
 
 @pytest.mark.integration
 @pytest.mark.integration
-async def test_feed_lists_recent_events_for_paid_tier(db_session: AsyncSession) -> None:
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, owner, is_vacant) "
-            "VALUES ('phl:000000001', 'O', true)"
-        )
-    )
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel_event (parcel_number, dataset, code, severity) "
-            "VALUES ('phl:000000001', 'tax_delinquency', 'delinquent', 'high')"
-        )
-    )
-    await db_session.flush()
-
-    app, _ = _authed_app(db_session)
-    app.dependency_overrides[get_current_user] = _fake_pro_user
-    async with _client(app) as client:
-        resp = await client.get("/feed?days=1")
-
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["total"] == 1
-    assert body["summary"][0]["code"] == "delinquent"
-    assert body["events"][0]["parcel_number"] == "phl:000000001"
-
-
 @pytest.mark.integration
 async def test_sheriff_sales_ranked_by_bid_gap_for_paid_tier(db_session: AsyncSession) -> None:
     await db_session.execute(
@@ -858,35 +831,6 @@ async def test_pipeline_add_move_and_remove(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
-async def test_push_subscribe_and_vapid_key(db_session: AsyncSession) -> None:
-    await db_session.execute(
-        text(
-            "INSERT INTO app_user (id, email, hashed_password, role, tier, is_active) "
-            "VALUES (1, 'm@example.com', 'x', 'user', 'free', true)"
-        )
-    )
-    await db_session.flush()
-
-    app = _app_with_session(db_session)
-    app.dependency_overrides[get_current_user] = _fake_user
-    app.dependency_overrides[get_app_settings] = lambda: Settings(_env_file=None)
-
-    async with _client(app) as client:
-        key = await client.get("/push/vapid-public-key")
-        sub = await client.post(
-            "/push/subscribe",
-            json={"endpoint": "https://push/x", "keys": {"p256dh": "k", "auth": "a"}},
-        )
-        unsub = await client.post("/push/unsubscribe", json={"endpoint": "https://push/x"})
-
-    assert key.status_code == 200
-    assert key.json() == {"public_key": None}
-    assert sub.status_code == 204
-    assert unsub.status_code == 204
-    remaining = await db_session.scalar(text("SELECT count(*) FROM push_subscription"))
-    assert remaining == 0
-
-
 @pytest.mark.integration
 async def test_digest_preference_and_unsubscribe(db_session: AsyncSession) -> None:
     await db_session.execute(
