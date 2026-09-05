@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -113,3 +115,49 @@ def verify_email_verification_token(settings: Settings, token: str) -> tuple[int
     if not isinstance(subject, str) or not subject.isdigit() or not isinstance(nonce, str):
         return None
     return int(subject), nonce
+
+
+_INVITE_PURPOSE = "buyer_invite"
+INVITE_TTL_DAYS = 90
+INVITE_CODE_LENGTH = 8
+_INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def create_buyer_invite_token(
+    settings: Settings,
+    *,
+    buyer_key: str,
+    display_name: str,
+    now: datetime | None = None,
+) -> str:
+    issued = now or datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "sub": buyer_key,
+        "name": display_name,
+        "purpose": _INVITE_PURPOSE,
+        "exp": issued + timedelta(days=INVITE_TTL_DAYS),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
+
+
+def verify_buyer_invite_token(settings: Settings, token: str) -> tuple[str, str] | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != _INVITE_PURPOSE:
+        return None
+    subject, name = payload.get("sub"), payload.get("name")
+    if not isinstance(subject, str) or not subject:
+        return None
+    return subject, name if isinstance(name, str) else subject
+
+
+def buyer_invite_code(settings: Settings, buyer_key: str) -> str:
+    digest = hmac.new(
+        settings.secret_key.encode("utf-8"),
+        f"{_INVITE_PURPOSE}:{buyer_key}".encode(),
+        hashlib.sha256,
+    ).digest()
+    size = len(_INVITE_CODE_ALPHABET)
+    return "".join(_INVITE_CODE_ALPHABET[byte % size] for byte in digest[:INVITE_CODE_LENGTH])
