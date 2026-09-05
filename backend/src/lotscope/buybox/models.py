@@ -32,6 +32,9 @@ class BuyBox(Base, TimestampMixin):
     )
     exclude_historic: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     exclude_flood: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    flip_bid_ratio: Mapped[float] = mapped_column(
+        Numeric(4, 3), nullable=False, server_default="0.700"
+    )
     assumptions: Mapped[dict[str, float]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="{}"
     )

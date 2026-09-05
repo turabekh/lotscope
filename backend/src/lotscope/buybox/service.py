@@ -45,6 +45,7 @@ def _defaults(user_id: int) -> BuyBox:
         exclude_open_violations=blank.exclude_open_violations,
         exclude_historic=blank.exclude_historic,
         exclude_flood=blank.exclude_flood,
+        flip_bid_ratio=blank.flip_bid_ratio,
         assumptions=dict(blank.assumptions),
         owned_parcels=list(blank.owned_parcels),
     )
@@ -90,6 +91,7 @@ async def write_buy_box(session: AsyncSession, user_id: int, data: BuyBoxWrite) 
     row.exclude_open_violations = data.exclude_open_violations
     row.exclude_historic = data.exclude_historic
     row.exclude_flood = data.exclude_flood
+    row.flip_bid_ratio = data.flip_bid_ratio
     row.assumptions = dict(data.assumptions)
     row.owned_parcels = list(data.owned_parcels)
     await session.flush()

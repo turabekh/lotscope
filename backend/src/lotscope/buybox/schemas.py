@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from lotscope.deal.assumptions import CANONICAL_ASSUMPTION_KEYS
 
-TargetUse = Literal["hold", "build", "flip"]
+TargetUse = Literal["hold", "build", "flip", "assemble"]
 
 MAX_AREAS = 20
 MAX_ZONING_CODES = 30
@@ -17,6 +17,7 @@ DEFAULT_EXCLUDE_CITY_NEIGHBOR = False
 DEFAULT_EXCLUDE_OPEN_VIOLATIONS = False
 DEFAULT_EXCLUDE_HISTORIC = True
 DEFAULT_EXCLUDE_FLOOD = True
+DEFAULT_FLIP_BID_RATIO = 0.70
 
 
 class BuyBoxArea(BaseModel):
@@ -61,8 +62,10 @@ class BuyBoxWrite(BaseModel):
     target_use: TargetUse = Field(
         default=DEFAULT_TARGET_USE,
         description=(
-            "build by default: the product is aimed at infill developers, and on a vacant "
-            "Philadelphia lot holding or flipping earns nothing the zoning envelope does not."
+            "Which lens grades a lot. build by default: the product is aimed at infill "
+            "developers, and on a vacant Philadelphia lot holding or flipping earns nothing "
+            "the zoning envelope does not. assemble grades on what an adjacent parcel unlocks; "
+            "hold and flip grade the opening bid against the land comps instead."
         ),
     )
     min_lot_sqft: int | None = Field(
@@ -108,6 +111,18 @@ class BuyBoxWrite(BaseModel):
         description=(
             "True by default: an SFHA parcel needs flood insurance and elevated construction, "
             "and the cost lands after the auction when the price is already fixed."
+        ),
+    )
+    flip_bid_ratio: float = Field(
+        default=DEFAULT_FLIP_BID_RATIO,
+        gt=0.0,
+        le=1.0,
+        description=(
+            "For a hold or flip buyer, the fraction of the low comparable a bid must sit under "
+            "to be worth taking. 0.70 by default: a resale buyer who is not building has only "
+            "the spread to the next sale, and 30 percent is the room that carries transfer tax, "
+            "holding costs and a soft market. It does not apply to the build lens, where the "
+            "offer comes from the construction pro forma instead."
         ),
     )
     assumptions: dict[str, float] = Field(
