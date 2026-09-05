@@ -1,0 +1,9 @@
+# Tests permitted to skip. One path prefix per line, relative to backend/.
+#
+# This file starts empty and should stay that way. A skipped test is a gate that
+# did not run: twice now, the whole integration suite reported green while every
+# case in it was skipped — once behind a hung docker credential helper, once
+# behind an untagged lotscope/postgres:test image. Both looked like a pass.
+#
+# Adding a line here is a decision to stop checking something. Say why, and put
+# the reason on the same line.
