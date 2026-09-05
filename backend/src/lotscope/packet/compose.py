@@ -6,6 +6,7 @@ from lotscope.buybox.schemas import BuyBoxRead
 from lotscope.deal.sensitivity import SensitivityGrid
 from lotscope.packet.schemas import (
     VERIFY_BEFORE_BIDDING,
+    AdjacentParcel,
     DataAsOf,
     LotVerdict,
     PacketComp,
@@ -69,7 +70,27 @@ class LotInputs:
 
     comps: tuple[PacketComp, ...] = ()
 
+    adjacent: tuple[AdjacentParcel, ...] = ()
+    variance_needed: str | None = None
+    variance_outlook_favourable: bool | None = None
+    variance_outlook_basis: str | None = None
+
+    computed_at: datetime | None = None
     sources_fetched_at: dict[str, datetime] = field(default_factory=dict)
+
+    @property
+    def comp_prices(self) -> list[float]:
+        return [comp.sale_price for comp in self.comps if comp.sale_price is not None]
+
+    @property
+    def comp_low(self) -> float | None:
+        prices = self.comp_prices
+        return min(prices) if prices else None
+
+    @property
+    def comp_high(self) -> float | None:
+        prices = self.comp_prices
+        return max(prices) if prices else None
 
 
 def is_scheduled(status: str | None, sale_date: date | None, today: date) -> bool:
@@ -240,7 +261,7 @@ def _swing(grid: SensitivityGrid, axis: str) -> float:
     return max(means) - min(means) if len(means) >= 2 else 0.0
 
 
-def _buy_box_exclusion(lot: LotInputs, buy_box: BuyBoxRead) -> str | None:
+def _buy_box_exclusion(lot: LotInputs, buy_box: BuyBoxRead, use: str) -> str | None:
     if buy_box.exclude_historic and lot.in_historic_district:
         return "In a historic district, which your buy box excludes."
     if buy_box.exclude_flood and lot.in_flood_zone:
@@ -250,7 +271,8 @@ def _buy_box_exclusion(lot: LotInputs, buy_box: BuyBoxRead) -> str | None:
     if buy_box.exclude_city_neighbor and lot.city_neighbor:
         return "Has a publicly held neighbour, which your buy box excludes."
     if (
-        buy_box.min_lot_sqft is not None
+        use != "assemble"
+        and buy_box.min_lot_sqft is not None
         and lot.lot_area_sqft is not None
         and lot.lot_area_sqft < buy_box.min_lot_sqft
     ):
@@ -262,71 +284,228 @@ def _buy_box_exclusion(lot: LotInputs, buy_box: BuyBoxRead) -> str | None:
     return None
 
 
-def decide(lot: LotInputs, buy_box: BuyBoxRead, required_margin: float) -> tuple[LotVerdict, str]:
-    excluded = _buy_box_exclusion(lot, buy_box)
-    if excluded is not None:
-        return "PASS", excluded
-
-    if lot.can_build_by_right is False:
+def _blocking_flag(lot: LotInputs, buy_box: BuyBoxRead) -> str | None:
+    if lot.has_unsafe_structure:
         return (
-            "PASS",
-            "Nothing can be built by right, so the lot needs a variance to be worth a bid.",
+            "L&I records an unsafe or imminently dangerous structure on or beside this lot, "
+            "which stops any lens."
+        )
+    if buy_box.exclude_historic and lot.in_historic_district:
+        return "In a historic district, which your buy box excludes."
+    if buy_box.exclude_flood and lot.in_flood_zone:
+        return "In a Special Flood Hazard Area, which your buy box excludes."
+    return None
+
+
+def _grade_build(
+    lot: LotInputs, buy_box: BuyBoxRead, required_margin: float
+) -> tuple[LotVerdict, str, str]:
+    rule = "build"
+    if lot.can_build_by_right is True:
+        if lot.max_allowable_offer is None or lot.est_margin is None:
+            return (
+                "LOOK",
+                "By-right eligible, but no offer could be computed from the data we hold.",
+                f"{rule}: by-right eligible, offer not computable",
+            )
+        if lot.opening_bid is not None and lot.max_allowable_offer < lot.opening_bid:
+            return (
+                "LOOK",
+                f"By-right eligible, but the ${lot.max_allowable_offer:,.0f} it supports is "
+                f"under the ${lot.opening_bid:,.0f} opening bid.",
+                f"{rule}: by-right eligible, MAO below opening bid",
+            )
+        if lot.est_margin < required_margin:
+            return (
+                "PASS",
+                f"By-right eligible, but {lot.est_margin:.1%} margin is under your "
+                f"{required_margin:.1%} target.",
+                f"{rule}: by-right eligible, margin under target",
+            )
+        if buy_box.max_bid is not None and lot.max_allowable_offer > buy_box.max_bid:
+            return (
+                "PASS",
+                f"Supports ${lot.max_allowable_offer:,.0f}, above your "
+                f"${buy_box.max_bid:,.0f} ceiling.",
+                f"{rule}: MAO above your max bid",
+            )
+        return (
+            "BID",
+            f"By-right eligible, supports ${lot.max_allowable_offer:,.0f} against a "
+            f"${lot.opening_bid:,.0f} opening bid at {lot.est_margin:.1%} margin."
+            if lot.opening_bid is not None
+            else f"By-right eligible, supports ${lot.max_allowable_offer:,.0f} at "
+            f"{lot.est_margin:.1%} margin.",
+            f"{rule}: by-right eligible, MAO >= opening bid, margin >= target",
         )
 
-    if lot.max_allowable_offer is None or lot.est_margin is None:
+    if lot.variance_outlook_favourable is True:
+        needed = lot.variance_needed or "a dimensional variance"
+        basis = lot.variance_outlook_basis or "ZBA decisions for this district"
         return (
             "LOOK",
-            "No offer could be computed from the data we hold, so this one needs a manual read.",
+            f"Not buildable by right — needs {needed} — but the ZBA outlook is favourable "
+            f"({basis}).",
+            f"{rule}: variance needed, ZBA outlook favourable",
         )
 
-    if buy_box.max_bid is not None and lot.max_allowable_offer > buy_box.max_bid:
-        return (
-            "PASS",
-            f"The most this lot supports is ${lot.max_allowable_offer:,.0f}, above your "
-            f"${buy_box.max_bid:,.0f} ceiling.",
-        )
-
-    if lot.opening_bid is not None and lot.opening_bid > lot.max_allowable_offer:
-        return (
-            "PASS",
-            f"The opening bid of ${lot.opening_bid:,.0f} already exceeds the "
-            f"${lot.max_allowable_offer:,.0f} this lot supports.",
-        )
-
-    if lot.est_margin < required_margin - _MARGIN_LOOK_BAND:
-        return (
-            "PASS",
-            f"Estimated margin {lot.est_margin:.1%} is well under your "
-            f"{required_margin:.1%} target.",
-        )
-
-    if lot.est_margin < required_margin:
+    if lot.can_build_by_right is None:
         return (
             "LOOK",
-            f"Estimated margin {lot.est_margin:.1%} is just under your "
-            f"{required_margin:.1%} target, so it turns on the assumptions.",
+            "Whether anything can be built by right could not be determined from the data we hold.",
+            f"{rule}: by-right eligibility unknown",
         )
 
-    high_flags = [flag for flag in red_flags(lot) if flag.severity == "high"]
-    if high_flags:
-        blocker = high_flags[0].label.lower()
-        return (
-            "LOOK",
-            f"The numbers work at ${lot.max_allowable_offer:,.0f}, "
-            f"but {blocker} needs clearing first.",
-        )
-
+    needed = lot.variance_needed or "a variance"
+    outlook_basis = lot.variance_outlook_basis
+    tail = f" ZBA outlook: {outlook_basis}." if outlook_basis else ""
     return (
-        "BID",
-        f"Supports ${lot.max_allowable_offer:,.0f} at {lot.est_margin:.1%} margin, "
-        f"inside your ceiling and clear of your exclusions.",
+        "PASS",
+        f"Not buildable by right — needs {needed} — and the ZBA outlook does not support it.{tail}",
+        f"{rule}: variance needed, ZBA outlook not favourable",
     )
 
 
-def _to_lot(lot: LotInputs, buy_box: BuyBoxRead, required_margin: float, today: date) -> PacketLot:
-    verdict, reason = decide(lot, buy_box, required_margin)
-    comps = list(lot.comps)
-    prices = [comp.sale_price for comp in comps if comp.sale_price is not None]
+def _adjacency_summary(lot: LotInputs) -> str:
+    parts = [
+        f"{item.parcel_number}{f' ({item.address})' if item.address else ''} [{item.owner_class}]"
+        for item in lot.adjacent
+    ]
+    return ", ".join(parts)
+
+
+def _combined_footprint_sqft(lot: LotInputs) -> float | None:
+    if lot.lot_area_sqft is None:
+        return None
+    extra = sum(item.lot_area_sqft or 0.0 for item in lot.adjacent)
+    return lot.lot_area_sqft + extra
+
+
+def _grade_assemble(lot: LotInputs, buy_box: BuyBoxRead) -> tuple[LotVerdict, str, str]:
+    rule = "assemble"
+    if not lot.adjacent:
+        return (
+            "PASS",
+            "No adjacent vacant, publicly held or already-owned parcel shares a boundary.",
+            f"{rule}: no qualifying adjacent parcel",
+        )
+
+    named = _adjacency_summary(lot)
+    combined = _combined_footprint_sqft(lot)
+    floor = buy_box.min_lot_sqft
+    if combined is not None and floor is not None and combined >= floor:
+        return (
+            "BID",
+            f"Combined with {named} the footprint reaches {combined:,.0f} sqft, at or above "
+            f"your {floor:,} sqft floor.",
+            f"{rule}: combined footprint by-right buildable under your floor",
+        )
+    if combined is not None and floor is not None:
+        return (
+            "LOOK",
+            f"Adjacent to {named}, but the combined {combined:,.0f} sqft is still under "
+            f"your {floor:,} sqft floor.",
+            f"{rule}: adjacent, combined footprint under your floor",
+        )
+    return (
+        "LOOK",
+        f"Adjacent to {named}, but the combined footprint could not be measured.",
+        f"{rule}: adjacent, combined footprint unknown",
+    )
+
+
+def _grade_resale(lot: LotInputs, buy_box: BuyBoxRead) -> tuple[LotVerdict, str, str]:
+    rule = "hold/flip"
+    low = lot.comp_low
+    if low is None:
+        return (
+            "LOOK",
+            "No comparable land sale nearby, so a resale spread cannot be measured.",
+            f"{rule}: no comparable range",
+        )
+    if lot.opening_bid is None:
+        return (
+            "LOOK",
+            f"No opening bid is published, so it cannot be tested against the "
+            f"${low:,.0f} comp low.",
+            f"{rule}: opening bid unknown",
+        )
+    threshold = low * buy_box.flip_bid_ratio
+    if lot.opening_bid <= threshold:
+        return (
+            "BID",
+            f"Opening bid ${lot.opening_bid:,.0f} is at or under "
+            f"{buy_box.flip_bid_ratio:.0%} of the ${low:,.0f} comp low "
+            f"(${threshold:,.0f}).",
+            f"{rule}: opening bid <= {buy_box.flip_bid_ratio:.0%} of comp low",
+        )
+    if lot.opening_bid <= low:
+        return (
+            "LOOK",
+            f"Opening bid ${lot.opening_bid:,.0f} is under the ${low:,.0f} comp low but "
+            f"above {buy_box.flip_bid_ratio:.0%} of it.",
+            f"{rule}: opening bid <= comp low",
+        )
+    return (
+        "PASS",
+        f"Opening bid ${lot.opening_bid:,.0f} is already above the ${low:,.0f} comp low.",
+        f"{rule}: opening bid above comp low",
+    )
+
+
+_LENS_LABEL = {
+    "build": "build",
+    "assemble": "assemble",
+    "hold": "hold/flip",
+    "flip": "hold/flip",
+}
+
+
+def _grade_for(
+    use: str, lot: LotInputs, buy_box: BuyBoxRead, required_margin: float
+) -> tuple[LotVerdict, str, str]:
+    if use == "build":
+        return _grade_build(lot, buy_box, required_margin)
+    if use == "assemble":
+        return _grade_assemble(lot, buy_box)
+    return _grade_resale(lot, buy_box)
+
+
+def decide(
+    lot: LotInputs, buy_box: BuyBoxRead, required_margin: float
+) -> tuple[LotVerdict, str, str, list[str]]:
+    blocking = _blocking_flag(lot, buy_box)
+    if blocking is not None:
+        return "PASS", blocking, "all lenses: blocking red flag", []
+
+    use = buy_box.target_use
+    excluded = _buy_box_exclusion(lot, buy_box, use)
+    if excluded is not None:
+        return "PASS", excluded, f"{_LENS_LABEL[use]}: outside your buy box", []
+
+    verdict, reason, rule = _grade_for(use, lot, buy_box, required_margin)
+
+    also: list[str] = []
+    for other in ("build", "assemble", "hold"):
+        if other == use or (other == "hold" and use == "flip"):
+            continue
+        other_excluded = _buy_box_exclusion(lot, buy_box, other)
+        if other_excluded is not None:
+            also.append(f"also as {_LENS_LABEL[other]}: PASS - {other_excluded}")
+            continue
+        other_verdict, other_reason, _ = _grade_for(other, lot, buy_box, required_margin)
+        also.append(f"also as {_LENS_LABEL[other]}: {other_verdict} - {other_reason}")
+    return verdict, reason, rule, also
+
+
+def _to_lot(
+    lot: LotInputs,
+    buy_box: BuyBoxRead,
+    required_margin: float,
+    today: date,
+    generated_at: datetime,
+) -> PacketLot:
+    verdict, reason, rule, also = decide(lot, buy_box, required_margin)
     return PacketLot(
         parcel_number=lot.parcel_number,
         address=lot.address,
@@ -348,11 +527,18 @@ def _to_lot(lot: LotInputs, buy_box: BuyBoxRead, required_margin: float, today: 
         est_margin=lot.est_margin,
         sensitive_inputs=sensitive_inputs(lot.sensitivity),
         red_flags=red_flags(lot),
-        comps=comps,
-        comp_range_low=min(prices) if prices else None,
-        comp_range_high=max(prices) if prices else None,
+        comps=list(lot.comps),
+        comp_range_low=lot.comp_low,
+        comp_range_high=lot.comp_high,
+        adjacent=list(lot.adjacent),
+        variance_needed=lot.variance_needed,
+        variance_outlook=lot.variance_outlook_basis,
         verdict=verdict,
         verdict_reason=reason,
+        graded_as=buy_box.target_use,
+        grade_rule=rule,
+        also=also,
+        computed_at=lot.computed_at or generated_at,
         verify_before_bidding=list(VERIFY_BEFORE_BIDDING),
     )
 
@@ -371,7 +557,7 @@ def compose_packet(
     vacant = [lot for lot in lots if lot.is_vacant]
     non_vacant = [lot for lot in lots if not lot.is_vacant]
 
-    composed = [_to_lot(lot, buy_box, required_margin, as_of_today) for lot in vacant]
+    composed = [_to_lot(lot, buy_box, required_margin, as_of_today, generated_at) for lot in vacant]
     kept = [lot for lot in composed if lot.verdict != "PASS"]
     passed = [
         PassedLot(parcel_number=lot.parcel_number, address=lot.address, reason=lot.verdict_reason)
@@ -390,6 +576,8 @@ def compose_packet(
     sale_types = sorted({lot.sale_type for lot in lots if lot.sale_type})
     header = PacketHeader(
         sale_date=sale_date,
+        target_use=buy_box.target_use,
+        computed_at=generated_at,
         sale_types=sale_types,
         listings=len(lots),
         vacant=len(vacant),
@@ -420,6 +608,7 @@ def _buy_box_summary(buy_box: BuyBoxRead, required_margin: float) -> dict[str, A
         "min_lot_sqft": buy_box.min_lot_sqft,
         "zoning_codes": list(buy_box.zoning_codes),
         "required_margin": required_margin,
+        "flip_bid_ratio": buy_box.flip_bid_ratio,
         "exclude_historic": buy_box.exclude_historic,
         "exclude_flood": buy_box.exclude_flood,
         "exclude_open_violations": buy_box.exclude_open_violations,

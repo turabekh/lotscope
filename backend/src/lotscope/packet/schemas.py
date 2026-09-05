@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from lotscope.buybox.schemas import TargetUse
+
 LotVerdict = Literal["BID", "LOOK", "PASS"]
 
 VERIFY_BEFORE_BIDDING: tuple[str, ...] = (
@@ -37,6 +39,14 @@ class RedFlag(BaseModel):
     source: str
     source_url: str
     fetched_at: datetime | None = None
+
+
+class AdjacentParcel(BaseModel):
+    parcel_number: str
+    address: str | None = None
+    owner_class: Literal["public", "vacant", "owned_by_you", "other"]
+    shared_boundary_ft: float | None = None
+    lot_area_sqft: float | None = None
 
 
 class PacketComp(BaseModel):
@@ -85,8 +95,16 @@ class PacketLot(BaseModel):
     comp_range_low: float | None = None
     comp_range_high: float | None = None
 
+    adjacent: list[AdjacentParcel] = Field(default_factory=list)
+    variance_needed: str | None = None
+    variance_outlook: str | None = None
+
     verdict: LotVerdict
     verdict_reason: str
+    graded_as: TargetUse
+    grade_rule: str
+    also: list[str] = Field(default_factory=list)
+    computed_at: datetime
     verify_before_bidding: list[str] = Field(default_factory=list)
 
 
@@ -94,10 +112,13 @@ class PassedLot(BaseModel):
     parcel_number: str
     address: str | None = None
     reason: str
+    grade_rule: str | None = None
 
 
 class PacketHeader(BaseModel):
     sale_date: date
+    target_use: TargetUse
+    computed_at: datetime
     sale_types: list[str]
     listings: int
     vacant: int

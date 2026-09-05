@@ -73,7 +73,11 @@ def _header_block(pdf: _Dossier, packet: PacketModel) -> None:
     pdf.cell(
         0,
         5,
-        _s(f"Generated {header.generated_at.strftime('%Y-%m-%d %H:%M UTC')}"),
+        _s(
+            f"Graded as {header.target_use} - computed "
+            f"{header.computed_at.strftime('%Y-%m-%d %H:%M UTC')} from live data, "
+            f"not a stored verdict"
+        ),
         new_x=XPos.LMARGIN,
         new_y=YPos.NEXT,
     )
@@ -143,6 +147,9 @@ def _lot_page(pdf: _Dossier, lot: PacketLot) -> None:
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*_INK)
     pdf.multi_cell(0, 4.5, _s(lot.verdict_reason), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    _footnote(pdf, f"Rule: {lot.grade_rule}")
+    for line in lot.also:
+        _note(pdf, line)
     pdf.ln(1)
 
     _section(pdf, "The listing")
@@ -166,6 +173,12 @@ def _lot_page(pdf: _Dossier, lot: PacketLot) -> None:
     )
     _kv(pdf, "Zoning", lot.zoning_code or "not recorded")
     _kv(pdf, "Overlays", ", ".join(lot.overlays) if lot.overlays else "none recorded")
+    if lot.adjacent:
+        _kv(
+            pdf,
+            "Adjacent",
+            ", ".join(f"{item.parcel_number} [{item.owner_class}]" for item in lot.adjacent),
+        )
     by_right = (
         "unknown"
         if lot.can_build_by_right is None
@@ -178,6 +191,11 @@ def _lot_page(pdf: _Dossier, lot: PacketLot) -> None:
         _note(pdf, lot.dimensional_reason)
     if lot.provision_id:
         _footnote(pdf, f"Title 14 provision {lot.provision_id}")
+    if lot.variance_needed:
+        _kv(pdf, "Variance needed", "")
+        _note(pdf, lot.variance_needed)
+    if lot.variance_outlook:
+        _note(pdf, f"ZBA outlook: {lot.variance_outlook}")
 
     _section(pdf, "The offer")
     _kv(pdf, "Maximum allowable offer", _money(lot.max_allowable_offer))
@@ -238,6 +256,8 @@ def _pass_appendix(pdf: _Dossier, packet: PacketModel) -> None:
             new_y=YPos.NEXT,
         )
         _note(pdf, entry.reason)
+        if entry.grade_rule:
+            _footnote(pdf, f"Rule: {entry.grade_rule}")
 
     if packet.non_vacant_appendix:
         _section(pdf, "Not vacant, so not screened")
@@ -257,7 +277,8 @@ def render_packet_pdf(packet: PacketModel) -> bytes:
     pdf = _Dossier(orientation="L", unit="mm", format="A4")
     pdf.running_title = f"Sale Packet {packet.header.sale_date.isoformat()}"
     pdf.running_subtitle = (
-        f"{packet.header.passing_buy_box} of {packet.header.vacant} vacant lots pass"
+        f"{packet.header.passing_buy_box} of {packet.header.vacant} vacant lots pass "
+        f"as {packet.header.target_use}"
     )
     pdf.footer_note = (
         "LotScope screens public records and is not legal, title or financial advice. "
