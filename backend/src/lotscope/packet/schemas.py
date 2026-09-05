@@ -7,7 +7,13 @@ from lotscope.buybox.schemas import TargetUse
 
 LotVerdict = Literal["BID", "LOOK", "PASS"]
 
+OPENING_BID_NOTE = (
+    "The published opening bid is a minimum, nominal on tax sales — expect to compete. "
+    "It does not price the lot and nothing in this packet is graded on it."
+)
+
 VERIFY_BEFORE_BIDDING: tuple[str, ...] = (
+    OPENING_BID_NOTE,
     "Water and sewer liens — the Water Revenue Bureau does not publish them per parcel and we "
     "do not hold them. A vacant lot can carry years of unbilled service charges.",
     "Gas liens and PGW balances — not in any dataset we ingest.",
@@ -72,6 +78,7 @@ class PacketLot(BaseModel):
     case_number: str | None = None
     sale_type: str | None = None
     opening_bid: float | None = None
+    opening_bid_note: str = OPENING_BID_NOTE
     status: str | None = None
     is_scheduled: bool
     plaintiff: str | None = None
@@ -94,6 +101,15 @@ class PacketLot(BaseModel):
     comps: list[PacketComp] = Field(default_factory=list)
     comp_range_low: float | None = None
     comp_range_high: float | None = None
+
+    clearing_estimate: float | None = None
+    clearing_sample_size: int = 0
+    clearing_low: float | None = None
+    clearing_high: float | None = None
+    clearing_sufficient: bool = False
+    clearing_reason: str | None = None
+    clearing_source: str | None = None
+    clearing_source_url: str | None = None
 
     adjacent: list[AdjacentParcel] = Field(default_factory=list)
     variance_needed: str | None = None

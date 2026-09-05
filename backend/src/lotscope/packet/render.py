@@ -28,7 +28,7 @@ _SUMMARY_COLUMNS: tuple[tuple[str, float], ...] = (
     ("Case", 24),
     ("Zoning", 20),
     ("Lot sqft", 20),
-    ("Opening", 24),
+    ("Clearing", 24),
     ("MAO", 26),
     ("Margin", 18),
     ("Flags", 14),
@@ -130,7 +130,7 @@ def _summary_table(pdf: _Dossier, packet: PacketModel) -> None:
             5,
             _s(f"{row.lot_area_sqft:,.0f}" if row.lot_area_sqft is not None else "-"),
         )
-        pdf.cell(_SUMMARY_COLUMNS[6][1], 5, _s(_money(row.opening_bid)))
+        pdf.cell(_SUMMARY_COLUMNS[6][1], 5, _s(_money(row.clearing_estimate)))
         pdf.cell(_SUMMARY_COLUMNS[7][1], 5, _s(_money(row.max_allowable_offer)))
         pdf.cell(_SUMMARY_COLUMNS[8][1], 5, _s(_percent(row.est_margin)))
         pdf.cell(_SUMMARY_COLUMNS[9][1], 5, _s(str(len(row.red_flags))))
@@ -163,6 +163,23 @@ def _lot_page(pdf: _Dossier, lot: PacketLot) -> None:
         f"{' - scheduled for auction' if lot.is_scheduled else ' - not scheduled'}",
     )
     _kv(pdf, "Opening bid", _money(lot.opening_bid))
+    _note(pdf, lot.opening_bid_note)
+    if lot.clearing_sufficient and lot.clearing_estimate is not None:
+        band = (
+            f" (range {_money(lot.clearing_low)} - {_money(lot.clearing_high)})"
+            if lot.clearing_low is not None
+            else ""
+        )
+        _kv(
+            pdf,
+            "Expected clearing",
+            f"{_money(lot.clearing_estimate)} from {lot.clearing_sample_size} deeds{band}",
+        )
+        if lot.clearing_source_url:
+            _footnote(pdf, f"{lot.clearing_source} - {lot.clearing_source_url}")
+    elif lot.clearing_reason:
+        _kv(pdf, "Expected clearing", "not enough data")
+        _note(pdf, lot.clearing_reason)
     _kv(pdf, "Plaintiff", lot.plaintiff or "not stated")
 
     _section(pdf, "The lot")

@@ -30,7 +30,7 @@ from lotscope.packet.render import packet_filename, render_packet_pdf
 from lotscope.packet.schemas import AdjacentParcel, DataAsOf, PacketComp, PacketModel
 from lotscope.risk.service import NOT_SCHEDULED_STATUSES
 from lotscope.underwriting.matching import required_margin
-from lotscope.valuation.service import value_parcel
+from lotscope.valuation.service import sheriff_clearing_estimate, value_parcel
 from lotscope.zba.schemas import VarianceOutlook
 from lotscope.zba.service import variance_outlook
 from lotscope.zoning.schemas import BuildabilityResult
@@ -261,6 +261,7 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
         buildability = None
         deal = None
         grid = None
+        clearing = None
         variance_needed = None
         outlook_favourable = None
         outlook_basis = None
@@ -289,6 +290,7 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
                 _deal_assumptions(deal),
                 computed_at=computed_at,
             )
+            clearing = await sheriff_clearing_estimate(session, parcel)
             if buildability is not None and buildability.can_build_by_right is not True:
                 variance_needed = _variance_needed(buildability)
                 outlook = await variance_outlook(session, parcel)
@@ -325,6 +327,14 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
                 in_historic_district=parcel in historic,
                 in_flood_zone=parcel in flood,
                 comps=tuple(comps.get(parcel, [])),
+                clearing_estimate=clearing.estimate if clearing else None,
+                clearing_sample_size=clearing.sample_size if clearing else 0,
+                clearing_low=clearing.low if clearing else None,
+                clearing_high=clearing.high if clearing else None,
+                clearing_sufficient=bool(clearing.sufficient) if clearing else False,
+                clearing_reason=clearing.reason if clearing else None,
+                clearing_source=clearing.source if clearing else None,
+                clearing_source_url=clearing.source_url if clearing else None,
                 adjacent=tuple(adjacent.get(parcel, [])),
                 variance_needed=variance_needed,
                 variance_outlook_favourable=outlook_favourable,

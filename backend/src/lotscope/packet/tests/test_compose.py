@@ -385,34 +385,90 @@ def _priced(low: float, high: float) -> tuple[PacketComp, ...]:
     )
 
 
-def test_the_flip_lens_bids_under_the_ratio_and_looks_under_the_comp_low() -> None:
+def _clearing(estimate: float, sample: int = 12) -> dict[str, object]:
+    return {
+        "clearing_estimate": estimate,
+        "clearing_sample_size": sample,
+        "clearing_low": estimate / 2,
+        "clearing_high": estimate * 3,
+        "clearing_sufficient": True,
+    }
+
+
+def test_the_flip_lens_grades_on_the_clearing_estimate_not_the_opening_bid() -> None:
     comps = _priced(100_000.0, 180_000.0)
     box = _buy_box(target_use="flip", flip_bid_ratio=0.70)
 
     cheap, cheap_reason, cheap_rule, _a = decide(
-        _lot(opening_bid=60_000.0, comps=comps), box, REQUIRED_MARGIN
+        _lot(opening_bid=1_600.0, comps=comps, **_clearing(60_000.0)), box, REQUIRED_MARGIN
     )
     middling, _, middling_rule, _b = decide(
-        _lot(opening_bid=90_000.0, comps=comps), box, REQUIRED_MARGIN
+        _lot(opening_bid=1_600.0, comps=comps, **_clearing(90_000.0)), box, REQUIRED_MARGIN
     )
-    dear, _, dear_rule, _c = decide(_lot(opening_bid=120_000.0, comps=comps), box, REQUIRED_MARGIN)
+    dear, _, dear_rule, _c = decide(
+        _lot(opening_bid=1_600.0, comps=comps, **_clearing(120_000.0)), box, REQUIRED_MARGIN
+    )
 
     assert cheap == "BID"
+    assert "Expected clearing $60,000" in cheap_reason
+    assert "median of 12 nearby sheriff's deeds" in cheap_reason
     assert "$70,000" in cheap_reason
-    assert cheap_rule == "hold/flip: opening bid <= 70% of comp low"
+    assert cheap_rule == "hold/flip: clearing estimate <= 70% of comp low"
     assert middling == "LOOK"
-    assert middling_rule == "hold/flip: opening bid <= comp low"
+    assert middling_rule == "hold/flip: clearing estimate <= comp low"
     assert dear == "PASS"
-    assert dear_rule == "hold/flip: opening bid above comp low"
+    assert dear_rule == "hold/flip: clearing estimate above comp low"
+
+
+def test_a_nominal_opening_bid_no_longer_makes_everything_a_bid() -> None:
+    comps = _priced(100_000.0, 180_000.0)
+
+    verdict, _reason, rule, _also = decide(
+        _lot(opening_bid=1_600.0, comps=comps, **_clearing(120_000.0)),
+        _buy_box(target_use="flip"),
+        REQUIRED_MARGIN,
+    )
+
+    assert verdict == "PASS"
+    assert rule == "hold/flip: clearing estimate above comp low"
+
+
+def test_insufficient_clearing_data_is_a_look_and_never_a_bid() -> None:
+    comps = _priced(100_000.0, 180_000.0)
+
+    verdict, reason, rule, _also = decide(
+        _lot(opening_bid=1_600.0, comps=comps, clearing_sample_size=2, clearing_sufficient=False),
+        _buy_box(target_use="flip"),
+        REQUIRED_MARGIN,
+    )
+
+    assert verdict == "LOOK"
+    assert "not enough recent sheriff clearing data nearby (n=2)" in reason.lower()
+    assert rule == "hold/flip: clearing estimate insufficient"
+
+
+def test_a_cheap_clearing_estimate_without_the_sufficient_flag_still_cannot_bid() -> None:
+    verdict, _reason, _rule, _also = decide(
+        _lot(
+            comps=_priced(100_000.0, 180_000.0),
+            clearing_estimate=1.0,
+            clearing_sample_size=1,
+            clearing_sufficient=False,
+        ),
+        _buy_box(target_use="flip"),
+        REQUIRED_MARGIN,
+    )
+
+    assert verdict == "LOOK"
 
 
 def test_the_flip_ratio_is_a_buy_box_field_that_moves_the_threshold() -> None:
     comps = _priced(100_000.0, 180_000.0)
     at_default, _, _r, _a = decide(
-        _lot(opening_bid=75_000.0, comps=comps), _buy_box(target_use="flip"), REQUIRED_MARGIN
+        _lot(comps=comps, **_clearing(75_000.0)), _buy_box(target_use="flip"), REQUIRED_MARGIN
     )
     at_eighty, _, _r2, _a2 = decide(
-        _lot(opening_bid=75_000.0, comps=comps),
+        _lot(comps=comps, **_clearing(75_000.0)),
         _buy_box(target_use="flip", flip_bid_ratio=0.80),
         REQUIRED_MARGIN,
     )
@@ -425,7 +481,7 @@ def test_the_flip_ratio_is_a_buy_box_field_that_moves_the_threshold() -> None:
 def test_the_flip_lens_does_not_gate_on_mao() -> None:
     comps = _priced(100_000.0, 180_000.0)
     verdict, _, _rule, _also = decide(
-        _lot(opening_bid=60_000.0, comps=comps, max_allowable_offer=0.0, est_margin=-0.9),
+        _lot(comps=comps, max_allowable_offer=0.0, est_margin=-0.9, **_clearing(60_000.0)),
         _buy_box(target_use="flip"),
         REQUIRED_MARGIN,
     )
@@ -435,7 +491,7 @@ def test_the_flip_lens_does_not_gate_on_mao() -> None:
 
 def test_the_other_lenses_come_back_as_also_lines() -> None:
     _verdict, _reason, _rule, also = decide(
-        _lot(comps=_priced(100_000.0, 180_000.0), adjacent=(_adjacent(),)),
+        _lot(comps=_priced(100_000.0, 180_000.0), adjacent=(_adjacent(),), **_clearing(60_000.0)),
         _buy_box(target_use="build", min_lot_sqft=640),
         REQUIRED_MARGIN,
     )
@@ -447,7 +503,9 @@ def test_the_other_lenses_come_back_as_also_lines() -> None:
 
 def test_a_hold_buyer_gets_build_and_assemble_as_also_lines() -> None:
     _verdict, _reason, _rule, also = decide(
-        _lot(comps=_priced(100_000.0, 180_000.0)), _buy_box(target_use="hold"), REQUIRED_MARGIN
+        _lot(comps=_priced(100_000.0, 180_000.0), **_clearing(60_000.0)),
+        _buy_box(target_use="hold"),
+        REQUIRED_MARGIN,
     )
 
     assert [line.split(":")[0] for line in also] == ["also as build", "also as assemble"]

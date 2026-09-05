@@ -70,6 +70,15 @@ class LotInputs:
 
     comps: tuple[PacketComp, ...] = ()
 
+    clearing_estimate: float | None = None
+    clearing_sample_size: int = 0
+    clearing_low: float | None = None
+    clearing_high: float | None = None
+    clearing_sufficient: bool = False
+    clearing_reason: str | None = None
+    clearing_source: str | None = None
+    clearing_source_url: str | None = None
+
     adjacent: tuple[AdjacentParcel, ...] = ()
     variance_needed: str | None = None
     variance_outlook_favourable: bool | None = None
@@ -423,33 +432,43 @@ def _grade_resale(lot: LotInputs, buy_box: BuyBoxRead) -> tuple[LotVerdict, str,
             "No comparable land sale nearby, so a resale spread cannot be measured.",
             f"{rule}: no comparable range",
         )
-    if lot.opening_bid is None:
+
+    if not lot.clearing_sufficient or lot.clearing_estimate is None:
         return (
             "LOOK",
-            f"No opening bid is published, so it cannot be tested against the "
-            f"${low:,.0f} comp low.",
-            f"{rule}: opening bid unknown",
+            f"Not enough recent sheriff clearing data nearby "
+            f"(n={lot.clearing_sample_size}), so what this lot will actually cost is unknown.",
+            f"{rule}: clearing estimate insufficient",
         )
+
+    clearing = lot.clearing_estimate
     threshold = low * buy_box.flip_bid_ratio
-    if lot.opening_bid <= threshold:
+    if lot.clearing_low is not None and lot.clearing_high is not None:
+        band = f", ${lot.clearing_low:,.0f}-${lot.clearing_high:,.0f}"
+    else:
+        band = ""
+    spread = (
+        f"Expected clearing ${clearing:,.0f} (median of {lot.clearing_sample_size} nearby "
+        f"sheriff's deeds{band})"
+    )
+    if clearing <= threshold:
         return (
             "BID",
-            f"Opening bid ${lot.opening_bid:,.0f} is at or under "
-            f"{buy_box.flip_bid_ratio:.0%} of the ${low:,.0f} comp low "
-            f"(${threshold:,.0f}).",
-            f"{rule}: opening bid <= {buy_box.flip_bid_ratio:.0%} of comp low",
+            f"{spread} is at or under {buy_box.flip_bid_ratio:.0%} of the ${low:,.0f} "
+            f"comp low (${threshold:,.0f}).",
+            f"{rule}: clearing estimate <= {buy_box.flip_bid_ratio:.0%} of comp low",
         )
-    if lot.opening_bid <= low:
+    if clearing <= low:
         return (
             "LOOK",
-            f"Opening bid ${lot.opening_bid:,.0f} is under the ${low:,.0f} comp low but "
-            f"above {buy_box.flip_bid_ratio:.0%} of it.",
-            f"{rule}: opening bid <= comp low",
+            f"{spread} is under the ${low:,.0f} comp low but above "
+            f"{buy_box.flip_bid_ratio:.0%} of it.",
+            f"{rule}: clearing estimate <= comp low",
         )
     return (
         "PASS",
-        f"Opening bid ${lot.opening_bid:,.0f} is already above the ${low:,.0f} comp low.",
-        f"{rule}: opening bid above comp low",
+        f"{spread} is already at or above the ${low:,.0f} comp low.",
+        f"{rule}: clearing estimate above comp low",
     )
 
 
@@ -530,6 +549,14 @@ def _to_lot(
         comps=list(lot.comps),
         comp_range_low=lot.comp_low,
         comp_range_high=lot.comp_high,
+        clearing_estimate=lot.clearing_estimate,
+        clearing_sample_size=lot.clearing_sample_size,
+        clearing_low=lot.clearing_low,
+        clearing_high=lot.clearing_high,
+        clearing_sufficient=lot.clearing_sufficient,
+        clearing_reason=lot.clearing_reason,
+        clearing_source=lot.clearing_source,
+        clearing_source_url=lot.clearing_source_url,
         adjacent=list(lot.adjacent),
         variance_needed=lot.variance_needed,
         variance_outlook=lot.variance_outlook_basis,

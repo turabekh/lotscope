@@ -145,6 +145,18 @@ def test_the_pdf_names_water_and_gas_among_what_it_cannot_see() -> None:
     assert "Gas liens" in text
 
 
+def test_every_packet_warns_that_the_opening_bid_is_nominal() -> None:
+    packet = _packet()
+    text = _all_text()
+
+    assert "nominal on tax sales" in text
+    assert "expect to compete" in text
+    for lot in packet.lots:
+        assert lot.opening_bid_note in lot.verify_before_bidding
+        assert "nominal on tax sales" in lot.opening_bid_note
+    assert packet.verify_before_bidding[0] == packet.lots[0].opening_bid_note
+
+
 def test_passed_lots_appear_in_the_appendix_with_their_reason() -> None:
     text = _all_text()
 
