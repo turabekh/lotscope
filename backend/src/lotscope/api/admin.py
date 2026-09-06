@@ -14,12 +14,14 @@ from lotscope.admin.schemas import (
     AdminOverview,
     AdminUsersResponse,
     AdminUserUpdate,
+    AnalystSpendToday,
     DatasetStatus,
     JobCatalogEntry,
     JobRunRequest,
     JobRunSummary,
 )
 from lotscope.admin.service import (
+    analyst_spend_today,
     enqueue_job,
     job_catalog,
     list_datasets,
@@ -30,11 +32,13 @@ from lotscope.admin.service import (
 )
 from lotscope.api.deps import (
     SourceFetcher,
+    get_app_settings,
     get_arq_pool,
     get_session,
     get_source_fetcher,
     require_admin,
 )
+from lotscope.core.config import Settings
 from lotscope.core.errors import ValidationError
 from lotscope.packet.service import enqueue_packet
 
@@ -44,6 +48,7 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 AdminDep = Annotated[User, Depends(require_admin)]
 ArqPoolDep = Annotated[ArqRedis, Depends(get_arq_pool)]
 FetcherDep = Annotated[SourceFetcher, Depends(get_source_fetcher)]
+SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 
 
 def _filename_from_url(url: str) -> str:
@@ -78,6 +83,14 @@ async def admin_update_user(
     result = await update_user(session, user_id, data)
     await session.commit()
     return result
+
+
+@router.get("/analyst-spend", response_model=AnalystSpendToday)
+async def admin_analyst_spend(
+    session: SessionDep, admin: AdminDep, settings: SettingsDep
+) -> AnalystSpendToday:
+    """Today's Analyst bill, by user. The one screen that answers "who is spending it"."""
+    return await analyst_spend_today(session, settings)
 
 
 @router.get("/jobs", response_model=list[JobCatalogEntry])

@@ -877,6 +877,9 @@ export interface AdminUserUpdate {
   role?: string
   tier?: string
   is_active?: boolean
+  // Sent as null to hand the account back to the platform default.
+  analyst_daily_usd?: string | null
+  analyst_daily_runs?: number | null
 }
 
 export interface OpsHealthRollup {
@@ -1017,6 +1020,30 @@ export interface JobParamSpec {
   required: boolean
 }
 
+export interface AnalystSpendRow {
+  user_id: number
+  email: string
+  chat_usd: string
+  job_usd: string
+  total_usd: string
+  runs: number
+  input_tokens: number
+  output_tokens: number
+  ceiling_usd: string
+  run_ceiling: number
+  over_ceiling: boolean
+}
+
+export interface AnalystSpendToday {
+  day: string
+  spend_usd: string
+  global_ceiling_usd: string
+  fraction: number
+  default_ceiling_usd: string
+  default_run_ceiling: number
+  users: AnalystSpendRow[]
+}
+
 export interface JobRunSummary {
   id: number
   job_id: string
@@ -1028,6 +1055,7 @@ export interface JobRunSummary {
   started_at: string | null
   finished_at: string | null
   result_count: number | null
+  duration_ms: number | null
   error: string | null
   triggered_by: number
   created_at: string

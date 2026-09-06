@@ -20,6 +20,7 @@ import type {
   AdminOverview,
   AdminUserUpdate,
   AdminUsersResponse,
+  AnalystSpendToday,
   AreaSearchRequest,
   AreaSearchResponse,
   AssemblageResult,
@@ -539,6 +540,9 @@ export const api = {
   },
   getJobCatalog(): Promise<JobCatalogEntry[]> {
     return request('/admin/jobs')
+  },
+  getAnalystSpend(): Promise<AnalystSpendToday> {
+    return request('/admin/analyst-spend')
   },
   getJobRuns(limit = 50): Promise<JobRunSummary[]> {
     return request(`/admin/jobs/runs?limit=${limit}`)

@@ -7,6 +7,7 @@ import CorrectionsQueue from '@/components/CorrectionsQueue.vue'
 import { api } from '@/lib/api'
 import type {
   AdminOverview,
+  AnalystSpendToday,
   DatasetStatus,
   JobCatalogEntry,
   JobRunSummary,
@@ -26,6 +27,7 @@ const users = ref<User[]>([])
 const usersTotal = ref(0)
 const loading = ref(false)
 
+const spend = ref<AnalystSpendToday | null>(null)
 const jobs = ref<JobCatalogEntry[]>([])
 const jobRuns = ref<JobRunSummary[]>([])
 const submittingJob = ref<string | null>(null)
@@ -147,6 +149,31 @@ const overviewCards = computed(() => {
   ]
 })
 
+function money(value: string | number): string {
+  return `$${Number(value).toFixed(2)}`
+}
+
+const spendPct = computed(() => Math.round((spend.value?.fraction ?? 0) * 100))
+
+const spendColor = computed(() => {
+  if (spendPct.value >= 100) return 'negative'
+  if (spendPct.value >= 80) return 'orange'
+  return 'primary'
+})
+
+async function saveCeiling(row: { user_id: number }, raw: string): Promise<void> {
+  const trimmed = raw.trim()
+  // Empty hands the account back to the platform default; 0 stops it entirely.
+  const value = trimmed === '' ? null : trimmed
+  try {
+    await api.updateAdminUser(row.user_id, { analyst_daily_usd: value })
+    $q.notify({ type: 'positive', message: 'Ceiling saved.' })
+    spend.value = await api.getAnalystSpend()
+  } catch {
+    $q.notify({ type: 'negative', message: 'Could not save the ceiling.' })
+  }
+}
+
 function statusColor(status: string): string {
   if (status === 'success') return 'positive'
   if (status === 'failed') return 'negative'
@@ -165,6 +192,7 @@ async function load(): Promise<void> {
   loading.value = true
   try {
     overview.value = await api.getAdminOverview()
+    spend.value = await api.getAnalystSpend()
     datasets.value = await api.getAdminDatasets()
     const page = await api.getAdminUsers(100, 0)
     users.value = page.users
@@ -215,6 +243,74 @@ onBeforeUnmount(() => {
         </q-card>
       </div>
 
+      <div class="text-subtitle2 q-mt-md q-mb-xs">Analyst spend today</div>
+      <q-card v-if="spend" flat bordered class="spend-card">
+        <div class="spend-head">
+          <div>
+            <div class="spend-total" data-test="spend-total">
+              {{ money(spend.spend_usd) }} of {{ money(spend.global_ceiling_usd) }}
+            </div>
+            <div class="text-caption text-grey-7">
+              {{ spend.day }} UTC · estimated from list prices · default ceiling
+              {{ money(spend.default_ceiling_usd) }} and {{ spend.default_run_ceiling }} runs per
+              user
+            </div>
+          </div>
+          <q-badge :color="spendColor" text-color="white" data-test="spend-pct">
+            {{ spendPct }}%
+          </q-badge>
+        </div>
+        <q-linear-progress
+          :value="Math.min(spend.fraction, 1)"
+          :color="spendColor"
+          size="6px"
+          class="q-mt-sm"
+        />
+        <q-markup-table flat dense class="q-mt-sm">
+          <thead>
+            <tr>
+              <th class="text-left">User</th>
+              <th class="text-right">Chat</th>
+              <th class="text-right">Jobs</th>
+              <th class="text-right">Total</th>
+              <th class="text-right">Runs</th>
+              <th class="text-right">Ceiling</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in spend.users" :key="row.user_id" data-test="spend-row">
+              <td class="text-left">
+                {{ row.email }}
+                <q-badge
+                  v-if="row.over_ceiling"
+                  color="negative"
+                  text-color="white"
+                  class="q-ml-xs"
+                >
+                  at ceiling
+                </q-badge>
+              </td>
+              <td class="text-right">{{ money(row.chat_usd) }}</td>
+              <td class="text-right">{{ money(row.job_usd) }}</td>
+              <td class="text-right">{{ money(row.total_usd) }}</td>
+              <td class="text-right">{{ row.runs }}</td>
+              <td class="text-right">
+                <q-input
+                  dense
+                  outlined
+                  class="ceiling-input"
+                  :model-value="Number(row.ceiling_usd).toFixed(2)"
+                  @update:model-value="(v) => saveCeiling(row, String(v ?? ''))"
+                />
+              </td>
+            </tr>
+            <tr v-if="spend.users.length === 0">
+              <td colspan="6" class="text-grey-6">No Analyst runs today.</td>
+            </tr>
+          </tbody>
+        </q-markup-table>
+      </q-card>
+
       <div class="text-subtitle2 q-mt-md q-mb-xs">
         Jobs
         <q-spinner v-if="hasActiveRun" color="primary" size="14px" class="q-ml-xs" />
@@ -260,6 +356,7 @@ onBeforeUnmount(() => {
             <th class="text-left">Job</th>
             <th class="text-left">Status</th>
             <th class="text-right">Rows</th>
+            <th class="text-right">Took</th>
             <th class="text-left">Started</th>
             <th class="text-left">Finished</th>
           </tr>
@@ -274,11 +371,14 @@ onBeforeUnmount(() => {
               <q-tooltip v-if="run.error">{{ run.error }}</q-tooltip>
             </td>
             <td class="text-right">{{ run.result_count?.toLocaleString() ?? '—' }}</td>
+            <td class="text-right">
+              {{ run.duration_ms === null ? '—' : `${(run.duration_ms / 1000).toFixed(1)}s` }}
+            </td>
             <td class="text-left">{{ formatTime(run.started_at) }}</td>
             <td class="text-left">{{ formatTime(run.finished_at) }}</td>
           </tr>
           <tr v-if="jobRuns.length === 0">
-            <td colspan="5" class="text-grey-6">No jobs have been triggered yet.</td>
+            <td colspan="6" class="text-grey-6">No jobs have been triggered yet.</td>
           </tr>
         </tbody>
       </q-markup-table>
@@ -495,6 +595,27 @@ onBeforeUnmount(() => {
   gap: 8px;
   margin-top: 14px;
 }
+.spend-card {
+  padding: 12px;
+}
+
+.spend-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.spend-total {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.ceiling-input {
+  max-width: 96px;
+  margin-left: auto;
+}
+
 .pull-card {
   padding: 12px;
   border-radius: var(--lot-radius);
