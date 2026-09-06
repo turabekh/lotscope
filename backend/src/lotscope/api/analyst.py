@@ -22,9 +22,16 @@ from lotscope.api.deps import (
     get_session,
     get_session_factory,
 )
+from lotscope.budget.service import (
+    CHAT_SOURCE,
+    check_analyst_budget,
+    maybe_alert_global_budget,
+    record_analyst_usage,
+)
 from lotscope.buybox.service import read_buy_box
 from lotscope.core.config import Settings
-from lotscope.core.errors import ConfigurationError, NotFoundError
+from lotscope.core.errors import ConfigurationError, NotFoundError, QuotaExceededError
+from lotscope.notifications.email import get_email_sender
 
 router = APIRouter(prefix="/analyst", tags=["analyst"])
 
@@ -53,6 +60,10 @@ async def post_message(
 ) -> RunRead:
     if not settings.anthropic_api_key:
         raise ConfigurationError("The analyst is not available: no model key is configured.")
+    verdict = await check_analyst_budget(session, user, settings)
+    if not verdict.allowed:
+        # 429 rather than 402: nothing is for sale here, the day's allowance is spent.
+        raise QuotaExceededError(verdict.message)
     conversation = await ensure_conversation(session, user.id, data.conversation_id, data.text)
     run = await create_run(
         session,
@@ -100,6 +111,22 @@ async def run_events(
     )
     client = AnthropicToolClient(settings)
 
+    async def spend_guard(input_tokens: int, output_tokens: int) -> str | None:
+        """Asked before every model call, with what this run has spent so far."""
+        async with factory() as guard_session:
+            live_user = await guard_session.get(User, user.id)
+            if live_user is None:
+                return None
+            verdict = await check_analyst_budget(
+                guard_session,
+                live_user,
+                settings,
+                pending_input_tokens=input_tokens,
+                pending_output_tokens=output_tokens,
+                model=settings.analyst_model,
+            )
+        return None if verdict.allowed else verdict.message
+
     async def events() -> AsyncIterator[AgentEvent]:
         async with factory() as run_session:
             live = await run_session.get(AgentRun, run.id)
@@ -111,9 +138,26 @@ async def run_events(
                 live,
                 context=context,
                 should_cancel=lambda: is_cancelled(run.id),
+                spend_guard=spend_guard,
             ):
                 yield event
+            # The ledger is written whatever the run did. A run that failed or was
+            # cancelled still burned the tokens it burned, and a ceiling that only
+            # counts successes is a ceiling a failing loop never reaches.
+            await record_analyst_usage(
+                run_session,
+                user_id=user.id,
+                model=live.model,
+                input_tokens=live.input_tokens,
+                output_tokens=live.output_tokens,
+                source=CHAT_SOURCE,
+            )
             await run_session.commit()
+        async with factory() as alert_session:
+            await maybe_alert_global_budget(
+                alert_session, get_email_sender(settings), settings
+            )
+            await alert_session.commit()
 
     return StreamingResponse(
         sse(events()),

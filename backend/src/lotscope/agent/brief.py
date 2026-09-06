@@ -17,6 +17,7 @@ from lotscope.accounts.security import create_unsubscribe_token
 from lotscope.agent.runtime import ModelClient, create_run, ensure_conversation, run_agent
 from lotscope.agent.signals import AnalystBrief, AnalystSignal
 from lotscope.agent.tools.registry import ToolContext, ToolRegistry
+from lotscope.budget.service import JOB_SOURCE, check_analyst_budget, record_analyst_usage
 from lotscope.buybox.models import BuyBox
 from lotscope.buybox.service import read_buy_box
 from lotscope.core.config import Settings
@@ -125,6 +126,17 @@ async def _write_brief(
         if event.kind == "text_delta":
             parts.append(event.payload["text"])
 
+    # Recorded under `job`, not `chat`: this is real spend on the invoice and the global
+    # ceiling counts it, but a brief the buyer did not ask for must never be the reason
+    # their next question is refused.
+    await record_analyst_usage(
+        session,
+        user_id=user_id,
+        model=run.model,
+        input_tokens=run.input_tokens,
+        output_tokens=run.output_tokens,
+        source=JOB_SOURCE,
+    )
     return "".join(parts).strip(), run.id, run.input_tokens, run.output_tokens
 
 
@@ -166,6 +178,17 @@ async def generate_brief(
         # useful alert becomes one people filter away.
         _logger.info("brief_skipped_no_signals", user_id=user_id, date=on_date.isoformat())
         return None
+
+    # The buyer's own ceiling does not apply to the brief, but the platform's does. If
+    # the day's model budget is gone, the nightly job is exactly the spend to stop.
+    user = await session.get(User, user_id)
+    if user is not None:
+        verdict = await check_analyst_budget(session, user, settings, source=JOB_SOURCE)
+        if not verdict.allowed:
+            _logger.warning(
+                "brief_skipped_over_budget", user_id=user_id, reason=verdict.reason
+            )
+            return None
 
     text_body, run_id, _, _ = await _write_brief(
         session, client, settings, user_id=user_id, signals=signals, on_date=on_date

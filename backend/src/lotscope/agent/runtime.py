@@ -1,6 +1,6 @@
 import asyncio
 import time
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any, Protocol
@@ -176,8 +176,16 @@ async def run_agent(
     registry: ToolRegistry | None = None,
     budget: RunBudget | None = None,
     should_cancel: Callable[[], bool] | None = None,
+    spend_guard: Callable[[int, int], Awaitable[str | None]] | None = None,
     mode: str = "chat",
 ) -> AsyncIterator[AgentEvent]:
+    """Run one question to an answer.
+
+    `spend_guard` is asked, before every model call, whether the daily budget still has
+    room, given the tokens this run has already used. It returns the sentence the buyer
+    should read when it does not. Checking only at the door would let one long run walk
+    through a ceiling it exceeded on its third tool call.
+    """
     tools = registry or REGISTRY
     limits = budget or RunBudget()
     started = time.monotonic()
@@ -197,6 +205,17 @@ async def run_agent(
                 run.status = "cancelled"
                 yield AgentEvent("cancelled", {"reason": "The run was cancelled."})
                 break
+
+            if spend_guard is not None:
+                refusal = await spend_guard(limits.input_tokens, limits.output_tokens)
+                if refusal is not None:
+                    stop_reason = "daily_budget"
+                    sequence += 1
+                    await _record_step(session, run.id, sequence, kind="text", text=refusal)
+                    answer_parts.append(refusal)
+                    yield AgentEvent("text_delta", {"text": refusal})
+                    yield AgentEvent("budget", {"reason": "daily_budget", "message": refusal})
+                    break
 
             exhausted = limits.exhausted()
             if exhausted is not None:
