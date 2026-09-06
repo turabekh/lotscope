@@ -12,7 +12,6 @@ from lotscope.pipeline.service import (
     list_deals,
     update_deal,
 )
-from lotscope.verdict.composition import VERDICT_VERSION
 
 pytestmark = pytest.mark.integration
 
@@ -78,24 +77,36 @@ async def test_deals_due_returns_overdue_and_today_only(db_session: AsyncSession
     assert [d.parcel_number for d in due] == ["000000001", "000000002"]
 
 
-async def test_list_deals_surfaces_verdict_economics(db_session: AsyncSession) -> None:
+async def test_a_deal_row_carries_the_economics_computed_for_this_read(
+    db_session: AsyncSession,
+) -> None:
+    """The pipeline shows what a lot supports now, not what a sweep last wrote."""
+    from lotscope.zoning.seed import seed_zoning_standards
+
     user_id = await _seed(db_session)
+    await seed_zoning_standards(db_session)
     await db_session.execute(
         text(
-            "INSERT INTO parcel_verdict "
-            "(parcel_number, verdict_version, max_allowable_offer, arv, est_profit, "
-            "est_margin, is_underpriced) "
-            "VALUES ('000000001', :vv, 90000, 250000, 45000, 0.18, true)"
-        ),
-        {"vv": VERDICT_VERSION},
+            "INSERT INTO zoning_district (code, geom_local) VALUES ('RSA-5', "
+            "ST_GeomFromText('POLYGON((-100 -100,-100 100,100 100,100 -100,-100 -100))', 2272))"
+        )
+    )
+    await db_session.execute(
+        text(
+            "UPDATE parcel SET lot_area_sqft = 1600, frontage_ft = 18, depth_ft = 90, "
+            "market_value = 150000, base_zoning_code = 'RSA-5', is_vacant = TRUE, "
+            "geom_local = ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272) "
+            "WHERE parcel_number = '000000001'"
+        )
     )
     await add_deal(db_session, user_id, DealCreate(parcel_number="000000001"), limit=None)
+    await db_session.flush()
 
     deal = (await list_deals(db_session, user_id))[0]
-    assert deal.max_allowable_offer == 90000
-    assert deal.arv == 250000
-    assert deal.est_profit == 45000
-    assert deal.is_underpriced is True
+
+    assert deal.opportunity_score is not None
+    # Nothing was read from a table of stored verdicts: there is not one.
+    assert await db_session.scalar(text("SELECT to_regclass('parcel_verdict')::text")) is None
 
 
 async def test_export_marks_untraced_deals_not_traced(db_session: AsyncSession) -> None:

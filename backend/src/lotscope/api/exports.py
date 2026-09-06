@@ -75,5 +75,5 @@ async def export_pipeline_csv(
     current_user: CurrentUserDep,
     redis: RedisDep,
 ) -> StreamingResponse:
-    rows = await export_deals(session, current_user.id, row_limit=EXPORT_ROW_LIMIT)
+    rows = await export_deals(session, current_user.id, row_limit=EXPORT_ROW_LIMIT, redis=redis)
     return _csv_response(PIPELINE_EXPORT_HEADER, rows, "lotscope-pipeline.csv")

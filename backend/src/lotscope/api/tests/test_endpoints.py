@@ -21,7 +21,6 @@ from lotscope.api.deps import (
 )
 from lotscope.core.config import Settings
 from lotscope.distress.service import recompute_distress
-from lotscope.verdict.composition import VERDICT_VERSION
 from lotscope.zoning.seed import seed_zoning_standards
 
 
@@ -208,43 +207,50 @@ async def test_variance_outlook_endpoint(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
-async def test_verdict_computes_on_read_and_refresh(db_session: AsyncSession) -> None:
+async def test_the_verdict_endpoint_computes_when_it_is_read(db_session: AsyncSession) -> None:
     await _setup_verdict_parcel(db_session)
     app, _ = _authed_app(db_session)
 
     async with _client(app) as client:
         first = await client.get("/parcels/phl:000000001/verdict")
-        refreshed = await client.post("/parcels/phl:000000001/verdict/refresh")
-        after = await client.get("/parcels/phl:000000001/verdict")
+        again = await client.get("/parcels/phl:000000001/verdict")
         missing = await client.get("/parcels/999999999/verdict")
 
     assert first.status_code == 200
-    assert first.json()["verdict_version"] == VERDICT_VERSION
-    assert refreshed.status_code == 200
-    assert after.status_code == 200
-    assert "RSA-5" in after.json()["summary"]
+    assert "RSA-5" in first.json()["summary"]
+    assert first.json()["computed_at"] is not None
+    assert again.status_code == 200
     assert missing.status_code == 404
+    # There is nothing to refresh, so the route that used to do it is not in the app.
+    assert not [
+        route for route in app.routes if "verdict/refresh" in str(getattr(route, "path", ""))
+    ]
 
 
 @pytest.mark.integration
-async def test_verdict_recomputes_a_stale_stored_version_on_read(db_session: AsyncSession) -> None:
+async def test_a_changed_input_changes_the_verdict_the_endpoint_returns(
+    db_session: AsyncSession,
+) -> None:
     await _setup_verdict_parcel(db_session)
     app, _ = _authed_app(db_session)
 
     async with _client(app) as client:
-        await client.post("/parcels/phl:000000001/verdict/refresh")
+        before = await client.get("/parcels/phl:000000001/verdict")
         await db_session.execute(
             text(
-                "UPDATE parcel_verdict SET verdict_version = 'v0', summary = 'stale' "
-                "WHERE parcel_number = 'phl:000000001'"
+                "INSERT INTO li_event (parcel_number, external_id, event_type, status, "
+                "case_status, event_date, description, is_unsafe, is_imminently_dangerous) "
+                "VALUES ('phl:000000001', 'li-endpoint-1', 'violation', 'OPEN', "
+                "'IN VIOLATION', current_date, 'Unsafe structure', true, true)"
             )
         )
         await db_session.commit()
-        resp = await client.get("/parcels/phl:000000001/verdict")
+        after = await client.get("/parcels/phl:000000001/verdict")
 
-    assert resp.status_code == 200
-    assert resp.json()["verdict_version"] == VERDICT_VERSION
-    assert resp.json()["summary"] != "stale"
+    assert before.status_code == 200
+    assert after.status_code == 200
+    # No job ran between the two reads.
+    assert after.json()["risk_flags"] != before.json()["risk_flags"]
 
 
 @pytest.mark.integration
@@ -502,9 +508,9 @@ async def test_sheriff_sales_ranked_by_bid_gap_for_paid_tier(db_session: AsyncSe
     )
     await db_session.execute(
         text(
-            "INSERT INTO parcel_verdict "
-            "(parcel_number, verdict_version, max_allowable_offer, opportunity_score) VALUES "
-            "('phl:000000001', 't', 50000, 80), ('phl:000000002', 't', 30000, 60)"
+            "INSERT INTO parcel_screen "
+            "(parcel_number, max_allowable_offer, opportunity_score) VALUES "
+            "('phl:000000001', 50000, 80), ('phl:000000002', 30000, 60)"
         )
     )
     await db_session.execute(
@@ -1012,7 +1018,6 @@ async def test_summary_endpoint_returns_and_caches(db_session: AsyncSession) -> 
     assert first.status_code == 200
     assert first.json()["summary"] == "A vacant RSA-5 lot."
     assert first.json()["parcel_number"] == "phl:000000001"
-    assert first.json()["verdict_version"] == "none"
     assert first.json()["is_informational"] is True
     assert second.status_code == 200
     assert generator.calls == 1  # second call served from cache

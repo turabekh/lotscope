@@ -198,11 +198,6 @@ export const api = {
   getVerdict(parcelNumber: string): Promise<VerdictResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/verdict`)
   },
-  refreshVerdict(parcelNumber: string): Promise<VerdictResult> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/verdict/refresh`, {
-      method: 'POST',
-    })
-  },
   getComps(parcelNumber: string): Promise<ValuationResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/comps`)
   },

@@ -231,7 +231,7 @@ def _sources(pdf: _Dossier, verdict: VerdictResult) -> None:
     pdf.multi_cell(
         0,
         4.5,
-        _s(f"{verdict.verdict_version}, computed {computed}"),
+        _s(f"Computed {computed}"),
         align="L",
         new_x=XPos.LMARGIN,
         new_y=YPos.NEXT,

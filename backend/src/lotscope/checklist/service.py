@@ -17,7 +17,7 @@ from lotscope.parcels.abatement import has_active_exemption
 from lotscope.parcels.schemas import ParcelDetail
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.subdivision.service import analyze_parcel_subdivision
-from lotscope.verdict.service import get_or_compute_current_verdict
+from lotscope.verdict.service import get_verdict
 from lotscope.zoning.buildability import FootprintBasis, UnitBasis
 from lotscope.zoning.confidence import critical_unknown_reasons
 from lotscope.zoning.dispositions import is_unregulated
@@ -140,7 +140,7 @@ def _program_for(
 async def build_parcel_checklist(
     session: AsyncSession, parcel_number: str
 ) -> ParcelChecklist | None:
-    verdict = await get_or_compute_current_verdict(session, parcel_number)
+    verdict = await get_verdict(session, parcel_number)
     if verdict is None:
         return None
     await session.commit()

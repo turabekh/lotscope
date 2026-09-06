@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.compare.schemas import ParcelCompareItem, ParcelCompareResponse
 from lotscope.parcels.service import get_parcel_detail
-from lotscope.verdict.service import get_or_compute_current_verdict
+from lotscope.verdict.service import get_verdict
 
 MAX_COMPARE_PARCELS = 4
 
@@ -30,7 +30,7 @@ async def compare_parcels(
         detail = await get_parcel_detail(session, parcel_number)
         if detail is None:
             continue
-        verdict = await get_or_compute_current_verdict(session, parcel_number)
+        verdict = await get_verdict(session, parcel_number)
         items.append(ParcelCompareItem(detail=detail, verdict=verdict))
     await session.commit()
     return ParcelCompareResponse(items=items)

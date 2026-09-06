@@ -8,7 +8,7 @@ from lotscope.checklist.service import build_parcel_checklist
 from lotscope.distress.service import assess_parcel_distress
 from lotscope.parcels.service import get_parcel_detail
 from lotscope.reports.dossier import render_dossier_pdf
-from lotscope.verdict.service import get_or_compute_current_verdict
+from lotscope.verdict.service import get_verdict
 from lotscope.zoning.service import assess_parcel
 
 _DISCLAIMER = (
@@ -27,7 +27,7 @@ async def build_parcel_dossier(
     if detail is None:
         return None
 
-    verdict = await get_or_compute_current_verdict(session, parcel_number)
+    verdict = await get_verdict(session, parcel_number)
     await session.commit()
 
     assemblage = await compute_assemblage(session, parcel_number)

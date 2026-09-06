@@ -1,8 +1,10 @@
 import hashlib
 import json
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from redis.asyncio import Redis
 from sqlalchemy import func, select, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +28,8 @@ from lotscope.reports.loi import (
 )
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import value_parcel
+from lotscope.verdict.schemas import VerdictResult
+from lotscope.verdict.service import compute_verdict, get_verdict
 
 _PARCEL_EXISTS_SQL = text("SELECT 1 FROM parcel WHERE parcel_number = :parcel_number")
 
@@ -36,8 +40,6 @@ _DEAL_COLUMNS = (
     "p.address, "
     "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
     "p.is_vacant, p.market_value, "
-    "round(pv.opportunity_score)::int AS opportunity_score, "
-    "pv.max_allowable_offer, pv.arv, pv.est_profit, pv.est_margin, pv.is_underpriced, "
     # The next sale this lot is actually listed for, so the table can say when it goes.
     "ss.sale_date, "
     # What the Analyst said in the run that put this row here. agent_run_id is the link;
@@ -45,7 +47,6 @@ _DEAL_COLUMNS = (
     "d.agent_run_id, ar.answer AS analyst_note, ar.created_at AS analyst_note_at "
     "FROM deal d "
     "JOIN parcel p ON p.parcel_number = d.parcel_number "
-    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = d.parcel_number "
     "LEFT JOIN agent_run ar ON ar.id = d.agent_run_id "
     "LEFT JOIN LATERAL ("
     "  SELECT s.sale_date FROM sheriff_sale s "
@@ -67,7 +68,12 @@ def _as_float(value: Any) -> float | None:
     return float(value) if value is not None else None
 
 
-def _item(row: Row[Any]) -> DealItem:
+def _item(row: Row[Any], verdict: VerdictResult | None = None) -> DealItem:
+    """One row of the pipeline.
+
+    The economics are the verdict computed for this read, not a stored copy: these are
+    the numbers a buyer bids on, and a pipeline is tens of rows, not thousands.
+    """
     return DealItem(
         id=row.id,
         parcel_number=row.parcel_number,
@@ -84,12 +90,12 @@ def _item(row: Row[Any]) -> DealItem:
         base_zoning_code=row.base_zoning_code,
         is_vacant=row.is_vacant,
         market_value=_as_float(row.market_value),
-        opportunity_score=row.opportunity_score,
-        max_allowable_offer=_as_float(row.max_allowable_offer),
-        arv=_as_float(row.arv),
-        est_profit=_as_float(row.est_profit),
-        est_margin=_as_float(row.est_margin),
-        is_underpriced=row.is_underpriced,
+        opportunity_score=round(verdict.opportunity_score) if verdict else None,
+        max_allowable_offer=verdict.max_allowable_offer if verdict else None,
+        arv=verdict.arv if verdict else None,
+        est_profit=verdict.est_profit if verdict else None,
+        est_margin=verdict.est_margin if verdict else None,
+        is_underpriced=verdict.is_underpriced if verdict else None,
         sale_date=row.sale_date,
         agent_run_id=row.agent_run_id,
         analyst_note=(row.analyst_note or None),
@@ -175,7 +181,6 @@ async def update_deal(
 
 
 _PARCEL_FACTS_SQL = text("SELECT address, local_key FROM parcel WHERE parcel_number = :pn")
-_MAO_SQL = text("SELECT max_allowable_offer FROM parcel_verdict WHERE parcel_number = :pn")
 
 
 def _comp_fingerprint(valuation: ValuationResult | None) -> str | None:
@@ -198,8 +203,10 @@ async def generate_offer(
     facts = (await session.execute(_PARCEL_FACTS_SQL, {"pn": parcel_number})).one_or_none()
     if facts is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    mao_raw = await session.scalar(_MAO_SQL, {"pn": parcel_number})
-    mao = float(mao_raw) if mao_raw is not None else None
+    # The offer letter goes to an owner, so its number is computed here and now rather
+    # than read from a cache or an index.
+    verdict = await compute_verdict(session, parcel_number)
+    mao = verdict.max_allowable_offer if verdict is not None else None
     valuation = await value_parcel(session, parcel_number)
 
     terms = LoiTerms(
@@ -256,20 +263,34 @@ async def remove_deal(session: AsyncSession, user_id: int, parcel_number: str) -
     return True
 
 
-async def get_deal(session: AsyncSession, user_id: int, parcel_number: str) -> DealItem | None:
+async def _items(
+    session: AsyncSession, rows: Sequence[Row[Any]], *, redis: Redis | None
+) -> list[DealItem]:
+    items = []
+    for row in rows:
+        verdict = await get_verdict(session, row.parcel_number, redis=redis)
+        items.append(_item(row, verdict))
+    return items
+
+
+async def get_deal(
+    session: AsyncSession, user_id: int, parcel_number: str, *, redis: Redis | None = None
+) -> DealItem | None:
     deal = await _deal_for(session, user_id, parcel_number)
     if deal is None:
         return None
     rows = (await session.execute(_LIST_SQL, {"user_id": user_id})).all()
-    for row in rows:
-        if row.parcel_number == parcel_number:
-            return _item(row)
-    return None
+    matching = [row for row in rows if row.parcel_number == parcel_number]
+    if not matching:
+        return None
+    return (await _items(session, matching, redis=redis))[0]
 
 
-async def list_deals(session: AsyncSession, user_id: int) -> list[DealItem]:
+async def list_deals(
+    session: AsyncSession, user_id: int, *, redis: Redis | None = None
+) -> list[DealItem]:
     rows = (await session.execute(_LIST_SQL, {"user_id": user_id})).all()
-    return [_item(row) for row in rows]
+    return await _items(session, rows, redis=redis)
 
 
 PIPELINE_EXPORT_HEADER: list[str] = [
@@ -296,11 +317,11 @@ PIPELINE_EXPORT_HEADER: list[str] = [
 
 
 async def export_deals(
-    session: AsyncSession, user_id: int, *, row_limit: int
+    session: AsyncSession, user_id: int, *, row_limit: int, redis: Redis | None = None
 ) -> list[tuple[Any, ...]]:
     if row_limit <= 0:
         return []
-    deals = await list_deals(session, user_id)
+    deals = await list_deals(session, user_id, redis=redis)
     rows: list[tuple[Any, ...]] = []
     for deal in deals[:row_limit]:
         traced = bool(deal.contact_phone or deal.contact_email)
@@ -331,9 +352,11 @@ async def export_deals(
     return rows
 
 
-async def deals_due(session: AsyncSession, user_id: int, today: date) -> list[DealItem]:
+async def deals_due(
+    session: AsyncSession, user_id: int, today: date, *, redis: Redis | None = None
+) -> list[DealItem]:
     rows = (await session.execute(_TODAY_SQL, {"user_id": user_id, "today": today})).all()
-    return [_item(row) for row in rows]
+    return await _items(session, rows, redis=redis)
 
 
 async def list_activity(

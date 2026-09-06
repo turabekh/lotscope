@@ -442,10 +442,7 @@ async function toggleSave(): Promise<void> {
             />
             <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
               <template #avatar><q-icon name="info" color="grey-7" /></template>
-              No verdict yet.
-              <template #action>
-                <q-btn flat dense color="primary" label="Compute" @click="store.refreshVerdict()" />
-              </template>
+              The verdict could not be computed for this lot.
             </q-banner>
             <SnapshotPanel :parcel-number="detail.parcel_number" />
             <DevelopmentProgramPanel />

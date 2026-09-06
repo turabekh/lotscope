@@ -68,12 +68,9 @@ from lotscope.subdivision.schemas import SubdivisionResult
 from lotscope.subdivision.service import analyze_parcel_subdivision
 from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import value_parcel
+from lotscope.verdict import cache as verdict_cache
 from lotscope.verdict.schemas import VerdictResult
-from lotscope.verdict.service import (
-    compute_verdict,
-    get_or_compute_current_verdict,
-    get_verdict,
-)
+from lotscope.verdict.service import get_verdict
 from lotscope.zba.schemas import VarianceOutlook
 from lotscope.zba.service import variance_outlook
 from lotscope.zoning.schemas import EnvelopeResult
@@ -99,11 +96,11 @@ async def _resolve_report(
     redis: Redis,
     generator: StructuredGenerator,
     model: str,
+    git_sha: str,
 ) -> ParcelReportResult | None:
-    verdict = await get_verdict(session, parcel_number)
-    version = verdict.verdict_version if verdict is not None else "none"
+    inputs = await verdict_cache.input_fingerprint(session, parcel_number, git_sha=git_sha)
     scope = _generation_scope(REPORT_PROMPT_VERSION, model)
-    cache_key = f"report:{scope}:{parcel_number}:{version}"
+    cache_key = f"report:{scope}:{parcel_number}:{inputs or 'none'}"
 
     with contextlib.suppress(RedisError):
         cached = await redis.get(cache_key)
@@ -158,23 +155,14 @@ async def parcel_detail(
 
 @router.get("/{parcel_number}/verdict", response_model=VerdictResult)
 async def parcel_verdict(
-    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
+    parcel_number: ParcelKeyDep,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    redis: RedisDep,
 ) -> VerdictResult:
-    verdict = await get_or_compute_current_verdict(session, parcel_number)
+    verdict = await get_verdict(session, parcel_number, redis=redis)
     if verdict is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    await session.commit()
-    return verdict
-
-
-@router.post("/{parcel_number}/verdict/refresh", response_model=VerdictResult)
-async def refresh_parcel_verdict(
-    parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
-) -> VerdictResult:
-    verdict = await compute_verdict(session, parcel_number)
-    if verdict is None:
-        raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    await session.commit()
     return verdict
 
 
@@ -296,10 +284,9 @@ async def parcel_summary(
     if not settings.anthropic_api_key:
         raise NotFoundError("The AI summary is not available.")
 
-    verdict = await get_verdict(session, parcel_number)
-    version = verdict.verdict_version if verdict is not None else "none"
+    inputs = await verdict_cache.input_fingerprint(session, parcel_number, git_sha=settings.git_sha)
     scope = _generation_scope(SUMMARY_PROMPT_VERSION, settings.anthropic_summary_model)
-    cache_key = f"summary:{scope}:{parcel_number}:{version}"
+    cache_key = f"summary:{scope}:{parcel_number}:{inputs or 'none'}"
 
     with contextlib.suppress(RedisError):
         cached = await redis.get(cache_key)
@@ -333,6 +320,7 @@ async def parcel_report(
         redis=redis,
         generator=generator,
         model=settings.anthropic_model,
+        git_sha=settings.git_sha,
     )
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
@@ -548,6 +536,7 @@ async def parcel_dossier(
             redis=redis,
             generator=generator,
             model=settings.anthropic_model,
+            git_sha=settings.git_sha,
         )
     pdf = await build_parcel_dossier(session, parcel_number, report=report)
     if pdf is None:

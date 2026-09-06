@@ -99,19 +99,13 @@ export const useParcelStore = defineStore('parcel', () => {
   }
 
   async function loadVerdict(parcelNumber: string): Promise<VerdictResult | null> {
+    // The verdict is computed when it is read, so a 404 means there is no such parcel.
     try {
       return await api.getVerdict(parcelNumber)
     } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 404) {
-        return await api.refreshVerdict(parcelNumber)
-      }
+      if (cause instanceof ApiError && cause.status === 404) return null
       throw cause
     }
-  }
-
-  async function refreshVerdict(): Promise<void> {
-    if (detail.value === null) return
-    verdict.value = await api.refreshVerdict(detail.value.parcel_number)
   }
 
   async function loadEnvelope(): Promise<void> {
@@ -309,7 +303,6 @@ export const useParcelStore = defineStore('parcel', () => {
     errorStatus,
     select,
     focusOnMap,
-    refreshVerdict,
     loadEnvelope,
     loadAssemblage,
     loadDistress,
