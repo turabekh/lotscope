@@ -1,4 +1,5 @@
 import type {
+  AnalystEnvelope,
   DealOverrides,
   PolicyDocument,
   PolicySummary,
@@ -78,6 +79,7 @@ import type {
   VerdictResult,
   WatchlistResponse,
 } from '@/lib/types'
+import type { LotSection } from '@/lib/sourceLinks'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -206,6 +208,13 @@ export const api = {
   },
   getEnvelope(parcelNumber: string): Promise<EnvelopeResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/envelope`)
+  },
+  /**
+   * One evidence section of the Lot page. The server answers it with the same tool the
+   * Analyst calls, so the page and the conversation cannot disagree about the record.
+   */
+  getEvidence(parcelNumber: string, section: LotSection): Promise<AnalystEnvelope> {
+    return request(`/parcels/${encodeURIComponent(parcelNumber)}/evidence/${section}`)
   },
   getAssemblage(parcelNumber: string): Promise<AssemblageResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/assemblage`)
