@@ -16,6 +16,7 @@ from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.parcels.models import Parcel
+from lotscope.verdict.cache import invalidate_after_ingest
 
 SHERIFF_DATASET = "sheriff_sale"
 
@@ -141,6 +142,7 @@ async def load_sheriff(
         await write_raw(session, raw_rows)
 
     result = await merge_sheriff(session, run.id)
+    await invalidate_after_ingest(result.touched)
     run.status = "success"
     run.finished_at = datetime.now(UTC)
     run.raw_rows = total

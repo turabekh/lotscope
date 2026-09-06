@@ -58,6 +58,9 @@ def _as_float(value: Any) -> float | None:
 class MergeResult:
     merged_rows: int
     event_count: int
+    # The parcels this step wrote. A verdict is computed from these rows, so its cached
+    # copy is dropped for exactly these and nothing else.
+    touched: tuple[str, ...] = ()
 
 
 async def merge_tax(session: AsyncSession, ingest_run_id: int) -> MergeResult:
@@ -93,7 +96,11 @@ async def merge_tax(session: AsyncSession, ingest_run_id: int) -> MergeResult:
 
     await session.flush()
     await session.execute(_UPSERT_CORE_SQL, {"ingest_run_id": ingest_run_id})
-    return MergeResult(merged_rows=len(rows), event_count=events)
+    return MergeResult(
+        merged_rows=len(rows),
+        event_count=events,
+        touched=tuple(row.parcel_number for row in rows),
+    )
 
 
 _LI_JOIN_SQL = text(
@@ -148,7 +155,11 @@ async def merge_li(session: AsyncSession, ingest_run_id: int, event_type: str) -
         await session.flush()
 
     await session.execute(_UPSERT_LI_SQL, {"ingest_run_id": ingest_run_id})
-    return MergeResult(merged_rows=len(rows), event_count=events)
+    return MergeResult(
+        merged_rows=len(rows),
+        event_count=events,
+        touched=tuple(row.parcel_number for row in rows),
+    )
 
 
 _OPA_JOIN_SQL = text(
@@ -203,7 +214,11 @@ async def merge_opa(session: AsyncSession, ingest_run_id: int, *, source: str) -
 
     await session.flush()
     await session.execute(_UPSERT_OPA_SQL, {"ingest_run_id": ingest_run_id, "source": source})
-    return MergeResult(merged_rows=len(rows), event_count=events)
+    return MergeResult(
+        merged_rows=len(rows),
+        event_count=events,
+        touched=tuple(row.parcel_number for row in rows),
+    )
 
 
 _RTT_SEEN_SQL = text("SELECT EXISTS (SELECT 1 FROM sale)")
@@ -255,7 +270,11 @@ async def merge_rtt(session: AsyncSession, ingest_run_id: int) -> MergeResult:
         await session.flush()
 
     await session.execute(_UPSERT_RTT_SQL, {"ingest_run_id": ingest_run_id})
-    return MergeResult(merged_rows=len(rows), event_count=events)
+    return MergeResult(
+        merged_rows=len(rows),
+        event_count=events,
+        touched=tuple(row.parcel_number for row in rows),
+    )
 
 
 _SHERIFF_SEEN_SQL = text("SELECT EXISTS (SELECT 1 FROM sheriff_sale)")
@@ -350,4 +369,8 @@ async def merge_sheriff(session: AsyncSession, ingest_run_id: int) -> MergeResul
         )
 
     await session.execute(_UPSERT_SHERIFF_SQL, {"ingest_run_id": ingest_run_id})
-    return MergeResult(merged_rows=len(rows), event_count=events + len(changes))
+    return MergeResult(
+        merged_rows=len(rows),
+        event_count=events + len(changes),
+        touched=tuple(row.parcel_number for row in rows),
+    )

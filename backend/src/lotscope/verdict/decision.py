@@ -3,8 +3,6 @@ from typing import Literal
 
 from lotscope.core.provenance import FieldProvenance
 
-DECISION_VERSION = "d3"
-
 Recommendation = Literal[
     "strong_candidate",
     "worth_investigating",
@@ -38,7 +36,6 @@ _DECISION_IMPACT: tuple[str, ...] = (
 class ScreeningDecision:
     recommendation: Recommendation
     reason: str
-    decision_version: str = DECISION_VERSION
 
 
 def _unavailable_critical(field_trust: dict[str, FieldProvenance]) -> list[str]:

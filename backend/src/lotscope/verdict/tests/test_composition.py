@@ -3,7 +3,7 @@ from datetime import datetime
 from lotscope.deal.schemas import DealAssumptionsSchema, DealResult
 from lotscope.risk.schemas import RiskFlagSchema, RiskResult
 from lotscope.valuation.schemas import ValuationResult
-from lotscope.verdict.composition import VERDICT_VERSION, compose_verdict
+from lotscope.verdict.composition import compose_verdict
 from lotscope.zoning.schemas import BuildabilityResult
 
 _NOW = datetime(2024, 1, 1)
@@ -105,7 +105,6 @@ def test_full_compose_maps_all_dimensions() -> None:
     verdict = compose_verdict(
         _buildability(), _valuation(), _risk([flag]), assessed_market_value=150000.0
     )
-    assert verdict.verdict_version == VERDICT_VERSION
     assert verdict.buildability_score == 80.0
     assert verdict.can_build_by_right is True
     assert verdict.by_right_units == 1

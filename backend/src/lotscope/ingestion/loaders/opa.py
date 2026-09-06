@@ -12,6 +12,7 @@ from lotscope.ingestion.raw import write_raw
 from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import upsert
+from lotscope.verdict.cache import invalidate_after_ingest
 
 OPA_DATASET = "opa_properties_public"
 OPA_KEY_COLUMN = "parcel_number"
@@ -145,6 +146,7 @@ async def load_opa(
         total += len(mapped)
 
     result = await merge_opa(session, run.id, source=OPA_DATASET)
+    await invalidate_after_ingest(result.touched)
     run.status = "success"
     run.finished_at = datetime.now(UTC)
     run.raw_rows = total

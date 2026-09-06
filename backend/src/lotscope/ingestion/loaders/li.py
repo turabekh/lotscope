@@ -16,6 +16,7 @@ from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.ingestion.vintage import vintage_from_dates
 from lotscope.parcels.models import Parcel
+from lotscope.verdict.cache import invalidate_after_ingest
 
 LI_KEY_COLUMN = "cartodb_id"
 
@@ -219,6 +220,7 @@ async def _run_li_loader(
         .all()
     )
     result = await merge_li(session, run.id, event_type)
+    await invalidate_after_ingest(result.touched)
     run.status = "success"
     run.finished_at = datetime.now(UTC)
     run.raw_rows = total

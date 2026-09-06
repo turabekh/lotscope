@@ -22,7 +22,6 @@ class VerdictResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     parcel_number: str
-    verdict_version: str
     buildability_score: float | None
     opportunity_score: float
     summary: str
@@ -47,7 +46,6 @@ class VerdictResult(BaseModel):
     field_trust: FieldTrust = {}
     recommendation: str | None = None
     recommendation_reason: str | None = None
-    decision_version: str | None = None
     computed_at: datetime
     value_confidence_band: ValueConfidence | None = None
     value_support_note: str = ""

@@ -7,16 +7,9 @@ from lotscope.deal.schemas import DealResult
 from lotscope.risk.schemas import RiskResult
 from lotscope.valuation.confidence import CONFIDENCE_SCORE
 from lotscope.valuation.schemas import ValuationResult
-from lotscope.verdict.decision import (
-    DECISION_VERSION,
-    STRONG_MARGIN,
-    VIABLE_MARGIN,
-    decide,
-)
+from lotscope.verdict.decision import STRONG_MARGIN, VIABLE_MARGIN, decide
 from lotscope.verdict.trust import compose_field_trust
 from lotscope.zoning.schemas import BuildabilityResult
-
-VERDICT_VERSION = "v11"
 
 _BUILDABILITY_WEIGHT = 0.6
 _RISK_WEIGHT = 0.4
@@ -27,7 +20,6 @@ _ECONOMICS_CEILING = 1.0
 
 @dataclass(frozen=True)
 class ComposedVerdict:
-    verdict_version: str
     buildability_score: float | None
     opportunity_score: float
     summary: str
@@ -52,7 +44,6 @@ class ComposedVerdict:
     field_trust: dict[str, FieldProvenance] = field(default_factory=dict)
     recommendation: str | None = None
     recommendation_reason: str | None = None
-    decision_version: str = DECISION_VERSION
 
 
 def economics_factor(est_margin: float | None, deal_infeasible: bool) -> float:
@@ -164,7 +155,6 @@ def compose_verdict(
     deal: DealResult | None = None,
     *,
     assessed_market_value: float | None,
-    verdict_version: str = VERDICT_VERSION,
     source_ages: dict[str, datetime | None] | None = None,
 ) -> ComposedVerdict:
     buildability_score = buildability.buildability_score if buildability is not None else None
@@ -204,8 +194,6 @@ def compose_verdict(
         field_trust=field_trust,
         recommendation=screening.recommendation,
         recommendation_reason=screening.reason,
-        decision_version=screening.decision_version,
-        verdict_version=verdict_version,
         buildability_score=buildability_score,
         opportunity_score=opportunity_score,
         summary=_summary(buildability, valuation, risk, deal),

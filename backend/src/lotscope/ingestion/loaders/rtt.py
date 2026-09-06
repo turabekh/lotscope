@@ -15,6 +15,7 @@ from lotscope.ingestion.service import record_freshness
 from lotscope.ingestion.upsert import insert_ignore, upsert
 from lotscope.ingestion.vintage import vintage_from_dates
 from lotscope.parcels.models import Parcel
+from lotscope.verdict.cache import invalidate_after_ingest
 
 RTT_DATASET = "rtt_summary"
 RTT_KEY_COLUMN = "cartodb_id"
@@ -133,6 +134,7 @@ async def load_rtt(
         .all()
     )
     result = await merge_rtt(session, run.id)
+    await invalidate_after_ingest(result.touched)
     run.status = "success"
     run.finished_at = datetime.now(UTC)
     run.raw_rows = total

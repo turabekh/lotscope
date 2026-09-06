@@ -1,33 +1,32 @@
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, text
-from sqlalchemy.dialects.postgresql import insert
+from redis.asyncio import Redis
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.core.logging import get_logger
+from lotscope.core.config import get_settings
 from lotscope.deal.service import build_deal
 from lotscope.ingestion.service import dataset_last_success, source_as_of
 from lotscope.risk.service import assess_parcel_risk
 from lotscope.valuation.service import value_parcel
-from lotscope.verdict.composition import VERDICT_VERSION, ComposedVerdict, compose_verdict
-from lotscope.verdict.decision import DECISION_VERSION
-from lotscope.verdict.models import ParcelVerdict
+from lotscope.verdict import cache
+from lotscope.verdict.composition import ComposedVerdict, compose_verdict
 from lotscope.verdict.schemas import VerdictResult
 from lotscope.zoning.service import assess_parcel as assess_zoning
-
-_logger = get_logger("verdict.service")
 
 _PARCEL_SQL = text(
     "SELECT market_value, base_zoning_code, market_code FROM parcel "
     "WHERE parcel_number = :parcel_number"
 )
 
+# The nightly screening index, not the verdict. Search ranks on it and the buy box
+# pre-filters on it; nothing here is ever the answer a user reads.
 _DEAL_SIGNALS_SQL = text(
     "SELECT parcel_number, deal_score, max_allowable_offer, is_underpriced "
-    "FROM parcel_verdict WHERE parcel_number = ANY(:parcel_numbers)"
+    "FROM parcel_screen WHERE parcel_number = ANY(:parcel_numbers)"
 )
 
 
@@ -78,36 +77,11 @@ async def _source_ages(session: AsyncSession, market_code: str) -> dict[str, dat
     return {label: source_as_of(label, last_success) for label in _TRUSTED_SOURCE_LABELS}
 
 
-async def _persist(
-    session: AsyncSession,
-    parcel_number: str,
-    composed: ComposedVerdict,
-    computed_at: datetime,
-) -> None:
-    values: dict[str, Any] = {
-        **asdict(composed),
-        "field_trust": {
-            name: provenance.model_dump(mode="json")
-            for name, provenance in composed.field_trust.items()
-        },
-        "parcel_number": parcel_number,
-        "computed_at": computed_at,
-    }
-    statement = insert(ParcelVerdict).values(values)
-    assignments: dict[str, Any] = {
-        column: statement.excluded[column] for column in values if column != "parcel_number"
-    }
-    assignments["updated_at"] = func.now()
-    statement = statement.on_conflict_do_update(index_elements=["parcel_number"], set_=assignments)
-    await session.execute(statement)
-
-
 def _to_result(
     parcel_number: str, composed: ComposedVerdict, computed_at: datetime
 ) -> VerdictResult:
     return VerdictResult(
         parcel_number=parcel_number,
-        verdict_version=composed.verdict_version,
         buildability_score=composed.buildability_score,
         opportunity_score=composed.opportunity_score,
         summary=composed.summary,
@@ -132,32 +106,12 @@ def _to_result(
         field_trust=composed.field_trust,
         recommendation=composed.recommendation,
         recommendation_reason=composed.recommendation_reason,
-        decision_version=composed.decision_version,
         computed_at=computed_at,
     )
 
 
-async def get_verdict(session: AsyncSession, parcel_number: str) -> VerdictResult | None:
-    row = await session.get(ParcelVerdict, parcel_number)
-    if row is None:
-        return None
-    return VerdictResult.model_validate(row)
-
-
-async def get_or_compute_current_verdict(
-    session: AsyncSession, parcel_number: str
-) -> VerdictResult | None:
-    verdict = await get_verdict(session, parcel_number)
-    if (
-        verdict is not None
-        and verdict.verdict_version == VERDICT_VERSION
-        and verdict.decision_version == DECISION_VERSION
-    ):
-        return verdict
-    return await compute_verdict(session, parcel_number)
-
-
 async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictResult | None:
+    """The verdict from the inputs as they stand right now. Nothing is written."""
     parcel = (await session.execute(_PARCEL_SQL, {"parcel_number": parcel_number})).one_or_none()
     if parcel is None:
         return None
@@ -181,20 +135,32 @@ async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictR
         assessed_market_value=_as_float(parcel.market_value),
         source_ages=await _source_ages(session, parcel.market_code),
     )
-    computed_at = datetime.now(UTC)
-    await _persist(session, parcel_number, composed, computed_at)
-    return _to_result(parcel_number, composed, computed_at)
+    return _to_result(parcel_number, composed, datetime.now(UTC))
 
 
-async def recompute_verdicts(session: AsyncSession, parcel_numbers: Sequence[str]) -> int:
-    count = 0
-    for parcel_number in parcel_numbers:
-        try:
-            async with session.begin_nested():
-                if await compute_verdict(session, parcel_number) is not None:
-                    count += 1
-        except Exception as error:
-            _logger.warning(
-                "verdict_recompute_skipped", parcel_number=parcel_number, error=str(error)
-            )
-    return count
+async def get_verdict(
+    session: AsyncSession, parcel_number: str, *, redis: Redis | None = None
+) -> VerdictResult | None:
+    """The verdict on a parcel, computed when it is read.
+
+    With Redis the result is cached for a day against a fingerprint of its inputs, so a
+    second read costs one query rather than the whole composition, and an input that has
+    moved since is a miss rather than a stale answer. Without Redis it is simply computed.
+    """
+    if redis is None:
+        return await compute_verdict(session, parcel_number)
+
+    fingerprint = await cache.input_fingerprint(
+        session, parcel_number, git_sha=get_settings().git_sha
+    )
+    if fingerprint is None:
+        return None
+
+    cached = await cache.read(redis, parcel_number, fingerprint)
+    if cached is not None:
+        return cached
+
+    verdict = await compute_verdict(session, parcel_number)
+    if verdict is not None:
+        await cache.write(redis, parcel_number, fingerprint, verdict)
+    return verdict
