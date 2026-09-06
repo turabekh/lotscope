@@ -43,8 +43,9 @@ if [ "${RUNNING_INGESTS:-0}" -gt 0 ]; then
   else
     echo "ABORT: ${RUNNING_INGESTS} ingest job(s) are running." >&2
     echo "Recreating the worker mid-ingest cancels it and leaves the dataset stale;" >&2
-    echo "that is what happened on 2026-09-05. Wait for the nightly to finish" >&2
-    echo "(it runs roughly 04:08-05:14 UTC) or set ALLOW_DEPLOY_DURING_INGEST=1 to override." >&2
+    echo "that is what happened on 2026-09-05. The row below is opened before the load" >&2
+    echo "starts and closed when it ends, so this is the whole answer: wait until it is" >&2
+    echo "clear, or set ALLOW_DEPLOY_DURING_INGEST=1 to override." >&2
     docker compose exec -T db psql -U lotscope -d lotscope -c \
       "SELECT dataset, started_at FROM ingest_run WHERE status = 'running' ORDER BY started_at" >&2 || true
     exit 1

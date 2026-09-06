@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -78,12 +77,12 @@ async def load_rtt(
     session: AsyncSession,
     carto: CartoClient,
     *,
+    run_id: int,
     page_size: int = 5000,
     where: str | None = None,
 ) -> int:
-    run = IngestRun(dataset=RTT_DATASET)
-    session.add(run)
-    await session.flush()
+    run = await session.get(IngestRun, run_id)
+    assert run is not None
     await session.execute(text("DELETE FROM staging.rtt"))
 
     total = 0
@@ -103,7 +102,7 @@ async def load_rtt(
             mapped.append(row)
             raw_rows.append(
                 {
-                    "ingest_run_id": run.id,
+                    "ingest_run_id": run_id,
                     "dataset": RTT_DATASET,
                     "natural_key": row["document_id"],
                     "payload": dict(raw),
@@ -116,7 +115,7 @@ async def load_rtt(
             for parcel_number in {row["parcel_number"] for row in mapped}
         ]
         await insert_ignore(session, Parcel, parcel_stubs, index_elements=["parcel_number"])
-        staging_rows = [_staging_row(row, run.id) for row in mapped]
+        staging_rows = [_staging_row(row, run_id) for row in mapped]
         await upsert(
             session, StagingRtt, staging_rows, index_elements=["parcel_number", "document_id"]
         )
@@ -127,16 +126,14 @@ async def load_rtt(
         (
             await session.execute(
                 text("SELECT sale_date FROM staging.rtt WHERE ingest_run_id = :run_id"),
-                {"run_id": run.id},
+                {"run_id": run_id},
             )
         )
         .scalars()
         .all()
     )
-    result = await merge_rtt(session, run.id)
+    result = await merge_rtt(session, run_id)
     await invalidate_after_ingest(result.touched)
-    run.status = "success"
-    run.finished_at = datetime.now(UTC)
     run.raw_rows = total
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count

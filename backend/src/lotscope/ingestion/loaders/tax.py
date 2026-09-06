@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -58,12 +57,12 @@ async def load_tax(
     session: AsyncSession,
     carto: CartoClient,
     *,
+    run_id: int,
     page_size: int = 5000,
     where: str | None = None,
 ) -> int:
-    run = IngestRun(dataset=TAX_DATASET)
-    session.add(run)
-    await session.flush()
+    run = await session.get(IngestRun, run_id)
+    assert run is not None
     await session.execute(text("DELETE FROM staging.tax"))
 
     total = 0
@@ -83,7 +82,7 @@ async def load_tax(
             mapped.append(row)
             raw_rows.append(
                 {
-                    "ingest_run_id": run.id,
+                    "ingest_run_id": run_id,
                     "dataset": TAX_DATASET,
                     "natural_key": row["parcel_number"],
                     "payload": dict(raw),
@@ -99,7 +98,7 @@ async def load_tax(
         staging_rows = [
             {
                 "parcel_number": row["parcel_number"],
-                "ingest_run_id": run.id,
+                "ingest_run_id": run_id,
                 "is_delinquent": row["is_delinquent"],
                 "delinquency_owner": row["delinquency_owner"],
                 "snapshot_period": row["snapshot_period"],
@@ -117,16 +116,14 @@ async def load_tax(
         (
             await session.execute(
                 text("SELECT snapshot_period FROM staging.tax WHERE ingest_run_id = :run_id"),
-                {"run_id": run.id},
+                {"run_id": run_id},
             )
         )
         .scalars()
         .all()
     )
-    result = await merge_tax(session, run.id)
+    result = await merge_tax(session, run_id)
     await invalidate_after_ingest(result.touched)
-    run.status = "success"
-    run.finished_at = datetime.now(UTC)
     run.raw_rows = total
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count

@@ -107,8 +107,20 @@ prints nothing, the mount is an empty directory: stop and fix it before step 3.
    Do not restore over the local working database.
 
 3. **Deploy `main`.** `gh workflow run deploy.yml --ref main`, then confirm the served SHA.
-   Check `ingest_run` for rows without `finished_at` first — the nightly runs about an hour
-   (04:08–05:14 UTC), and deploying into it is how the 2026-08-24 datasets were lost.
+
+   **The ingest guard is one query, and `scripts/deploy.sh` runs it for you** — it aborts
+   unless `ALLOW_DEPLOY_DURING_INGEST=1`. Deploying into a load is how the 2026-08-24
+   datasets were lost.
+
+   ```
+   SELECT dataset, started_at FROM ingest_run WHERE status = 'running' ORDER BY started_at;
+   ```
+
+   No rows means nothing is loading. Since 2026-09-06 the row is opened in its own
+   committed transaction *before* the loader starts and closed `success` or `failed` when
+   it ends, so this is the whole answer — not the worker's log, not the clock. Before that
+   fix the row was written inside the load's own transaction and stayed invisible until
+   the load finished, so this query read clean through every ingest.
 
 4. **Migrate — verification, not application.** The `migrate` compose service runs
    `alembic upgrade head` during step 3, so by the time you get here `alembic current` already

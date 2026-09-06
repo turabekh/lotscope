@@ -11,6 +11,7 @@ from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.loaders.rtt import RttRecord, to_sale_row
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.ingestion.parsing import parse_iso_date
+from lotscope.ingestion.tests.support import open_run
 from lotscope.valuation.models import Sale
 
 
@@ -80,7 +81,9 @@ async def test_load_rtt_stubs_parcel_and_inserts_sale(db_session: AsyncSession) 
 
     handler = _RowsHandler([[_rtt_row(1, "DOC-1", 250000.0)]])
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-        total = await load_rtt(db_session, carto, page_size=500)
+        total = await load_rtt(
+            db_session, carto, page_size=500, run_id=await open_run(db_session, "rtt_summary")
+        )
     await db_session.flush()
 
     assert total == 1
@@ -109,7 +112,9 @@ async def test_load_rtt_is_idempotent_on_document(db_session: AsyncSession) -> N
     for _ in range(2):
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-            await load_rtt(db_session, carto, page_size=500)
+            await load_rtt(
+                db_session, carto, page_size=500, run_id=await open_run(db_session, "rtt_summary")
+            )
         await db_session.flush()
 
     count = await db_session.scalar(
@@ -129,7 +134,9 @@ async def test_load_rtt_emits_new_deed_for_new_document(db_session: AsyncSession
     for pages in runs:
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-            await load_rtt(db_session, carto, page_size=500)
+            await load_rtt(
+                db_session, carto, page_size=500, run_id=await open_run(db_session, "rtt_summary")
+            )
         await db_session.flush()
 
     events = (
@@ -156,7 +163,9 @@ async def test_load_rtt_records_the_latest_recording_date_as_the_vintage(
 
     handler = _RowsHandler([[older, newer]])
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-        await load_rtt(db_session, carto, page_size=500)
+        await load_rtt(
+            db_session, carto, page_size=500, run_id=await open_run(db_session, "rtt_summary")
+        )
     await db_session.flush()
 
     fresh = await db_session.get(DatasetFreshness, ("phl", "rtt_summary"))
@@ -180,7 +189,9 @@ async def test_a_future_dated_deed_cannot_pass_as_the_rtt_vintage(
 
     handler = _RowsHandler([[real, bogus]])
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-        await load_rtt(db_session, carto, page_size=500)
+        await load_rtt(
+            db_session, carto, page_size=500, run_id=await open_run(db_session, "rtt_summary")
+        )
     await db_session.flush()
 
     fresh = await db_session.get(DatasetFreshness, ("phl", "rtt_summary"))

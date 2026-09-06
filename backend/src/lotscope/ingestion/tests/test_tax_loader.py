@@ -9,6 +9,7 @@ from lotscope.core.config import Settings
 from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.loaders.tax import TaxRecord, to_tax_row
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.ingestion.tests.support import open_run
 
 
 def test_to_tax_row_flags_delinquency() -> None:
@@ -54,7 +55,12 @@ async def test_load_tax_upserts_status_and_stubs_parcel(db_session: AsyncSession
         [[{"cartodb_id": 1, "opa_number": "1234567", "total_due": 9000.0, "num_years_owed": 2}]]
     )
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-        total = await load_tax(db_session, carto, page_size=500)
+        total = await load_tax(
+            db_session,
+            carto,
+            page_size=500,
+            run_id=await open_run(db_session, "real_estate_tax_delinquencies"),
+        )
     await db_session.flush()
 
     assert total == 1
@@ -83,7 +89,12 @@ async def test_load_tax_is_idempotent(db_session: AsyncSession) -> None:
     for _ in range(2):
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-            await load_tax(db_session, carto, page_size=500)
+            await load_tax(
+                db_session,
+                carto,
+                page_size=500,
+                run_id=await open_run(db_session, "real_estate_tax_delinquencies"),
+            )
         await db_session.flush()
 
     count = await db_session.scalar(
@@ -103,7 +114,12 @@ async def test_load_tax_emits_event_on_second_run_change(db_session: AsyncSessio
     for pages in runs:
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-            await load_tax(db_session, carto, page_size=500)
+            await load_tax(
+                db_session,
+                carto,
+                page_size=500,
+                run_id=await open_run(db_session, "real_estate_tax_delinquencies"),
+            )
         await db_session.flush()
 
     codes = (

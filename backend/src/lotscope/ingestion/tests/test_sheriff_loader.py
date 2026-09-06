@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.loaders.sheriff import SheriffSaleRecord, load_sheriff, to_sheriff_row
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.ingestion.tests.support import open_run
 
 
 def test_to_sheriff_row_maps_and_normalizes() -> None:
@@ -56,7 +57,11 @@ def _row(case: str, opa: str, price: float) -> dict[str, Any]:
 
 @pytest.mark.integration
 async def test_load_sheriff_inserts_and_records_freshness(db_session: AsyncSession) -> None:
-    total = await load_sheriff(db_session, _FakeSource([_row("BW-1", "1234567", 10000.0)]))
+    total = await load_sheriff(
+        db_session,
+        _FakeSource([_row("BW-1", "1234567", 10000.0)]),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     assert total == 1
@@ -80,7 +85,11 @@ async def test_load_sheriff_emits_event_for_new_case(db_session: AsyncSession) -
         [_row("BW-1", "1234567", 10000.0), _row("BW-2", "1234567", 20000.0)],
     ]
     for rows in runs:
-        await load_sheriff(db_session, _FakeSource(rows))
+        await load_sheriff(
+            db_session,
+            _FakeSource(rows),
+            run_id=await open_run(db_session, "sheriff_sale"),
+        )
         await db_session.flush()
 
     events = (
@@ -99,7 +108,11 @@ async def test_load_sheriff_emits_event_for_new_case(db_session: AsyncSession) -
 @pytest.mark.integration
 async def test_load_sheriff_is_idempotent_on_case(db_session: AsyncSession) -> None:
     for _ in range(2):
-        await load_sheriff(db_session, _FakeSource([_row("BW-9", "1234567", 5000.0)]))
+        await load_sheriff(
+            db_session,
+            _FakeSource([_row("BW-9", "1234567", 5000.0)]),
+            run_id=await open_run(db_session, "sheriff_sale"),
+        )
         await db_session.flush()
 
     count = await db_session.scalar(
@@ -112,13 +125,21 @@ async def test_load_sheriff_is_idempotent_on_case(db_session: AsyncSession) -> N
 async def test_load_sheriff_postponement_updates_same_case(db_session: AsyncSession) -> None:
     scheduled = _row("BW-7", "1234567", 5000.0)
     scheduled["sale_date"] = "2026-08-05"
-    await load_sheriff(db_session, _FakeSource([scheduled]))
+    await load_sheriff(
+        db_session,
+        _FakeSource([scheduled]),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     postponed = _row("BW-7", "1234567", 5000.0)
     postponed["status"] = "Postponed"
     postponed["sale_date"] = "2026-09-16"
-    await load_sheriff(db_session, _FakeSource([postponed]))
+    await load_sheriff(
+        db_session,
+        _FakeSource([postponed]),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     rows = (
@@ -135,7 +156,11 @@ async def test_load_sheriff_postponement_updates_same_case(db_session: AsyncSess
 async def test_load_sheriff_preserves_detail_fields_when_a_rescrape_bounces(
     db_session: AsyncSession,
 ) -> None:
-    await load_sheriff(db_session, _FakeSource([_row("BW-5", "1234567", 8000.0)]))
+    await load_sheriff(
+        db_session,
+        _FakeSource([_row("BW-5", "1234567", 8000.0)]),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     bounced: dict[str, Any] = {
@@ -147,7 +172,11 @@ async def test_load_sheriff_preserves_detail_fields_when_a_rescrape_bounces(
         "opening_bid": None,
         "plaintiff": "BANK",
     }
-    await load_sheriff(db_session, _FakeSource([bounced]))
+    await load_sheriff(
+        db_session,
+        _FakeSource([bounced]),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     row = (
@@ -168,9 +197,17 @@ async def test_load_sheriff_preserves_detail_fields_when_a_rescrape_bounces(
 async def test_load_sheriff_overwrites_bid_when_a_new_value_arrives(
     db_session: AsyncSession,
 ) -> None:
-    await load_sheriff(db_session, _FakeSource([_row("BW-6", "1234567", 5000.0)]))
+    await load_sheriff(
+        db_session,
+        _FakeSource([_row("BW-6", "1234567", 5000.0)]),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
-    await load_sheriff(db_session, _FakeSource([_row("BW-6", "1234567", 7500.0)]))
+    await load_sheriff(
+        db_session,
+        _FakeSource([_row("BW-6", "1234567", 7500.0)]),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     bid = await db_session.scalar(
@@ -185,7 +222,11 @@ async def test_load_sheriff_counts_skipped_rows_in_freshness(db_session: AsyncSe
         _row("BW-1", "1234567", 10000.0),
         {**_row("BW-2", "", 20000.0), "opa_number": None},
     ]
-    total = await load_sheriff(db_session, _FakeSource(rows))
+    total = await load_sheriff(
+        db_session,
+        _FakeSource(rows),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     assert total == 1
@@ -215,6 +256,7 @@ async def test_skip_detail_separates_out_of_market_rows_from_unidentified_ones(
         db_session,
         _FakeSource(rows),
         known_parcels={"000000901"},
+        run_id=await open_run(db_session, "sheriff_sale"),
     )
     await db_session.flush()
 
@@ -235,7 +277,12 @@ async def test_a_fully_reconciled_load_records_no_skip_detail(db_session: AsyncS
     await db_session.flush()
     rows = [{**_row("SS-9", "000000902", 1000.0), "parcel_number": "000000902"}]
 
-    total = await load_sheriff(db_session, _FakeSource(rows), known_parcels={"000000902"})
+    total = await load_sheriff(
+        db_session,
+        _FakeSource(rows),
+        known_parcels={"000000902"},
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     assert total == 1

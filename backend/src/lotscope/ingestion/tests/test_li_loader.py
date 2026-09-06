@@ -9,6 +9,7 @@ from lotscope.core.config import Settings
 from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.loaders.li import ViolationRecord, to_violation_event_row
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.ingestion.tests.support import open_run
 
 
 def test_to_violation_event_row_maps_and_flags() -> None:
@@ -71,7 +72,9 @@ async def test_load_li_violations_inserts_event(db_session: AsyncSession) -> Non
 
     handler = _RowsHandler([[_violation(1, "V-1")]])
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-        total = await load_li_violations(db_session, carto, page_size=500)
+        total = await load_li_violations(
+            db_session, carto, page_size=500, run_id=await open_run(db_session, "violations")
+        )
     await db_session.flush()
 
     assert total == 1
@@ -98,7 +101,9 @@ async def test_load_li_violations_is_idempotent(db_session: AsyncSession) -> Non
     for _ in range(2):
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-            await load_li_violations(db_session, carto, page_size=500)
+            await load_li_violations(
+                db_session, carto, page_size=500, run_id=await open_run(db_session, "violations")
+            )
         await db_session.flush()
 
     count = await db_session.scalar(text("SELECT count(*) FROM li_event WHERE external_id = 'V-9'"))
@@ -115,7 +120,9 @@ async def test_load_li_violations_emits_event_for_new_row_on_second_run(
     for pages in runs:
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-            await load_li_violations(db_session, carto, page_size=500)
+            await load_li_violations(
+                db_session, carto, page_size=500, run_id=await open_run(db_session, "violations")
+            )
         await db_session.flush()
 
     events = (
@@ -201,7 +208,9 @@ async def test_load_li_violations_records_the_latest_event_date_as_the_vintage(
 
     handler = _RowsHandler([[older, newer]])
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-        await load_li_violations(db_session, carto, page_size=500)
+        await load_li_violations(
+            db_session, carto, page_size=500, run_id=await open_run(db_session, "violations")
+        )
     await db_session.flush()
 
     fresh = await db_session.get(DatasetFreshness, ("phl", "violations"))
@@ -224,7 +233,9 @@ async def test_a_future_dated_violation_cannot_pass_as_the_li_vintage(
 
     handler = _RowsHandler([[real, bogus]])
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-        await load_li_violations(db_session, carto, page_size=500)
+        await load_li_violations(
+            db_session, carto, page_size=500, run_id=await open_run(db_session, "violations")
+        )
     await db_session.flush()
 
     fresh = await db_session.get(DatasetFreshness, ("phl", "violations"))

@@ -39,8 +39,23 @@ ArcGisLoader = Callable[[AsyncSession, ArcGisClient], Awaitable[int]]
 
 
 class CartoLoader(Protocol):
+    """A loader that upserts what it reads and keeps no staging rows of its own."""
+
     def __call__(
         self, session: AsyncSession, carto: CartoClient, *, where: str | None = ...
+    ) -> Awaitable[int]: ...
+
+
+class StagedCartoLoader(Protocol):
+    """A loader that stages rows against a run id before merging them."""
+
+    def __call__(
+        self,
+        session: AsyncSession,
+        carto: CartoClient,
+        *,
+        run_id: int,
+        where: str | None = ...,
     ) -> Awaitable[int]: ...
 
 
@@ -54,7 +69,25 @@ async def _run_carto(
 ) -> int:
     async with CartoClient(settings) as carto:
         return await run_loader(
-            session_factory, lambda session: loader(session, carto, where=where), dataset=dataset
+            session_factory,
+            lambda session, _run_id: loader(session, carto, where=where),
+            dataset=dataset,
+        )
+
+
+async def _run_carto_staged(
+    session_factory: SessionFactory,
+    settings: Settings,
+    *,
+    loader: StagedCartoLoader,
+    dataset: str,
+    where: str | None = None,
+) -> int:
+    async with CartoClient(settings) as carto:
+        return await run_loader(
+            session_factory,
+            lambda session, run_id: loader(session, carto, run_id=run_id, where=where),
+            dataset=dataset,
         )
 
 
@@ -69,14 +102,18 @@ async def _run_arcgis(
     async with ArcGisClient(settings) as arcgis:
         return await run_loader(
             session_factory,
-            lambda session: loader(session, arcgis),
+            # Geometry loaders keep no run row of their own; the runner opens one for
+            # them all the same, so "is an ingest in flight" has one answer.
+            lambda session, _run_id: loader(session, arcgis),
             dataset=dataset,
             market_code=market_code,
         )
 
 
 async def ingest_opa(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_carto(session_factory, settings, loader=opa.load_opa, dataset=opa.OPA_DATASET)
+    return await _run_carto_staged(
+        session_factory, settings, loader=opa.load_opa, dataset=opa.OPA_DATASET
+    )
 
 
 async def ingest_pwd(session_factory: SessionFactory, settings: Settings) -> int:
@@ -84,7 +121,7 @@ async def ingest_pwd(session_factory: SessionFactory, settings: Settings) -> int
 
 
 async def ingest_rtt(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_carto(
+    return await _run_carto_staged(
         session_factory,
         settings,
         loader=rtt.load_rtt,
@@ -94,11 +131,13 @@ async def ingest_rtt(session_factory: SessionFactory, settings: Settings) -> int
 
 
 async def ingest_tax(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_carto(session_factory, settings, loader=tax.load_tax, dataset=tax.TAX_DATASET)
+    return await _run_carto_staged(
+        session_factory, settings, loader=tax.load_tax, dataset=tax.TAX_DATASET
+    )
 
 
 async def ingest_li_violations(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_carto(
+    return await _run_carto_staged(
         session_factory,
         settings,
         loader=li.load_li_violations,
@@ -108,7 +147,7 @@ async def ingest_li_violations(session_factory: SessionFactory, settings: Settin
 
 
 async def ingest_li_permits(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_carto(
+    return await _run_carto_staged(
         session_factory,
         settings,
         loader=li.load_li_permits,
@@ -118,7 +157,7 @@ async def ingest_li_permits(session_factory: SessionFactory, settings: Settings)
 
 
 async def ingest_li_demolitions(session_factory: SessionFactory, settings: Settings) -> int:
-    return await _run_carto(
+    return await _run_carto_staged(
         session_factory,
         settings,
         loader=li.load_li_demolitions,
@@ -141,7 +180,7 @@ async def ingest_sheriff(session_factory: SessionFactory, settings: Settings) ->
         return 0
     return await run_loader(
         session_factory,
-        lambda session: load_sheriff(session, source),
+        lambda session, run_id: load_sheriff(session, source, run_id=run_id),
         dataset=sheriff.SHERIFF_DATASET,
     )
 
@@ -183,7 +222,7 @@ async def ingest_vacancy(session_factory: SessionFactory, settings: Settings) ->
 async def ingest_derived_vacancy(session_factory: SessionFactory, settings: Settings) -> int:
     return await run_loader(
         session_factory,
-        vacancy.derive_phl_vacancy,
+        lambda session, _run_id: vacancy.derive_phl_vacancy(session),
         dataset=vacancy.DERIVED_VACANCY_DATASET,
     )
 
@@ -191,7 +230,7 @@ async def ingest_derived_vacancy(session_factory: SessionFactory, settings: Sett
 async def ingest_public_ownership(session_factory: SessionFactory, settings: Settings) -> int:
     return await run_loader(
         session_factory,
-        public_ownership.derive_phl_public_ownership,
+        lambda session, _run_id: public_ownership.derive_phl_public_ownership(session),
         dataset=public_ownership.PUBLIC_OWNERSHIP_DATASET,
     )
 

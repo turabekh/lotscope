@@ -24,7 +24,7 @@ async def test_run_loader_commits_and_returns_total(migrated_database: str) -> N
     engine = create_async_engine(migrated_database)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def loader(session: AsyncSession) -> int:
+    async def loader(session: AsyncSession, run_id: int) -> int:
         await record_freshness(session, "ds_ok", status="success", success=True, row_count=7)
         return 7
 
@@ -45,7 +45,7 @@ async def test_run_loader_records_failure_and_raises(migrated_database: str) -> 
     engine = create_async_engine(migrated_database)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def failing(session: AsyncSession) -> int:
+    async def failing(session: AsyncSession, run_id: int) -> int:
         raise ValueError("boom")
 
     try:
@@ -67,7 +67,7 @@ async def test_run_loader_records_a_cancelled_run_before_re_raising(
     engine = create_async_engine(migrated_database)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def cancelled(session: AsyncSession) -> int:
+    async def cancelled(session: AsyncSession, run_id: int) -> int:
         raise CancelledError
 
     try:
@@ -89,7 +89,7 @@ async def test_a_failure_does_not_overwrite_a_success_recorded_after_the_run_sta
     engine = create_async_engine(migrated_database)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def fails_after_a_concurrent_run_succeeds(session: AsyncSession) -> int:
+    async def fails_after_a_concurrent_run_succeeds(session: AsyncSession, run_id: int) -> int:
         async with session_factory() as concurrent:
             await record_freshness(
                 concurrent, "ds_race", status="success", success=True, row_count=42
@@ -119,7 +119,7 @@ async def test_a_failure_still_supersedes_a_success_from_before_the_run_started(
     engine = create_async_engine(migrated_database)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def failing(session: AsyncSession) -> int:
+    async def failing(session: AsyncSession, run_id: int) -> int:
         raise ValueError("boom")
 
     try:
@@ -147,7 +147,7 @@ async def test_a_failure_does_not_overwrite_a_success_whose_run_started_first(
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     winner = session_factory()
 
-    async def fails_after_the_longer_run_commits(session: AsyncSession) -> int:
+    async def fails_after_the_longer_run_commits(session: AsyncSession, run_id: int) -> int:
         await record_freshness(winner, "ds_race_long", status="success", success=True, row_count=42)
         await winner.commit()
         raise ValueError("duplicate run lost the merge")

@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.ingestion.loaders.sheriff import load_sheriff
+from lotscope.ingestion.tests.support import open_run
 from lotscope.search.spatial import build_filters
 
 pytestmark = pytest.mark.integration
@@ -55,7 +56,11 @@ async def test_status_and_date_changes_become_events_and_a_rerun_adds_none(
         _row("CV-2", "000000702", _FUTURE, "Scheduled - Tax"),
         _row("CV-3", "000000703", _FUTURE, "Scheduled - Tax"),
     ]
-    await load_sheriff(db_session, _FakeSource(first))
+    await load_sheriff(
+        db_session,
+        _FakeSource(first),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
     assert await _events(db_session) == [], "the first sighting of a case is not a change"
 
@@ -64,7 +69,11 @@ async def test_status_and_date_changes_become_events_and_a_rerun_adds_none(
         _row("CV-2", "000000702", _LATER, "Scheduled - Tax"),
         _row("CV-3", "000000703", _FUTURE, "Scheduled - Tax"),
     ]
-    await load_sheriff(db_session, _FakeSource(changed))
+    await load_sheriff(
+        db_session,
+        _FakeSource(changed),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     events = await _events(db_session)
@@ -76,7 +85,11 @@ async def test_status_and_date_changes_become_events_and_a_rerun_adds_none(
     assert by_case["CV-2"].new_sale_date == _LATER
     assert "CV-3" not in by_case, "an unchanged case emits nothing"
 
-    await load_sheriff(db_session, _FakeSource(changed))
+    await load_sheriff(
+        db_session,
+        _FakeSource(changed),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
     assert len(await _events(db_session)) == 2, "re-running on unchanged data is idempotent"
 
@@ -90,7 +103,11 @@ async def test_the_search_predicate_returns_only_scheduled_parcels(
         _row("CV-11", "000000712", past, "Scheduled - Tax"),
         _row("CV-12", "000000713", _FUTURE, "Sold"),
     ]
-    await load_sheriff(db_session, _FakeSource(rows))
+    await load_sheriff(
+        db_session,
+        _FakeSource(rows),
+        run_id=await open_run(db_session, "sheriff_sale"),
+    )
     await db_session.flush()
 
     where, params = build_filters(vacant_only=False, zoning_codes=[], scheduled_for_sale=True)
@@ -113,12 +130,14 @@ async def test_a_case_that_changes_status_and_date_together_is_one_event(
     await load_sheriff(
         db_session,
         _FakeSource([_row("CV-20", "000000721", _FUTURE, "Scheduled - Tax")]),
+        run_id=await open_run(db_session, "sheriff_sale"),
     )
     await db_session.flush()
 
     await load_sheriff(
         db_session,
         _FakeSource([_row("CV-20", "000000721", _LATER, "Postponed")]),
+        run_id=await open_run(db_session, "sheriff_sale"),
     )
     await db_session.flush()
 

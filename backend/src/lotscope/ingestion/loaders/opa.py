@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -107,12 +106,12 @@ async def load_opa(
     session: AsyncSession,
     carto: CartoClient,
     *,
+    run_id: int,
     page_size: int = 5000,
     where: str | None = None,
 ) -> int:
-    run = IngestRun(dataset=OPA_DATASET)
-    session.add(run)
-    await session.flush()
+    run = await session.get(IngestRun, run_id)
+    assert run is not None
     await session.execute(text("DELETE FROM staging.opa"))
 
     total = 0
@@ -132,7 +131,7 @@ async def load_opa(
             mapped.append(row)
             raw_rows.append(
                 {
-                    "ingest_run_id": run.id,
+                    "ingest_run_id": run_id,
                     "dataset": OPA_DATASET,
                     "natural_key": row["parcel_number"],
                     "payload": dict(raw),
@@ -140,15 +139,13 @@ async def load_opa(
             )
         if not mapped:
             continue
-        staging_rows = [_staging_row(row, run.id) for row in mapped]
+        staging_rows = [_staging_row(row, run_id) for row in mapped]
         await upsert(session, StagingOpa, staging_rows, index_elements=["parcel_number"])
         await write_raw(session, raw_rows)
         total += len(mapped)
 
-    result = await merge_opa(session, run.id, source=OPA_DATASET)
+    result = await merge_opa(session, run_id, source=OPA_DATASET)
     await invalidate_after_ingest(result.touched)
-    run.status = "success"
-    run.finished_at = datetime.now(UTC)
     run.raw_rows = total
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count

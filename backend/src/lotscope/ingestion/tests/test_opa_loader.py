@@ -9,6 +9,7 @@ from lotscope.core.config import Settings
 from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.loaders.opa import OpaRecord, to_parcel_row
 from lotscope.ingestion.models import DatasetFreshness
+from lotscope.ingestion.tests.support import open_run
 from lotscope.parcels.models import Parcel
 
 
@@ -69,7 +70,12 @@ async def test_load_opa_upserts_and_records_freshness(db_session: AsyncSession) 
         ]
     )
     async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-        total = await load_opa(db_session, carto, page_size=2)
+        total = await load_opa(
+            db_session,
+            carto,
+            page_size=2,
+            run_id=await open_run(db_session, "opa_properties_public"),
+        )
     await db_session.flush()
 
     assert total == 3
@@ -89,7 +95,12 @@ async def test_load_opa_is_idempotent(db_session: AsyncSession) -> None:
     for _ in range(2):
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-            await load_opa(db_session, carto, page_size=50)
+            await load_opa(
+                db_session,
+                carto,
+                page_size=50,
+                run_id=await open_run(db_session, "opa_properties_public"),
+            )
         await db_session.flush()
 
     count = await db_session.scalar(
@@ -109,7 +120,12 @@ async def test_load_opa_emits_assessment_event_on_value_change(db_session: Async
     for pages in runs:
         handler = _RowsHandler(pages)
         async with CartoClient(_settings(), transport=httpx.MockTransport(handler)) as carto:
-            await load_opa(db_session, carto, page_size=50)
+            await load_opa(
+                db_session,
+                carto,
+                page_size=50,
+                run_id=await open_run(db_session, "opa_properties_public"),
+            )
         await db_session.flush()
 
     events = (

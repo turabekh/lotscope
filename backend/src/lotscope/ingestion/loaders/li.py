@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -153,6 +152,7 @@ async def _run_li_loader(
     session: AsyncSession,
     carto: CartoClient,
     *,
+    run_id: int,
     dataset: str,
     event_type: str,
     columns: tuple[str, ...],
@@ -161,9 +161,8 @@ async def _run_li_loader(
     page_size: int,
     where: str | None,
 ) -> int:
-    run = IngestRun(dataset=dataset)
-    session.add(run)
-    await session.flush()
+    run = await session.get(IngestRun, run_id)
+    assert run is not None
     await session.execute(
         text("DELETE FROM staging.li_event WHERE event_type = :event_type"),
         {"event_type": event_type},
@@ -186,7 +185,7 @@ async def _run_li_loader(
             mapped.append(row)
             raw_rows.append(
                 {
-                    "ingest_run_id": run.id,
+                    "ingest_run_id": run_id,
                     "dataset": dataset,
                     "natural_key": row["external_id"],
                     "payload": dict(raw),
@@ -199,7 +198,7 @@ async def _run_li_loader(
             for parcel_number in {row["parcel_number"] for row in mapped}
         ]
         await insert_ignore(session, Parcel, parcel_stubs, index_elements=["parcel_number"])
-        staging_rows = [_staging_row(row, run.id, dataset) for row in mapped]
+        staging_rows = [_staging_row(row, run_id, dataset) for row in mapped]
         await upsert(
             session, StagingLiEvent, staging_rows, index_elements=["event_type", "external_id"]
         )
@@ -213,16 +212,14 @@ async def _run_li_loader(
                     "SELECT event_date FROM staging.li_event "
                     "WHERE ingest_run_id = :run_id AND event_type = :event_type"
                 ),
-                {"run_id": run.id, "event_type": event_type},
+                {"run_id": run_id, "event_type": event_type},
             )
         )
         .scalars()
         .all()
     )
-    result = await merge_li(session, run.id, event_type)
+    result = await merge_li(session, run_id, event_type)
     await invalidate_after_ingest(result.touched)
-    run.status = "success"
-    run.finished_at = datetime.now(UTC)
     run.raw_rows = total
     run.merged_rows = result.merged_rows
     run.event_count = result.event_count
@@ -242,12 +239,14 @@ async def load_li_violations(
     session: AsyncSession,
     carto: CartoClient,
     *,
+    run_id: int,
     page_size: int = 5000,
     where: str | None = None,
 ) -> int:
     return await _run_li_loader(
         session,
         carto,
+        run_id=run_id,
         dataset=LI_VIOLATIONS_DATASET,
         event_type="violation",
         columns=LI_VIOLATIONS_COLUMNS,
@@ -262,12 +261,14 @@ async def load_li_permits(
     session: AsyncSession,
     carto: CartoClient,
     *,
+    run_id: int,
     page_size: int = 5000,
     where: str | None = None,
 ) -> int:
     return await _run_li_loader(
         session,
         carto,
+        run_id=run_id,
         dataset=LI_PERMITS_DATASET,
         event_type="permit",
         columns=LI_PERMITS_COLUMNS,
@@ -282,12 +283,14 @@ async def load_li_demolitions(
     session: AsyncSession,
     carto: CartoClient,
     *,
+    run_id: int,
     page_size: int = 5000,
     where: str | None = None,
 ) -> int:
     return await _run_li_loader(
         session,
         carto,
+        run_id=run_id,
         dataset=LI_DEMOLITIONS_DATASET,
         event_type="demolition",
         columns=LI_DEMOLITIONS_COLUMNS,

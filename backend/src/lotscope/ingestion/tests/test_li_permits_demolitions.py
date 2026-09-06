@@ -13,6 +13,7 @@ from lotscope.ingestion.loaders.li import (
     to_demolition_event_row,
     to_permit_event_row,
 )
+from lotscope.ingestion.tests.support import open_run
 
 
 def test_to_permit_event_row_maps_permit() -> None:
@@ -92,9 +93,13 @@ async def test_load_li_permits_and_demolitions_coexist(db_session: AsyncSession)
         ]
     )
     async with CartoClient(_settings(), transport=httpx.MockTransport(permit_handler)) as carto:
-        await load_li_permits(db_session, carto, page_size=500)
+        await load_li_permits(
+            db_session, carto, page_size=500, run_id=await open_run(db_session, "permits")
+        )
     async with CartoClient(_settings(), transport=httpx.MockTransport(demo_handler)) as carto:
-        await load_li_demolitions(db_session, carto, page_size=500)
+        await load_li_demolitions(
+            db_session, carto, page_size=500, run_id=await open_run(db_session, "demolitions")
+        )
     await db_session.flush()
 
     types = await db_session.scalars(
