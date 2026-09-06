@@ -23,7 +23,6 @@ import type {
   AreaSearchResponse,
   AssemblageResult,
   AssemblageTopResponse,
-  AssessmentResult,
   BasemapSession,
   BuyerProfileDetail,
   BuyerRoster,
@@ -46,7 +45,6 @@ import type {
   JobRunSummary,
   LayersResponse,
   LeadsResponse,
-  MarketContext,
   NeighborhoodListResponse,
   NeighborhoodMarketResponse,
   NextSheriffSale,
@@ -56,7 +54,6 @@ import type {
   OpsSheriffCoverage,
   OwnerPortfolio,
   ParcelChecklist,
-  ParcelCompareResponse,
   ParcelDetail,
   ParcelReportResult,
   ParcelSearchResponse,
@@ -232,29 +229,17 @@ export const api = {
   getParcelReport(parcelNumber: string): Promise<ParcelReportResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/report`)
   },
-  getAssessment(parcelNumber: string): Promise<AssessmentResult> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/assessment`)
-  },
   getSubdivision(parcelNumber: string): Promise<SubdivisionResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/subdivision`)
   },
   getHistoric(parcelNumber: string): Promise<HistoricResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/historic`)
   },
-  getMarketContext(parcelNumber: string): Promise<MarketContext> {
-    return request(`/parcels/${encodeURIComponent(parcelNumber)}/market`)
-  },
   getScenarios(parcelNumber: string): Promise<ScenariosResult> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/scenarios`)
   },
   getChecklist(parcelNumber: string): Promise<ParcelChecklist> {
     return request(`/parcels/${encodeURIComponent(parcelNumber)}/checklist`)
-  },
-  compareParcels(parcelNumbers: string[]): Promise<ParcelCompareResponse> {
-    const query = parcelNumbers
-      .map((parcelNumber) => `parcels=${encodeURIComponent(parcelNumber)}`)
-      .join('&')
-    return request(`/parcels/compare?${query}`)
   },
   getDeal(parcelNumber: string, params: DealOverrides = {}): Promise<DealResult> {
     const query = new URLSearchParams()

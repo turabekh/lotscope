@@ -37,8 +37,6 @@ from lotscope.assessment.schemas import AssessmentResult
 from lotscope.assessment.service import analyze_parcel_assessment
 from lotscope.checklist.schemas import ParcelChecklist
 from lotscope.checklist.service import build_parcel_checklist
-from lotscope.compare.schemas import ParcelCompareResponse
-from lotscope.compare.service import MAX_COMPARE_PARCELS, compare_parcels
 from lotscope.core.config import Settings
 from lotscope.core.errors import NotFoundError
 from lotscope.corrections.schemas import CorrectionCreate, CorrectionRead
@@ -54,8 +52,6 @@ from lotscope.documents.storage import LocalBlobStore
 from lotscope.historic.schemas import HistoricResult
 from lotscope.historic.service import get_parcel_historic
 from lotscope.ingestion.service import source_freshness
-from lotscope.market.schemas import MarketContext
-from lotscope.market.service import get_parcel_market
 from lotscope.owners.schemas import OwnerPortfolio
 from lotscope.owners.service import get_owner_portfolio
 from lotscope.parcels.schemas import ParcelDetail, SourceFreshness
@@ -129,15 +125,6 @@ def _ask_cache_key(parcel_number: str, question: str, source: str, model: str) -
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
-
-
-@router.get("/compare", response_model=ParcelCompareResponse)
-async def parcels_compare(
-    session: SessionDep,
-    current_user: CurrentUserDep,
-    parcels: Annotated[list[str], Query(min_length=2, max_length=MAX_COMPARE_PARCELS)],
-) -> ParcelCompareResponse:
-    return await compare_parcels(session, parcels)
 
 
 @router.get("/{parcel_number}", response_model=ParcelDetail)
@@ -352,20 +339,6 @@ async def parcel_historic(
     parcel_number: ParcelKeyDep, session: SessionDep, current_user: CurrentUserDep
 ) -> HistoricResult:
     result = await get_parcel_historic(session, parcel_number)
-    if result is None:
-        raise NotFoundError(f"Parcel {parcel_number} was not found.")
-    return result
-
-
-@router.get("/{parcel_number}/market", response_model=MarketContext)
-async def parcel_market(
-    parcel_number: ParcelKeyDep,
-    session: SessionDep,
-    current_user: CurrentUserDep,
-    radius_ft: Annotated[float, Query(gt=0, le=10000)] = 1500.0,
-    years: Annotated[int, Query(ge=1, le=20)] = 3,
-) -> MarketContext:
-    result = await get_parcel_market(session, parcel_number, radius_ft=radius_ft, years=years)
     if result is None:
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     return result

@@ -6,14 +6,12 @@ import type {
   DealOverrides,
   UnderwritingAnalysis,
   AssemblageResult,
-  AssessmentResult,
   DealResult,
   DeedRestrictionsResponse,
   DistressResult,
   NextSheriffSale,
   EnvelopeResult,
   HistoricResult,
-  MarketContext,
   OwnerPortfolio,
   ParcelChecklist,
   ParcelDetail,
@@ -32,11 +30,9 @@ export const useParcelStore = defineStore('parcel', () => {
   const assemblageLoading = ref(false)
   const distress = ref<DistressResult | null>(null)
   const nextSheriffSale = ref<NextSheriffSale | null>(null)
-  const assessment = ref<AssessmentResult | null>(null)
   const subdivision = ref<SubdivisionResult | null>(null)
   const historic = ref<HistoricResult | null>(null)
   const scenarios = ref<ScenariosResult | null>(null)
-  const marketContext = ref<MarketContext | null>(null)
   const comps = ref<ValuationResult | null>(null)
   const deal = ref<DealResult | null>(null)
   const dealLoading = ref(false)
@@ -57,11 +53,9 @@ export const useParcelStore = defineStore('parcel', () => {
     assemblage.value = null
     distress.value = null
     nextSheriffSale.value = null
-    assessment.value = null
     subdivision.value = null
     historic.value = null
     scenarios.value = null
-    marketContext.value = null
     comps.value = null
     deal.value = null
     underwriting.value = null
@@ -74,11 +68,9 @@ export const useParcelStore = defineStore('parcel', () => {
       void loadAssemblage(parcelNumber)
       void loadDistress(parcelNumber)
       void loadNextSheriffSale(parcelNumber)
-      void loadAssessment(parcelNumber)
       void loadSubdivision(parcelNumber)
       void loadHistoric(parcelNumber)
       void loadScenarios(parcelNumber)
-      void loadMarketContext(parcelNumber)
       void loadComps(parcelNumber)
       void loadDeal(parcelNumber)
       void loadChecklist(parcelNumber)
@@ -149,15 +141,6 @@ export const useParcelStore = defineStore('parcel', () => {
     }
   }
 
-  async function loadAssessment(parcelNumber: string): Promise<void> {
-    try {
-      const result = await api.getAssessment(parcelNumber)
-      if (detail.value?.parcel_number === parcelNumber) assessment.value = result
-    } catch {
-      if (detail.value?.parcel_number === parcelNumber) assessment.value = null
-    }
-  }
-
   async function loadSubdivision(parcelNumber: string): Promise<void> {
     try {
       const result = await api.getSubdivision(parcelNumber)
@@ -182,15 +165,6 @@ export const useParcelStore = defineStore('parcel', () => {
       if (detail.value?.parcel_number === parcelNumber) scenarios.value = result
     } catch {
       if (detail.value?.parcel_number === parcelNumber) scenarios.value = null
-    }
-  }
-
-  async function loadMarketContext(parcelNumber: string): Promise<void> {
-    try {
-      const result = await api.getMarketContext(parcelNumber)
-      if (detail.value?.parcel_number === parcelNumber) marketContext.value = result
-    } catch {
-      if (detail.value?.parcel_number === parcelNumber) marketContext.value = null
     }
   }
 
@@ -258,11 +232,9 @@ export const useParcelStore = defineStore('parcel', () => {
     assemblage.value = null
     distress.value = null
     nextSheriffSale.value = null
-    assessment.value = null
     subdivision.value = null
     historic.value = null
     scenarios.value = null
-    marketContext.value = null
     comps.value = null
     deal.value = null
     underwriting.value = null
@@ -286,11 +258,9 @@ export const useParcelStore = defineStore('parcel', () => {
     assemblageLoading,
     distress,
     nextSheriffSale,
-    assessment,
     subdivision,
     historic,
     scenarios,
-    marketContext,
     comps,
     deal,
     underwriting,
@@ -306,11 +276,9 @@ export const useParcelStore = defineStore('parcel', () => {
     loadEnvelope,
     loadAssemblage,
     loadDistress,
-    loadAssessment,
     loadSubdivision,
     loadHistoric,
     loadScenarios,
-    loadMarketContext,
     loadComps,
     loadDeal,
     loadChecklist,
