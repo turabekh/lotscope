@@ -12,23 +12,32 @@ function sectionIn(root: HTMLElement, id: string): HTMLElement {
 describe('scrollToSection', () => {
   it('re-aims when the page grows under the scroll it already made', async () => {
     vi.useFakeTimers()
+    const observers: Array<() => void> = []
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          observers.push(callback)
+        }
+        observe() {}
+        disconnect() {}
+      },
+    )
     const root = document.createElement('div')
     const node = sectionIn(root, 'violations')
-    let top = 0
-    node.getBoundingClientRect = () => ({ top }) as DOMRect
-    const scrolled = vi.fn(() => {
-      top = 0
-    })
+    const scrolled = vi.fn()
     node.scrollIntoView = scrolled
 
     const done = scrollToSection('violations', root)
-    // The evidence sections load and push the target down the page.
-    top = 900
-    await vi.advanceTimersByTimeAsync(1200)
+    await vi.advanceTimersByTimeAsync(0)
+    // The evidence sections finish loading and the page changes size underneath.
+    observers.forEach((fire) => fire())
+    await vi.advanceTimersByTimeAsync(2000)
     await done
 
-    // Once to land, and again for each settle check that found it had drifted.
+    // Once to land, and again for the growth that moved it.
     expect(scrolled.mock.calls.length).toBeGreaterThan(1)
+    vi.unstubAllGlobals()
     vi.useRealTimers()
   })
 
