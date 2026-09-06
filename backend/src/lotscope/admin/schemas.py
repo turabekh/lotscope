@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -37,6 +38,10 @@ class AdminUserUpdate(BaseModel):
     role: Literal["user", "admin"] | None = None
     tier: Literal["free", "pro", "investor", "enterprise"] | None = None
     is_active: bool | None = None
+    # Sent explicitly as null to hand the account back to the platform default, which is
+    # why these are read through model_fields_set rather than "is not None".
+    analyst_daily_usd: Decimal | None = None
+    analyst_daily_runs: int | None = None
 
 
 class JobRunSummary(BaseModel):
@@ -52,9 +57,39 @@ class JobRunSummary(BaseModel):
     started_at: datetime | None
     finished_at: datetime | None
     result_count: int | None
+    duration_ms: int | None = None
     error: str | None
     triggered_by: int
     created_at: datetime
+
+
+class AnalystSpendRow(BaseModel):
+    user_id: int
+    email: str
+    chat_usd: Decimal
+    job_usd: Decimal
+    total_usd: Decimal
+    runs: int
+    input_tokens: int
+    output_tokens: int
+    ceiling_usd: Decimal
+    run_ceiling: int
+    over_ceiling: bool
+
+
+class AnalystSpendToday(BaseModel):
+    """What the Analyst has cost today, per buyer and in total.
+
+    `usd_estimate` throughout: token counts are exact, list prices are what we assume.
+    """
+
+    day: date
+    spend_usd: Decimal
+    global_ceiling_usd: Decimal
+    fraction: float
+    default_ceiling_usd: Decimal
+    default_run_ceiling: int
+    users: list[AnalystSpendRow]
 
 
 class JobParamSpec(BaseModel):

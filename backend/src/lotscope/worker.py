@@ -27,6 +27,12 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.errors import NotFoundError
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.core.market import MARKET_CODE
+from lotscope.core.observability import (
+    CRON_SOURCE,
+    WORKER_SOURCE,
+    capture,
+    init_error_reporting,
+)
 from lotscope.diligence.service import complete_run
 from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.carto import CartoClient
@@ -39,6 +45,8 @@ from lotscope.notifications.service import (
     send_sales_week_digest,
 )
 from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
+from lotscope.ops.cron_schedule import CRON_SCHEDULE, CronSpec
+from lotscope.ops.errors import send_error_digest
 from lotscope.ops.reconcile import reconcile_against_opa
 from lotscope.ops.stats import snapshot_market_stats
 from lotscope.packet.delivery import send_daily_packets, send_sale_change_alerts
@@ -58,6 +66,7 @@ async def startup(ctx: dict[str, Any]) -> None:
     ctx["settings"] = settings
     ctx["engine"] = engine
     ctx["session_factory"] = create_session_factory(engine)
+    init_error_reporting(settings, "worker")
     await _reap_orphans(ctx["session_factory"])
 
 
@@ -376,6 +385,12 @@ async def send_ops_health_digest(ctx: dict[str, Any]) -> int:
     return count
 
 
+async def send_error_digest_email(ctx: dict[str, Any]) -> int:
+    settings = ctx["settings"]
+    sender = get_email_sender(settings)
+    return await send_error_digest(ctx["session_factory"], sender, settings)
+
+
 async def send_ops_alerts(ctx: dict[str, Any]) -> int:
     settings = ctx["settings"]
     sender = get_email_sender(settings)
@@ -419,6 +434,8 @@ async def _close_cron_run(
     *,
     status: str,
     error: str | None,
+    duration_ms: int | None = None,
+    result_count: int | None = None,
 ) -> None:
     if run_id is None:
         return
@@ -430,12 +447,16 @@ async def _close_cron_run(
             run.status = status
             run.finished_at = datetime.now(UTC)
             run.error = error
+            run.duration_ms = duration_ms
+            run.result_count = result_count
             await session.commit()
     except Exception as exc:
         _logger.warning("cron_run_not_closed", run_id=run_id, error=str(exc))
 
 
 def recorded(coroutine: Callable[[dict[str, Any]], Awaitable[Any]]) -> Any:
+    """Open a job_run row, close it either way, and report anything that was not a stop."""
+
     async def run(ctx: dict[str, Any]) -> Any:
         name = coroutine.__name__
         run_id = await _open_cron_run(ctx["session_factory"], name)
@@ -455,11 +476,30 @@ def recorded(coroutine: Callable[[dict[str, Any]], Awaitable[Any]]) -> Any:
                 run_id,
                 status="cancelled" if isinstance(exc, CancelledError) else "failed",
                 error=f"{type(exc).__name__}: {exc}",
+                duration_ms=int(elapsed * 1000),
             )
+            # A cancellation is a deploy or a shutdown asking the job to stop, which is
+            # not a defect and must not fill the digest every time we ship.
+            if not isinstance(exc, CancelledError):
+                await capture(
+                    exc,
+                    source=CRON_SOURCE,
+                    where=name,
+                    context={"job": name, "elapsed_seconds": round(elapsed, 1)},
+                    settings=ctx["settings"],
+                    session_factory=ctx["session_factory"],
+                )
             raise
         elapsed = (datetime.now(UTC) - started).total_seconds()
         _logger.info("cron_job_finished", job=name, elapsed_seconds=round(elapsed, 1))
-        await _close_cron_run(ctx["session_factory"], run_id, status="success", error=None)
+        await _close_cron_run(
+            ctx["session_factory"],
+            run_id,
+            status="success",
+            error=None,
+            duration_ms=int(elapsed * 1000),
+            result_count=result if isinstance(result, int) else None,
+        )
         return result
 
     run.__name__ = coroutine.__name__
@@ -467,67 +507,126 @@ def recorded(coroutine: Callable[[dict[str, Any]], Awaitable[Any]]) -> Any:
     return run
 
 
+def captured(coroutine: Callable[..., Awaitable[Any]]) -> Any:
+    """Report an enqueued job's unhandled exception before arq swallows it into a log."""
+
+    async def run(ctx: dict[str, Any], *args: Any) -> Any:
+        try:
+            return await coroutine(ctx, *args)
+        except CancelledError:
+            raise
+        except Exception as exc:
+            await capture(
+                exc,
+                source=WORKER_SOURCE,
+                where=coroutine.__name__,
+                context={
+                    "job": coroutine.__name__,
+                    "args": [str(a)[:120] for a in args],
+                    "job_try": ctx.get("job_try"),
+                },
+                settings=ctx["settings"],
+                session_factory=ctx["session_factory"],
+            )
+            raise
+
+    run.__name__ = coroutine.__name__
+    run.__qualname__ = coroutine.__qualname__
+    return run
+
+
+_CRON_FUNCTIONS: dict[str, Callable[[dict[str, Any]], Awaitable[Any]]] = {
+    "send_error_digest_email": send_error_digest_email,
+    "sweep_ingestion_retention": sweep_ingestion_retention,
+    "summarise_conversations": summarise_conversations,
+    "ingest_all": ingest_all,
+    "send_ops_alerts": send_ops_alerts,
+    "send_sheriff_change_emails": send_sheriff_change_emails,
+    "build_daily_signals": build_daily_signals,
+    "recompute_vacancy_confidence": recompute_vacancy_confidence,
+    "rebuild_screen_index": rebuild_screen_index,
+    "recompute_distress": recompute_distress,
+    "send_sales_week_emails": send_sales_week_emails,
+    "recompute_assemblage": recompute_assemblage,
+    "recompute_buyers": recompute_buyers,
+    "snapshot_stats": snapshot_stats,
+    "send_ops_health_digest": send_ops_health_digest,
+    "reconcile_upstream_sample": reconcile_upstream_sample,
+    "send_morning_briefs": send_morning_briefs,
+    "send_daily_packet_emails": send_daily_packet_emails,
+    "send_daily_digests": send_daily_digests,
+    "send_weekly_digests": send_weekly_digests,
+    "send_deal_reminder_emails": send_deal_reminder_emails,
+}
+
+# Jobs that walk the whole parcel table or wait on an upstream API.
+_LONG_CRONS = frozenset(
+    {
+        "ingest_all",
+        "rebuild_screen_index",
+        "recompute_distress",
+        "recompute_assemblage",
+        "recompute_vacancy_confidence",
+        "build_daily_signals",
+        "send_morning_briefs",
+        "send_daily_packet_emails",
+        "send_sheriff_change_emails",
+        "summarise_conversations",
+    }
+)
+
+
+def _cron_timeout(name: str) -> int:
+    if name == "ingest_all":
+        return INGEST_JOB_TIMEOUT
+    return BULK_JOB_TIMEOUT if name in _LONG_CRONS else DEFAULT_JOB_TIMEOUT
+
+
+def _scheduled(spec: CronSpec) -> Any:
+    """One timetable entry, wired to the function of the same name.
+
+    The name is the join between `ops.cron_schedule` and this module, and it is also the
+    `job_run.job_id` readiness reads, so a rename that misses one of the three shows up
+    as a stale job rather than as nothing at all.
+    """
+    return cron(
+        recorded(captured(_CRON_FUNCTIONS[spec.name])),
+        hour=set(spec.hours) if spec.hours is not None else None,
+        minute=set(spec.minutes),
+        weekday=spec.weekday,
+        timeout=_cron_timeout(spec.name),
+    )
+
+
 class WorkerSettings:
     functions: ClassVar = [
-        func(ingest_dataset, timeout=INGEST_JOB_TIMEOUT),
-        func(ingest_all, timeout=INGEST_JOB_TIMEOUT),
-        run_admin_job,
-        sweep_ingestion_retention,
-        func(generate_sale_packet, timeout=BULK_JOB_TIMEOUT),
-        func(build_diligence_report, timeout=BULK_JOB_TIMEOUT),
-        func(send_daily_packet_emails, timeout=BULK_JOB_TIMEOUT),
-        func(send_sheriff_change_emails, timeout=BULK_JOB_TIMEOUT),
-        func(build_daily_signals, timeout=BULK_JOB_TIMEOUT),
-        func(send_morning_briefs, timeout=BULK_JOB_TIMEOUT),
-        func(summarise_conversations, timeout=BULK_JOB_TIMEOUT),
-        func(rebuild_screen_index, timeout=BULK_JOB_TIMEOUT),
-        func(recompute_distress, timeout=BULK_JOB_TIMEOUT),
-        func(recompute_assemblage, timeout=BULK_JOB_TIMEOUT),
-        func(recompute_vacancy_confidence, timeout=BULK_JOB_TIMEOUT),
-        snapshot_stats,
-        reconcile_upstream_sample,
-        send_weekly_digests,
-        send_daily_digests,
-        send_deal_reminder_emails,
-        send_sales_week_emails,
-        send_ops_health_digest,
-        send_ops_alerts,
+        func(captured(ingest_dataset), timeout=INGEST_JOB_TIMEOUT),
+        func(captured(ingest_all), timeout=INGEST_JOB_TIMEOUT),
+        captured(run_admin_job),
+        captured(sweep_ingestion_retention),
+        func(captured(generate_sale_packet), timeout=BULK_JOB_TIMEOUT),
+        func(captured(build_diligence_report), timeout=BULK_JOB_TIMEOUT),
+        func(captured(send_daily_packet_emails), timeout=BULK_JOB_TIMEOUT),
+        func(captured(send_sheriff_change_emails), timeout=BULK_JOB_TIMEOUT),
+        func(captured(build_daily_signals), timeout=BULK_JOB_TIMEOUT),
+        func(captured(send_morning_briefs), timeout=BULK_JOB_TIMEOUT),
+        func(captured(summarise_conversations), timeout=BULK_JOB_TIMEOUT),
+        func(captured(rebuild_screen_index), timeout=BULK_JOB_TIMEOUT),
+        func(captured(recompute_distress), timeout=BULK_JOB_TIMEOUT),
+        func(captured(recompute_assemblage), timeout=BULK_JOB_TIMEOUT),
+        func(captured(recompute_vacancy_confidence), timeout=BULK_JOB_TIMEOUT),
+        captured(snapshot_stats),
+        captured(reconcile_upstream_sample),
+        captured(send_weekly_digests),
+        captured(send_daily_digests),
+        captured(send_deal_reminder_emails),
+        captured(send_sales_week_emails),
+        captured(send_ops_health_digest),
+        captured(send_ops_alerts),
+        captured(send_error_digest_email),
     ]
     on_startup = startup
     on_shutdown = shutdown
     job_timeout = DEFAULT_JOB_TIMEOUT
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
-    cron_jobs: ClassVar = [
-        cron(recorded(sweep_ingestion_retention), hour=2, minute=0),
-        cron(recorded(ingest_all), hour=4, minute=0, timeout=INGEST_JOB_TIMEOUT),
-        cron(recorded(recompute_vacancy_confidence), hour=6, minute=30, timeout=BULK_JOB_TIMEOUT),
-        cron(recorded(rebuild_screen_index), hour=7, minute=0, timeout=BULK_JOB_TIMEOUT),
-        cron(recorded(recompute_distress), hour=8, minute=0, timeout=BULK_JOB_TIMEOUT),
-        cron(recorded(recompute_assemblage), hour=8, minute=30, timeout=BULK_JOB_TIMEOUT),
-        cron(recorded(recompute_buyers), hour=9, minute=0),
-        cron(recorded(snapshot_stats), hour=9, minute=30),
-        cron(recorded(reconcile_upstream_sample), hour=11, minute=0),
-        cron(recorded(send_ops_alerts), hour=5, minute=30),
-        cron(recorded(send_ops_health_digest), hour=10, minute=0),
-        cron(recorded(send_sales_week_emails), weekday="mon", hour=8, minute=0),
-        cron(recorded(send_daily_digests), hour=13, minute=0),
-        cron(recorded(send_weekly_digests), weekday="mon", hour=13, minute=30),
-        cron(recorded(send_deal_reminder_emails), hour=13, minute=45),
-        cron(
-            recorded(send_daily_packet_emails),
-            hour={13, 14},
-            minute=0,
-            timeout=BULK_JOB_TIMEOUT,
-        ),
-        cron(recorded(send_sheriff_change_emails), hour=5, minute=45, timeout=BULK_JOB_TIMEOUT),
-        # After the ingest (04:00, ~1h) and the sheriff change pass (05:45).
-        cron(recorded(build_daily_signals), hour=6, minute=15, timeout=BULK_JOB_TIMEOUT),
-        # 07:00 America/New_York on both sides of DST; the job checks the local clock.
-        cron(
-            recorded(send_morning_briefs),
-            hour={11, 12},
-            minute=0,
-            timeout=BULK_JOB_TIMEOUT,
-        ),
-        cron(recorded(summarise_conversations), hour=3, minute=30, timeout=BULK_JOB_TIMEOUT),
-    ]
+    cron_jobs: ClassVar = [_scheduled(spec) for spec in CRON_SCHEDULE]

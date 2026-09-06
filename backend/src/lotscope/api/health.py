@@ -22,7 +22,7 @@ from lotscope.corpus.service import (
     corpus_health,
 )
 from lotscope.notifications.email import get_email_sender
-from lotscope.ops.service import stale_automated_datasets
+from lotscope.ops.service import stale_automated_datasets, stale_cron_jobs
 
 router = APIRouter(tags=["health"])
 
@@ -41,6 +41,7 @@ class ReadinessResponse(BaseModel):
     email_allowlist_active: bool
     billing: bool
     stale_datasets: list[str] = []
+    stale_jobs: list[str] = []
 
 
 @router.get("/health", response_model=LivenessResponse)
@@ -126,11 +127,14 @@ async def readiness(
     database_ok = await _check_database(session)
     redis_ok = await _check_redis(redis)
     stale = await _stale_datasets(session) if database_ok else []
+    jobs_stale = await _stale_jobs(session) if database_ok else []
     ingestion_ok = not stale
     email_ok = get_email_sender(settings) is not None
     allowlist_active = bool(settings.email_allowlist)
     billing_ok = billing_is_configured(settings)
-    healthy = database_ok and redis_ok and ingestion_ok and email_ok
+    # A stopped cron degrades readiness: the nightly pipeline is the product, and a
+    # green tick over a job that has not run for two days is worse than no tick at all.
+    healthy = database_ok and redis_ok and ingestion_ok and email_ok and not jobs_stale
     status: Literal["ready", "degraded"] = "ready" if healthy else "degraded"
     return ReadinessResponse(
         status=status,
@@ -141,6 +145,7 @@ async def readiness(
         email_allowlist_active=allowlist_active,
         billing=billing_ok,
         stale_datasets=stale,
+        stale_jobs=jobs_stale,
     )
 
 
@@ -153,6 +158,17 @@ async def _stale_datasets(session: AsyncSession) -> list[str]:
     except SQLAlchemyError:
         return [_UNCHECKABLE]
     return [f"{item.market_code}/{item.dataset}: {item.reason}" for item in stale]
+
+
+_JOBS_UNCHECKABLE = "cron history could not be read, so staleness is unknown"
+
+
+async def _stale_jobs(session: AsyncSession) -> list[str]:
+    try:
+        stale = await stale_cron_jobs(session)
+    except SQLAlchemyError:
+        return [_JOBS_UNCHECKABLE]
+    return [f"{job.name}: {job.reason}" for job in stale]
 
 
 async def _check_database(session: AsyncSession) -> bool:

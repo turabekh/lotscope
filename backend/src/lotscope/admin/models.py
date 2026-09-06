@@ -22,6 +22,10 @@ class JobRun(Base, TimestampMixin):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     result_count: Mapped[int | None] = mapped_column(Integer)
+    # Recorded rather than derived from the timestamps: a run that was interrupted
+    # has a finished_at written by the reaper long after it stopped, and the gap
+    # between the two would read as a duration nobody spent.
+    duration_ms: Mapped[int | None] = mapped_column(Integer)
     error: Mapped[str | None] = mapped_column(Text)
     triggered_by: Mapped[int | None] = mapped_column(
         ForeignKey("app_user.id", ondelete="CASCADE"), nullable=True

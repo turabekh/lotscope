@@ -10,6 +10,7 @@ from lotscope.ingestion.loaders.sheriff_civilview import CivilViewListRow, Civil
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ops.cadence import FreshnessInput, cadence_for, evaluate_freshness
+from lotscope.ops.cron_schedule import CRON_SCHEDULE, missed_since
 from lotscope.ops.models import MarketStats
 from lotscope.ops.schemas import (
     CoverageStats,
@@ -275,6 +276,59 @@ async def stale_automated_datasets(
             stale.append(
                 StaleDataset(
                     market_code=row.market_code, dataset=row.dataset, reason=verdict.reason
+                )
+            )
+    return stale
+
+
+@dataclass(frozen=True)
+class StaleJob:
+    name: str
+    reason: str
+
+
+async def stale_cron_jobs(session: AsyncSession, now: datetime | None = None) -> list[StaleJob]:
+    """Crons that have not succeeded across their last two scheduled runs.
+
+    Two runs back rather than one, because a job that is mid-flight or that lost a single
+    night to a deploy is not a job that has stopped. Two consecutive misses is a job that
+    is not coming back on its own.
+
+    A cron is judged only against history we actually have. Nothing is reported as stale
+    for a window that predates the oldest recorded cron run — after a fresh deployment
+    that would be every job on the timetable, which is an alarm about our own record
+    keeping rather than about the jobs.
+    """
+    moment = (now or datetime.now(UTC)).astimezone(UTC)
+    history_start = await session.scalar(
+        select(func.min(JobRun.started_at)).where(JobRun.kind == "cron")
+    )
+    rows = (
+        await session.execute(
+            select(JobRun.job_id, func.max(JobRun.started_at))
+            .where(JobRun.kind == "cron", JobRun.status == "success")
+            .group_by(JobRun.job_id)
+        )
+    ).all()
+    last_success: dict[str, datetime | None] = {str(job_id): at for job_id, at in rows}
+
+    stale: list[StaleJob] = []
+    for spec in CRON_SCHEDULE:
+        cutoff = missed_since(spec, moment)
+        if cutoff is None:
+            continue
+        if history_start is None or cutoff < history_start.astimezone(UTC):
+            continue
+        succeeded_at = last_success.get(f"cron:{spec.name}")
+        if succeeded_at is None:
+            stale.append(StaleJob(spec.name, "has never recorded a successful run"))
+        elif succeeded_at.astimezone(UTC) < cutoff:
+            stale.append(
+                StaleJob(
+                    spec.name,
+                    "last succeeded "
+                    f"{succeeded_at.astimezone(UTC).strftime('%Y-%m-%d %H:%M')} UTC, "
+                    f"two scheduled runs ago was {cutoff.strftime('%Y-%m-%d %H:%M')} UTC",
                 )
             )
     return stale

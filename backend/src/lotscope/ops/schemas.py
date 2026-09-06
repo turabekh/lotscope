@@ -73,6 +73,7 @@ class JobRunRow(BaseModel):
     started_at: datetime | None
     finished_at: datetime | None
     result_count: int | None
+    duration_ms: int | None = None
     error: str | None
     created_at: datetime
 

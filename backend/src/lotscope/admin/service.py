@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any, Protocol
 
 from sqlalchemy import func, select, text
@@ -12,11 +13,15 @@ from lotscope.admin.schemas import (
     AdminOverview,
     AdminUsersResponse,
     AdminUserUpdate,
+    AnalystSpendRow,
+    AnalystSpendToday,
     DatasetStatus,
     JobCatalogEntry,
     JobParamSpec,
     JobRunSummary,
 )
+from lotscope.budget.service import day_spend, user_ceilings
+from lotscope.core.config import Settings
 from lotscope.core.errors import ConflictError, NotFoundError
 from lotscope.ingestion.models import DatasetFreshness
 
@@ -88,8 +93,71 @@ async def update_user(session: AsyncSession, user_id: int, data: AdminUserUpdate
         user.tier = data.tier
     if data.is_active is not None:
         user.is_active = data.is_active
+    # Explicit null means "back to the platform default", so what was sent decides, not
+    # whether the value happens to be None.
+    if "analyst_daily_usd" in data.model_fields_set:
+        user.analyst_daily_usd = data.analyst_daily_usd
+    if "analyst_daily_runs" in data.model_fields_set:
+        user.analyst_daily_runs = data.analyst_daily_runs
     await session.flush()
     return UserRead.model_validate(user)
+
+
+async def analyst_spend_today(
+    session: AsyncSession, settings: Settings, *, now: datetime | None = None
+) -> AnalystSpendToday:
+    """Today's model spend, per buyer, against the ceiling each of them is actually on."""
+    spend = await day_spend(session, settings, now=now)
+    users = (
+        {
+            user.id: user
+            for user in (
+                await session.execute(
+                    select(User).where(User.id.in_([row.user_id for row in spend.users]))
+                )
+            )
+            .scalars()
+            .all()
+        }
+        if spend.users
+        else {}
+    )
+
+    rows: list[AnalystSpendRow] = []
+    for row in spend.users:
+        account = users.get(row.user_id)
+        usd_ceiling, run_ceiling = (
+            user_ceilings(account, settings)
+            if account is not None
+            else (
+                Decimal(str(settings.analyst_daily_usd_per_user)),
+                int(settings.analyst_daily_runs_per_user),
+            )
+        )
+        rows.append(
+            AnalystSpendRow(
+                user_id=row.user_id,
+                email=row.email,
+                chat_usd=row.chat_usd,
+                job_usd=row.job_usd,
+                total_usd=row.total_usd,
+                runs=row.runs,
+                input_tokens=row.input_tokens,
+                output_tokens=row.output_tokens,
+                ceiling_usd=usd_ceiling,
+                run_ceiling=run_ceiling,
+                over_ceiling=row.chat_usd >= usd_ceiling,
+            )
+        )
+    return AnalystSpendToday(
+        day=spend.day,
+        spend_usd=spend.spend_usd,
+        global_ceiling_usd=spend.ceiling_usd,
+        fraction=round(spend.fraction, 4),
+        default_ceiling_usd=Decimal(str(settings.analyst_daily_usd_per_user)),
+        default_run_ceiling=int(settings.analyst_daily_runs_per_user),
+        users=rows,
+    )
 
 
 async def _latest_runs_by_job(session: AsyncSession) -> dict[str, JobRun]:
@@ -219,9 +287,12 @@ async def mark_job_finished(
     run = await session.get(JobRun, job_run_id)
     if run is None:
         raise NotFoundError(f"Job run {job_run_id} was not found.")
+    finished = datetime.now(UTC)
     run.status = status
     run.result_count = result_count
     run.error = error[:_ERROR_LIMIT] if error is not None else None
-    run.finished_at = datetime.now(UTC)
+    run.finished_at = finished
+    if run.started_at is not None:
+        run.duration_ms = int((finished - run.started_at).total_seconds() * 1000)
     await session.flush()
     return run
