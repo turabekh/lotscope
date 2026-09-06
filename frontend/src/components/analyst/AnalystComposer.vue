@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 
-const props = defineProps<{ busy: boolean; suggestion?: string | null }>()
+const props = defineProps<{
+  busy: boolean
+  suggestion?: string | null
+  saleDate?: string | null
+}>()
 const emit = defineEmits<{ send: [text: string]; stop: [] }>()
 
 const text = ref('')
@@ -13,8 +17,14 @@ const SHORTCUTS = ['Screen the next sale', 'What changed on my lots'] as const
 // "Screen the next sale" is only useful if the Analyst can resolve which sale that is.
 // It can — get_sale_calendar — but when the server already knows the date, saying it is
 // one fewer round trip and one fewer thing to get wrong.
+//
+// The date, not the server's suggested prompt: that prompt is whatever the opening asks
+// for next, and for a buyer with no buy box it reads "I buy vacant lots in". A button
+// labelled "Screen the next sale" that types something else is a button that lies.
 function expand(shortcut: string): string {
-  if (shortcut === 'Screen the next sale' && props.suggestion) return props.suggestion
+  if (shortcut === 'Screen the next sale' && props.saleDate) {
+    return `Screen the ${props.saleDate} sale against my buy box`
+  }
   return shortcut
 }
 

@@ -120,6 +120,7 @@ function openBrief(): void {
       <AnalystComposer
         :busy="analyst.streaming"
         :suggestion="analyst.opening?.suggested_prompt ?? null"
+        :sale-date="analyst.opening?.next_sale_date ?? null"
         @send="analyst.send"
         @stop="analyst.cancel"
       />

@@ -63,11 +63,23 @@ describe('AnalystComposer', () => {
   })
 
   it('spells out which sale is next when the server knows the date', async () => {
-    const wrapper = composer({ suggestion: 'Screen the 2026-09-16 sale against my buy box' })
+    const wrapper = composer({ saleDate: '2026-09-16' })
     await wrapper.findAll('[data-test="composer-shortcut"]')[0].trigger('click')
 
     const input = wrapper.find('[data-test="composer-input"]')
-    expect((input.element as HTMLTextAreaElement).value).toContain('2026-09-16')
+    expect((input.element as HTMLTextAreaElement).value).toBe(
+      'Screen the 2026-09-16 sale against my buy box',
+    )
+  })
+
+  it('does not type the opening prompt into a button that says screen the sale', async () => {
+    // A buyer with no buy box is asked for one, and that ask is the suggested prompt. The
+    // shortcut used to substitute it wholesale, so it typed "I buy vacant lots in".
+    const wrapper = composer({ suggestion: 'I buy vacant lots in ' })
+    await wrapper.findAll('[data-test="composer-shortcut"]')[0].trigger('click')
+
+    const input = wrapper.find('[data-test="composer-input"]')
+    expect((input.element as HTMLTextAreaElement).value).toBe('Screen the next sale')
   })
 
   it('keeps every control tappable', () => {
