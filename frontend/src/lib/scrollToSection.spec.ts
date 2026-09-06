@@ -10,34 +10,47 @@ function sectionIn(root: HTMLElement, id: string): HTMLElement {
 }
 
 describe('scrollToSection', () => {
-  it('re-aims when the page grows under the scroll it already made', async () => {
+  it('re-aims when the page grows under the scroll, however late that is', async () => {
     vi.useFakeTimers()
-    const observers: Array<() => void> = []
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        constructor(callback: () => void) {
-          observers.push(callback)
-        }
-        observe() {}
-        disconnect() {}
-      },
-    )
     const root = document.createElement('div')
     const node = sectionIn(root, 'violations')
+    let top = 0
+    node.getBoundingClientRect = () => ({ top }) as DOMRect
+    const scrolled = vi.fn(() => {
+      top = 0
+    })
+    node.scrollIntoView = scrolled
+
+    const done = scrollToSection('violations', root)
+    await vi.advanceTimersByTimeAsync(0)
+    // The evidence sections come back seconds later and push the target down the page.
+    await vi.advanceTimersByTimeAsync(2500)
+    top = 1400
+    await vi.advanceTimersByTimeAsync(4000)
+    await done
+
+    expect(scrolled.mock.calls.length).toBeGreaterThan(1)
+    vi.useRealTimers()
+  })
+
+  it('hands the page back the moment the reader scrolls', async () => {
+    vi.useFakeTimers()
+    const root = document.createElement('div')
+    const node = sectionIn(root, 'violations')
+    let top = 0
+    node.getBoundingClientRect = () => ({ top }) as DOMRect
     const scrolled = vi.fn()
     node.scrollIntoView = scrolled
 
     const done = scrollToSection('violations', root)
     await vi.advanceTimersByTimeAsync(0)
-    // The evidence sections finish loading and the page changes size underneath.
-    observers.forEach((fire) => fire())
-    await vi.advanceTimersByTimeAsync(2000)
+    window.dispatchEvent(new Event('wheel'))
+    top = 2000
+    await vi.advanceTimersByTimeAsync(6000)
     await done
 
-    // Once to land, and again for the growth that moved it.
-    expect(scrolled.mock.calls.length).toBeGreaterThan(1)
-    vi.unstubAllGlobals()
+    // Only the landing scroll: after the reader takes over, the page is theirs.
+    expect(scrolled).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
   })
 

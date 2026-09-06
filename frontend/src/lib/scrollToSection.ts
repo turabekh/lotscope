@@ -3,17 +3,18 @@
  *
  * The evidence sections fetch their own records and the map loads its tiles, so the page
  * grows under a scroll that has already been aimed: scroll once and the section you asked
- * for is a thousand pixels away by the time everything has arrived. Aiming again on a
- * short timer was not enough either — on production the growth outlasted a one-second
- * window and the drawer settled inside the verdict.
+ * for is a thousand pixels away by the time everything has arrived. Two earlier attempts
+ * stopped too soon — a one-second timer, then a resize watcher whose idle window expired
+ * before the first fetch came back — and production landed in the verdict either way.
  *
- * So this watches the page actually change size and re-aims each time it does, until the
- * layout has been still for a moment or the budget runs out. Then it stops: past that,
- * the reader is the one scrolling.
+ * So this simply holds its aim for a few seconds: check often, re-aim when the section has
+ * drifted, and stop the moment the reader scrolls for themselves. Predictable beats clever
+ * here; nothing about the page's loading is being inferred.
  */
 
-const STILL_MS = 700
-const BUDGET_MS = 8000
+const HOLD_MS = 6000
+const CHECK_MS = 300
+const DRIFT_TOLERANCE_PX = 24
 const WAIT_ATTEMPTS = 20
 const WAIT_INTERVAL_MS = 100
 
@@ -42,35 +43,26 @@ export async function scrollToSection(id: string, within?: HTMLElement | null): 
   const node = await findSection(id, scope)
   if (node === null) return false
 
-  const aim = (): void => node.scrollIntoView({ block: 'start' })
-  aim()
-
-  const watched = within ?? document.body
-  if (typeof ResizeObserver === 'undefined') {
-    await sleep(STILL_MS)
-    aim()
-    return true
+  let handOver = false
+  const release = (): void => {
+    handOver = true
   }
+  const events = ['wheel', 'touchstart', 'keydown'] as const
+  for (const event of events) window.addEventListener(event, release, { passive: true })
 
-  await new Promise<void>((resolve) => {
-    let still: ReturnType<typeof setTimeout>
-    const stop = (): void => {
-      clearTimeout(still)
-      clearTimeout(budget)
-      observer.disconnect()
-      resolve()
+  try {
+    node.scrollIntoView({ block: 'start' })
+    const target = node.getBoundingClientRect().top
+    const checks = Math.floor(HOLD_MS / CHECK_MS)
+    for (let check = 0; check < checks && !handOver; check += 1) {
+      await sleep(CHECK_MS)
+      if (handOver) break
+      if (Math.abs(node.getBoundingClientRect().top - target) > DRIFT_TOLERANCE_PX) {
+        node.scrollIntoView({ block: 'start' })
+      }
     }
-    const observer = new ResizeObserver(() => {
-      aim()
-      clearTimeout(still)
-      still = setTimeout(stop, STILL_MS)
-    })
-    const budget = setTimeout(stop, BUDGET_MS)
-    still = setTimeout(stop, STILL_MS)
-    observer.observe(watched)
-    for (const section of Array.from(watched.querySelectorAll('section[id]'))) {
-      observer.observe(section)
-    }
-  })
+  } finally {
+    for (const event of events) window.removeEventListener(event, release)
+  }
   return true
 }
