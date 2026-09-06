@@ -91,13 +91,30 @@ function openBrief(): void {
       v-if="isMobile"
       type="button"
       class="analyst__rail-toggle"
+      :aria-expanded="railOpen"
       data-test="analyst-rail-toggle"
       @click="railOpen = !railOpen"
     >
       Conversations
+      <span aria-hidden="true">{{ railOpen ? '⌃' : '⌄' }}</span>
     </button>
 
-    <aside v-if="!isMobile || railOpen" class="analyst__rail">
+    <!-- On a phone the rail is a sheet over the thread, dismissed by tapping away from it.
+         As a row of the layout it took a third of the screen to show nothing. -->
+    <button
+      v-if="isMobile && railOpen"
+      type="button"
+      class="analyst__scrim"
+      aria-label="Close conversations"
+      data-test="analyst-rail-scrim"
+      @click="railOpen = false"
+    ></button>
+
+    <aside
+      v-if="!isMobile || railOpen"
+      class="analyst__rail"
+      :class="{ 'analyst__rail--sheet': isMobile }"
+    >
       <ConversationList
         :conversations="analyst.conversations"
         :active-id="analyst.conversationId"
@@ -165,7 +182,12 @@ function openBrief(): void {
 }
 
 .analyst--mobile {
+  /* Rows, not an even split: the toggle is as tall as it needs to be and the thread gets
+     everything else. Without this the button shared the height and left a third of the
+     screen empty. */
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  position: relative;
 }
 .analyst--mobile .analyst__rail-toggle {
   display: block;
@@ -179,10 +201,26 @@ function openBrief(): void {
   min-height: 40px;
   cursor: pointer;
 }
-.analyst--mobile .analyst__rail {
+.analyst__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  border: 0;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.35);
+}
+.analyst--mobile .analyst__rail--sheet {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  z-index: 9;
   border-right: 0;
-  border-bottom: 1px solid var(--ls-line, #e0e0e0);
-  max-height: 40vh;
+  border-bottom: 1px solid var(--ls-line);
+  background: var(--ls-surface);
+  max-height: 60vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
 .analyst--mobile .analyst__evidence {
   width: 100%;

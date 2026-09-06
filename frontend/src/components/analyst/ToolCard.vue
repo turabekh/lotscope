@@ -12,59 +12,94 @@ const summary = computed(() => toolSummary(props.call))
 const sources = computed(() => props.call.envelope?.sources ?? [])
 const unverified = computed(() => props.call.envelope?.unverified ?? [])
 
-const MAX_NESTED_ROWS = 12
-const MAX_NESTED_COLUMNS = 5
+// A card is evidence, not a dump: twenty rows of anything, then a count of the rest.
+const MAX_ROWS = 20
+const MAX_COLUMNS = 5
+const INLINE_LIST_CHARS = 120
+
+interface Table {
+  header: string[]
+  rows: string[][]
+  more: number
+}
 
 interface Field {
   key: string
   value: string | null
-  table: { header: string[]; rows: string[][]; more: number } | null
+  table: Table | null
 }
 
-function cell(value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
 /**
- * The envelope's data as fields.
+ * What one value looks like inside a cell.
  *
- * A list of objects — the lots in a screen, the violations in a live read — becomes a small
- * table. Stringifying it produces a wall of JSON that buries the answer, which is the
- * opposite of what an evidence panel is for.
+ * Nested structure is named, never stringified. A cell reading `{9 fields}` tells the
+ * reader there is more there; the same cell holding 400 characters of JSON tells them
+ * nothing and buries the row it is in.
  */
-const rows = computed<Field[]>(() => {
-  const data = props.call.envelope?.data ?? {}
-  return Object.entries(data).map(([key, value]) => {
-    const label = key.replace(/_/g, ' ')
-    if (
-      Array.isArray(value) &&
-      value.length > 0 &&
-      value.every((item) => item !== null && typeof item === 'object' && !Array.isArray(item))
-    ) {
-      const records = value as Record<string, unknown>[]
-      const header: string[] = []
-      for (const record of records) {
-        for (const field of Object.keys(record)) {
-          if (!header.includes(field) && header.length < MAX_NESTED_COLUMNS) header.push(field)
-        }
-      }
-      return {
-        key: label,
-        value: null,
-        table: {
-          header,
-          rows: records
-            .slice(0, MAX_NESTED_ROWS)
-            .map((record) => header.map((field) => cell(record[field]))),
-          more: Math.max(0, records.length - MAX_NESTED_ROWS),
-        },
-      }
+function cell(value: unknown): string {
+  if (value === null || value === undefined) return '—'
+  if (Array.isArray(value)) return value.length === 1 ? '[1 item]' : `[${value.length} items]`
+  if (isRecord(value)) {
+    const count = Object.keys(value).length
+    return count === 1 ? '{1 field}' : `{${count} fields}`
+  }
+  return String(value)
+}
+
+/** A list of records — screened lots, violations, deeds — as a table. */
+function tableOfRecords(records: Record<string, unknown>[]): Table {
+  const header: string[] = []
+  for (const record of records) {
+    for (const field of Object.keys(record)) {
+      if (!header.includes(field) && header.length < MAX_COLUMNS) header.push(field)
     }
-    return { key: label, value: cell(value), table: null }
-  })
-})
+  }
+  return {
+    header,
+    rows: records.slice(0, MAX_ROWS).map((record) => header.map((field) => cell(record[field]))),
+    more: Math.max(0, records.length - MAX_ROWS),
+  }
+}
+
+/** An object — a verdict, a tax record — as its own field/value table. */
+function tableOfRecord(record: Record<string, unknown>): Table {
+  const entries = Object.entries(record)
+  return {
+    header: ['field', 'value'],
+    rows: entries.slice(0, MAX_ROWS).map(([key, value]) => [key.replace(/_/g, ' '), cell(value)]),
+    more: Math.max(0, entries.length - MAX_ROWS),
+  }
+}
+
+function tableOfValues(values: unknown[]): Table {
+  return {
+    header: ['value'],
+    rows: values.slice(0, MAX_ROWS).map((value) => [cell(value)]),
+    more: Math.max(0, values.length - MAX_ROWS),
+  }
+}
+
+function fieldFor(key: string, value: unknown): Field {
+  const label = key.replace(/_/g, ' ')
+  if (Array.isArray(value) && value.length > 0) {
+    if (value.every(isRecord)) return { key: label, value: null, table: tableOfRecords(value) }
+    const inline = value.map(cell).join(', ')
+    if (inline.length <= INLINE_LIST_CHARS) return { key: label, value: inline, table: null }
+    return { key: label, value: null, table: tableOfValues(value) }
+  }
+  if (isRecord(value) && Object.keys(value).length > 0) {
+    return { key: label, value: null, table: tableOfRecord(value) }
+  }
+  return { key: label, value: cell(value), table: null }
+}
+
+const rows = computed<Field[]>(() =>
+  Object.entries(props.call.envelope?.data ?? {}).map(([key, value]) => fieldFor(key, value)),
+)
 
 function stamp(source: { fetched_at: string | null; ingested_at: string | null }): string {
   if (source.fetched_at) return `read ${source.fetched_at.slice(0, 16).replace('T', ' ')} UTC`

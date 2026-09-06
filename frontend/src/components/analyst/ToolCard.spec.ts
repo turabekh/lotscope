@@ -101,7 +101,7 @@ describe('ToolCard', () => {
 
     const body = wrapper.find('[data-test="tool-card-body"]')
     expect(body.exists()).toBe(true)
-    expect(body.text()).toContain('open_violations')
+    expect(body.text()).toContain('open violations')
     expect(body.text()).toContain('violations (live)')
     expect(wrapper.find('[data-test="tool-unverified"]').text()).toContain('what was reported')
   })
@@ -187,7 +187,7 @@ describe('ToolCard nested data', () => {
   })
 
   it('says how many rows it left out rather than pretending it showed them all', async () => {
-    const lots = Array.from({ length: 20 }, (_, i) => ({ address: `LOT ${i}`, verdict: 'PASS' }))
+    const lots = Array.from({ length: 25 }, (_, i) => ({ address: `LOT ${i}`, verdict: 'PASS' }))
     const wrapper = mount(ToolCard, {
       props: {
         call: call({
@@ -198,6 +198,59 @@ describe('ToolCard nested data', () => {
       global: { plugins: [[Quasar, {}]] },
     })
     await wrapper.find('[data-test="tool-card-toggle"]').trigger('click')
-    expect(wrapper.text()).toContain('and 8 more')
+    expect(wrapper.text()).toContain('and 5 more')
+  })
+
+  it('renders a nested record as its own table rather than a wall of JSON', async () => {
+    const verdict = {
+      opportunity_score: 76,
+      summary: 'RSA-5: buildable by-right (1 unit)',
+      field_trust: { can_build_by_right: { status: 'calculated' } },
+      risk_flags: [{ code: 'flood_zone' }],
+    }
+    const wrapper = mount(ToolCard, {
+      props: {
+        call: call({
+          name: 'get_verdict',
+          envelope: { data: { verdict }, sources: [], unverified: [] },
+        }),
+      },
+      global: { plugins: [[Quasar, {}]] },
+    })
+    await wrapper.find('[data-test="tool-card-toggle"]').trigger('click')
+
+    const text = wrapper.text()
+    expect(text).toContain('opportunity score')
+    expect(text).toContain('76')
+    // Structure below the row is named, not stringified.
+    expect(text).toContain('{1 field}')
+    expect(text).toContain('[1 item]')
+    expect(text).not.toContain('{"')
+  })
+
+  it('leaves no JSON anywhere in a deeply nested envelope', async () => {
+    const wrapper = mount(ToolCard, {
+      props: {
+        call: call({
+          name: 'get_delinquency',
+          envelope: {
+            data: {
+              tax: { total_due: '8400.00', delinquency_owner: 'PRIOR OWNER' },
+              latest_transfer: { sale_date: '2026-03-04', document_type: 'DEED' },
+              nested: [{ deep: { deeper: [1, 2, 3] } }],
+            },
+            sources: [],
+            unverified: [],
+          },
+        }),
+      },
+      global: { plugins: [[Quasar, {}]] },
+    })
+    await wrapper.find('[data-test="tool-card-toggle"]').trigger('click')
+
+    const text = wrapper.text()
+    expect(text).toContain('PRIOR OWNER')
+    expect(text).not.toContain('{"')
+    expect(text).not.toContain('[{')
   })
 })

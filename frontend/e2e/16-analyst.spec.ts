@@ -72,7 +72,7 @@ test('a tool card expands to the envelope behind it', async ({ page }) => {
   await page.locator('[data-test="tool-card-toggle"]').first().click()
 
   const body = page.locator('[data-test="tool-card-body"]').first()
-  await expect(body).toContainText('open_violations')
+  await expect(body).toContainText('open violations')
   await expect(body).toContainText('violations (live)')
   await expect(page.locator('[data-test="tool-unverified"]').first()).toContainText(
     'what was reported',
