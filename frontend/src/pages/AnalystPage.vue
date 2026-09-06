@@ -8,8 +8,9 @@ import ConversationList from '@/components/analyst/ConversationList.vue'
 import EvidenceDrawer from '@/components/analyst/EvidenceDrawer.vue'
 import MessageThread from '@/components/analyst/MessageThread.vue'
 import { api } from '@/lib/api'
+import { isLotSection, type LotSection } from '@/lib/sourceLinks'
 import type { BriefRecord } from '@/lib/types'
-import { openingQuestionFor } from '@/components/analyst/askAboutLot'
+import { openingQuestionFor, openingQuestionForMany } from '@/components/analyst/askAboutLot'
 import { useAnalystStore } from '@/stores/analyst'
 
 const $q = useQuasar()
@@ -19,6 +20,7 @@ const analyst = useAnalystStore()
 
 const brief = ref<BriefRecord | null>(null)
 const drawerParcel = ref<string | null>(null)
+const drawerSection = ref<LotSection | null>(null)
 const railOpen = ref(false)
 
 const isMobile = computed(() => $q.screen.lt.md)
@@ -28,7 +30,12 @@ onMounted(async () => {
   const about = route.query.about
   const label = route.query.label
   if (typeof about === 'string' && about) {
-    const question = openingQuestionFor(typeof label === 'string' && label ? label : about)
+    // Deals hands over several parcels at once, comma separated.
+    const labels = (typeof label === 'string' && label ? label : about)
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    const question = openingQuestionForMany(labels) || openingQuestionFor(about)
     void router.replace({ name: 'analyst' })
     void analyst.send(question)
   }
@@ -47,8 +54,9 @@ onMounted(async () => {
   ])
 })
 
-function openLot(parcelNumber: string): void {
+function openLot(parcelNumber: string, section: string | null): void {
   drawerParcel.value = parcelNumber
+  drawerSection.value = section && isLotSection(section) ? section : null
 }
 
 async function openConversation(id: number): Promise<void> {
@@ -120,6 +128,7 @@ function openBrief(): void {
     <EvidenceDrawer
       v-if="drawerParcel"
       :parcel-number="drawerParcel"
+      :section="drawerSection"
       :bottom-sheet="isMobile"
       class="analyst__evidence"
       @close="drawerParcel = null"
