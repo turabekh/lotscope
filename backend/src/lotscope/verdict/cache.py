@@ -19,7 +19,8 @@ checked on read.
 
 import hashlib
 import json
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -27,7 +28,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.core.config import get_settings
-from lotscope.verdict.schemas import VerdictResult
+
+if TYPE_CHECKING:
+    from lotscope.verdict.service import VerdictRead
 
 CACHE_TTL_SECONDS = 86_400
 
@@ -56,18 +59,28 @@ def cache_key(parcel_number: str) -> str:
 
 
 async def input_fingerprint(
-    session: AsyncSession, parcel_number: str, *, git_sha: str
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    git_sha: str,
+    assumptions: Mapping[str, float] | None = None,
 ) -> str | None:
-    """A digest of everything the verdict is computed from, or None if there is no parcel."""
+    """A digest of everything the verdict is computed from, or None if there is no parcel.
+
+    The buyer's underwriting assumptions are part of it: a buyer who has changed none
+    hashes the same as everyone else and shares their entry, and one who has changed them
+    cannot be served somebody else's numbers.
+    """
     row = (await session.execute(_FINGERPRINT_SQL, {"parcel_number": parcel_number})).one_or_none()
     if row is None:
         return None
     stamps = [value.isoformat() if value is not None else "-" for value in row]
-    return hashlib.sha256("|".join([git_sha, *stamps]).encode("utf-8")).hexdigest()
+    tuned = json.dumps(dict(sorted((assumptions or {}).items())), separators=(",", ":"))
+    return hashlib.sha256("|".join([git_sha, tuned, *stamps]).encode("utf-8")).hexdigest()
 
 
-async def read(redis: Redis, parcel_number: str, fingerprint: str) -> VerdictResult | None:
-    """The cached verdict, only if it was computed from exactly these inputs."""
+async def read(redis: Redis, parcel_number: str, fingerprint: str) -> "VerdictRead | None":
+    """The cached read, only if it was computed from exactly these inputs."""
     try:
         raw = await redis.get(cache_key(parcel_number))
     except RedisError:
@@ -81,13 +94,15 @@ async def read(redis: Redis, parcel_number: str, fingerprint: str) -> VerdictRes
     if payload.get("inputs") != fingerprint:
         return None
     try:
-        return VerdictResult.model_validate(payload["verdict"])
+        from lotscope.verdict.service import VerdictRead
+
+        return VerdictRead.model_validate(payload["read"])
     except (KeyError, ValueError):
         return None
 
 
-async def write(redis: Redis, parcel_number: str, fingerprint: str, verdict: VerdictResult) -> None:
-    payload = json.dumps({"inputs": fingerprint, "verdict": json.loads(verdict.model_dump_json())})
+async def write(redis: Redis, parcel_number: str, fingerprint: str, read: "VerdictRead") -> None:
+    payload = json.dumps({"inputs": fingerprint, "read": json.loads(read.model_dump_json())})
     try:
         await redis.set(cache_key(parcel_number), payload, ex=CACHE_TTL_SECONDS)
     except RedisError:

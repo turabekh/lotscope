@@ -16,7 +16,6 @@ from lotscope.core.market import MARKET_CODE
 from lotscope.deal.analysis import DealAssumptions, DealInputs
 from lotscope.deal.schemas import DealResult
 from lotscope.deal.sensitivity import build_grid
-from lotscope.deal.service import build_deal
 from lotscope.packet.compose import (
     LI_URL,
     OPA_URL,
@@ -33,11 +32,11 @@ from lotscope.packet.render import packet_filename, render_packet_pdf
 from lotscope.packet.schemas import AdjacentParcel, DataAsOf, PacketComp, PacketModel
 from lotscope.risk.service import NOT_SCHEDULED_STATUSES
 from lotscope.underwriting.matching import required_margin
-from lotscope.valuation.service import sheriff_clearing_estimate, value_parcel
+from lotscope.valuation.service import sheriff_clearing_estimate
+from lotscope.verdict.service import get_verdict_read
 from lotscope.zba.schemas import VarianceOutlook
 from lotscope.zba.service import variance_outlook
 from lotscope.zoning.schemas import BuildabilityResult
-from lotscope.zoning.service import assess_parcel as assess_zoning
 
 _logger = get_logger(__name__)
 
@@ -54,10 +53,6 @@ _LISTINGS_SQL = text(
     "ORDER BY ss.parcel_number, ss.updated_at DESC"
 )
 
-_SUBJECT_SQL = text(
-    "SELECT parcel_number, base_zoning_code, market_value FROM parcel "
-    "WHERE parcel_number = ANY(:parcels)"
-)
 
 _ADJACENT_SQL = text(
     "SELECT t.parcel_number AS subject, n.parcel_number, n.address, n.lot_area_sqft, "
@@ -153,7 +148,9 @@ async def _rows(session: AsyncSession, statement: Any, params: dict[str, Any]) -
     return list((await session.execute(statement, params)).mappings())
 
 
-async def build_packet_model(session: AsyncSession, user_id: int, sale_date: date) -> PacketModel:
+async def build_packet_model(
+    session: AsyncSession, user_id: int, sale_date: date, *, redis: Redis | None = None
+) -> PacketModel:
     listings = await _rows(
         session,
         _LISTINGS_SQL,
@@ -169,7 +166,6 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
     parcels = [row["parcel_number"] for row in listings]
     keyed = {"parcels": parcels}
 
-    subjects = {row["parcel_number"]: row for row in await _rows(session, _SUBJECT_SQL, keyed)}
     violations = {row["parcel_number"]: row for row in await _rows(session, _VIOLATIONS_SQL, keyed)}
     taxes = {row["parcel_number"]: row for row in await _rows(session, _TAX_SQL, keyed)}
     historic = {row["parcel_number"] for row in await _rows(session, _HISTORIC_SQL, keyed)}
@@ -271,30 +267,26 @@ async def build_packet_model(session: AsyncSession, user_id: int, sale_date: dat
         outlook_favourable = None
         outlook_basis = None
         if vacant:
-            subject = subjects.get(parcel)
-            buildability = await assess_zoning(session, parcel)
-            valuation = await value_parcel(session, parcel)
-            deal = await build_deal(
-                session,
-                parcel,
-                user_id=user_id,
-                base_zoning_code=subject["base_zoning_code"] if subject else None,
-                market_value=_as_float(subject["market_value"]) if subject else None,
-                buildability=buildability,
-                valuation=valuation,
-            )
-            grid = build_grid(
-                DealInputs(
-                    units=deal.units,
-                    buildable_area_sqft=buildability.buildable_area_sqft if buildability else None,
-                    estimated_floors=None,
-                    finished_comp_prices=_comp_prices(comps.get(parcel, [])),
-                    land_value=deal.acquisition_cost,
-                    acquisition_price=None,
-                ),
-                _deal_assumptions(deal),
-                computed_at=computed_at,
-            )
+            # One read, the same one the Lot page and the Analyst get, with this buyer's
+            # own assumptions applied. The packet used to compose its own copy beside it.
+            read = await get_verdict_read(session, parcel, redis=redis, user_id=user_id)
+            buildability = read.buildability if read else None
+            deal = read.deal if read else None
+            if deal is not None:
+                grid = build_grid(
+                    DealInputs(
+                        units=deal.units,
+                        buildable_area_sqft=(
+                            buildability.buildable_area_sqft if buildability else None
+                        ),
+                        estimated_floors=None,
+                        finished_comp_prices=_comp_prices(comps.get(parcel, [])),
+                        land_value=deal.acquisition_cost,
+                        acquisition_price=None,
+                    ),
+                    _deal_assumptions(deal),
+                    computed_at=computed_at,
+                )
             clearing = await sheriff_clearing_estimate(session, parcel)
             if buildability is not None and buildability.can_build_by_right is not True:
                 variance_needed = _variance_needed(buildability)
@@ -430,7 +422,7 @@ async def build_packet(
         await session.flush()
 
     try:
-        model = await build_packet_model(session, user_id, sale_date)
+        model = await build_packet_model(session, user_id, sale_date, redis=redis)
         if verify_live:
             # Only the lots worth bidding on. Verifying the PASS index would spend a
             # buyer's build time re-checking lots they have already been told to skip.

@@ -87,5 +87,8 @@ async def test_a_loader_that_raises_leaves_the_row_failed_not_running(
     finally:
         async with factory() as session:
             await session.execute(text("DELETE FROM ingest_run WHERE dataset = 'failure_probe'"))
+            await session.execute(
+                text("DELETE FROM dataset_freshness WHERE dataset = 'failure_probe'")
+            )
             await session.commit()
         await engine.dispose()

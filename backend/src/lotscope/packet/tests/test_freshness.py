@@ -114,3 +114,23 @@ async def test_the_packet_states_when_it_was_computed_not_when_the_index_was(
     assert model.header.computed_at.date() == today_utc
     for lot in model.lots:
         assert lot.computed_at.date() == today_utc
+
+
+async def test_the_packet_and_the_lot_page_read_the_same_composition(
+    db_session: AsyncSession,
+) -> None:
+    """The packet's offer is the verdict's offer: one computation, not two beside each other."""
+    from lotscope.verdict.service import get_verdict_read
+
+    parcel = "phl:freshness3"
+    await _listing(db_session, parcel)
+    user_id = await _user(db_session, "freshness3@example.com")
+    await db_session.flush()
+
+    model = await build_packet_model(db_session, user_id, SALE_DATE)
+    lot = next(lot for lot in model.lots if lot.parcel_number == parcel)
+    read = await get_verdict_read(db_session, parcel, user_id=user_id)
+
+    assert read is not None
+    assert lot.max_allowable_offer == (read.deal.max_allowable_offer if read.deal else None)
+    assert lot.by_right_units == (read.buildability.by_right_units if read.buildability else None)

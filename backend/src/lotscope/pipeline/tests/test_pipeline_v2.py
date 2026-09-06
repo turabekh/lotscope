@@ -123,3 +123,24 @@ async def test_export_marks_untraced_deals_not_traced(db_session: AsyncSession) 
     assert rows["000000001"][16] == "215-555-0100"
     assert rows["000000002"][15] == "not traced"
     assert rows["000000002"][16] is None
+
+
+async def test_the_export_refuses_a_pipeline_larger_than_it_can_compute(
+    db_session: AsyncSession,
+) -> None:
+    """Every figure in the file is computed for the export, so the file is bounded."""
+    from lotscope.core.errors import ValidationError
+    from lotscope.pipeline.service import export_deals
+
+    user_id = await _seed(db_session)
+    for number in ("000000001", "000000002", "000000003"):
+        await add_deal(db_session, user_id, DealCreate(parcel_number=number), limit=None)
+    await db_session.flush()
+
+    with pytest.raises(ValidationError) as caught:
+        await export_deals(db_session, user_id, row_limit=2)
+
+    assert "Narrow your search" in str(caught.value)
+
+    within = await export_deals(db_session, user_id, row_limit=3)
+    assert len(within) == 3

@@ -15,6 +15,9 @@ from lotscope.pipeline.service import PIPELINE_EXPORT_HEADER, export_deals
 from lotscope.reports.csv_export import EXPORT_DISCLAIMER, stream_csv
 
 EXPORT_ROW_LIMIT = 10_000
+# The pipeline export computes every figure it prints, so its ceiling is what a request
+# can carry rather than what a file can hold.
+PIPELINE_EXPORT_ROW_LIMIT = 2_000
 
 router = APIRouter(tags=["exports"])
 
@@ -75,5 +78,7 @@ async def export_pipeline_csv(
     current_user: CurrentUserDep,
     redis: RedisDep,
 ) -> StreamingResponse:
-    rows = await export_deals(session, current_user.id, row_limit=EXPORT_ROW_LIMIT, redis=redis)
+    rows = await export_deals(
+        session, current_user.id, row_limit=PIPELINE_EXPORT_ROW_LIMIT, redis=redis
+    )
     return _csv_response(PIPELINE_EXPORT_HEADER, rows, "lotscope-pipeline.csv")

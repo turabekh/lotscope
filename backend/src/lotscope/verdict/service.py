@@ -3,18 +3,23 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import BaseModel
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lotscope.buybox.service import buy_box_assumptions
 from lotscope.core.config import get_settings
+from lotscope.deal.schemas import DealResult
 from lotscope.deal.service import build_deal
 from lotscope.ingestion.service import dataset_last_success, source_as_of
 from lotscope.risk.service import assess_parcel_risk
+from lotscope.valuation.schemas import ValuationResult
 from lotscope.valuation.service import value_parcel
 from lotscope.verdict import cache
 from lotscope.verdict.composition import ComposedVerdict, compose_verdict
 from lotscope.verdict.schemas import VerdictResult
+from lotscope.zoning.schemas import BuildabilityResult
 from lotscope.zoning.service import assess_parcel as assess_zoning
 
 _PARCEL_SQL = text(
@@ -110,8 +115,28 @@ def _to_result(
     )
 
 
-async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictResult | None:
-    """The verdict from the inputs as they stand right now. Nothing is written."""
+class VerdictRead(BaseModel):
+    """The verdict and the working behind it.
+
+    The packet needs the buildability and the deal themselves — the sensitivity grid is
+    built from the deal's own inputs, which the composed verdict flattens away. Rather
+    than let the packet compose its own copy beside this one, the read carries both.
+    """
+
+    verdict: VerdictResult
+    buildability: BuildabilityResult | None = None
+    valuation: ValuationResult | None = None
+    deal: DealResult | None = None
+
+
+async def compute_verdict_read(
+    session: AsyncSession, parcel_number: str, *, user_id: int | None = None
+) -> VerdictRead | None:
+    """The verdict from the inputs as they stand right now. Nothing is written.
+
+    A user id brings that buyer's own underwriting assumptions to the deal; without one
+    the platform defaults apply, which is what every shared surface reads.
+    """
     parcel = (await session.execute(_PARCEL_SQL, {"parcel_number": parcel_number})).one_or_none()
     if parcel is None:
         return None
@@ -122,6 +147,7 @@ async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictR
     deal = await build_deal(
         session,
         parcel_number,
+        user_id=user_id,
         base_zoning_code=parcel.base_zoning_code,
         market_value=_as_float(parcel.market_value),
         buildability=buildability,
@@ -135,23 +161,40 @@ async def compute_verdict(session: AsyncSession, parcel_number: str) -> VerdictR
         assessed_market_value=_as_float(parcel.market_value),
         source_ages=await _source_ages(session, parcel.market_code),
     )
-    return _to_result(parcel_number, composed, datetime.now(UTC))
+    return VerdictRead(
+        verdict=_to_result(parcel_number, composed, datetime.now(UTC)),
+        buildability=buildability,
+        valuation=valuation,
+        deal=deal,
+    )
 
 
-async def get_verdict(
-    session: AsyncSession, parcel_number: str, *, redis: Redis | None = None
+async def compute_verdict(
+    session: AsyncSession, parcel_number: str, *, user_id: int | None = None
 ) -> VerdictResult | None:
-    """The verdict on a parcel, computed when it is read.
+    read = await compute_verdict_read(session, parcel_number, user_id=user_id)
+    return read.verdict if read is not None else None
 
-    With Redis the result is cached for a day against a fingerprint of its inputs, so a
-    second read costs one query rather than the whole composition, and an input that has
-    moved since is a miss rather than a stale answer. Without Redis it is simply computed.
+
+async def get_verdict_read(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    redis: Redis | None = None,
+    user_id: int | None = None,
+) -> VerdictRead | None:
+    """The verdict on a parcel and its working, computed when it is read.
+
+    With Redis the read is cached for a day against a fingerprint of its inputs — which
+    includes the buyer's own assumptions, so a buyer who has changed none shares the
+    entry with everyone else and one who has changed them does not read theirs.
     """
     if redis is None:
-        return await compute_verdict(session, parcel_number)
+        return await compute_verdict_read(session, parcel_number, user_id=user_id)
 
+    assumptions = await buy_box_assumptions(session, user_id) if user_id is not None else {}
     fingerprint = await cache.input_fingerprint(
-        session, parcel_number, git_sha=get_settings().git_sha
+        session, parcel_number, git_sha=get_settings().git_sha, assumptions=assumptions
     )
     if fingerprint is None:
         return None
@@ -160,7 +203,18 @@ async def get_verdict(
     if cached is not None:
         return cached
 
-    verdict = await compute_verdict(session, parcel_number)
-    if verdict is not None:
-        await cache.write(redis, parcel_number, fingerprint, verdict)
-    return verdict
+    read = await compute_verdict_read(session, parcel_number, user_id=user_id)
+    if read is not None:
+        await cache.write(redis, parcel_number, fingerprint, read)
+    return read
+
+
+async def get_verdict(
+    session: AsyncSession,
+    parcel_number: str,
+    *,
+    redis: Redis | None = None,
+    user_id: int | None = None,
+) -> VerdictResult | None:
+    read = await get_verdict_read(session, parcel_number, redis=redis, user_id=user_id)
+    return read.verdict if read is not None else None

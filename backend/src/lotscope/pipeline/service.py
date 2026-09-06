@@ -9,7 +9,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lotscope.core.errors import NotFoundError, QuotaExceededError
+from lotscope.core.errors import NotFoundError, QuotaExceededError, ValidationError
 from lotscope.pipeline.models import Deal, DealActivity
 from lotscope.pipeline.schemas import (
     DealActivityItem,
@@ -319,8 +319,21 @@ PIPELINE_EXPORT_HEADER: list[str] = [
 async def export_deals(
     session: AsyncSession, user_id: int, *, row_limit: int, redis: Redis | None = None
 ) -> list[tuple[Any, ...]]:
+    """The pipeline as CSV, with every figure computed for this export.
+
+    Bounded, because each row is a verdict: warm that is a query each, cold it is the
+    whole composition, and an unbounded export of thousands would be a request nobody's
+    browser waits out. Above the ceiling the answer is to narrow the pipeline, not to
+    hand back numbers from last night.
+    """
     if row_limit <= 0:
         return []
+    total = await count_deals(session, user_id)
+    if total > row_limit:
+        raise ValidationError(
+            f"That is {total:,} deals and the export carries {row_limit:,}. "
+            "Narrow your search — filter the pipeline by stage — and export again."
+        )
     deals = await list_deals(session, user_id, redis=redis)
     rows: list[tuple[Any, ...]] = []
     for deal in deals[:row_limit]:
