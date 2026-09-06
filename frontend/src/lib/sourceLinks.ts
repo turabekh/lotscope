@@ -21,7 +21,6 @@ const ATLAS = 'https://atlas.phila.gov'
  * The two lists are meant to be changed together.
  */
 export const LOT_SECTIONS = [
-  'header',
   'map',
   'verdict',
   'sheriff',

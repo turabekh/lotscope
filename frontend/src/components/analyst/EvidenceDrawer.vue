@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, watchEffect } from 'vue'
+import { computed, nextTick, ref, watchEffect } from 'vue'
 
 import ParcelDossier from '@/components/ParcelDossier.vue'
 import type { LotSection } from '@/lib/sourceLinks'
@@ -12,6 +12,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ close: [] }>()
 
+const root = ref<HTMLElement | null>(null)
 const store = useParcelStore()
 const open = computed(() => props.parcelNumber !== null)
 
@@ -25,7 +26,9 @@ async function load(): Promise<void> {
   // the violations rather than at the top of the lot.
   await nextTick()
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const node = document.getElementById(props.section)
+    // Scoped to the drawer: an id that happens to exist elsewhere on the page is not this
+    // lot's section, and scrolling to it would move something the reader is not looking at.
+    const node = root.value?.querySelector(`#${props.section}`)
     if (node) {
       node.scrollIntoView({ block: 'start' })
       return
@@ -39,6 +42,7 @@ watchEffect(() => void load())
 <template>
   <aside
     v-if="open"
+    ref="root"
     class="evidence"
     :class="{ 'evidence--sheet': bottomSheet }"
     data-test="evidence-drawer"
