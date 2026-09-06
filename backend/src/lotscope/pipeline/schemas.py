@@ -62,6 +62,12 @@ class DealItem(BaseModel):
     est_profit: float | None
     est_margin: float | None
     is_underpriced: bool | None
+    sale_date: date | None = None
+    agent_run_id: int | None = None
+    # The answer from the run that created or last touched this row. It is what the
+    # Analyst said at the time, not a fresh read, so the screen dates it.
+    analyst_note: str | None = None
+    analyst_note_at: datetime | None = None
     updated_at: datetime
 
 

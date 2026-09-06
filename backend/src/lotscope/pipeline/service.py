@@ -37,10 +37,21 @@ _DEAL_COLUMNS = (
     "coalesce(nullif(p.base_zoning_code, ''), p.resolved_zoning_code) AS base_zoning_code, "
     "p.is_vacant, p.market_value, "
     "round(pv.opportunity_score)::int AS opportunity_score, "
-    "pv.max_allowable_offer, pv.arv, pv.est_profit, pv.est_margin, pv.is_underpriced "
+    "pv.max_allowable_offer, pv.arv, pv.est_profit, pv.est_margin, pv.is_underpriced, "
+    # The next sale this lot is actually listed for, so the table can say when it goes.
+    "ss.sale_date, "
+    # What the Analyst said in the run that put this row here. agent_run_id is the link;
+    # without it the note would be a guess about which conversation this came from.
+    "d.agent_run_id, ar.answer AS analyst_note, ar.created_at AS analyst_note_at "
     "FROM deal d "
     "JOIN parcel p ON p.parcel_number = d.parcel_number "
     "LEFT JOIN parcel_verdict pv ON pv.parcel_number = d.parcel_number "
+    "LEFT JOIN agent_run ar ON ar.id = d.agent_run_id "
+    "LEFT JOIN LATERAL ("
+    "  SELECT s.sale_date FROM sheriff_sale s "
+    "  WHERE s.parcel_number = d.parcel_number AND s.sale_date >= current_date "
+    "  ORDER BY s.sale_date LIMIT 1"
+    ") ss ON TRUE "
 )
 
 _LIST_SQL = text(
@@ -79,6 +90,10 @@ def _item(row: Row[Any]) -> DealItem:
         est_profit=_as_float(row.est_profit),
         est_margin=_as_float(row.est_margin),
         is_underpriced=row.is_underpriced,
+        sale_date=row.sale_date,
+        agent_run_id=row.agent_run_id,
+        analyst_note=(row.analyst_note or None),
+        analyst_note_at=row.analyst_note_at,
         updated_at=row.updated_at,
     )
 
