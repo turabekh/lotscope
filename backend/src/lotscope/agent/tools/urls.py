@@ -39,7 +39,6 @@ def provision(cite: str | None) -> str:
 # evidence from a tool card lands on the section that holds the fact, not the top of the
 # page. sourceLinks.ts mirrors these; the two are meant to be read together.
 LOT_SECTIONS = (
-    "header",
     "map",
     "verdict",
     "sheriff",
@@ -54,6 +53,11 @@ LOT_SECTIONS = (
 
 
 def atlas_section(parcel_number: str, section: str) -> str:
-    """An Atlas link carrying a Lot-page section, so the drawer opens where the fact is."""
-    anchor = section if section in LOT_SECTIONS else "header"
-    return f"{atlas(parcel_number)}#{anchor}"
+    """An Atlas link carrying a Lot-page section, so the drawer opens where the fact is.
+
+    A section we do not have gets no anchor rather than a made-up one: the lot opens at
+    the top, which is the honest answer for a read that is about the parcel itself.
+    """
+    if section not in LOT_SECTIONS:
+        return atlas(parcel_number)
+    return f"{atlas(parcel_number)}#{section}"

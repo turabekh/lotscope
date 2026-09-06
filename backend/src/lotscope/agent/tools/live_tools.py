@@ -356,7 +356,7 @@ async def live_opa_tool(
         sources=[
             _live_source("opa_properties_public", result.payload.get("url"), result.fetched_at),
             Source(name="parcel", url=urls.OPA_URL, ingested_at=ingested),
-            Source(name="atlas", url=urls.atlas_section(row.parcel_number, "header")),
+            Source(name="atlas", url=urls.atlas(row.parcel_number)),
         ],
         unverified=[
             "OPA's sale_date and sale_price are the assessment record's own last-sale fields, "

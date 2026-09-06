@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, watchEffect } from 'vue'
+import { computed, nextTick, ref, watchEffect } from 'vue'
 
 import ParcelDossier from '@/components/ParcelDossier.vue'
 import type { LotSection } from '@/lib/sourceLinks'
+import { scrollToSection } from '@/lib/scrollToSection'
 import { useParcelStore } from '@/stores/parcel'
 
 const props = defineProps<{
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ close: [] }>()
 
+const root = ref<HTMLElement | null>(null)
 const store = useParcelStore()
 const open = computed(() => props.parcelNumber !== null)
 
@@ -24,14 +26,7 @@ async function load(): Promise<void> {
   // Open on the section the Analyst's link named, so evidence for a violation opens on
   // the violations rather than at the top of the lot.
   await nextTick()
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const node = document.getElementById(props.section)
-    if (node) {
-      node.scrollIntoView({ block: 'start' })
-      return
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
+  await scrollToSection(props.section, root.value)
 }
 watchEffect(() => void load())
 </script>
@@ -39,6 +34,7 @@ watchEffect(() => void load())
 <template>
   <aside
     v-if="open"
+    ref="root"
     class="evidence"
     :class="{ 'evidence--sheet': bottomSheet }"
     data-test="evidence-drawer"
