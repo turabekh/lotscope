@@ -136,3 +136,42 @@ async def test_fetch_viewport_attribution_returns_copyright() -> None:
 
     assert text == "Imagery ©2026 Maxar, Google"
     assert transport.viewport_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_a_key_google_refuses_reads_as_unavailable_not_as_an_upstream_error() -> None:
+    """The caller's question is "can I have satellite?" and the answer is no."""
+    settings = _settings()
+    redis = _FakeRedis()
+
+    def refuse(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"error": {"status": "INVALID_ARGUMENT"}})
+
+    with pytest.raises(ConfigurationError):
+        await resolve_basemap_session(
+            settings,
+            cast(Redis, redis),
+            "satellite",
+            transport=httpx.MockTransport(refuse),
+        )
+
+
+@pytest.mark.asyncio
+async def test_a_refusal_is_remembered_rather_than_asked_again_every_mount() -> None:
+    settings = _settings()
+    redis = _FakeRedis()
+    calls = 0
+
+    def refuse(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(400, json={"error": {"status": "INVALID_ARGUMENT"}})
+
+    transport = httpx.MockTransport(refuse)
+    for _ in range(3):
+        with pytest.raises(ConfigurationError):
+            await resolve_basemap_session(
+                settings, cast(Redis, redis), "satellite", transport=transport
+            )
+
+    assert calls == 1

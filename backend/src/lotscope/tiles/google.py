@@ -13,10 +13,18 @@ from lotscope.core.errors import ConfigurationError, UpstreamError
 
 MapType = Literal["satellite", "roadmap"]
 
+_REFUSED_MESSAGE = (
+    "Google would not issue a basemap session for this key, so the satellite basemap is "
+    "unavailable. The map falls back to the open raster basemap."
+)
 _ATTRIBUTION = "Map data © Google"
 _TILE_SIZE = 256
 _SESSION_CACHE_PREFIX = "gmaps:session"
 _EXPIRY_BUFFER_SECONDS = 300
+# How long to stop asking after Google refuses. A key it will not accept does not start
+# working within the minute, and every map mount was spending a round trip finding out.
+_REFUSAL_TTL_SECONDS = 600
+_REFUSAL_CACHE_PREFIX = "gmaps:refused"
 
 
 @dataclass(frozen=True)
@@ -122,8 +130,24 @@ async def resolve_basemap_session(
     *,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> BasemapSession:
+    """A Google basemap session, or a plain "not available" if Google will not give one.
+
+    An unusable key is the same answer to the caller as no key at all — the map falls
+    back to the raster basemap either way — so it is reported as unconfigured rather than
+    as a 502 the client has to interpret. The refusal is remembered for ten minutes so a
+    key Google rejects is not re-offered to it on every map mount.
+    """
     _require_key(settings)
-    token, tile_size = await _resolve_token(settings, redis, map_type, transport=transport)
+    refusal_key = f"{_REFUSAL_CACHE_PREFIX}:{map_type}"
+    with contextlib.suppress(RedisError):
+        if await redis.get(refusal_key) is not None:
+            raise ConfigurationError(_REFUSED_MESSAGE)
+    try:
+        token, tile_size = await _resolve_token(settings, redis, map_type, transport=transport)
+    except UpstreamError as error:
+        with contextlib.suppress(RedisError):
+            await redis.set(refusal_key, "1", ex=_REFUSAL_TTL_SECONDS)
+        raise ConfigurationError(_REFUSED_MESSAGE) from error
     return _build_session(settings, map_type, token, tile_size)
 
 

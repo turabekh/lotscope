@@ -37,7 +37,9 @@ export const useFiltersStore = defineStore('filters', () => {
   const useClasses = ref<UseClass[]>([])
   const colorMode = ref<ColorMode>('vacancy')
   const show3d = ref(true)
-  const basemap = ref<Basemap>('satellite')
+  // The open raster basemap by default: it is the one we can always draw, and asking
+  // Google for a session we may not get costs a round trip and a flash on every mount.
+  const basemap = ref<Basemap>('osm')
 
   function toggleClass(value: UseClass): void {
     useClasses.value = useClasses.value.includes(value)
