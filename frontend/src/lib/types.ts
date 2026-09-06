@@ -864,7 +864,6 @@ export interface AdminOverview {
   parcels_vacant: number
   screened_total: number
   deeds_total: number
-  saved_searches_total: number
   neighborhoods_total: number
 }
 

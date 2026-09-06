@@ -138,13 +138,15 @@ const ROLES = ['user', 'admin']
 const overviewCards = computed(() => {
   const o = overview.value
   if (o === null) return []
+  // Every card here must be a field the API actually returns. A card for a field it
+  // stopped returning renders `undefined.toLocaleString()` and takes the whole screen
+  // down — which is what a "Saved searches" card left over from a deleted feature did.
   return [
     { label: 'Users', value: o.users_total, icon: 'group' },
     { label: 'Parcels', value: o.parcels_total, icon: 'map' },
     { label: 'Vacant', value: o.parcels_vacant, icon: 'grass' },
     { label: 'Screened lots', value: o.screened_total, icon: 'gavel' },
     { label: 'Deeds', value: o.deeds_total, icon: 'description' },
-    { label: 'Saved searches', value: o.saved_searches_total, icon: 'saved_search' },
     { label: 'Neighborhoods', value: o.neighborhoods_total, icon: 'location_city' },
   ]
 })

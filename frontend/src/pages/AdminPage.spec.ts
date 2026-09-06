@@ -86,17 +86,19 @@ vi.mock('@/lib/api', async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
-      getAdminOverview: vi.fn(() =>
-        Promise.resolve({
-          users_total: 0,
-          users_by_tier: {},
-          parcels_total: 0,
-          parcels_vacant: 0,
-          screened_total: 0,
-          deeds_total: 0,
-          saved_searches_total: 0,
-          neighborhoods_total: 0,
-        }),
+      // Typed on purpose: this mock is the only thing standing between a card that
+      // reads a field the API stopped returning and a blank /admin in production.
+      getAdminOverview: vi.fn(
+        (): Promise<import('@/lib/types').AdminOverview> =>
+          Promise.resolve({
+            users_total: 3,
+            users_by_tier: {},
+            parcels_total: 4,
+            parcels_vacant: 5,
+            screened_total: 6,
+            deeds_total: 7,
+            neighborhoods_total: 8,
+          }),
       ),
       getAdminDatasets: vi.fn(() => Promise.resolve([])),
       getAdminUsers: vi.fn(() => Promise.resolve({ total: 0, users: [] })),
@@ -153,6 +155,16 @@ describe('AdminPage jobs console', () => {
     localStorage.clear()
     runJobMock.mockClear()
     useAuthStore().user = adminUser()
+  })
+
+  it('renders every overview card with a real number', async () => {
+    // A card for a field the API no longer returns threw on `undefined.toLocaleString()`
+    // and took the whole admin screen down. Every card must carry a value.
+    const wrapper = await mountAdmin()
+    const values = wrapper.findAll('.stat-value').map((node) => node.text())
+    expect(values.length).toBeGreaterThan(0)
+    expect(values).not.toContain('')
+    for (const value of values) expect(value).toMatch(/^[\d,]+$/)
   })
 
   it('lists catalog jobs grouped for the admin', async () => {
