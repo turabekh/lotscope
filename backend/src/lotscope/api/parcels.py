@@ -9,6 +9,9 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.accounts.models import User
+from lotscope.agent.envelope import ToolResult
+from lotscope.agent.tools import REGISTRY
+from lotscope.agent.tools.registry import ToolContext
 from lotscope.ai.client import StructuredGenerator
 from lotscope.ai.embeddings import Embedder
 from lotscope.ai.prompts import (
@@ -488,6 +491,34 @@ async def parcel_source_freshness(
         raise NotFoundError(f"Parcel {parcel_number} was not found.")
     rows = await source_freshness(session, market_code)
     return [SourceFreshness.model_validate(row) for row in rows]
+
+
+# A Lot-page evidence section and the tool that answers it. The page reads the same tool
+# the Analyst does, so a section and an answer in the conversation cannot disagree about
+# what the record says — and the envelope's sources are the section's "Show me".
+EVIDENCE_TOOLS = {
+    "sheriff": "get_sheriff_listing",
+    "deeds": "get_deed_chain",
+    "violations": "get_violations",
+    "delinquency": "get_delinquency",
+}
+
+
+@router.get("/{parcel_number}/evidence/{section}", response_model=ToolResult)
+async def parcel_evidence(
+    parcel_number: ParcelKeyDep,
+    section: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ToolResult:
+    tool_name = EVIDENCE_TOOLS.get(section)
+    if tool_name is None:
+        raise NotFoundError(f"No evidence section is named {section!r}.")
+    registered = REGISTRY.get(tool_name)
+    if registered is None:
+        raise NotFoundError(f"No tool named {tool_name!r} is registered.")
+    payload = registered.input_model.model_validate({"parcel": parcel_number})
+    return await registered.handler(session, ToolContext(user_id=current_user.id), payload)
 
 
 @router.get("/{parcel_number}/checklist", response_model=ParcelChecklist)

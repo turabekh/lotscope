@@ -1156,3 +1156,74 @@ async def test_search_still_serves_a_signed_in_member(db_session: AsyncSession) 
         area_search = await client.post("/search/area", json=_AREA_REQUEST)
     assert text_search.status_code == 200
     assert area_search.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_evidence_sections_return_the_agent_tools_own_envelope(
+    db_session: AsyncSession,
+) -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO parcel (parcel_number, address, owner) VALUES "
+            "('phl:000000001', '1 Test St', 'Jane Doe')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, sale_date, sale_price, document_type, "
+            "document_id, grantor, grantee) VALUES ('phl:000000001', '2019-04-02', 42000, "
+            "'DEED', '53000001', 'PRIOR OWNER', 'JANE DOE')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO li_event (parcel_number, event_type, event_date, status, "
+            "case_status, description) VALUES ('phl:000000001', 'violation', '2024-06-01', "
+            "'OPEN', 'IN VIOLATION', 'Vacant lot not maintained')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
+            "as_of_date, delinquency_owner) VALUES ('phl:000000001', true, 8400, 3, "
+            "'2026-01-31', 'PRIOR OWNER')"
+        )
+    )
+    await db_session.flush()
+
+    app, _ = _authed_app(db_session)
+    async with _client(app) as client:
+        deeds = await client.get("/parcels/000000001/evidence/deeds")
+        violations = await client.get("/parcels/000000001/evidence/violations")
+        delinquency = await client.get("/parcels/000000001/evidence/delinquency")
+        sheriff = await client.get("/parcels/000000001/evidence/sheriff")
+        unknown = await client.get("/parcels/000000001/evidence/nonsense")
+
+    assert deeds.status_code == 200
+    assert deeds.json()["data"]["deeds"][0]["document_id"] == "53000001"
+    assert any(source["name"] == "rtt_summary" for source in deeds.json()["sources"])
+
+    assert violations.json()["data"]["violations"][0]["case_status"] == "IN VIOLATION"
+    # Every section carries what it could not establish, because the page states it too.
+    assert violations.json()["unverified"]
+
+    body = delinquency.json()
+    # Decimals cross the wire as strings, the way the Analyst already receives them.
+    assert body["data"]["tax"]["total_due"] == "8400.00"
+    # The debt names a prior owner: the section must say so rather than imply Jane Doe owes it.
+    assert "PRIOR OWNER" in (body["data"]["attribution"] or "")
+
+    assert sheriff.json()["data"]["listings"] == []
+    assert unknown.status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_evidence_sections_are_closed_to_anonymous_callers(
+    db_session: AsyncSession,
+) -> None:
+    app = _app_with_session(db_session)
+    async with _client(app) as client:
+        response = await client.get("/parcels/000000001/evidence/deeds")
+    assert response.status_code == 401
