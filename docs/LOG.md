@@ -223,3 +223,13 @@ SnapshotPanel kept but collapsed to "In plain words" — the verdict states the 
 Ask the Analyst hands the parcel over as a query parameter and the Analyst opens the conversation itself. Diligence shown at $199 and plainly disabled rather than hidden.
 The sourceLinks module mirrors the agent's urls.py so a "Show me" and a source in an envelope point at the same place.
 Gates: lint, typecheck 624 files + vue-tsc, unit 1166 + integration 639 (0 skipped), vitest 382, Playwright 44 serially.
+
+## 2026-09-06 — Step 3.3 residual + Step 3.4 (feat/lot-flat-and-deals)
+Did not deploy and did not merge: this branch is 8 commits ahead of main, main is unchanged at 87e8c7b.
+The Lot page is one page: sections in reading order under a sticky nav, risk flags and distress moved into the verdict where the plan puts them, freshness moved beside corrections. The flatten I inherited had named three sections for panels that do not hold those facts — a freshness table under "Violations", risk flags under "Sheriff listing".
+So the four record sections are real now: GET /parcels/{parcel}/evidence/{sheriff|deeds|violations|delinquency} runs the Analyst's own tool and returns its envelope, which makes the section's sources and its "unverified" lines the same ones the conversation cites. A failed load says so instead of reading as a clean record.
+Deals is a list: stage saved on change, MAO against offer, sale date, the Analyst note dated to the run that wrote it, offer letter per row, one card per lot at 380px. The board, drag and drop, Today tab and contact drawer are gone.
+Two defects only the browser showed. The section nav is a flex child with its own overflow, so its automatic minimum height was zero and it collapsed to a 13px band the page scrolled through; and every --ls-* colour the Phase 3 screens name was never defined, so all of Phase 3 ignored dark mode — they are aliases of --lot-* now, on body rather than :root, or the alias freezes the light value.
+e2e fixtures gained a transfer, an open violation and a closed one, a listing and a debt named against the owner before last, so the sections are asserted against records rather than empty states.
+Not done: no deploy, no live-verify on these sections (they read the stored copy; the live tools remain the Analyst's), and the Analyst still cannot be asked about a set from anywhere but Deals.
+Gates: lint, typecheck 624 files + vue-tsc, backend 1809 (0 skipped), vitest 412, Playwright 57 serially.
