@@ -242,9 +242,13 @@ def test_a_stricter_margin_lowers_what_the_lot_is_worth_paying() -> None:
     permissive = _at_margin(0.20).max_allowable_offer
     strict = _at_margin(0.35).max_allowable_offer
 
+    assert permissive is not None
+    assert strict is not None
     assert permissive > strict
 
 
 def test_the_offer_moves_monotonically_as_the_margin_rises() -> None:
     offers = [_at_margin(margin).max_allowable_offer for margin in (0.10, 0.20, 0.30, 0.40)]
-    assert offers == sorted(offers, reverse=True)
+    assert all(offer is not None for offer in offers)
+    figures = [offer for offer in offers if offer is not None]
+    assert figures == sorted(figures, reverse=True)
