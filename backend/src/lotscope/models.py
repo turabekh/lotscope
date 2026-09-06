@@ -10,6 +10,7 @@ from lotscope.buybox.models import BuyBox
 from lotscope.buyers.models import BuyerProfile
 from lotscope.core.db import Base
 from lotscope.corrections.models import ParcelCorrection
+from lotscope.diligence.models import DiligenceRun
 from lotscope.distress.models import ParcelDistress
 from lotscope.documents.models import DeedDocument, DeedRestriction
 from lotscope.historic.models import HistoricDistrict
@@ -50,6 +51,7 @@ __all__ = [
     "DealActivity",
     "DeedDocument",
     "DeedRestriction",
+    "DiligenceRun",
     "Document",
     "FloodZone",
     "HistoricDistrict",

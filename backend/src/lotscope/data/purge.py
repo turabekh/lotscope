@@ -40,6 +40,12 @@ EXPLICIT_PARCEL_KEYED_TABLES: tuple[ExplicitTable, ...] = (
         "keys on parcel_number but declares a foreign key only to app_user",
     ),
     ExplicitTable(
+        "diligence_run",
+        "parcel_number",
+        "a bought checklist names the parcel it is about but keys on the buyer; a report "
+        "on a lot we no longer hold is a report about nothing",
+    ),
+    ExplicitTable(
         "analyst_signal",
         "parcel_number",
         "an overnight finding names a parcel but keys on the user; it declares no "
