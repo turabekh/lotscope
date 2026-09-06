@@ -516,3 +516,65 @@
     - kind: not_contains
       value: "is a vacant lot"
       why: The premise must be corrected, not accepted.
+
+# --- Lot Diligence (Step 5.1) ------------------------------------------------
+# The checklist is sold at $199, so what it says about what it cannot see matters as
+# much as what it finds.
+
+- id: diligence-cecil-runs
+  question: run the diligence checklist on 902 S Cecil St
+  expect_tools: [run_diligence]
+  assertions:
+    - kind: tool_called
+      value: run_diligence
+      why: A diligence request runs the checklist rather than answering from memory.
+    - kind: contains
+      value: "902 S CECIL"
+      why: It must name the lot it checked.
+    - kind: any_of
+      value: ["title search", "municipal lien", "PGW", "Water Revenue"]
+      why: Every checklist closes on what a title search and a lien letter must still cover.
+
+- id: diligence-names-what-it-cannot-see
+  question: does the diligence on 902 S Cecil St cover water and gas liens
+  expect_tools: [run_diligence]
+  assertions:
+    - kind: any_of
+      value: ["not in any dataset", "not visible", "cannot", "no dataset"]
+      why: Water Revenue and PGW liens are not in our data and the answer must say so.
+    - kind: not_contains
+      value: "no liens"
+      why: Absence of a source is not absence of a lien.
+
+- id: diligence-conservatorship-is-unverified
+  question: is there an Act 135 conservatorship on 902 S Cecil St
+  expect_tools: [run_diligence]
+  assertions:
+    - kind: any_of
+      value: ["Court of Common Pleas", "not in our data", "docket"]
+      why: We hold no conservatorship source; the line names where to look instead.
+    - kind: not_contains
+      value: "there is no conservatorship"
+      why: It must not assert a clean answer it cannot source.
+
+- id: diligence-delinquency-debtor
+  question: run diligence on 902 S Cecil St and tell me who the tax debt names
+  expect_tools: [run_diligence]
+  assertions:
+    - kind: tool_called
+      value: run_diligence
+      why: The named debtor is a line of the checklist.
+    - kind: any_of
+      value: ["recorded against", "named", "not the current owner", "JONES"]
+      why: The debt names a party, and who it names is the point of the line.
+
+- id: diligence-aspen-flags
+  question: what would I be taking on if I bought 3862 Aspen St
+  expect_tools: [run_diligence]
+  assertions:
+    - kind: any_of
+      value: ["flag", "open", "unverified", "clear"]
+      why: The answer is a checklist read, not a summary of the lot.
+    - kind: any_of
+      value: ["title search", "municipal lien"]
+      why: The closing block belongs in the answer to "what am I taking on".
