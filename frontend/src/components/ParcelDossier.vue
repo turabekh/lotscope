@@ -10,12 +10,18 @@ import CompsPanel from '@/components/CompsPanel.vue'
 import DealCard from '@/components/DealCard.vue'
 import DeedRestrictionsPanel from '@/components/DeedRestrictionsPanel.vue'
 import DistressPanel from '@/components/DistressPanel.vue'
+import DeedsEvidence from '@/components/DeedsEvidence.vue'
+import DelinquencyEvidence from '@/components/DelinquencyEvidence.vue'
 import FreshnessPanel from '@/components/FreshnessPanel.vue'
 import ReportCorrectionDialog from '@/components/ReportCorrectionDialog.vue'
 import HistoricPanel from '@/components/HistoricPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
+import LotSectionNav from '@/components/LotSectionNav.vue'
 import RiskPanel from '@/components/RiskPanel.vue'
+import SheriffEvidence from '@/components/SheriffEvidence.vue'
+import ViolationsEvidence from '@/components/ViolationsEvidence.vue'
 import VerdictSection from '@/components/VerdictSection.vue'
+import type { LotSection } from '@/lib/sourceLinks'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
 import SnapshotPanel from '@/components/SnapshotPanel.vue'
@@ -41,17 +47,24 @@ const saving = ref(false)
 const correctionOpen = ref(false)
 const addingDeal = ref(false)
 const downloadingDossier = ref(false)
-const tab = ref('verdict')
+function scrollTo(id: LotSection): void {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
-const TABS = [
-  { name: 'verdict', label: 'Verdict', icon: 'verified' },
-  { name: 'deal', label: 'Deal', icon: 'payments' },
-  { name: 'land', label: 'Land', icon: 'architecture' },
-  { name: 'risk', label: 'Risk', icon: 'gpp_maybe' },
-  { name: 'docs', label: 'Docs', icon: 'description' },
+// Every section is on the page for every lot. "No sheriff-sale listing is on file" is an
+// answer a buyer needs, and a nav entry that appears on some lots and not others is a
+// section a reader stops looking for.
+const visibleSections: { id: LotSection; label: string }[] = [
+  { id: 'verdict', label: 'Verdict' },
+  { id: 'sheriff', label: 'Sheriff' },
+  { id: 'deeds', label: 'Deeds' },
+  { id: 'violations', label: 'Violations' },
+  { id: 'delinquency', label: 'Delinquency' },
+  { id: 'comps', label: 'Comps' },
+  { id: 'zoning-overlays', label: 'Zoning' },
+  { id: 'neighbors', label: 'Neighbours' },
+  { id: 'corrections', label: 'Corrections' },
 ]
-
-const tabsAlign = computed(() => ($q.screen.lt.md ? 'left' : 'justify'))
 
 const sheriffCountdown = computed(() => {
   const sale = nextSheriffSale.value
@@ -93,16 +106,6 @@ const developedNote = computed(() => {
   const assessed = mv != null ? ` (assessed at ${formatCurrency(mv)})` : ''
   return `LotScope focuses on vacant & infill land. This parcel already has a structure${assessed}, so the buildability, land value, and deal figures below model a hypothetical teardown or redevelopment — not the property's current value.`
 })
-
-const dealEmpty = computed(
-  () =>
-    !store.deal &&
-    !store.underwriting &&
-    !store.scenarios &&
-    !store.comps &&
-    !store.assessment &&
-    !store.marketContext,
-)
 
 const MOTIVATION_CHIP: Partial<
   Record<DistressTier, { label: string; color: string; icon: string }>
@@ -404,7 +407,7 @@ async function toggleSave(): Promise<void> {
             text-color="white"
             :icon="motivation.icon"
             data-test="motivation-chip"
-            @click="tab = 'verdict'"
+            @click="scrollTo('verdict')"
           >
             {{ motivation.label }} · {{ motivation.score }}/100
             <q-tooltip max-width="260px" anchor="top middle" self="bottom middle">
@@ -416,26 +419,15 @@ async function toggleSave(): Promise<void> {
         </div>
       </header>
 
-      <q-tabs
-        v-model="tab"
-        dense
-        no-caps
-        class="dossier-tabs"
-        active-color="primary"
-        indicator-color="primary"
-        :align="tabsAlign"
-        narrow-indicator
-      >
-        <q-tab v-for="t in TABS" :key="t.name" :name="t.name" :icon="t.icon" :label="t.label" />
-      </q-tabs>
-
       <div class="panel-body lot-scroll">
         <q-banner v-if="error" dense class="bg-red-1 text-negative rounded-borders">
           {{ error }}
         </q-banner>
 
-        <q-tab-panels v-model="tab" animated keep-alive class="dossier-panels">
-          <q-tab-panel name="verdict" class="tab-pane">
+        <LotSectionNav :sections="visibleSections" />
+
+        <div class="lot-sections">
+          <section id="verdict" class="lot-section" data-test="lot-section-verdict-wrap">
             <q-banner v-if="isDeveloped" dense class="developed-banner rounded-borders">
               <template #avatar><q-icon name="home_work" color="blue-grey-6" /></template>
               <div class="developed-head">Already developed — {{ developedUse }}</div>
@@ -457,58 +449,55 @@ async function toggleSave(): Promise<void> {
             </q-banner>
             <SnapshotPanel :parcel-number="detail.parcel_number" />
             <DevelopmentProgramPanel />
+            <RiskPanel />
             <DistressPanel />
-            <ChecklistPanel />
-            <div class="tab-foot">
-              <q-btn
-                flat
-                dense
-                no-caps
-                color="grey-7"
-                icon="refresh"
-                label="Recompute verdict"
-                :loading="loading"
-                @click="store.refreshVerdict()"
-              />
-            </div>
-          </q-tab-panel>
-
-          <q-tab-panel name="deal" class="tab-pane">
             <DealCard />
             <ScenariosPanel />
-            <CompsPanel />
-            <div class="q-mt-md">
-              <q-btn
-                unelevated
-                no-caps
-                disable
-                color="primary"
-                label="Diligence — $199"
-                data-test="diligence-cta"
-              />
-              <div class="text-caption lot-text-muted q-mt-xs">Coming soon.</div>
-            </div>
-            <div v-if="dealEmpty" class="tab-empty">
-              <q-icon name="query_stats" size="26px" />
-              <span>No deal, comp, or market data for this lot yet.</span>
-            </div>
-          </q-tab-panel>
+            <ChecklistPanel />
+          </section>
 
-          <q-tab-panel name="land" class="tab-pane">
+          <section id="sheriff" class="lot-section" data-test="lot-section-sheriff">
+            <h2 class="lot-section__title">Sheriff listing</h2>
+            <SheriffEvidence :parcel-number="detail.parcel_number" />
+          </section>
+
+          <section id="deeds" class="lot-section" data-test="lot-section-deeds">
+            <h2 class="lot-section__title">Deeds</h2>
+            <DeedsEvidence :parcel-number="detail.parcel_number" />
+            <DeedRestrictionsPanel />
+          </section>
+
+          <section id="violations" class="lot-section" data-test="lot-section-violations">
+            <h2 class="lot-section__title">Violations</h2>
+            <ViolationsEvidence :parcel-number="detail.parcel_number" />
+          </section>
+
+          <section id="delinquency" class="lot-section" data-test="lot-section-delinquency">
+            <h2 class="lot-section__title">Delinquency</h2>
+            <DelinquencyEvidence :parcel-number="detail.parcel_number" />
+          </section>
+
+          <section id="comps" class="lot-section" data-test="lot-section-comps">
+            <h2 class="lot-section__title">Comps</h2>
+            <CompsPanel />
+          </section>
+
+          <section id="zoning-overlays" class="lot-section" data-test="lot-section-zoning">
+            <h2 class="lot-section__title">Zoning and overlays</h2>
             <SubdivisionPanel />
             <OverlayPanel />
-            <AssemblagePanel />
             <HistoricPanel />
             <PropertyFacts :detail="detail" />
-          </q-tab-panel>
+          </section>
 
-          <q-tab-panel name="risk" class="tab-pane">
-            <RiskPanel />
+          <section id="neighbors" class="lot-section" data-test="lot-section-neighbors">
+            <h2 class="lot-section__title">Neighbours</h2>
+            <AssemblagePanel />
             <OwnerPortfolioPanel />
-          </q-tab-panel>
+          </section>
 
-          <q-tab-panel name="docs" class="tab-pane">
-            <FreshnessPanel :parcel-number="detail.parcel_number" />
+          <section id="corrections" class="lot-section" data-test="lot-section-corrections">
+            <h2 class="lot-section__title">Corrections</h2>
             <div class="correction-cta">
               <q-btn
                 flat
@@ -525,9 +514,9 @@ async function toggleSave(): Promise<void> {
               v-model="correctionOpen"
               :parcel-number="detail.parcel_number"
             />
-            <DeedRestrictionsPanel />
-          </q-tab-panel>
-        </q-tab-panels>
+            <FreshnessPanel :parcel-number="detail.parcel_number" />
+          </section>
+        </div>
       </div>
     </template>
 
@@ -642,45 +631,38 @@ async function toggleSave(): Promise<void> {
 .panel-body {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  /* No padding at the top: the section nav sticks to the scrollport, and a padded edge
+     leaves a band above it that the page scrolls through in plain sight. */
+  padding: 0 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.dossier-tabs {
-  flex: 0 0 auto;
-  background: var(--lot-surface);
-  border-bottom: 1px solid var(--lot-border);
-  padding: 0 8px;
+.lot-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.lot-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* The section nav is sticky, so an anchored jump has to stop short of it or the
+     heading it lands on sits underneath. */
+  scroll-margin-top: 60px;
+}
+.lot-section__title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--lot-muted);
-}
-.dossier-panels {
-  background: transparent;
-}
-.tab-pane {
-  padding: 4px 0 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.tab-foot {
-  display: flex;
-  justify-content: center;
+  margin: 0;
 }
 .correction-cta {
   display: flex;
   justify-content: center;
   padding-top: 4px;
-}
-.tab-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
-  padding: 28px 16px;
-  color: var(--lot-faint);
-  font-size: 13px;
 }
 .rounded-borders {
   border-radius: var(--lot-radius);

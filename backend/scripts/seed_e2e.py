@@ -1,5 +1,5 @@
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +38,15 @@ COMP_SALES = [
     ("99900004", "E2E-4", date(2025, 7, 20), 100000),
 ]
 
+LI_EVENTS = [
+    ("E2E-LI-1", date(2026, 6, 1), "OPEN", "IN VIOLATION", "Vacant lot not maintained", True),
+    ("E2E-LI-2", date(2024, 2, 12), "CLOSED", "CLOSED", "Trash and debris", False),
+]
+
+# Ahead of today rather than a fixed year: a listing has to read as scheduled, and a
+# countdown of "in 26,673 days" is not a sale date anyone recognises.
+FUTURE_SALE_DATE = date.today() + timedelta(days=45)
+
 DISTRICT_POLYGON = (
     "POLYGON((-75.170 39.925,-75.170 39.935,-75.160 39.935,-75.160 39.925,-75.170 39.925))"
 )
@@ -50,7 +59,7 @@ def _parcel_polygon(index: int) -> str:
 
 
 async def _clear(session: AsyncSession) -> None:
-    for table in ("parcel_verdict", "sale", "tax_status", "parcel"):
+    for table in ("parcel_verdict", "sale", "tax_status", "li_event", "sheriff_sale", "parcel"):
         await session.execute(
             text(f"DELETE FROM {table} WHERE parcel_number = ANY(:numbers)"),
             {"numbers": PARCEL_NUMBERS},
@@ -124,12 +133,52 @@ async def _insert_supporting_records(session: AsyncSession) -> None:
                 "source": SOURCE,
             },
         )
+    # The delinquent fixture carries the records the Lot page's evidence sections read: a
+    # transfer, an open violation and a closed one, a listing, and a debt named against the
+    # owner before last — the case where attribution actually matters.
+    delinquent = f"{MARKET_CODE}:99900001"
     await session.execute(
         text(
-            "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, source) "
-            "VALUES (:number, TRUE, 22000, 4, :source)"
+            "INSERT INTO tax_status (parcel_number, is_delinquent, total_due, years_owed, "
+            "as_of_date, delinquency_owner, source) VALUES (:number, TRUE, 22000, 4, "
+            ":as_of, 'PRIOR OWNER LLC', :source)"
         ),
-        {"number": f"{MARKET_CODE}:99900001", "source": SOURCE},
+        {"number": delinquent, "as_of": date(2026, 1, 31), "source": SOURCE},
+    )
+    await session.execute(
+        text(
+            "INSERT INTO sale (parcel_number, document_id, document_type, sale_date, "
+            "sale_price, grantor, grantee, source) VALUES (:number, 'E2E-1', 'DEED', "
+            ":sale_date, 61000, 'PRIOR OWNER LLC', 'ACME LAND HOLDINGS LLC', :source)"
+        ),
+        {"number": delinquent, "sale_date": date(2026, 3, 4), "source": SOURCE},
+    )
+    for external_id, event_date, status, case_status, description, unsafe in LI_EVENTS:
+        await session.execute(
+            text(
+                "INSERT INTO li_event (parcel_number, external_id, event_type, status, "
+                "case_status, event_date, description, is_unsafe, is_imminently_dangerous, "
+                "source) VALUES (:number, :external_id, 'violation', :status, :case_status, "
+                ":event_date, :description, :unsafe, FALSE, :source)"
+            ),
+            {
+                "number": delinquent,
+                "external_id": external_id,
+                "status": status,
+                "case_status": case_status,
+                "event_date": event_date,
+                "description": description,
+                "unsafe": unsafe,
+                "source": SOURCE,
+            },
+        )
+    await session.execute(
+        text(
+            "INSERT INTO sheriff_sale (parcel_number, case_number, sale_type, sale_date, "
+            "status, opening_bid, plaintiff, source) VALUES (:number, 'E2E-2301-0001', "
+            "'TAX', :sale_date, 'Postponed', 1200, 'CITY OF PHILADELPHIA', :source)"
+        ),
+        {"number": delinquent, "sale_date": FUTURE_SALE_DATE, "source": SOURCE},
     )
 
 

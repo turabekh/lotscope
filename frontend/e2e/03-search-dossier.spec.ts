@@ -21,16 +21,18 @@ test('flow 4 — a dossier opens directly by parcel number', async ({ page }) =>
   await openDossier(page, SEEDED.bestMargin.number)
 
   await expect(page.getByRole('button', { name: SEEDED.bestMargin.address })).toBeVisible()
-  for (const tab of ['Verdict', 'Deal', 'Land', 'Risk', 'Docs']) {
-    await expect(page.getByRole('tab', { name: tab })).toBeVisible()
+  // One page now: every section is present, and the nav lists them.
+  for (const section of ['verdict', 'deeds', 'violations', 'comps', 'neighbors']) {
+    await expect(page.locator(`#${section}`)).toHaveCount(1)
   }
+  await expect(page.locator('[data-test="lot-section-nav"]')).toBeVisible()
 })
 
-test('the Land tab affirms what was checked, not just what was found', async ({ page }) => {
+test('the zoning section affirms what was checked, not just what was found', async ({ page }) => {
   await registerAndSettle(page, 'landtab')
 
   await openDossier(page, SEEDED.bestMargin.number)
-  await page.getByRole('tab', { name: 'Land' }).click()
+  await page.locator('[data-test="lot-nav-zoning-overlays"]').click()
 
   await expect(page.getByText('Not in a designated historic district')).toBeVisible()
   await expect(page.getByText('Not designated')).toBeVisible()

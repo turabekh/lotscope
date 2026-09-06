@@ -2,7 +2,6 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { Quasar } from 'quasar'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick } from 'vue'
 
 import ParcelDossier from '@/components/ParcelDossier.vue'
 import type { DistressResult, DistressTier, ParcelDetail, VerdictResult } from '@/lib/types'
@@ -117,6 +116,10 @@ function mountDossier(detail: ParcelDetail, distress: DistressResult | null = nu
         OwnerPortfolioPanel: true,
         ReportPanel: true,
         DeedRestrictionsPanel: true,
+        SheriffEvidence: true,
+        DeedsEvidence: true,
+        ViolationsEvidence: true,
+        DelinquencyEvidence: true,
       },
     },
   })
@@ -177,46 +180,76 @@ describe('ParcelDossier seller-motivation surfacing', () => {
     expect(wrapper.find('[data-test="motivation-chip"]').exists()).toBe(false)
   })
 
-  it('renders the distress panel on the default verdict tab, not behind Risk', () => {
+  it('puts distress and its factors in the verdict, reachable without a click', () => {
+    // Distress is a scored read on the owner, not a record of what is owed. It belongs
+    // beside the verdict; the delinquency section shows the tax record itself.
     const wrapper = mountDossier(vacant(), makeDistress('high', 72))
-    expect(wrapper.findComponent({ name: 'DistressPanel' }).exists()).toBe(true)
-    expect(wrapper.findComponent({ name: 'OwnerPortfolioPanel' }).exists()).toBe(false)
+    const verdict = wrapper.find('[data-test="lot-section-verdict-wrap"]')
+    expect(verdict.exists()).toBe(true)
+    expect(verdict.findComponent({ name: 'DistressPanel' }).exists()).toBe(true)
+    const delinquency = wrapper.find('[data-test="lot-section-delinquency"]')
+    expect(delinquency.findComponent({ name: 'DelinquencyEvidence' }).exists()).toBe(true)
   })
 })
 
-async function openDealTab(wrapper: ReturnType<typeof mountDossier>): Promise<void> {
-  const dealTab = wrapper.findAll('.dossier-tabs .q-tab').find((tab) => tab.text().includes('Deal'))
-  if (!dealTab) throw new Error('no Deal tab rendered')
-  await dealTab.trigger('click')
-  await nextTick()
-  await nextTick()
-}
+describe('ParcelDossier sections', () => {
+  const vacantLot = () => makeDetail({ land_use: 'VACANT LAND', is_vacant: true })
 
-describe('ParcelDossier deal-tab composition', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    localStorage.clear()
+  it('shows every section on one page, in order, without a tab click', () => {
+    const wrapper = mountDossier(vacantLot())
+    const html = wrapper.html()
+    const order = [
+      'lot-section-verdict-wrap',
+      'lot-section-sheriff',
+      'lot-section-deeds',
+      'lot-section-violations',
+      'lot-section-delinquency',
+      'lot-section-comps',
+      'lot-section-zoning',
+      'lot-section-neighbors',
+      'lot-section-corrections',
+    ].map((id) => html.indexOf(id))
+
+    expect(order.every((index) => index >= 0)).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
   })
 
-  const vacant = () => makeDetail({ land_use: 'VACANT LAND', is_vacant: true })
-
-  it('gives the deal tab a single card in place of the two retired panels', async () => {
-    const wrapper = mountDossier(vacant())
-    await openDealTab(wrapper)
-
-    expect(wrapper.findComponent({ name: 'DealCard' }).exists()).toBe(true)
+  it('gives the verdict section one deal card in place of the two retired panels', () => {
+    const wrapper = mountDossier(vacantLot())
+    const verdict = wrapper.find('[data-test="lot-section-verdict-wrap"]')
+    expect(verdict.findComponent({ name: 'DealCard' }).exists()).toBe(true)
     expect(wrapper.findComponent({ name: 'DealPanel' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'UnderwritingPanel' }).exists()).toBe(false)
   })
 
-  it('orders the deal tab card first, ahead of scenarios and comps', async () => {
-    const wrapper = mountDossier(vacant())
-    await openDealTab(wrapper)
+  it('offers every section in the nav, on every lot', () => {
+    // Including sheriff: "no listing is on file" is an answer, and a nav entry that comes
+    // and goes is one a reader stops looking for.
+    const wrapper = mountDossier(vacantLot())
+    for (const id of ['verdict', 'sheriff', 'deeds', 'violations', 'delinquency', 'comps']) {
+      expect(wrapper.find(`[data-test="lot-nav-${id}"]`).exists()).toBe(true)
+    }
+  })
 
-    const order = ['DealCard', 'ScenariosPanel', 'CompsPanel'].map((name) =>
-      wrapper.html().indexOf(name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()),
-    )
-    expect(order.every((index) => index >= 0)).toBe(true)
-    expect([...order].sort((a, b) => a - b)).toEqual(order)
+  it('shows each record section with the evidence that answers it', () => {
+    const wrapper = mountDossier(vacantLot())
+    const pairs: [string, string][] = [
+      ['lot-section-sheriff', 'SheriffEvidence'],
+      ['lot-section-deeds', 'DeedsEvidence'],
+      ['lot-section-violations', 'ViolationsEvidence'],
+      ['lot-section-delinquency', 'DelinquencyEvidence'],
+    ]
+    for (const [section, component] of pairs) {
+      expect(
+        wrapper.find(`[data-test="${section}"]`).findComponent({ name: component }).exists(),
+      ).toBe(true)
+    }
+  })
+
+  it('anchors each section so a link can land on it', () => {
+    const wrapper = mountDossier(vacantLot())
+    for (const id of ['verdict', 'deeds', 'violations', 'delinquency', 'comps']) {
+      expect(wrapper.find(`#${id}`).exists()).toBe(true)
+    }
   })
 })

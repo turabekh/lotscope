@@ -5,8 +5,6 @@ import { openDossier, registerAndSettle, SEEDED } from './support/app'
 test('flow 6 — editing an assumption recomputes the deal', async ({ page }) => {
   await registerAndSettle(page, 'assumption')
   await openDossier(page, SEEDED.bestMargin.number)
-
-  await page.getByRole('tab', { name: 'Deal' }).click()
   await expect(page.locator('[data-test="deal-controls"]')).toBeVisible()
 
   const acquisition = page.getByRole('spinbutton', { name: 'Acquisition price ($)' })
@@ -20,8 +18,6 @@ test('flow 6 — editing an assumption recomputes the deal', async ({ page }) =>
 test('flow 6 — resetting returns the deal to market defaults', async ({ page }) => {
   await registerAndSettle(page, 'assumption-reset')
   await openDossier(page, SEEDED.bestMargin.number)
-
-  await page.getByRole('tab', { name: 'Deal' }).click()
   await expect(page.locator('[data-test="deal-controls"]')).toBeVisible()
 
   await page.getByRole('spinbutton', { name: 'Target margin (%)' }).fill('45')
@@ -34,8 +30,6 @@ test('flow 6 — resetting returns the deal to market defaults', async ({ page }
 test('flow 6 — the deal card carries the whole loop from figure to offer', async ({ page }) => {
   await registerAndSettle(page, 'deal-loop')
   await openDossier(page, SEEDED.bestMargin.number)
-
-  await page.getByRole('tab', { name: 'Deal' }).click()
 
   const grid = page.locator('[data-test="heatmap"]')
   const construction = page.locator('[data-test="breakdown-construction"]')
