@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import AnalystComposer from '@/components/analyst/AnalystComposer.vue'
 import ConversationList from '@/components/analyst/ConversationList.vue'
@@ -8,9 +9,12 @@ import EvidenceDrawer from '@/components/analyst/EvidenceDrawer.vue'
 import MessageThread from '@/components/analyst/MessageThread.vue'
 import { api } from '@/lib/api'
 import type { BriefRecord } from '@/lib/types'
+import { openingQuestionFor } from '@/components/analyst/askAboutLot'
 import { useAnalystStore } from '@/stores/analyst'
 
 const $q = useQuasar()
+const route = useRoute()
+const router = useRouter()
 const analyst = useAnalystStore()
 
 const brief = ref<BriefRecord | null>(null)
@@ -20,6 +24,15 @@ const railOpen = ref(false)
 const isMobile = computed(() => $q.screen.lt.md)
 
 onMounted(async () => {
+  // A lot handed over from the Lot page starts the conversation already about that lot.
+  const about = route.query.about
+  const label = route.query.label
+  if (typeof about === 'string' && about) {
+    const question = openingQuestionFor(typeof label === 'string' && label ? label : about)
+    void router.replace({ name: 'analyst' })
+    void analyst.send(question)
+  }
+
   await Promise.all([
     analyst.loadConversations(),
     analyst.loadOpening(),

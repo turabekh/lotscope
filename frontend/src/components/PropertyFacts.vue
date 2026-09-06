@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import ShowMe from '@/components/ShowMe.vue'
 import { formatCurrency, formatSqft, formatFeet } from '@/lib/format'
+import { cartoTarget, storedTarget } from '@/lib/sourceLinks'
 import type { ParcelDetail } from '@/lib/types'
 
 const props = defineProps<{ detail: ParcelDetail }>()
@@ -10,6 +12,14 @@ const exemptTotal = computed(
   () => (props.detail.exempt_land ?? 0) + (props.detail.exempt_building ?? 0),
 )
 const hasExemption = computed(() => exemptTotal.value > 0)
+
+// Owner comes from the assessment record; the Carto row is the page a reader can open to
+// check it themselves. Everything else here is the same row, so it carries our own
+// as-of instead of a second identical link.
+const ownerSource = computed(() => cartoTarget('opa_properties_public', props.detail.parcel_number))
+const storedAsOf = computed(() =>
+  storedTarget(props.detail.source ?? 'opa_properties_public', props.detail.last_synced_at ?? null),
+)
 </script>
 
 <template>
@@ -21,7 +31,10 @@ const hasExemption = computed(() => exemptTotal.value > 0)
       <q-list dense>
         <q-item class="q-px-none">
           <q-item-section>Owner</q-item-section>
-          <q-item-section side class="value">{{ detail.owner ?? '—' }}</q-item-section>
+          <q-item-section side class="value" data-test="fact-owner">
+            {{ detail.owner ?? '—' }}
+            <ShowMe :target="ownerSource" />
+          </q-item-section>
         </q-item>
         <q-item v-if="detail.land_use" class="q-px-none">
           <q-item-section>Land use</q-item-section>
@@ -29,7 +42,10 @@ const hasExemption = computed(() => exemptTotal.value > 0)
         </q-item>
         <q-item class="q-px-none">
           <q-item-section>Lot area</q-item-section>
-          <q-item-section side class="value">{{ formatSqft(detail.lot_area_sqft) }}</q-item-section>
+          <q-item-section side class="value" data-test="fact-lot-area">
+            {{ formatSqft(detail.lot_area_sqft) }}
+            <ShowMe :target="storedAsOf" />
+          </q-item-section>
         </q-item>
         <q-item v-if="detail.frontage_ft || detail.depth_ft" class="q-px-none">
           <q-item-section>Frontage × depth</q-item-section>

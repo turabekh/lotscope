@@ -38,10 +38,18 @@ watch(() => props.parcelNumber, load)
 </script>
 
 <template>
-  <q-card v-if="summary" flat bordered class="snapshot rounded-borders">
+  <!-- Collapsed by default. The verdict section above already states the finding, and the
+       Analyst answers follow-ups on the same screen; this is the plain-words read plus the
+       one thing nothing else shows, which is how much of the lot we actually hold data for. -->
+  <q-expansion-item
+    v-if="summary"
+    dense
+    label="In plain words"
+    class="snapshot rounded-borders"
+    data-test="lot-plain-words"
+  >
     <q-card-section class="q-py-sm">
       <div class="section-title">
-        <q-icon name="auto_awesome" size="18px" class="q-mr-xs" />Snapshot
         <q-space />
         <q-chip
           dense
@@ -64,7 +72,7 @@ watch(() => props.parcelNumber, load)
         >
       </div>
     </q-card-section>
-  </q-card>
+  </q-expansion-item>
 </template>
 
 <style scoped>

@@ -15,13 +15,12 @@ import ReportCorrectionDialog from '@/components/ReportCorrectionDialog.vue'
 import HistoricPanel from '@/components/HistoricPanel.vue'
 import OwnerPortfolioPanel from '@/components/OwnerPortfolioPanel.vue'
 import RiskPanel from '@/components/RiskPanel.vue'
+import VerdictSection from '@/components/VerdictSection.vue'
 import PropertyFacts from '@/components/PropertyFacts.vue'
 import ScenariosPanel from '@/components/ScenariosPanel.vue'
 import SnapshotPanel from '@/components/SnapshotPanel.vue'
 import OverlayPanel from '@/components/OverlayPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
-import VerdictHero from '@/components/VerdictHero.vue'
-import VerdictPanel from '@/components/VerdictPanel.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 import type { DistressTier } from '@/lib/types'
@@ -30,7 +29,7 @@ import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
 
 const store = useParcelStore()
-const { detail, verdict, checklist, nextSheriffSale, loading, error, errorStatus } =
+const { detail, verdict, envelope, checklist, nextSheriffSale, loading, error, errorStatus } =
   storeToRefs(store)
 const watchlist = useWatchlistStore()
 const pipeline = usePipelineStore()
@@ -39,7 +38,6 @@ const props = withDefaults(defineProps<{ showBack?: boolean }>(), { showBack: fa
 const emit = defineEmits<{ back: [] }>()
 const $q = useQuasar()
 const saving = ref(false)
-const whyOpen = ref(false)
 const correctionOpen = ref(false)
 const addingDeal = ref(false)
 const downloadingDossier = ref(false)
@@ -255,6 +253,38 @@ async function toggleSave(): Promise<void> {
               dense
               no-caps
               size="sm"
+              icon="forum"
+              label="Ask the Analyst"
+              aria-label="Ask the Analyst about this lot"
+              data-test="parcel-action-ask"
+              :to="{
+                name: 'analyst',
+                query: {
+                  about: detail.parcel_number,
+                  label: detail.address ?? detail.parcel_number,
+                },
+              }"
+            />
+            <q-btn
+              class="act"
+              flat
+              dense
+              no-caps
+              size="sm"
+              icon="fact_check"
+              label="Diligence $199"
+              aria-label="Lot diligence, not available yet"
+              disable
+              data-test="parcel-action-diligence"
+            >
+              <q-tooltip>Lot Diligence arrives in Phase 5.</q-tooltip>
+            </q-btn>
+            <q-btn
+              class="act"
+              flat
+              dense
+              no-caps
+              size="sm"
               icon="picture_as_pdf"
               label="Report"
               :loading="downloadingDossier"
@@ -411,12 +441,12 @@ async function toggleSave(): Promise<void> {
               <div class="developed-head">Already developed — {{ developedUse }}</div>
               <div class="developed-note">{{ developedNote }}</div>
             </q-banner>
-            <VerdictHero
+            <VerdictSection
               v-if="verdict"
               :verdict="verdict"
               :developed="isDeveloped"
               :checklist="checklist"
-              @explain="whyOpen = true"
+              :cited-section="envelope?.cited_section ?? null"
             />
             <q-banner v-else-if="!loading" dense class="bg-grey-2 rounded-borders">
               <template #avatar><q-icon name="info" color="grey-7" /></template>
@@ -426,12 +456,6 @@ async function toggleSave(): Promise<void> {
               </template>
             </q-banner>
             <SnapshotPanel :parcel-number="detail.parcel_number" />
-            <VerdictPanel
-              v-if="verdict"
-              :verdict="verdict"
-              :developed="isDeveloped"
-              :checklist="checklist"
-            />
             <DevelopmentProgramPanel />
             <DistressPanel />
             <ChecklistPanel />
