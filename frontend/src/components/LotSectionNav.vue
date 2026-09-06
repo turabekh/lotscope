@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
+import { scrollToSection } from '@/lib/scrollToSection'
 import type { LotSection } from '@/lib/sourceLinks'
 
 const props = defineProps<{ sections: { id: LotSection; label: string }[] }>()
@@ -31,18 +32,7 @@ onMounted(() => {
 onBeforeUnmount(() => observer?.disconnect())
 
 async function go(id: LotSection): Promise<void> {
-  const node = document.getElementById(id)
-  if (!node) return
-  node.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  // The evidence sections load on their own, so the page grows under a scroll that has
-  // already been aimed. Re-aim it a few times while the layout settles, then stop —
-  // beyond that the reader is the one scrolling.
-  const settled = node.getBoundingClientRect().top
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    const drift = Math.abs(node.getBoundingClientRect().top - settled)
-    if (drift > 24) node.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  await scrollToSection(id)
 }
 </script>
 

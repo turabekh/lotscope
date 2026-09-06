@@ -4,6 +4,7 @@ import { computed, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import MapView from '@/components/MapView.vue'
+import { scrollToSection } from '@/lib/scrollToSection'
 import { isLotSection } from '@/lib/sourceLinks'
 import ParcelDossier from '@/components/ParcelDossier.vue'
 import { useParcelStore } from '@/stores/parcel'
@@ -30,14 +31,7 @@ async function scrollToHash(): Promise<void> {
   const anchor = route.hash.replace('#', '')
   if (!anchor || !isLotSection(anchor)) return
   await nextTick()
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const node = document.getElementById(anchor)
-    if (node) {
-      node.scrollIntoView({ block: 'start' })
-      return
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
+  await scrollToSection(anchor)
 }
 
 function goBack(): void {

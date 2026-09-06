@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watchEffect } from 'vue'
 
 import ParcelDossier from '@/components/ParcelDossier.vue'
 import type { LotSection } from '@/lib/sourceLinks'
+import { scrollToSection } from '@/lib/scrollToSection'
 import { useParcelStore } from '@/stores/parcel'
 
 const props = defineProps<{
@@ -25,16 +26,7 @@ async function load(): Promise<void> {
   // Open on the section the Analyst's link named, so evidence for a violation opens on
   // the violations rather than at the top of the lot.
   await nextTick()
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    // Scoped to the drawer: an id that happens to exist elsewhere on the page is not this
-    // lot's section, and scrolling to it would move something the reader is not looking at.
-    const node = root.value?.querySelector(`#${props.section}`)
-    if (node) {
-      node.scrollIntoView({ block: 'start' })
-      return
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
+  await scrollToSection(props.section, root.value)
 }
 watchEffect(() => void load())
 </script>
