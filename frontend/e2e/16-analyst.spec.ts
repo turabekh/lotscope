@@ -1,16 +1,22 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { registerAndSettle } from './support/app'
+import { registerAndSettle, SEEDED } from './support/app'
 
-/** One SSE stream: two tool calls and a streamed answer, exactly as the runtime emits them. */
+/**
+ * One SSE stream: a tool call and a streamed answer, exactly as the runtime emits them.
+ *
+ * The parcel is a seeded fixture. A real Philadelphia parcel number passes only on a
+ * machine holding the full dataset — CI holds six fixtures, so the drawer opened on an
+ * error state there and the section it was meant to land on never rendered.
+ */
 const STREAM = [
   'retry: 3000\n\n',
-  'event: tool_started\ndata: {"tool":"live_li","input":{"parcel":"phl:191357500"}}\n\n',
+  'event: tool_started\ndata: {"tool":"live_li","input":{"parcel":"phl:99900001"}}\n\n',
   'event: tool_finished\ndata: {"tool":"live_li","data":{"live":{"open_violations":6},' +
     '"stored":{"open_violations":0},"diff":[{"field":"open_violations"}]},' +
     '"sources":[{"name":"violations (live)","url":"https://phl.carto.com/api/v2/sql?q=x",' +
     '"fetched_at":"2026-09-05T13:38:58Z","ingested_at":null,"computed_at":null},' +
-    '{"name":"atlas","url":"https://atlas.phila.gov/191357500#violations","fetched_at":null,' +
+    '{"name":"atlas","url":"https://atlas.phila.gov/99900001#violations","fetched_at":null,' +
     '"ingested_at":null,"computed_at":null}],"unverified":["L&I records what was reported."],' +
     '"duration_ms":812}\n\n',
   'event: text_delta\ndata: {"text":"L&I shows 6 open "}\n\n',
@@ -39,7 +45,7 @@ async function mockAnalyst(page: Page): Promise<void> {
 }
 
 async function ask(page: Page): Promise<void> {
-  await page.locator('[data-test="composer-input"]').fill('what is open on 3862 Aspen St')
+  await page.locator('[data-test="composer-input"]').fill('what is open on 1500 E2E Fixture Way')
   await page.locator('[data-test="composer-send"]').click()
   await expect(page.locator('[data-test="analyst-answer"]')).toContainText('L&I shows 6 open')
 }
@@ -128,6 +134,9 @@ test('evidence opens on the section the tool actually read', async ({ page }) =>
 
   const drawer = page.locator('[data-test="evidence-drawer"]')
   await expect(drawer).toBeVisible()
+  // The lot itself loaded, not the drawer's error state — a drawer that opened on a parcel
+  // the database does not hold has no sections to land on.
+  await expect(drawer).toContainText(SEEDED.delinquent.address)
 
   // live_li read the violations, so its lot link is anchored there and the drawer lands
   // on that section rather than at the top of the lot.
