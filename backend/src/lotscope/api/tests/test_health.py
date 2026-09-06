@@ -15,9 +15,19 @@ def _with_email(app: FastAPI) -> None:
     app.dependency_overrides[get_settings] = lambda: settings
 
 
+class _StubResult:
+    def all(self) -> list[object]:
+        return []
+
+
 class _StubSession:
-    async def execute(self, *_args: object, **_kwargs: object) -> object:
-        return object()
+    """A database that answers, and answers "nothing"."""
+
+    async def execute(self, *_args: object, **_kwargs: object) -> _StubResult:
+        return _StubResult()
+
+    async def scalar(self, *_args: object, **_kwargs: object) -> None:
+        return None
 
 
 class _StubRedis:

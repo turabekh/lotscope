@@ -31,6 +31,7 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "build_daily_signals",
         "send_morning_briefs",
         "summarise_conversations",
+        "send_error_digest_email",
     }
 
 
