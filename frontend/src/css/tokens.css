@@ -57,6 +57,19 @@
   --lot-scroll-thumb-hover: #aebccd;
 }
 
+body {
+  /* The screens built in Phase 3 name their colours --ls-*. They are the same palette,
+     so they resolve through the --lot-* tokens above and follow the theme with them. */
+  --ls-surface: var(--lot-surface);
+  --ls-line: var(--lot-border);
+  --ls-muted: var(--lot-muted);
+  --ls-link: var(--lot-accent-ink);
+  --ls-selected: var(--lot-surface-2);
+  --ls-accent: var(--lot-accent);
+  --ls-negative: var(--lot-sev-high);
+  --ls-topbar: 48px;
+}
+
 body.body--dark {
   --lot-bg: #0b1220;
   --lot-surface: #161f31;
