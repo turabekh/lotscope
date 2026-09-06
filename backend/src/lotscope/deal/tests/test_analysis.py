@@ -216,3 +216,35 @@ def test_an_assessed_fallback_is_not_called_a_modelled_value() -> None:
         ASSUMPTIONS,
     )
     assert "modelled land value" in " ".join(modelled.reasons)
+
+
+def _at_margin(margin: float) -> DealAnalysis:
+    return analyze_deal(
+        _inputs(),
+        DealAssumptions(
+            construction_cost_per_sqft=175.0,
+            soft_cost_pct=0.15,
+            selling_cost_pct=0.07,
+            target_margin=margin,
+            default_unit_sqft=1200.0,
+            max_unit_sqft=3000.0,
+        ),
+    )
+
+
+def test_a_stricter_margin_lowers_what_the_lot_is_worth_paying() -> None:
+    """The offer is computed from the margin, so changing one has to move the other.
+
+    This lives here rather than in a browser test: whether the figure moves on screen for
+    a given fixture depends on that fixture being feasible, and the e2e seed is not. The
+    arithmetic is the thing being claimed, and it is the same everywhere.
+    """
+    permissive = _at_margin(0.20).max_allowable_offer
+    strict = _at_margin(0.35).max_allowable_offer
+
+    assert permissive > strict
+
+
+def test_the_offer_moves_monotonically_as_the_margin_rises() -> None:
+    offers = [_at_margin(margin).max_allowable_offer for margin in (0.10, 0.20, 0.30, 0.40)]
+    assert offers == sorted(offers, reverse=True)
