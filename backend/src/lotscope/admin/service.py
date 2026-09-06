@@ -174,6 +174,40 @@ async def mark_job_running(session: AsyncSession, job_run_id: int) -> JobRun:
     return run
 
 
+INTERRUPTED_STATUS = "interrupted"
+_INTERRUPTED_ERROR = (
+    "The worker process that was running this job stopped before it could write a result. "
+    "Recorded as interrupted when the worker next started."
+)
+
+
+async def reap_orphaned_runs(session: AsyncSession) -> int:
+    """Close every run that says it is running while nobody is running it.
+
+    Only the process that opened a `job_run` row ever closes it, so a worker that dies
+    without a chance to write — a container recreated under a deploy, an OOM kill, a hard
+    restart — leaves the row saying `running` for ever. Nothing later contradicts it: the
+    next night's run opens its own row, and the stale one sits there claiming a job is in
+    flight months after the process that claimed it stopped existing.
+
+    This runs at worker startup, where the claim is decidable. One worker serves this
+    deployment, so at the moment it starts nothing it owns can be running yet, and every
+    row still marked running belongs to a process that is gone. `queued` rows are left
+    alone: those are waiting in Redis, which survives a restart, and the worker is about
+    to pick them up.
+    """
+    orphans = (
+        (await session.execute(select(JobRun).where(JobRun.status == "running"))).scalars().all()
+    )
+    now = datetime.now(UTC)
+    for run in orphans:
+        run.status = INTERRUPTED_STATUS
+        run.finished_at = now
+        run.error = _INTERRUPTED_ERROR
+    await session.flush()
+    return len(orphans)
+
+
 async def mark_job_finished(
     session: AsyncSession,
     job_run_id: int,

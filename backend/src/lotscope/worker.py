@@ -16,7 +16,7 @@ from lotscope.admin.catalog import (
     parse_params,
 )
 from lotscope.admin.models import JobRun
-from lotscope.admin.service import mark_job_finished, mark_job_running
+from lotscope.admin.service import mark_job_finished, mark_job_running, reap_orphaned_runs
 from lotscope.agent.brief import build_and_brief, send_daily_briefs
 from lotscope.agent.client import AnthropicToolClient
 from lotscope.agent.summarise import summarise_long_conversations
@@ -58,6 +58,20 @@ async def startup(ctx: dict[str, Any]) -> None:
     ctx["settings"] = settings
     ctx["engine"] = engine
     ctx["session_factory"] = create_session_factory(engine)
+    await _reap_orphans(ctx["session_factory"])
+
+
+async def _reap_orphans(session_factory: async_sessionmaker[AsyncSession]) -> None:
+    """Nothing this worker owns is running yet, so anything that says it is, is not."""
+    try:
+        async with session_factory() as session:
+            reaped = await reap_orphaned_runs(session)
+            await session.commit()
+    except Exception as exc:
+        _logger.warning("orphaned_runs_not_reaped", error=str(exc))
+        return
+    if reaped:
+        _logger.warning("reaped_orphaned_runs", count=reaped)
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
