@@ -443,6 +443,16 @@ export const api = {
     return request('/packets')
   },
 
+  getProvision(provisionId: string): Promise<{
+    id: string
+    cite: string
+    heading: string | null
+    text: string
+    source_url: string
+  }> {
+    return request(`/provisions/${encodeURIComponent(provisionId)}`)
+  },
+
   getConversations(): Promise<ConversationRead[]> {
     return request('/analyst/conversations')
   },
