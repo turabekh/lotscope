@@ -23,7 +23,7 @@ interface NavLink {
 
 const sections = computed<NavLink[]>(() => [
   { label: 'Analyst', icon: 'forum', name: 'analyst' },
-  { label: 'Deals', icon: 'view_kanban', name: 'deals' },
+  { label: 'Deals', icon: 'table_rows', name: 'deals' },
   { label: 'Packets', icon: 'description', name: 'packets', badge: () => alerts.value },
 ])
 

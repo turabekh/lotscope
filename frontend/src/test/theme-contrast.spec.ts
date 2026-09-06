@@ -11,7 +11,6 @@ const NOT_YET_MIGRATED = new Set([
   'pages/AccountPage.vue',
   'pages/AdminPage.vue',
   'pages/AuthPage.vue',
-  'pages/DealsPage.vue',
 ])
 
 function vueFilesUnder(dir: string): string[] {

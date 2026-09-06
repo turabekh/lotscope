@@ -69,7 +69,7 @@ function goAdmin(): void {
         </q-item>
         <q-separator />
         <q-item v-close-popup clickable @click="goDeals">
-          <q-item-section avatar><q-icon name="view_kanban" /></q-item-section>
+          <q-item-section avatar><q-icon name="table_rows" /></q-item-section>
           <q-item-section>Deals</q-item-section>
         </q-item>
         <q-item v-close-popup clickable @click="goAccount">

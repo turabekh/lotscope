@@ -267,6 +267,10 @@ export type DealStage = 'lead' | 'diligence' | 'offer' | 'under_contract' | 'clo
 export interface DealItem {
   id: number
   parcel_number: string
+  sale_date?: string | null
+  agent_run_id?: number | null
+  analyst_note?: string | null
+  analyst_note_at?: string | null
   stage: DealStage
   note: string | null
   target_price: number | null
