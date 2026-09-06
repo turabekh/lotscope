@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 from pydantic import BaseModel, Field
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.agent.envelope import Source, ToolResult
@@ -618,3 +618,69 @@ async def test_a_tool_that_breaks_the_session_does_not_stop_the_run(
         text("SELECT count(*) FROM agent_step WHERE run_id = :r"), {"r": run.id}
     )
     assert steps == 2
+
+
+async def test_a_run_that_crosses_the_daily_budget_stops_and_says_so_in_the_thread(
+    db_session: AsyncSession,
+) -> None:
+    """The buyer must read why the answer stopped, in the thread, not in a log."""
+    _, run = await _run(db_session, "budget-thread@example.com")
+    message = "You have used $3.02 of your $3.00 daily Analyst budget, so this run stopped here."
+    seen: list[tuple[int, int]] = []
+
+    async def guard(input_tokens: int, output_tokens: int) -> str | None:
+        seen.append((input_tokens, output_tokens))
+        # Room for the first turn, none for the second.
+        return None if len(seen) == 1 else message
+
+    model = FakeModel([_tool_turn(), _text_turn()])
+    events = await _collect(
+        run_agent(
+            db_session,
+            model,
+            run,
+            context=ToolContext(user_id=run.user_id, buy_box={}, owned_parcels=()),
+            registry=_registry(),
+            spend_guard=guard,
+        )
+    )
+
+    assert run.stop_reason == "daily_budget"
+    assert run.answer is not None
+    assert message in run.answer
+    assert any(
+        event.kind == "budget" and event.payload.get("message") == message for event in events
+    )
+    steps = (
+        (
+            await db_session.execute(
+                select(AgentStep).where(AgentStep.run_id == run.id).order_by(AgentStep.sequence)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert any(step.kind == "text" and step.text == message for step in steps)
+    # The guard saw what the first turn actually cost, not zero.
+    assert seen[1][0] > 0
+
+
+async def test_a_run_inside_the_budget_is_never_interrupted(db_session: AsyncSession) -> None:
+    _, run = await _run(db_session, "budget-ok@example.com")
+
+    async def guard(input_tokens: int, output_tokens: int) -> str | None:
+        return None
+
+    await _collect(
+        run_agent(
+            db_session,
+            FakeModel([_text_turn("It is vacant.")]),
+            run,
+            context=ToolContext(user_id=run.user_id, buy_box={}, owned_parcels=()),
+            registry=_registry(),
+            spend_guard=guard,
+        )
+    )
+
+    assert run.stop_reason == "end_turn"
+    assert run.status == "succeeded"

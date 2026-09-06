@@ -148,9 +148,7 @@ async def capture(
         # A fresh session on purpose: the one the request or job was using is very
         # likely inside a failed transaction, and writing the error there would lose it.
         async with session_factory() as session:
-            await record_error_event(
-                session, exc, source=source, where=where, context=context
-            )
+            await record_error_event(session, exc, source=source, where=where, context=context)
             await session.commit()
     except Exception as cause:
         _logger.error("error_event_not_recorded", where=where, error=str(cause))

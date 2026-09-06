@@ -185,9 +185,7 @@ async def generate_brief(
     if user is not None:
         verdict = await check_analyst_budget(session, user, settings, source=JOB_SOURCE)
         if not verdict.allowed:
-            _logger.warning(
-                "brief_skipped_over_budget", user_id=user_id, reason=verdict.reason
-            )
+            _logger.warning("brief_skipped_over_budget", user_id=user_id, reason=verdict.reason)
             return None
 
     text_body, run_id, _, _ = await _write_brief(

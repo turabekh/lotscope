@@ -1,5 +1,5 @@
 from asyncio import CancelledError
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from sqlalchemy import text
@@ -120,7 +120,7 @@ async def test_the_worker_reaps_on_the_way_up(db_session: AsyncSession) -> None:
     )
     await db_session.flush()
 
-    await _reap_orphans(_Factory(db_session))
+    await _reap_orphans(cast("Any", _Factory(db_session)))
 
     rows = await _runs(db_session)
     assert rows[0].status == "interrupted"

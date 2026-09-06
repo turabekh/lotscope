@@ -154,9 +154,7 @@ async def run_events(
             )
             await run_session.commit()
         async with factory() as alert_session:
-            await maybe_alert_global_budget(
-                alert_session, get_email_sender(settings), settings
-            )
+            await maybe_alert_global_budget(alert_session, get_email_sender(settings), settings)
             await alert_session.commit()
 
     return StreamingResponse(
