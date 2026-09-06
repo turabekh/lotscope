@@ -6,6 +6,7 @@ from lotscope.agent.models import AgentConversation, AgentRun, AgentStep
 from lotscope.agent.signals import AnalystBrief, AnalystSignal
 from lotscope.ai.models import Document
 from lotscope.assemblage.models import ParcelAssemblage
+from lotscope.budget.models import AnalystUsage
 from lotscope.buybox.models import BuyBox
 from lotscope.buyers.models import BuyerProfile
 from lotscope.core.db import Base
@@ -17,7 +18,7 @@ from lotscope.historic.models import HistoricDistrict
 from lotscope.ingestion.models import DatasetFreshness
 from lotscope.neighborhoods.models import Neighborhood
 from lotscope.notifications.models import PushSubscription
-from lotscope.ops.models import MarketStats, OpsAlertState
+from lotscope.ops.models import ErrorEvent, MarketStats, OpsAlertState
 from lotscope.packet.models import SaleChangeNotice, SalePacket
 from lotscope.parcels.models import Parcel
 from lotscope.pipeline.models import Deal, DealActivity
@@ -42,6 +43,7 @@ __all__ = [
     "AnalystBrief",
     "AnalystMemory",
     "AnalystSignal",
+    "AnalystUsage",
     "BuyBox",
     "BuyerInvite",
     "BuyerProfile",
@@ -53,6 +55,7 @@ __all__ = [
     "DeedRestriction",
     "DiligenceRun",
     "Document",
+    "ErrorEvent",
     "FloodZone",
     "HistoricDistrict",
     "JobRun",

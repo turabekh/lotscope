@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-4-6"
     anthropic_summary_model: str = "claude-haiku-4-5-20251001"
 
+    # What the Analyst may spend in a day. The per-user pair is a default an admin can
+    # override per account; the global figure is the platform's own ceiling and has no
+    # override, because the point of a last line is that it is the last line.
+    analyst_daily_usd_per_user: float = 3.0
+    analyst_daily_runs_per_user: int = 40
+    analyst_daily_usd_global: float = 50.0
+    analyst_global_alert_fraction: float = 0.8
+
     voyage_api_key: str | None = None
     voyage_url: str = "https://api.voyageai.com/v1/embeddings"
     embedding_model: str = "voyage-3"
@@ -116,6 +124,13 @@ class Settings(BaseSettings):
     # Live verification runs while a buyer waits, so it gets a short leash and no retries.
     live_verify_timeout_seconds: float = 8.0
     live_verify_cache_seconds: int = 900
+
+    # Where unhandled exceptions go. With a DSN they go to Sentry; without one they are
+    # collected in the database and mailed to the admins as a deduped digest, because an
+    # error nobody is told about is an error nobody fixes.
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 0.0
+    error_digest_minutes: int = 15
 
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8080"]
 

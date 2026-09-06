@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -6,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     UniqueConstraint,
     func,
@@ -34,6 +36,10 @@ class User(Base, TimestampMixin):
         String(10), nullable=False, default="weekly", server_default="weekly"
     )
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Null means the platform default. Set per account by an admin; 0 stops this
+    # account's Analyst entirely, which is how a runaway is contained without a deploy.
+    analyst_daily_usd: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
+    analyst_daily_runs: Mapped[int | None] = mapped_column(Integer, nullable=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     email_verification_nonce: Mapped[str | None] = mapped_column(String(64))
     entity_name: Mapped[str | None] = mapped_column(String(255))
