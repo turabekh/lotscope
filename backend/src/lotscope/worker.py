@@ -27,6 +27,7 @@ from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.errors import NotFoundError
 from lotscope.core.logging import configure_logging, get_logger
 from lotscope.core.market import MARKET_CODE
+from lotscope.diligence.service import complete_run
 from lotscope.distress.jobs import recompute_all_distress
 from lotscope.ingestion.carto import CartoClient
 from lotscope.ingestion.jobs import INGEST_JOBS, ingest_market
@@ -88,6 +89,24 @@ async def sweep_ingestion_retention(ctx: dict[str, Any]) -> int:
         events_deleted=result.events_deleted,
     )
     return result.raw_deleted + result.events_deleted
+
+
+async def build_diligence_report(ctx: dict[str, Any], run_id: int) -> int:
+    async with ctx["session_factory"]() as session:
+        try:
+            run = await complete_run(session, run_id, redis=ctx.get("redis"))
+        except Exception as cause:
+            await session.commit()
+            _logger.error(
+                "diligence_failed",
+                run_id=run_id,
+                error=str(cause),
+                error_type=type(cause).__name__,
+            )
+            raise
+        await session.commit()
+        _logger.info("diligence_ready", run_id=run_id, path=run.pdf_path)
+    return 1
 
 
 async def generate_sale_packet(ctx: dict[str, Any], packet_id: int) -> int:
@@ -441,6 +460,7 @@ class WorkerSettings:
         run_admin_job,
         sweep_ingestion_retention,
         func(generate_sale_packet, timeout=BULK_JOB_TIMEOUT),
+        func(build_diligence_report, timeout=BULK_JOB_TIMEOUT),
         func(send_daily_packet_emails, timeout=BULK_JOB_TIMEOUT),
         func(send_sheriff_change_emails, timeout=BULK_JOB_TIMEOUT),
         func(build_daily_signals, timeout=BULK_JOB_TIMEOUT),

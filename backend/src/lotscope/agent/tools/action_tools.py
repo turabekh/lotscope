@@ -969,3 +969,61 @@ async def export_csv_tool(
             else []
         ),
     )
+
+
+class DiligenceInput(BaseModel):
+    parcel: str = Field(
+        description="A parcel number such as phl:191357500, or a Philadelphia street address."
+    )
+
+
+@tool(
+    name="run_diligence",
+    description=(
+        "Run the pre-closing checklist on one parcel: title chain, delinquency and who the "
+        "debt names, open L&I cases, unsafe structures next door, conservatorship, historic "
+        "designation, overlays and RCOs, flood, public-owner adjacency, probate signals in "
+        "the deed parties, party walls, utilities, and any sheriff listing. Reads the deed "
+        "index and L&I live. Takes about a minute. Sold at $199; run it when a buyer asks "
+        "what they would be taking on, or is close to bidding on one lot."
+    ),
+    input_model=DiligenceInput,
+    long_running=True,
+)
+async def run_diligence_tool(
+    session: AsyncSession, context: ToolContext, payload: DiligenceInput
+) -> ToolResult:
+    from lotscope.diligence.service import complete_run, start_run
+
+    row = await _resolve(session, payload.parcel)
+    if row is None:
+        return empty(f"No Philadelphia parcel matches {payload.parcel!r}.")
+
+    run = await start_run(session, context.user_id, row.parcel_number)
+    await complete_run(session, run.id, redis=context.redis)
+    await session.refresh(run)
+    report = run.report_json or {}
+    lines = report.get("lines", [])
+
+    return ToolResult(
+        data={
+            "diligence_id": run.id,
+            "parcel_number": row.parcel_number,
+            "address": row.address,
+            "flags": [line for line in lines if line.get("status") == "flag"],
+            "unverified": [line for line in lines if line.get("status") == "unverified"],
+            "clear": sum(1 for line in lines if line.get("status") == "clear"),
+            "file": {
+                "label": f"Lot Diligence — {row.address or row.parcel_number}",
+                "href": f"/diligence/{run.id}/download",
+            },
+        },
+        sources=[
+            Source(name="lotscope_diligence", computed_at=run.generated_at),
+            Source(name="atlas", url=urls.atlas(row.parcel_number)),
+        ],
+        unverified=[
+            "A checklist is not a title search. Water Revenue and PGW liens are not in any "
+            "dataset LotScope holds, and neither is an Act 135 conservatorship petition.",
+        ],
+    )
