@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.admin.schemas import AdminUserUpdate
 from lotscope.admin.service import (
     list_datasets,
+    list_job_runs,
     list_users,
     platform_overview,
     update_user,
@@ -77,3 +78,23 @@ async def test_update_user_missing_raises(db_session: AsyncSession) -> None:
     await _seed(db_session)
     with pytest.raises(NotFoundError):
         await update_user(db_session, 999999, AdminUserUpdate(tier="pro"))
+
+
+async def test_a_cron_run_can_be_listed_even_though_nobody_triggered_it(
+    db_session: AsyncSession,
+) -> None:
+    """Production 500ed on /admin/jobs/runs for exactly this: crons have no triggerer."""
+    await db_session.execute(
+        text(
+            "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at, "
+            "duration_ms, triggered_by) VALUES ('cron:ingest_all', 'ingest_all', 'cron', "
+            "'success', now(), now(), 3437, NULL)"
+        )
+    )
+    await db_session.flush()
+
+    rows = await list_job_runs(db_session, limit=10)
+
+    assert [row.label for row in rows] == ["ingest_all"]
+    assert rows[0].triggered_by is None
+    assert rows[0].duration_ms == 3437

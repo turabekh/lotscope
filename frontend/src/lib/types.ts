@@ -1056,7 +1056,7 @@ export interface JobRunSummary {
   result_count: number | null
   duration_ms: number | null
   error: string | null
-  triggered_by: number
+  triggered_by: number | null
   created_at: string
 }
 

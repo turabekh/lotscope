@@ -59,7 +59,9 @@ class JobRunSummary(BaseModel):
     result_count: int | None
     duration_ms: int | None = None
     error: str | None
-    triggered_by: int
+    # Null for a cron: nobody triggered it. The column has always allowed that;
+    # this schema did not, and /admin/jobs/runs 500ed on any page holding one.
+    triggered_by: int | None
     created_at: datetime
 
 
