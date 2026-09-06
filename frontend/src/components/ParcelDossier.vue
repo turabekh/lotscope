@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import AssemblagePanel from '@/components/AssemblagePanel.vue'
 import ChecklistPanel from '@/components/ChecklistPanel.vue'
@@ -29,7 +29,8 @@ import OverlayPanel from '@/components/OverlayPanel.vue'
 import SubdivisionPanel from '@/components/SubdivisionPanel.vue'
 import { ApiError, api } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
-import type { DistressTier } from '@/lib/types'
+import type { DiligenceRecord, DistressTier } from '@/lib/types'
+import { useAuthStore } from '@/stores/auth'
 import { useParcelStore } from '@/stores/parcel'
 import { STAGES, usePipelineStore } from '@/stores/pipeline'
 import { useWatchlistStore } from '@/stores/watchlist'
@@ -38,6 +39,7 @@ const store = useParcelStore()
 const { detail, verdict, envelope, checklist, nextSheriffSale, loading, error, errorStatus } =
   storeToRefs(store)
 const watchlist = useWatchlistStore()
+const auth = useAuthStore()
 const pipeline = usePipelineStore()
 
 const props = withDefaults(defineProps<{ showBack?: boolean }>(), { showBack: false })
@@ -121,6 +123,80 @@ const motivation = computed(() => {
   return style ? { ...style, score: result.score } : null
 })
 
+// Diligence: a comped buyer runs it and downloads it; everyone else sees the price and a
+// button that says why it will not open yet, rather than one that fails at checkout.
+const diligence = ref<DiligenceRecord | null>(null)
+const diligenceBusy = ref(false)
+const billingConfigured = ref(false)
+
+const comped = computed(() => {
+  const until = auth.user?.comp_until
+  return until !== null && until !== undefined && new Date(until) > new Date()
+})
+
+const diligenceLabel = computed(() => {
+  if (diligenceBusy.value) return 'Running diligence'
+  if (diligence.value?.status === 'ready') return 'Diligence — download'
+  return 'Diligence $199'
+})
+
+const diligenceDisabled = computed(
+  () => !comped.value && !billingConfigured.value && diligence.value?.status !== 'ready',
+)
+
+async function loadDiligence(parcelNumber: string): Promise<void> {
+  diligence.value = null
+  try {
+    const [existing, prices] = await Promise.all([
+      api.getDiligenceForParcel(parcelNumber),
+      api.getCheckoutPrices(),
+    ])
+    diligence.value = existing
+    billingConfigured.value = prices.configured
+  } catch {
+    diligence.value = null
+  }
+}
+
+async function onDiligence(): Promise<void> {
+  const parcel = detail.value?.parcel_number
+  if (!parcel || diligenceBusy.value) return
+  if (diligence.value?.status === 'ready') {
+    try {
+      await api.downloadDiligence(diligence.value.id, parcel)
+    } catch (cause) {
+      const message = cause instanceof ApiError ? cause.message : 'Could not download it.'
+      $q.notify({ message, color: 'negative', icon: 'error' })
+    }
+    return
+  }
+  diligenceBusy.value = true
+  try {
+    const started = await api.requestDiligence(parcel)
+    // Two live reads and a render: it is a job, so the button waits for it.
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+      const current = await api.getDiligence(started.id)
+      if (current.status !== 'pending') {
+        diligence.value = current
+        break
+      }
+    }
+    if (diligence.value?.status === 'failed') {
+      $q.notify({
+        message: diligence.value.error ?? 'The checklist could not be built.',
+        color: 'negative',
+        icon: 'error',
+      })
+    }
+  } catch (cause) {
+    const message = cause instanceof ApiError ? cause.message : 'Could not run diligence.'
+    $q.notify({ message, color: 'negative', icon: 'error' })
+  } finally {
+    diligenceBusy.value = false
+  }
+}
+
 async function downloadDossier(): Promise<void> {
   if (detail.value === null || downloadingDossier.value) return
   downloadingDossier.value = true
@@ -166,6 +242,16 @@ onMounted(() => {
   void watchlist.ensureLoaded()
   void pipeline.ensureLoaded()
 })
+
+// A checklist already bought for this lot is a download, not a purchase, so the button
+// has to know which lot it is looking at.
+watch(
+  () => detail.value?.parcel_number,
+  (parcelNumber) => {
+    if (parcelNumber) void loadDiligence(parcelNumber)
+  },
+  { immediate: true },
+)
 
 async function toggleSave(): Promise<void> {
   if (detail.value === null || saving.value) return
@@ -275,12 +361,20 @@ async function toggleSave(): Promise<void> {
               no-caps
               size="sm"
               icon="fact_check"
-              label="Diligence $199"
-              aria-label="Lot diligence, not available yet"
-              disable
+              :label="diligenceLabel"
+              :loading="diligenceBusy"
+              :disable="diligenceDisabled"
+              aria-label="Lot diligence"
               data-test="parcel-action-diligence"
+              @click="onDiligence"
             >
-              <q-tooltip>Lot Diligence arrives in Phase 5.</q-tooltip>
+              <q-tooltip v-if="diligenceDisabled">Purchasing opens soon.</q-tooltip>
+              <q-tooltip v-else-if="diligence?.status === 'ready'">
+                Checklist built {{ diligence.generated_at?.slice(0, 10) }} — download the PDF.
+              </q-tooltip>
+              <q-tooltip v-else>
+                A pre-closing checklist on this lot: title, liens, cases, neighbours.
+              </q-tooltip>
             </q-btn>
             <q-btn
               class="act"

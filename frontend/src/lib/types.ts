@@ -819,6 +819,7 @@ export interface User {
   subscription_status: string | null
   digest_frequency: 'off' | 'weekly' | 'daily'
   onboarded_at: string | null
+  comp_until: string | null
   created_at: string
   entity_name?: string | null
   signer_name?: string | null
@@ -1314,6 +1315,16 @@ export interface PacketRecord {
   error: string | null
   generated_at: string | null
   download_url: string | null
+}
+
+export interface DiligenceRecord {
+  id: number
+  parcel_number: string
+  status: 'pending' | 'ready' | 'failed'
+  error: string | null
+  generated_at: string | null
+  download_url: string | null
+  price_cents: number
 }
 
 export interface CheckoutPrices {

@@ -1,6 +1,7 @@
 import type {
   AnalystEnvelope,
   DealOverrides,
+  DiligenceRecord,
   PolicyDocument,
   PolicySummary,
   CorrectionRecord,
@@ -469,6 +470,22 @@ export const api = {
   // Null is an answer: nothing changed overnight.
   todaysBrief(): Promise<BriefRecord | null> {
     return request('/briefs/today')
+  },
+
+  requestDiligence(parcel: string): Promise<DiligenceRecord> {
+    return request('/diligence', { method: 'POST', body: JSON.stringify({ parcel }) })
+  },
+  getDiligence(runId: number): Promise<DiligenceRecord> {
+    return request(`/diligence/${runId}`)
+  },
+  getDiligenceForParcel(parcelNumber: string): Promise<DiligenceRecord | null> {
+    return request(`/diligence/parcel/${encodeURIComponent(parcelNumber)}`)
+  },
+  downloadDiligence(runId: number, parcelNumber: string): Promise<void> {
+    return downloadFile(
+      `/diligence/${runId}/download`,
+      `lotscope-diligence-${parcelNumber.replace(':', '-')}.pdf`,
+    )
   },
 
   downloadPacket(packetId: number, saleDate: string): Promise<void> {

@@ -31,6 +31,7 @@ const user = {
   subscription_status: null,
   digest_frequency: 'weekly' as const,
   onboarded_at: null,
+  comp_until: null,
   created_at: '',
 }
 

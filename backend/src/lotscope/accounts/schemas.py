@@ -31,6 +31,9 @@ class UserRead(BaseModel):
     subscription_status: str | None
     digest_frequency: str
     onboarded_at: datetime | None
+    # When a buyer's access is comped to, so a screen can offer what they can actually
+    # have rather than a price it will refuse to take.
+    comp_until: datetime | None
     created_at: datetime
     entity_name: str | None
     signer_name: str | None
