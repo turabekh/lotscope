@@ -60,12 +60,19 @@ test('editing an assumption moves the offer', async ({ page }) => {
 
   const mao = page.locator('[data-test="deal-mao"]').first()
   await expect(mao).toBeVisible()
-  const before = await mao.innerText()
 
-  // A higher required margin means less can be paid for the lot. The offer is computed
-  // from the assumptions, so it has to move.
-  await page.getByRole('spinbutton', { name: 'Target margin (%)' }).fill('55')
-  await page.getByRole('button', { name: 'Recompute', exact: true }).click()
+  // Two explicit margins rather than one. The market default is itself a margin, so
+  // filling a single value can silently match it and assert nothing — which is exactly
+  // how this passed locally and failed in CI.
+  const margin = page.getByRole('spinbutton', { name: 'Target margin (%)' })
+  const recompute = page.getByRole('button', { name: 'Recompute', exact: true })
 
-  await expect.poll(async () => mao.innerText(), { timeout: 30000 }).not.toBe(before)
+  await margin.fill('35')
+  await recompute.click()
+  await expect.poll(async () => mao.innerText(), { timeout: 30000 }).not.toBe('')
+  const permissive = await mao.innerText()
+
+  await margin.fill('55')
+  await recompute.click()
+  await expect.poll(async () => mao.innerText(), { timeout: 30000 }).not.toBe(permissive)
 })
