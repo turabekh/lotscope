@@ -19,6 +19,7 @@ from lotscope.core.errors import (
     ValidationError,
 )
 from lotscope.core.logging import get_logger
+from lotscope.core.observability import API_SOURCE, capture
 
 _logger = get_logger("api.errors")
 
@@ -65,6 +66,11 @@ async def _handle_validation_error(request: Request, exc: Exception) -> JSONResp
     return JSONResponse(status_code=422, content=payload.model_dump())
 
 
+def _route_pattern(request: Request) -> str:
+    route = request.scope.get("route")
+    return str(getattr(route, "path", None) or request.url.path)
+
+
 def _apply_cors_headers(request: Request, response: JSONResponse) -> None:
     origin = request.headers.get("origin")
     if origin and origin in get_settings().cors_origins:
@@ -73,12 +79,28 @@ def _apply_cors_headers(request: Request, response: JSONResponse) -> None:
         response.headers["vary"] = "Origin"
 
 
+def _request_context(request: Request) -> dict[str, object]:
+    """What a reader needs to reproduce it: which call, from whom, and which build."""
+    user = getattr(request.state, "user_id", None)
+    return {
+        "method": request.method,
+        "path": request.url.path,
+        "route": _route_pattern(request),
+        "query": str(request.url.query)[:500],
+        "user_id": user,
+        "git_sha": get_settings().git_sha,
+    }
+
+
 async def _handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
-    _logger.error(
-        "unhandled_error",
-        path=request.url.path,
-        error=str(exc),
-        error_type=type(exc).__name__,
+    await capture(
+        exc,
+        source=API_SOURCE,
+        # The route pattern, not the filled-in path, or every parcel number is its own bug.
+        where=f"{request.method} {_route_pattern(request)}",
+        context=_request_context(request),
+        settings=get_settings(),
+        session_factory=getattr(request.app.state, "session_factory", None),
     )
     payload = ErrorResponse(error="InternalError", detail="An unexpected error occurred.")
     response = JSONResponse(status_code=500, content=payload.model_dump())

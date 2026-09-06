@@ -39,6 +39,7 @@ from lotscope.api.watchlist import router as watchlist_router
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging
+from lotscope.core.observability import init_error_reporting
 
 
 @asynccontextmanager
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.settings = settings
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
+    init_error_reporting(settings, "api")
     app.state.redis = Redis.from_url(settings.redis_url)
     app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
     try:

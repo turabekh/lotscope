@@ -122,6 +122,8 @@ async def get_current_user(
         raise AuthError("Account not found or inactive.")
     if user.email_verified_at is None and not _is_verification_exempt(request):
         raise EmailUnverifiedError("Confirm your email address to finish setting up your account.")
+    # So an unhandled 500 can say whose request it was without re-decoding the token.
+    request.state.user_id = user.id
     return user
 
 
