@@ -140,7 +140,7 @@ const overviewCards = computed(() => {
     { label: 'Users', value: o.users_total, icon: 'group' },
     { label: 'Parcels', value: o.parcels_total, icon: 'map' },
     { label: 'Vacant', value: o.parcels_vacant, icon: 'grass' },
-    { label: 'Verdicts', value: o.verdicts_total, icon: 'gavel' },
+    { label: 'Screened lots', value: o.screened_total, icon: 'gavel' },
     { label: 'Deeds', value: o.deeds_total, icon: 'description' },
     { label: 'Saved searches', value: o.saved_searches_total, icon: 'saved_search' },
     { label: 'Neighborhoods', value: o.neighborhoods_total, icon: 'location_city' },

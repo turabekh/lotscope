@@ -48,7 +48,6 @@ class ParcelSummary(BaseModel):
 
 class ParcelSummaryResult(BaseModel):
     parcel_number: str
-    verdict_version: str
     summary: str
     data_coverage: Literal["high", "medium", "low"]
     is_informational: bool

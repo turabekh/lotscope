@@ -22,8 +22,7 @@ def test_long_running_jobs_are_not_left_on_the_arq_default() -> None:
     for name in ("ingest_all", "ingest_dataset"):
         assert timeouts[name] == INGEST_JOB_TIMEOUT
     for name in (
-        "recompute_verdicts",
-        "recompute_vacant_verdicts",
+        "rebuild_screen_index",
         "recompute_distress",
         "recompute_assemblage",
         "recompute_vacancy_confidence",

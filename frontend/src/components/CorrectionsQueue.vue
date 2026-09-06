@@ -117,7 +117,6 @@ onMounted(load)
         <div class="description">{{ record.description }}</div>
 
         <div class="evidence">
-          <span>Verdict {{ record.verdict_version ?? 'unrecorded' }}</span>
           <span>computed {{ formatDate(record.verdict_computed_at) }}</span>
           <span>field state {{ record.field_status ?? 'unrecorded' }}</span>
           <span>source {{ record.source_label ?? 'unrecorded' }}</span>

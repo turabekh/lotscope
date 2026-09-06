@@ -21,7 +21,6 @@ def _detail(**overrides: Any) -> ParcelDetail:
 def _verdict(**overrides: Any) -> VerdictResult:
     base: dict[str, Any] = {
         "parcel_number": "000000001",
-        "verdict_version": "v8",
         "buildability_score": 70.0,
         "opportunity_score": 68.0,
         "summary": "RSA-5: buildable by-right.",

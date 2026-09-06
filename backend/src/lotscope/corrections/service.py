@@ -22,7 +22,6 @@ def _snapshot(verdict: VerdictResult | None, field_name: str | None) -> dict[str
         return {}
     provenance = verdict.field_trust.get(field_name) if field_name else None
     return {
-        "verdict_version": verdict.verdict_version,
         "verdict_computed_at": verdict.computed_at,
         "field_status": provenance.status if provenance else None,
         "source_label": provenance.source_label if provenance else None,

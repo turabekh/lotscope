@@ -1,4 +1,4 @@
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from lotscope.core.errors import ConfigurationError
 
@@ -9,7 +9,6 @@ class UnknownMarketProfileError(ConfigurationError):
 
 @dataclass(frozen=True)
 class DistressScoringProfile:
-    profile_id: str
     market: str
     sheriff_sale_weight: int
     delinquent_weight: int
@@ -30,8 +29,7 @@ class DistressScoringProfile:
     medium_tier: int
 
 
-PHILLY_DISTRESS_V1 = DistressScoringProfile(
-    profile_id="philly-distress-v1",
+DISTRESS_PROFILE = DistressScoringProfile(
     market="phl",
     sheriff_sale_weight=30,
     delinquent_weight=15,
@@ -51,7 +49,3 @@ PHILLY_DISTRESS_V1 = DistressScoringProfile(
     high_tier=60,
     medium_tier=30,
 )
-
-PHILLY_DISTRESS_V2 = replace(PHILLY_DISTRESS_V1, profile_id="philly-distress-v2")
-
-DISTRESS_PROFILE = PHILLY_DISTRESS_V2

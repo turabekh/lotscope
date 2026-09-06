@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import case, func, select, text
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.admin.models import JobRun
@@ -20,7 +20,6 @@ from lotscope.ops.schemas import (
     JobRunRow,
     MarketHealthDetail,
     SheriffCoverage,
-    VerdictVersionCount,
 )
 from lotscope.parcels.models import Parcel
 from lotscope.zoning.models import ZoningStandard
@@ -108,18 +107,18 @@ def _coverage(stats: MarketStats | None) -> CoverageStats:
         return CoverageStats(
             parcel_count=None,
             geometry_pct=None,
-            verdict_pct=None,
+            screened_pct=None,
             vacant_count=None,
-            vacant_with_comp_pct=None,
+            vacant_priced_pct=None,
             computed_at=None,
         )
     return CoverageStats(
         parcel_count=stats.parcel_count,
         geometry_pct=float(stats.geometry_pct) if stats.geometry_pct is not None else None,
-        verdict_pct=float(stats.verdict_pct) if stats.verdict_pct is not None else None,
+        screened_pct=float(stats.screened_pct) if stats.screened_pct is not None else None,
         vacant_count=stats.vacant_count,
-        vacant_with_comp_pct=(
-            float(stats.vacant_with_comp_pct) if stats.vacant_with_comp_pct is not None else None
+        vacant_priced_pct=(
+            float(stats.vacant_priced_pct) if stats.vacant_priced_pct is not None else None
         ),
         computed_at=stats.computed_at,
     )
@@ -204,17 +203,6 @@ async def fleet_overview(session: AsyncSession, now: datetime, git_sha: str) -> 
     return FleetOverview(markets=rows, git_sha=git_sha, generated_at=now)
 
 
-async def _verdict_versions(session: AsyncSession, market_code: str) -> list[VerdictVersionCount]:
-    sql = text(
-        "SELECT v.verdict_version AS version, count(*) AS n "
-        "FROM parcel p LEFT JOIN parcel_verdict v ON v.parcel_number = p.parcel_number "
-        "WHERE p.market_code = :market "
-        "GROUP BY v.verdict_version ORDER BY n DESC"
-    )
-    result = await session.execute(sql, {"market": market_code})
-    return [VerdictVersionCount(verdict_version=row.version, count=int(row.n)) for row in result]
-
-
 async def _recent_jobs(session: AsyncSession, market_code: str, limit: int) -> list[JobRunRow]:
     failed_first = case((JobRun.status == _FAILED, 0), else_=1)
     rows = (
@@ -246,7 +234,6 @@ async def market_health(
         coverage=_coverage(stats),
         zoning_standard_count=standards,
         zoning_district_count=districts,
-        verdict_versions=await _verdict_versions(session, market_code),
         recent_jobs=await _recent_jobs(session, market_code, job_limit),
         generated_at=now,
     )

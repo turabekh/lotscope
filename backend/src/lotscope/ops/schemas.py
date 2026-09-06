@@ -13,9 +13,9 @@ class HealthRollup(BaseModel):
 class CoverageStats(BaseModel):
     parcel_count: int | None
     geometry_pct: float | None
-    verdict_pct: float | None
+    screened_pct: float | None
     vacant_count: int | None
-    vacant_with_comp_pct: float | None
+    vacant_priced_pct: float | None
     computed_at: datetime | None
 
 
@@ -61,11 +61,6 @@ class DatasetHealth(BaseModel):
     row_count: int | None
 
 
-class VerdictVersionCount(BaseModel):
-    verdict_version: str | None
-    count: int
-
-
 class JobRunRow(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -92,6 +87,5 @@ class MarketHealthDetail(BaseModel):
     coverage: CoverageStats
     zoning_standard_count: int
     zoning_district_count: int
-    verdict_versions: list[VerdictVersionCount]
     recent_jobs: list[JobRunRow]
     generated_at: datetime

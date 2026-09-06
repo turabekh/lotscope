@@ -59,4 +59,4 @@ def test_the_two_registries_are_actually_compared() -> None:
     shared = set(_declared_timeouts()) & set(_cron_timeouts())
 
     assert "ingest_all" in shared
-    assert "recompute_verdicts" in shared
+    assert "rebuild_screen_index" in shared

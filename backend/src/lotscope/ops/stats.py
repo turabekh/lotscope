@@ -7,20 +7,20 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.core.market import MARKET_CODE
 from lotscope.ops.models import MarketStats
-from lotscope.verdict.composition import VERDICT_VERSION
 
 _STATS_SQL = text(
     "SELECT "
     "count(*) AS parcel_count, "
     "100.0 * count(*) FILTER (WHERE p.geom_local IS NOT NULL) "
     "  / nullif(count(*), 0) AS geometry_pct, "
-    "100.0 * count(*) FILTER (WHERE v.verdict_version = :vv) "
-    "  / nullif(count(*), 0) AS verdict_pct, "
+    "100.0 * count(*) FILTER (WHERE coalesce(p.is_vacant, false) AND v.parcel_number "
+    "  IS NOT NULL) / nullif(count(*) FILTER (WHERE coalesce(p.is_vacant, false)), 0) "
+    "  AS screened_pct, "
     "count(*) FILTER (WHERE coalesce(p.is_vacant, false)) AS vacant_count, "
     "100.0 * count(*) FILTER (WHERE coalesce(p.is_vacant, false) "
-    "  AND v.value_estimate_low IS NOT NULL) "
-    "  / nullif(count(*) FILTER (WHERE coalesce(p.is_vacant, false)), 0) AS vacant_with_comp_pct "
-    "FROM parcel p LEFT JOIN parcel_verdict v ON v.parcel_number = p.parcel_number "
+    "  AND v.est_margin IS NOT NULL) "
+    "  / nullif(count(*) FILTER (WHERE coalesce(p.is_vacant, false)), 0) AS vacant_priced_pct "
+    "FROM parcel p LEFT JOIN parcel_screen v ON v.parcel_number = p.parcel_number "
     "WHERE p.market_code = :market"
 )
 
@@ -33,15 +33,15 @@ async def snapshot_market_stats(session_factory: async_sessionmaker[AsyncSession
     computed_at = datetime.now(UTC)
     async with session_factory() as session:
         market = MARKET_CODE
-        params = {"market": market, "vv": VERDICT_VERSION}
+        params = {"market": market}
         row = (await session.execute(_STATS_SQL, params)).one()
         values = {
             "market_code": market,
             "parcel_count": int(row.parcel_count or 0),
             "geometry_pct": _round(row.geometry_pct),
-            "verdict_pct": _round(row.verdict_pct),
+            "screened_pct": _round(row.screened_pct),
             "vacant_count": int(row.vacant_count or 0),
-            "vacant_with_comp_pct": _round(row.vacant_with_comp_pct),
+            "vacant_priced_pct": _round(row.vacant_priced_pct),
             "computed_at": computed_at,
         }
         statement = insert(MarketStats).values(**values)

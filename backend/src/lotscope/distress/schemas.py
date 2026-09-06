@@ -17,8 +17,6 @@ class DistressResult(BaseModel):
     parcel_number: str
     score: int
     tier: Tier
-    version: str
-    profile_id: str
     factors: list[DistressFactor]
     sources: list[dict[str, Any]]
     computed_at: datetime

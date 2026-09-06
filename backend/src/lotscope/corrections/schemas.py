@@ -37,7 +37,6 @@ class CorrectionRead(BaseModel):
     reported_by: int
     section: str
     field_name: str | None
-    verdict_version: str | None
     verdict_computed_at: datetime | None
     field_status: str | None
     source_label: str | None

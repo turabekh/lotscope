@@ -1,13 +1,6 @@
-import dataclasses
-
 import pytest
 
-from lotscope.distress.profiles import (
-    DISTRESS_PROFILE,
-    PHILLY_DISTRESS_V1,
-    PHILLY_DISTRESS_V2,
-    DistressScoringProfile,
-)
+from lotscope.distress.profiles import DISTRESS_PROFILE
 from lotscope.distress.scoring import DistressSignals, score_distress
 
 _LegacyFactor = tuple[str, str, int]
@@ -95,12 +88,10 @@ _MATRIX: dict[str, DistressSignals] = {
     ),
 }
 
-_PROFILES = [PHILLY_DISTRESS_V1, PHILLY_DISTRESS_V2]
-
 
 @pytest.mark.parametrize("case", _MATRIX.keys())
-@pytest.mark.parametrize("profile", _PROFILES, ids=lambda p: p.profile_id)
-def test_profile_scoring_matches_legacy(case: str, profile: DistressScoringProfile) -> None:
+def test_profile_scoring_matches_legacy(case: str) -> None:
+    profile = DISTRESS_PROFILE
     signals = _MATRIX[case]
     legacy_score, legacy_tier, legacy_factors = _legacy_score(signals)
     result = score_distress(signals, profile)
@@ -110,40 +101,20 @@ def test_profile_scoring_matches_legacy(case: str, profile: DistressScoringProfi
 
 
 def test_severe_tax_edges_are_inclusive() -> None:
-    at_dollars = score_distress(_MATRIX["severe_due_exactly_10000"], PHILLY_DISTRESS_V1)
-    at_years = score_distress(_MATRIX["severe_years_exactly_3"], PHILLY_DISTRESS_V1)
-    below = score_distress(_MATRIX["just_below_severe_due"], PHILLY_DISTRESS_V1)
+    at_dollars = score_distress(_MATRIX["severe_due_exactly_10000"], DISTRESS_PROFILE)
+    at_years = score_distress(_MATRIX["severe_years_exactly_3"], DISTRESS_PROFILE)
+    below = score_distress(_MATRIX["just_below_severe_due"], DISTRESS_PROFILE)
     assert any(f.code == "severe_delinquency" for f in at_dollars.factors)
     assert any(f.code == "severe_delinquency" for f in at_years.factors)
     assert all(f.code != "severe_delinquency" for f in below.factors)
 
 
 def test_long_tenure_boundary_is_inclusive_at_15() -> None:
-    at = score_distress(_MATRIX["long_tenure_exactly_15"], PHILLY_DISTRESS_V1)
-    below = score_distress(_MATRIX["just_below_long_tenure"], PHILLY_DISTRESS_V1)
+    at = score_distress(_MATRIX["long_tenure_exactly_15"], DISTRESS_PROFILE)
+    below = score_distress(_MATRIX["just_below_long_tenure"], DISTRESS_PROFILE)
     assert any(f.code == "long_tenure" for f in at.factors)
     assert all(f.code != "long_tenure" for f in below.factors)
 
 
 def test_cap_engages_at_100() -> None:
-    assert score_distress(_MATRIX["cap_engaged_over_100"], PHILLY_DISTRESS_V1).score == 100
-
-
-def test_clones_are_identical_to_philly_except_id_and_market() -> None:
-    base = dataclasses.replace(PHILLY_DISTRESS_V1, profile_id="x", market="x")
-    assert dataclasses.replace(DISTRESS_PROFILE, profile_id="x", market="x") == base
-
-
-def test_the_second_version_changes_which_signals_reach_it_not_the_weights() -> None:
-    v1_weights = {
-        field: getattr(PHILLY_DISTRESS_V1, field)
-        for field in PHILLY_DISTRESS_V1.__dataclass_fields__
-        if field != "profile_id"
-    }
-    v2_weights = {
-        field: getattr(PHILLY_DISTRESS_V2, field)
-        for field in PHILLY_DISTRESS_V2.__dataclass_fields__
-        if field != "profile_id"
-    }
-
-    assert v1_weights == v2_weights
+    assert score_distress(_MATRIX["cap_engaged_over_100"], DISTRESS_PROFILE).score == 100

@@ -14,8 +14,7 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "sweep_ingestion_retention",
         "ingest_all",
         "recompute_vacancy_confidence",
-        "recompute_vacant_verdicts",
-        "recompute_verdicts",
+        "rebuild_screen_index",
         "recompute_distress",
         "recompute_assemblage",
         "recompute_buyers",
@@ -26,7 +25,6 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
         "send_deal_reminder_emails",
         "send_sales_week_emails",
         "snapshot_stats",
-        "check_verdict_invariants",
         "reconcile_upstream_sample",
         "send_ops_health_digest",
         "send_ops_alerts",
@@ -36,37 +34,17 @@ def test_scheduled_jobs_cover_ingest_recomputes_and_digests() -> None:
     }
 
 
-async def test_recompute_vacant_verdicts_requests_vacant_only(
+async def test_the_nightly_job_rebuilds_the_screening_index(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, Any] = {}
 
-    async def fake(session_factory: object, *, vacant_only: bool = False) -> int:
-        captured["vacant_only"] = vacant_only
+    async def fake(session_factory: object) -> int:
+        captured["called"] = True
         return 9
 
-    monkeypatch.setattr(worker, "recompute_all_verdicts", fake)
-    result = await worker.recompute_vacant_verdicts({"session_factory": object()})
+    monkeypatch.setattr(worker, "rebuild_all_screens", fake)
+    result = await worker.rebuild_screen_index({"session_factory": object()})
 
     assert result == 9
-    assert captured["vacant_only"] is True
-
-
-async def test_scheduled_recompute_only_converges_parcels_off_the_current_version(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, Any] = {}
-
-    async def fake(
-        session_factory: object, *, vacant_only: bool = False, only_stale: bool = False
-    ) -> int:
-        captured["vacant_only"] = vacant_only
-        captured["only_stale"] = only_stale
-        return 4
-
-    monkeypatch.setattr(worker, "recompute_all_verdicts", fake)
-    result = await worker.recompute_verdicts({"session_factory": object()})
-
-    assert result == 4
-    assert captured["vacant_only"] is False
-    assert captured["only_stale"] is True
+    assert captured["called"] is True

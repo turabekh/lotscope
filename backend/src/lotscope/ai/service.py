@@ -57,14 +57,14 @@ _MEDIUM_COVERAGE_MIN = 2
 
 _SUMMARY_SOURCES: list[dict[str, Any]] = [
     {"source": "parcel"},
-    {"source": "parcel_verdict"},
+    {"source": "lotscope_verdict"},
     {"source": "parcel_distress"},
     {"source": "assessment"},
 ]
 
 _REPORT_SOURCES: list[dict[str, Any]] = [
     {"source": "parcel"},
-    {"source": "parcel_verdict"},
+    {"source": "lotscope_verdict"},
     {"source": "parcel_distress"},
     {"source": "assessment"},
     {"source": "zoning"},
@@ -80,7 +80,7 @@ def _parcel_facts(detail: ParcelDetail, verdict: VerdictResult | None) -> str:
     ]
     if verdict is not None:
         lines.append(
-            f"Verdict ({verdict.verdict_version}): {verdict.summary}. "
+            f"Verdict: {verdict.summary}. "
             f"can_build_by_right={verdict.can_build_by_right}; "
             f"by_right_units={verdict.by_right_units}; risk_score={verdict.risk_score}."
         )
@@ -248,7 +248,6 @@ async def summarize_parcel(
 
     return ParcelSummaryResult(
         parcel_number=parcel_number,
-        verdict_version=verdict.verdict_version if verdict is not None else "none",
         summary=summary.summary,
         data_coverage=_data_coverage(verdict, assessment),
         is_informational=summary.is_informational,

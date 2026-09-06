@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lotscope.ops.models import MarketStats
 from lotscope.ops.stats import snapshot_market_stats
-from lotscope.verdict.composition import VERDICT_VERSION
 
 pytestmark = pytest.mark.integration
 
@@ -22,12 +21,11 @@ async def test_snapshot_computes_coverage_stats(db_session: AsyncSession) -> Non
     )
     await db_session.execute(
         text(
-            "INSERT INTO parcel_verdict "
-            "(parcel_number, verdict_version, value_estimate_low) VALUES "
-            "('phl:s-1', :vv, 100000), "
-            "('phl:s-3', :vv, NULL)"
+            "INSERT INTO parcel_screen "
+            "(parcel_number, est_margin) VALUES "
+            "('phl:s-1', 0.22), "
+            "('phl:s-2', NULL)"
         ),
-        {"vv": VERDICT_VERSION},
     )
     await db_session.flush()
 
@@ -53,8 +51,9 @@ async def test_snapshot_computes_coverage_stats(db_session: AsyncSession) -> Non
     assert row.parcel_count == 3
     assert row.vacant_count == 2
     assert row.geometry_pct is not None
-    assert row.verdict_pct is not None
-    assert row.vacant_with_comp_pct is not None
+    assert row.screened_pct is not None
+    assert row.vacant_priced_pct is not None
     assert float(row.geometry_pct) == pytest.approx(66.67, abs=0.1)
-    assert float(row.verdict_pct) == pytest.approx(66.67, abs=0.1)
-    assert float(row.vacant_with_comp_pct) == pytest.approx(50.0, abs=0.1)
+    # Both vacant lots are in the index; one of them carries a priced margin.
+    assert float(row.screened_pct) == pytest.approx(100.0, abs=0.1)
+    assert float(row.vacant_priced_pct) == pytest.approx(50.0, abs=0.1)

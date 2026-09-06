@@ -31,18 +31,12 @@ class JobSpec:
 
 _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
     JobSpec(
-        id="recompute:verdicts",
-        label="Recompute verdicts (all parcels)",
+        id="rebuild:screen",
+        label="Rebuild the screening index",
         kind=RECOMPUTE_KIND,
-        description="Recompute the Parcel Verdict for every parcel, in one market or in every "
-        "market when left blank.",
-    ),
-    JobSpec(
-        id="recompute:vacant_verdicts",
-        label="Recompute verdicts (vacant only)",
-        kind=RECOMPUTE_KIND,
-        description="Recompute the Parcel Verdict for vacant parcels only, in one market or in "
-        "every market when left blank.",
+        description="Rebuild the nightly screening index over vacant land, which search ranks "
+        "on and the buy box pre-filters on. A lot's own verdict is computed when it is read "
+        "and needs no job.",
     ),
     JobSpec(
         id="recompute:distress",

@@ -38,14 +38,13 @@ from lotscope.notifications.service import (
     send_sales_week_digest,
 )
 from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
-from lotscope.ops.invariants import breaches, check_invariants
 from lotscope.ops.reconcile import reconcile_against_opa
 from lotscope.ops.stats import snapshot_market_stats
 from lotscope.packet.delivery import send_daily_packets, send_sale_change_alerts
 from lotscope.packet.models import SalePacket
 from lotscope.packet.service import build_packet
 from lotscope.vacancy.jobs import recompute_all_vacancy_confidence
-from lotscope.verdict.jobs import recompute_all_verdicts
+from lotscope.verdict.jobs import rebuild_all_screens
 from lotscope.zoning.seed import seed_all_zoning_standards
 
 _logger = get_logger("worker")
@@ -179,15 +178,9 @@ async def send_sheriff_change_emails(ctx: dict[str, Any]) -> int:
     return count
 
 
-async def recompute_verdicts(ctx: dict[str, Any]) -> int:
-    count = await recompute_all_verdicts(ctx["session_factory"], only_stale=True)
-    _logger.info("recomputed_verdicts", count=count, only_stale=True)
-    return count
-
-
-async def recompute_vacant_verdicts(ctx: dict[str, Any]) -> int:
-    count = await recompute_all_verdicts(ctx["session_factory"], vacant_only=True)
-    _logger.info("recomputed_vacant_verdicts", count=count)
+async def rebuild_screen_index(ctx: dict[str, Any]) -> int:
+    count = await rebuild_all_screens(ctx["session_factory"])
+    _logger.info("rebuilt_screen_index", count=count)
     return count
 
 
@@ -213,20 +206,6 @@ async def recompute_vacancy_confidence(ctx: dict[str, Any]) -> int:
     count = await recompute_all_vacancy_confidence(ctx["session_factory"])
     _logger.info("recomputed_vacancy_confidence", count=count)
     return count
-
-
-async def check_verdict_invariants(ctx: dict[str, Any]) -> int:
-    async with ctx["session_factory"]() as session:
-        failed = breaches(await check_invariants(session, MARKET_CODE))
-        for result in failed:
-            _logger.error(
-                "invariant_breached",
-                invariant=result.invariant.name,
-                violations=result.violations,
-                claim=result.invariant.claim,
-            )
-    _logger.info("invariants_checked", breached=len(failed))
-    return len(failed)
 
 
 async def reconcile_upstream_sample(ctx: dict[str, Any]) -> int:
@@ -260,10 +239,7 @@ _RecomputeFn = Callable[[async_sessionmaker[AsyncSession], str | None], Awaitabl
 _MaintenanceFn = Callable[[async_sessionmaker[AsyncSession]], Awaitable[int]]
 
 _RECOMPUTE_DISPATCH: dict[str, _RecomputeFn] = {
-    "recompute:verdicts": lambda factory, market: recompute_all_verdicts(factory, market=market),
-    "recompute:vacant_verdicts": lambda factory, market: recompute_all_verdicts(
-        factory, vacant_only=True, market=market
-    ),
+    "rebuild:screen": lambda factory, market: rebuild_all_screens(factory, market=market),
     "recompute:distress": lambda factory, market: recompute_all_distress(factory, market=market),
     "recompute:vacancy": lambda factory, market: recompute_all_vacancy_confidence(
         factory, market=market
@@ -470,13 +446,11 @@ class WorkerSettings:
         func(build_daily_signals, timeout=BULK_JOB_TIMEOUT),
         func(send_morning_briefs, timeout=BULK_JOB_TIMEOUT),
         func(summarise_conversations, timeout=BULK_JOB_TIMEOUT),
-        func(recompute_verdicts, timeout=BULK_JOB_TIMEOUT),
-        func(recompute_vacant_verdicts, timeout=BULK_JOB_TIMEOUT),
+        func(rebuild_screen_index, timeout=BULK_JOB_TIMEOUT),
         func(recompute_distress, timeout=BULK_JOB_TIMEOUT),
         func(recompute_assemblage, timeout=BULK_JOB_TIMEOUT),
         func(recompute_vacancy_confidence, timeout=BULK_JOB_TIMEOUT),
         snapshot_stats,
-        check_verdict_invariants,
         reconcile_upstream_sample,
         send_weekly_digests,
         send_daily_digests,
@@ -493,19 +467,15 @@ class WorkerSettings:
         cron(recorded(sweep_ingestion_retention), hour=2, minute=0),
         cron(recorded(ingest_all), hour=4, minute=0, timeout=INGEST_JOB_TIMEOUT),
         cron(recorded(recompute_vacancy_confidence), hour=6, minute=30, timeout=BULK_JOB_TIMEOUT),
-        cron(recorded(recompute_vacant_verdicts), hour=7, minute=0, timeout=BULK_JOB_TIMEOUT),
+        cron(recorded(rebuild_screen_index), hour=7, minute=0, timeout=BULK_JOB_TIMEOUT),
         cron(recorded(recompute_distress), hour=8, minute=0, timeout=BULK_JOB_TIMEOUT),
         cron(recorded(recompute_assemblage), hour=8, minute=30, timeout=BULK_JOB_TIMEOUT),
         cron(recorded(recompute_buyers), hour=9, minute=0),
         cron(recorded(snapshot_stats), hour=9, minute=30),
-        cron(recorded(check_verdict_invariants), hour=10, minute=30),
         cron(recorded(reconcile_upstream_sample), hour=11, minute=0),
         cron(recorded(send_ops_alerts), hour=5, minute=30),
         cron(recorded(send_ops_health_digest), hour=10, minute=0),
         cron(recorded(send_sales_week_emails), weekday="mon", hour=8, minute=0),
-        cron(
-            recorded(recompute_verdicts), weekday="sun", hour=5, minute=0, timeout=BULK_JOB_TIMEOUT
-        ),
         cron(recorded(send_daily_digests), hour=13, minute=0),
         cron(recorded(send_weekly_digests), weekday="mon", hour=13, minute=30),
         cron(recorded(send_deal_reminder_emails), hour=13, minute=45),

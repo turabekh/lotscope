@@ -20,7 +20,6 @@ class ParcelCorrection(Base, TimestampMixin):
     section: Mapped[str] = mapped_column(String(40), nullable=False)
     field_name: Mapped[str | None] = mapped_column(String(60))
 
-    verdict_version: Mapped[str | None] = mapped_column(String(10))
     verdict_computed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     field_status: Mapped[str | None] = mapped_column(String(20))
     source_label: Mapped[str | None] = mapped_column(String(60))

@@ -55,7 +55,7 @@ async def _listing(session: AsyncSession, parcel: str) -> None:
     await session.flush()
 
 
-async def test_a_stale_stored_verdict_does_not_change_the_packets_offer(
+async def test_a_stale_screening_row_does_not_change_the_packets_offer(
     db_session: AsyncSession,
 ) -> None:
     parcel = "phl:freshness1"
@@ -68,9 +68,9 @@ async def test_a_stale_stored_verdict_does_not_change_the_packets_offer(
 
     await db_session.execute(
         text(
-            "INSERT INTO parcel_verdict (parcel_number, verdict_version, max_allowable_offer, "
+            "INSERT INTO parcel_screen (parcel_number, max_allowable_offer, "
             "est_margin, can_build_by_right, by_right_units, computed_at) "
-            "VALUES (:p, 'stale-v0', :mao, 0.99, true, 9, now() - interval '400 days')"
+            "VALUES (:p, :mao, 0.99, true, 9, now() - interval '400 days')"
         ),
         {"p": parcel, "mao": STALE_MAO},
     )
@@ -91,7 +91,7 @@ async def test_a_stale_stored_verdict_does_not_change_the_packets_offer(
             assert lot.by_right_units != 9
 
 
-async def test_the_packet_states_when_it_was_computed_not_when_the_verdict_was(
+async def test_the_packet_states_when_it_was_computed_not_when_the_index_was(
     db_session: AsyncSession,
 ) -> None:
     parcel = "phl:freshness2"
@@ -99,8 +99,8 @@ async def test_the_packet_states_when_it_was_computed_not_when_the_verdict_was(
     user_id = await _user(db_session, "freshness2@example.com")
     await db_session.execute(
         text(
-            "INSERT INTO parcel_verdict (parcel_number, verdict_version, max_allowable_offer, "
-            "computed_at) VALUES (:p, 'stale-v0', 1, now() - interval '400 days')"
+            "INSERT INTO parcel_screen (parcel_number, max_allowable_offer, "
+            "computed_at) VALUES (:p, 1, now() - interval '400 days')"
         ),
         {"p": parcel},
     )

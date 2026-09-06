@@ -9,7 +9,6 @@ import type { ParcelChecklist, VerdictResult } from '@/lib/types'
 function makeVerdict(overrides: Partial<VerdictResult>): VerdictResult {
   return {
     parcel_number: '000000001',
-    verdict_version: 'v8',
     buildability_score: 40,
     opportunity_score: 55,
     summary: 'RSA-5: variance likely',

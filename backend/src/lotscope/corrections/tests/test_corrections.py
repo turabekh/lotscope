@@ -25,7 +25,6 @@ _COMPUTED_AT = datetime(2026, 7, 1, tzinfo=UTC)
 def _verdict() -> VerdictResult:
     return VerdictResult(
         parcel_number="phl:1",
-        verdict_version="v8",
         buildability_score=80.0,
         opportunity_score=70.0,
         summary="RSA-5",
@@ -84,8 +83,6 @@ async def _report(session: AsyncSession, user_id: int) -> CorrectionRead:
 async def test_a_correction_snapshots_the_disputed_result(db_session: AsyncSession) -> None:
     user_id = await _user(db_session)
     correction = await _report(db_session, user_id)
-
-    assert correction.verdict_version == "v8"
     assert correction.verdict_computed_at == _COMPUTED_AT
     assert correction.field_status == "calculated"
     assert correction.source_label == "zoning_district"
@@ -113,7 +110,6 @@ async def test_a_correction_without_a_verdict_still_records_the_report(
         request=CorrectionCreate(section="other", description="Nothing renders on this parcel."),
         verdict=None,
     )
-    assert correction.verdict_version is None
     assert correction.status == "open"
 
 

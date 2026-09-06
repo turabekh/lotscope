@@ -14,7 +14,6 @@ function makeRecord(overrides: Partial<CorrectionRecord> = {}): CorrectionRecord
     reported_by: 3,
     section: 'valuation',
     field_name: 'value_estimate_low',
-    verdict_version: 'v8',
     verdict_computed_at: '2026-07-29T08:00:00Z',
     field_status: 'estimated',
     source_label: 'RTT transfers',
@@ -46,20 +45,18 @@ describe('CorrectionsQueue', () => {
     const text = wrapper.text()
     expect(text).toContain('phl:99900002')
     expect(text).toContain('valuation')
-    expect(text).toContain('Verdict v8')
     expect(text).toContain('field state estimated')
     expect(text).toContain('source RTT transfers')
   })
 
   it('says when the evidence was not recorded rather than leaving it blank', async () => {
     vi.spyOn(api, 'getCorrectionQueue').mockResolvedValue([
-      makeRecord({ verdict_version: null, field_status: null, source_label: null }),
+      makeRecord({ field_status: null, source_label: null }),
     ])
     const wrapper = mountQueue()
     await flushPromises()
 
     const text = wrapper.text()
-    expect(text).toContain('Verdict unrecorded')
     expect(text).toContain('field state unrecorded')
     expect(text).toContain('source unrecorded')
   })

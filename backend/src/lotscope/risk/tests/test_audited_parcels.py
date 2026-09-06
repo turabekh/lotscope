@@ -1,6 +1,6 @@
 from datetime import date
 
-from lotscope.distress.profiles import PHILLY_DISTRESS_V2
+from lotscope.distress.profiles import DISTRESS_PROFILE
 from lotscope.distress.scoring import DistressSignals, is_absentee, score_distress
 from lotscope.risk.attribution import TransferAfterSnapshot, attribute_delinquency
 from lotscope.risk.violation_status import is_open_violation
@@ -41,11 +41,11 @@ def test_the_audited_parcels_closed_violation_is_not_open() -> None:
 def test_the_audited_parcel_loses_thirty_five_points_of_borrowed_distress() -> None:
     before = score_distress(
         DistressSignals(is_delinquent=True, total_due=8975.26, years_owed=44, open_violations=1),
-        PHILLY_DISTRESS_V2,
+        DISTRESS_PROFILE,
     )
     after = score_distress(
         DistressSignals(is_delinquent=False, total_due=None, years_owed=None, open_violations=0),
-        PHILLY_DISTRESS_V2,
+        DISTRESS_PROFILE,
     )
 
     assert before.score - after.score == 35
@@ -78,7 +78,7 @@ def test_the_control_parcel_keeps_every_point_it_had() -> None:
         is_delinquent=True, total_due=9189.94, years_owed=8, open_violations=2
     )
 
-    scored = score_distress(signals, PHILLY_DISTRESS_V2)
+    scored = score_distress(signals, DISTRESS_PROFILE)
 
     assert {factor.code for factor in scored.factors} == {
         "tax_delinquent",

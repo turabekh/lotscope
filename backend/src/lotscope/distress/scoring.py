@@ -6,8 +6,6 @@ from lotscope.distress.profiles import DistressScoringProfile
 
 Tier = Literal["high", "medium", "low", "none"]
 
-DISTRESS_VERSION = "v2"
-
 
 @dataclass(frozen=True)
 class DistressSignals:

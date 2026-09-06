@@ -23,7 +23,7 @@ class AdminOverview(BaseModel):
     users_by_tier: dict[str, int]
     parcels_total: int
     parcels_vacant: int
-    verdicts_total: int
+    screened_total: int
     deeds_total: int
     neighborhoods_total: int
 

@@ -18,9 +18,9 @@ class MarketStats(Base, TimestampMixin):
     market_code: Mapped[str] = mapped_column(String(10), primary_key=True)
     parcel_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     geometry_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
-    verdict_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    screened_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
     vacant_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
-    vacant_with_comp_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    vacant_priced_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
     computed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 

@@ -9,7 +9,6 @@ import type { ParcelSummaryResult } from '@/lib/types'
 function makeSummary(parcelNumber: string): ParcelSummaryResult {
   return {
     parcel_number: parcelNumber,
-    verdict_version: 'v8',
     summary: `Summary for ${parcelNumber}`,
     data_coverage: 'high',
     is_informational: true,

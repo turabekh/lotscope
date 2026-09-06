@@ -54,8 +54,7 @@ async def _seed_lead(
     )
     await session.execute(
         text(
-            "INSERT INTO parcel_distress (parcel_number, score, tier, version) "
-            "VALUES (:pn, :score, 'high', 'v2')"
+            "INSERT INTO parcel_distress (parcel_number, score, tier) VALUES (:pn, :score, 'high')"
         ),
         {"pn": parcel_number, "score": score},
     )

@@ -17,7 +17,6 @@ from lotscope.distress.schemas import (
     build_mail_recipients,
 )
 from lotscope.distress.scoring import (
-    DISTRESS_VERSION,
     DistressSignals,
     is_absentee,
     score_distress,
@@ -296,8 +295,6 @@ async def assess_parcel_distress(
         parcel_number=parcel_number,
         score=assessment.score,
         tier=assessment.tier,
-        version=DISTRESS_VERSION,
-        profile_id=DISTRESS_PROFILE.profile_id,
         factors=[
             DistressFactor(code=f.code, label=f.label, weight=f.weight) for f in assessment.factors
         ],
@@ -328,8 +325,6 @@ async def recompute_distress(
                 "parcel_number": row.parcel_number,
                 "score": assessment.score,
                 "tier": assessment.tier,
-                "version": DISTRESS_VERSION,
-                "profile_id": DISTRESS_PROFILE.profile_id,
                 "sources": _SOURCES,
                 "debt_counts": signals.is_delinquent,
                 "computed_at": now,
@@ -341,8 +336,6 @@ async def recompute_distress(
         set_={
             "score": statement.excluded.score,
             "tier": statement.excluded.tier,
-            "version": statement.excluded.version,
-            "profile_id": statement.excluded.profile_id,
             "sources": statement.excluded.sources,
             "debt_counts": statement.excluded.debt_counts,
             "computed_at": statement.excluded.computed_at,

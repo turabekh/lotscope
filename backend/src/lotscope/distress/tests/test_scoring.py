@@ -1,9 +1,9 @@
-from lotscope.distress.profiles import PHILLY_DISTRESS_V1
+from lotscope.distress.profiles import DISTRESS_PROFILE
 from lotscope.distress.scoring import DistressSignals, is_absentee, score_distress
 
 
 def test_clean_parcel_scores_zero() -> None:
-    result = score_distress(DistressSignals(), PHILLY_DISTRESS_V1)
+    result = score_distress(DistressSignals(), DISTRESS_PROFILE)
     assert result.score == 0
     assert result.tier == "none"
     assert result.factors == []
@@ -12,7 +12,7 @@ def test_clean_parcel_scores_zero() -> None:
 def test_city_owned_is_excluded() -> None:
     result = score_distress(
         DistressSignals(is_city_owned=True, in_sheriff_sale=True, is_delinquent=True),
-        PHILLY_DISTRESS_V1,
+        DISTRESS_PROFILE,
     )
     assert result.score == 0
     assert result.tier == "none"
@@ -26,7 +26,7 @@ def test_sheriff_sale_and_severe_delinquency_score_high() -> None:
             total_due=25000,
             years_owed=5,
         ),
-        PHILLY_DISTRESS_V1,
+        DISTRESS_PROFILE,
     )
     assert result.score == 60
     assert result.tier == "high"
@@ -47,14 +47,14 @@ def test_score_caps_at_100() -> None:
             is_vacant=True,
             is_absentee_owner=True,
         ),
-        PHILLY_DISTRESS_V1,
+        DISTRESS_PROFILE,
     )
     assert result.score == 100
 
 
 def test_mild_delinquency_is_not_severe() -> None:
     result = score_distress(
-        DistressSignals(is_delinquent=True, total_due=500, years_owed=1), PHILLY_DISTRESS_V1
+        DistressSignals(is_delinquent=True, total_due=500, years_owed=1), DISTRESS_PROFILE
     )
     assert result.score == 15
     assert result.tier == "low"
@@ -63,25 +63,25 @@ def test_mild_delinquency_is_not_severe() -> None:
 def test_vacant_and_absentee_is_medium() -> None:
     result = score_distress(
         DistressSignals(is_vacant=True, is_absentee_owner=True, open_violations=2),
-        PHILLY_DISTRESS_V1,
+        DISTRESS_PROFILE,
     )
     assert result.score == 25
     assert result.tier == "low"
 
 
 def test_dangerous_outranks_plain_violations() -> None:
-    result = score_distress(DistressSignals(has_unsafe=True, open_violations=5), PHILLY_DISTRESS_V1)
+    result = score_distress(DistressSignals(has_unsafe=True, open_violations=5), DISTRESS_PROFILE)
     codes = {f.code for f in result.factors}
     assert "li_dangerous" in codes
     assert "li_violations" not in codes
 
 
 def test_long_tenure_requires_absentee() -> None:
-    resident = score_distress(DistressSignals(years_since_last_sale=20), PHILLY_DISTRESS_V1)
+    resident = score_distress(DistressSignals(years_since_last_sale=20), DISTRESS_PROFILE)
     assert resident.score == 0
 
     absentee = score_distress(
-        DistressSignals(is_absentee_owner=True, years_since_last_sale=20), PHILLY_DISTRESS_V1
+        DistressSignals(is_absentee_owner=True, years_since_last_sale=20), DISTRESS_PROFILE
     )
     codes = {f.code for f in absentee.factors}
     assert "long_tenure" in codes
@@ -90,7 +90,7 @@ def test_long_tenure_requires_absentee() -> None:
 
 def test_short_tenure_does_not_add_long_tenure() -> None:
     result = score_distress(
-        DistressSignals(is_absentee_owner=True, years_since_last_sale=5), PHILLY_DISTRESS_V1
+        DistressSignals(is_absentee_owner=True, years_since_last_sale=5), DISTRESS_PROFILE
     )
     codes = {f.code for f in result.factors}
     assert "long_tenure" not in codes
@@ -98,7 +98,7 @@ def test_short_tenure_does_not_add_long_tenure() -> None:
 
 
 def test_tired_landlord_adds_portfolio_distress() -> None:
-    result = score_distress(DistressSignals(is_tired_landlord=True), PHILLY_DISTRESS_V1)
+    result = score_distress(DistressSignals(is_tired_landlord=True), DISTRESS_PROFILE)
     codes = {f.code for f in result.factors}
     assert "portfolio_distress" in codes
     assert result.score == 10
@@ -112,7 +112,7 @@ def test_city_owned_excludes_owner_intent_factors() -> None:
             years_since_last_sale=30,
             is_tired_landlord=True,
         ),
-        PHILLY_DISTRESS_V1,
+        DISTRESS_PROFILE,
     )
     assert result.score == 0
 
@@ -135,14 +135,14 @@ def test_a_genuinely_different_mailing_address_is_still_absentee() -> None:
 
 
 def test_a_complied_and_closed_violation_earns_no_distress() -> None:
-    profile = PHILLY_DISTRESS_V1
+    profile = DISTRESS_PROFILE
     scored = score_distress(DistressSignals(open_violations=0, violations_on_record=1), profile)
 
     assert [factor.code for factor in scored.factors] == []
 
 
 def test_only_genuinely_open_violations_earn_the_weight() -> None:
-    profile = PHILLY_DISTRESS_V1
+    profile = DISTRESS_PROFILE
     scored = score_distress(DistressSignals(open_violations=1, violations_on_record=4), profile)
 
     codes = [factor.code for factor in scored.factors]

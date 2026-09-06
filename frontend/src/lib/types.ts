@@ -215,7 +215,6 @@ export interface DealOverrides {
 
 export interface VerdictResult {
   parcel_number: string
-  verdict_version: string
   buildability_score: number | null
   opportunity_score: number
   summary: string
@@ -511,7 +510,6 @@ export interface AppealPacketStatus {
 
 export interface ParcelSummaryResult {
   parcel_number: string
-  verdict_version: string
   summary: string
   data_coverage: 'high' | 'medium' | 'low'
   is_informational: boolean
@@ -864,7 +862,7 @@ export interface AdminOverview {
   users_by_tier: Record<string, number>
   parcels_total: number
   parcels_vacant: number
-  verdicts_total: number
+  screened_total: number
   deeds_total: number
   saved_searches_total: number
   neighborhoods_total: number
@@ -891,9 +889,9 @@ export interface OpsHealthRollup {
 export interface OpsCoverageStats {
   parcel_count: number | null
   geometry_pct: number | null
-  verdict_pct: number | null
+  screened_pct: number | null
   vacant_count: number | null
-  vacant_with_comp_pct: number | null
+  vacant_priced_pct: number | null
   computed_at: string | null
 }
 
@@ -984,11 +982,6 @@ export interface OpsDatasetHealth {
   row_count: number | null
 }
 
-export interface OpsVerdictVersionCount {
-  verdict_version: string | null
-  count: number
-}
-
 export interface OpsJobRunRow {
   id: number
   job_id: string
@@ -1013,7 +1006,6 @@ export interface OpsMarketHealthDetail {
   coverage: OpsCoverageStats
   zoning_standard_count: number
   zoning_district_count: number
-  verdict_versions: OpsVerdictVersionCount[]
   recent_jobs: OpsJobRunRow[]
   generated_at: string
 }
@@ -1231,7 +1223,6 @@ export interface CorrectionRecord {
   reported_by?: number
   section: string
   field_name: string | null
-  verdict_version?: string | null
   verdict_computed_at?: string | null
   field_status?: string | null
   source_label?: string | null

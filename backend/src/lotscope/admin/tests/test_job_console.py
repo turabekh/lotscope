@@ -232,9 +232,9 @@ async def test_recompute_dispatch_reaches_the_recompute(
         received["market"] = market
         return 3
 
-    monkeypatch.setitem(worker._RECOMPUTE_DISPATCH, "recompute:verdicts", _recompute)
+    monkeypatch.setitem(worker._RECOMPUTE_DISPATCH, "rebuild:screen", _recompute)
 
-    await worker._dispatch_admin_job(_reusing_factory(db_session), None, "recompute:verdicts", {})
+    await worker._dispatch_admin_job(_reusing_factory(db_session), None, "rebuild:screen", {})
     assert received["market"] is None
 
 

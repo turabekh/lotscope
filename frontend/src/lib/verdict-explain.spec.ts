@@ -6,7 +6,6 @@ import { flagWeight, scoreBreakdown, sourceLabel } from '@/lib/verdict-explain'
 function verdict(partial: Partial<VerdictResult>): VerdictResult {
   return {
     parcel_number: '1',
-    verdict_version: 'v8',
     buildability_score: null,
     opportunity_score: 0,
     summary: '',

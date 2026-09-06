@@ -155,11 +155,10 @@ async def test_leads_rank_and_exclude(db_session: AsyncSession) -> None:
     parcel = await assess_parcel_distress(db_session, "000000001")
     assert parcel is not None
     assert top.score == parcel.score  # precomputed lead score and live per-parcel scorer agree
-    assert parcel.profile_id == "philly-distress-v2"
-    stored_profile = await db_session.scalar(
-        text("SELECT profile_id FROM parcel_distress WHERE parcel_number = '000000001'")
+    stored_score = await db_session.scalar(
+        text("SELECT score FROM parcel_distress WHERE parcel_number = '000000001'")
     )
-    assert stored_profile == parcel.profile_id  # precomputed and live agree on the profile
+    assert stored_score == parcel.score  # the nightly index and the live scorer agree
 
 
 async def test_long_tenure_absentee_from_old_deed(db_session: AsyncSession) -> None:
@@ -169,7 +168,6 @@ async def test_long_tenure_absentee_from_old_deed(db_session: AsyncSession) -> N
 
     result = await assess_parcel_distress(db_session, "000000010")
     assert result is not None
-    assert result.version == "v2"
     assert {f.code for f in result.factors} >= {"absentee", "long_tenure"}
     assert result.score == 15  # absentee 10 + long_tenure 5
 

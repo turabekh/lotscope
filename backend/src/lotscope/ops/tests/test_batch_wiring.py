@@ -41,8 +41,8 @@ def test_distress_separates_open_violations_from_violations_on_record() -> None:
     assert "violations" not in fields
 
 
-def test_philadelphia_scores_under_the_second_profile_version() -> None:
-    assert DISTRESS_PROFILE.profile_id == "philly-distress-v2"
+def test_philadelphia_scores_under_its_own_profile() -> None:
+    assert DISTRESS_PROFILE.market == "phl"
 
 
 def test_valuation_and_verdict_composition_stayed_out_of_this_batch() -> None:

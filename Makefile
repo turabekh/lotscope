@@ -3,7 +3,7 @@ BACKEND := backend
 FRONTEND := frontend
 INFRA := db redis martin mailpit
 
-.PHONY: help up up-app down logs dev dev-api sync migrate revision seed gold-set gold-set-select recompute-verdicts recompute-distress recompute-vacancy recompute-assemblage load-phillycode derive-phillycode verify-derivation verify-zoning-standards check-invariants verify-v11 reconcile-opa demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
+.PHONY: help up up-app down logs dev dev-api sync migrate revision seed rebuild-screen recompute-distress recompute-vacancy recompute-assemblage load-phillycode derive-phillycode verify-derivation verify-zoning-standards reconcile-opa demo test-image test test-unit test-integration lint fmt typecheck check fmt-check ingest e2e e2e-seed e2e-install web-install web-dev web-build web-test web-lint web-typecheck docker-prune
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -42,17 +42,8 @@ revision: ## Create a migration (use: make revision m="message")
 seed: ## Seed reference data (zoning standards for every market)
 	cd $(BACKEND) && uv run python -m lotscope.zoning.seed
 
-gold-set-select: ## Select the gold-set parcels for review (writes the gitignored real set)
-	cd $(BACKEND) && uv run python -m lotscope.goldset.select_cli $(ARGS)
-
-gold-set: ## Evaluate the Philadelphia gold set against current verdicts (FILE=... to override)
-	cd $(BACKEND) && uv run python -m lotscope.goldset.cli $(FILE)
-
-recompute-verdicts: ## Recompute the Parcel Verdict for every parcel
+rebuild-screen: ## Rebuild the nightly screening index over vacant land
 	cd $(BACKEND) && uv run python -m lotscope.verdict.jobs
-
-graduate-hbg-zoning: ## Lift the Harrisburg provisional zoning cap (run ONLY after reviewer sign-off): make graduate-hbg-zoning CONFIRM=--confirm
-	cd $(BACKEND) && uv run python scripts/graduate_hbg_zoning.py $(CONFIRM)
 
 recompute-distress: ## Recompute the motivated-seller distress index for every parcel
 	cd $(BACKEND) && uv run python -m lotscope.distress.jobs
@@ -72,12 +63,6 @@ load-phillycode: ## Load the parsed Philadelphia Code (QA-gated) into code_provi
 derive-phillycode: ## Derive and embed document rows from code_provision
 	cd $(BACKEND) && uv run python -m lotscope.ai.phillycode_cli $(ARGS)
 
-verify-v11: ## Run the v11 acceptance checks against the configured database (step 12)
-	cd $(BACKEND) && uv run python scripts/verify_v11.py
-
-check-invariants: ## Assert the cross-field invariants hold (MARKET=phl by default)
-	cd $(BACKEND) && uv run python -m lotscope.ops.invariants_cli $(ARGS)
-
 reconcile-opa: ## Sample live OPA records and diff them against what we store (N=50 default)
 	cd $(BACKEND) && uv run python -m lotscope.ops.reconcile_cli $(N)
 
@@ -89,7 +74,7 @@ verify-derivation: ## Reconcile derived documents against the deriver's own expe
 
 demo: ## Load a small synthetic demo dataset and compute its verdicts (local preview)
 	$(COMPOSE) exec -T db psql -U lotscope -d lotscope < $(BACKEND)/data/demo/demo.sql
-	$(MAKE) recompute-verdicts
+	$(MAKE) rebuild-screen
 
 test-image: ## Build the PostGIS + pgvector image used by integration tests
 	docker build -t lotscope/postgres:test docker/postgres

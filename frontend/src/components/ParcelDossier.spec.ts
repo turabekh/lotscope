@@ -48,7 +48,6 @@ function makeDetail(overrides: Partial<ParcelDetail>): ParcelDetail {
 
 const VERDICT: VerdictResult = {
   parcel_number: '141281340',
-  verdict_version: 'v7',
   opportunity_score: 76,
   buildability_score: 80,
   summary: 'RSA5: buildable by-right (1 unit)',

@@ -92,7 +92,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
           users_by_tier: {},
           parcels_total: 0,
           parcels_vacant: 0,
-          verdicts_total: 0,
+          screened_total: 0,
           deeds_total: 0,
           saved_searches_total: 0,
           neighborhoods_total: 0,
