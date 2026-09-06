@@ -388,20 +388,31 @@ Any `last_success_at` older than about two days means ingestion is broken again.
 
 If the revision comparison cannot be made, the backup is taken anyway. Failing towards a backup costs a minute; failing away from one costs the database.
 
-**A weekly backup also runs from the VM's crontab**, Sundays at 03:00 UTC, labelled `weekly`:
+**A nightly backup runs from the VM's crontab** at 03:00 UTC, labelled `nightly`, with a
+**weekly restore check** half an hour later:
 
 ```cron
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 BACKUP_BUCKET=gs://lotscope-501014-db-backups
-BACKUP_LABEL=weekly
-0 3 * * 0 cd /home/turaboy/lotscope && /bin/bash scripts/backup-db.sh >> /home/turaboy/backup.log 2>&1
+BACKUP_LABEL=nightly
+BACKUP_RETAIN_DAYS=14
+0 3 * * * cd /home/turaboy/lotscope && /bin/bash scripts/backup-db.sh >> /home/turaboy/backup.log 2>&1
+30 3 * * 0 cd /home/turaboy/lotscope && /bin/bash scripts/verify-backup.sh >> /home/turaboy/backup.log 2>&1
 ```
 
-`PATH` is set explicitly because `gcloud` lives in `/snap/bin`, which cron's default `PATH` does not include. Without that line the job fails every week with `gcloud: command not found` and nothing announces it — the failure mode this schedule exists to prevent.
+`PATH` is set explicitly because `gcloud` lives in `/snap/bin`, which cron's default `PATH` does not include. Without that line the job fails every night with `gcloud: command not found` and nothing announces it — the failure mode this schedule exists to prevent.
 
-Installed and verified 2026-08-01 by running the command in a stripped environment (`env -i`), which produced `lotscope-weekly-20260801T020511Z.dump`.
+**03:00 is an hour before the 04:00 ingest**, so a dump is the day as it ended rather than a day caught halfway through being rewritten.
 
-**Weekly, not nightly, is a deliberate trade.** It sets the real RPO at 7 days (see *Objectives*). Nightly would cost roughly seven times the storage — still only cents a month — so if losing a week of pipelines, saved searches, and underwriting is unacceptable, change the schedule rather than the RPO figure.
+**Retention is 14 days and it applies to every label**, `pre-migration` dumps included: the prune matches on the timestamp in the object name, not on what produced it. Moving from 30 days to 14 on 2026-09-06 removed eight objects — five old `pre-migration` dumps and the `weekly` dumps of 9, 16 and 23 August.
+
+The nightly schedule was installed and verified 2026-09-06 by running the command in a stripped environment (`env -i`), which produced `lotscope-nightly-20260906T112900Z.dump` (2,303,007,666 bytes).
+
+**Nightly, not weekly, since 2026-09-06.** The RPO was 7 days and is now 1. The extra storage is cents a month, and 14-day retention keeps the total roughly where the weekly schedule had it.
+
+`scripts/verify-backup.sh` runs weekly, downloads the newest `nightly` dump, restores it into a scratch database inside the `db` container, counts `parcel`, drops the scratch database, and writes the result into `job_run` as `backup:restore_check` — so a restore that quietly stopped working appears on the same admin screen as every other job, with its row count and duration.
+
+**It refuses to run when the disk cannot hold a second copy.** A restore is another whole database on the same volume, so the script compares free space against `pg_database_size` and records a `failed` run with the two figures rather than filling the disk that production is sitting on. On 2026-09-06 that was 51 GB free against a 23 GB database.
 
 **Expect one `ERROR` line in a successful run.** `gcloud` reports that it cannot check bucket compatibility for parallel composite uploads, because the VM service account holds `roles/storage.objectAdmin` (objects) and not `storage.buckets.get`. It falls back to a normal upload and succeeds. This is a performance note wearing an error's clothing; it is not a failed backup.
 
@@ -467,10 +478,10 @@ docker compose exec -T db pg_restore -U lotscope -d lotscope_restore --no-owner 
 
 | Objective | Target | Basis |
 |---|---|---|
-| **RPO** | **7 days**, and zero for migration-caused loss | The schedule is weekly (Sundays 03:00 UTC), plus a pre-migration backup; a migration failure loses nothing because the backup precedes it |
+| **RPO** | **24 hours**, and zero for migration-caused loss | The schedule is nightly (03:00 UTC), plus a pre-migration backup; a migration failure loses nothing because the backup precedes it |
 | **RTO** | 1 hour | Measured 2026-08-01: 4s download + 4m19s restore + verification. The remaining budget is promotion and service restart |
 
-The RPO is **7 days because the schedule is weekly**, not because a week of loss is comfortable. It is the figure the configuration actually supports. Moving to a nightly cron makes it 24 hours for a few cents a month; changing the number without changing the schedule makes it fiction.
+The RPO is **24 hours because the schedule is nightly**, and it was 7 days until 2026-09-06 for the same reason. It is the figure the configuration actually supports; changing the number without changing the schedule makes it fiction. A weekly restore check proves the dumps behind it are readable, because an untested backup supports no RPO at all.
 
 RTO is now evidence-based rather than estimated, but it covers a *verified scratch restore* — the promote-and-restart step has still never been performed under pressure.
 

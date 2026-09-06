@@ -4,7 +4,7 @@ set -euo pipefail
 DB_CONTAINER="${BACKUP_DB_CONTAINER:-db}"
 DB_USER="${BACKUP_DB_USER:-lotscope}"
 DB_NAME="${BACKUP_DB_NAME:-lotscope}"
-RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-30}"
+RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-14}"
 LABEL="${BACKUP_LABEL:-manual}"
 
 if [[ -z "${BACKUP_BUCKET:-}" ]]; then
