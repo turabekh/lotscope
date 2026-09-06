@@ -69,13 +69,13 @@ async def get_verdict_tool(
     session: AsyncSession, context: ToolContext, payload: ParcelInput
 ) -> ToolResult:
     from lotscope.distress.service import assess_parcel_distress
-    from lotscope.verdict.service import compute_verdict
+    from lotscope.verdict.service import get_verdict
 
     row = await _resolve(session, payload.parcel)
     if row is None:
         return empty(f"No Philadelphia parcel matches {payload.parcel!r}.")
 
-    verdict = await compute_verdict(session, row.parcel_number)
+    verdict = await get_verdict(session, row.parcel_number, redis=context.redis)
     distress = await assess_parcel_distress(session, row.parcel_number)
     fetched = await _fetched(session)
 

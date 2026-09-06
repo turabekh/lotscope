@@ -117,9 +117,9 @@ async def get_parcel(
     if detail is None:
         return empty(f"Parcel {parcel_number} resolved but no detail could be assembled.")
 
-    from lotscope.verdict.service import compute_verdict
+    from lotscope.verdict.service import get_verdict
 
-    verdict = await compute_verdict(session, parcel_number)
+    verdict = await get_verdict(session, parcel_number, redis=context.redis)
     fetched = await _freshness(session)
 
     data: dict[str, Any] = {
