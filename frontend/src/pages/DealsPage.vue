@@ -156,18 +156,22 @@ function noteFor(deal: DealItem): string | null {
               </option>
             </select>
           </td>
-          <td class="deals__next">
+          <td class="deals__next" data-label="Next action">
             <span v-if="deal.next_action">{{ deal.next_action }}</span>
             <span v-else class="deals__muted">—</span>
             <span v-if="deal.next_action_due" class="deals__sub">{{ deal.next_action_due }}</span>
           </td>
-          <td class="deals__num" data-test="deals-mao">{{ money(deal.max_allowable_offer) }}</td>
-          <td class="deals__num" data-test="deals-offer">{{ money(deal.target_price) }}</td>
-          <td data-test="deals-sale">
+          <td class="deals__num" data-label="MAO" data-test="deals-mao">
+            {{ money(deal.max_allowable_offer) }}
+          </td>
+          <td class="deals__num" data-label="Offer" data-test="deals-offer">
+            {{ money(deal.target_price) }}
+          </td>
+          <td data-label="Sale" data-test="deals-sale">
             <span v-if="deal.sale_date">{{ deal.sale_date }}</span>
             <span v-else class="deals__muted">not listed</span>
           </td>
-          <td>
+          <td data-label="LOI">
             <button
               type="button"
               class="deals__link"
@@ -177,7 +181,7 @@ function noteFor(deal: DealItem): string | null {
               Offer letter
             </button>
           </td>
-          <td class="deals__note" data-test="deals-note">
+          <td class="deals__note" data-label="Last Analyst note" data-test="deals-note">
             <template v-if="noteFor(deal)">
               <span>{{ noteFor(deal) }}</span>
               <!-- Dated, because it is what the Analyst said then, not a fresh read. -->
@@ -311,6 +315,16 @@ function noteFor(deal: DealItem): string | null {
   .deals__table td {
     border: 0;
     padding: 3px 0;
+  }
+  /* The header row is gone on a phone, so each value carries its own label. */
+  .deals__table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ls-muted);
+    margin-top: 4px;
   }
   .deals__num {
     text-align: left;
