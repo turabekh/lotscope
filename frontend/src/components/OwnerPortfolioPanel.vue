@@ -153,8 +153,18 @@ function selectParcel(parcelNumber: string): void {
               <span v-if="lot.market_value"> · {{ formatCurrency(lot.market_value) }}</span>
             </div>
           </div>
-          <q-badge v-if="lot.opportunity_score !== null" color="primary" outline>
+          <!-- The one score on this page that is not computed for this read: it comes from
+               the nightly screen, so the badge says so rather than asserting it. -->
+          <q-badge
+            v-if="lot.opportunity_score !== null"
+            color="primary"
+            outline
+            data-test="portfolio-score"
+          >
             {{ lot.opportunity_score }}
+            <q-tooltip max-width="240px" anchor="top middle" self="bottom middle">
+              Opportunity score from last night's screen. Open the lot for the read computed now.
+            </q-tooltip>
           </q-badge>
         </div>
       </div>
