@@ -190,7 +190,6 @@ def test_snapshot_payload_names_distress_signals_as_present_and_additive() -> No
         score=20,
         tier="low",
         version="v2",
-        profile_id="philly-distress-v2",
         factors=[
             DistressFactor(code="vacant", label="Vacant lot — owner unlikely to occupy", weight=10),
             DistressFactor(
@@ -222,7 +221,6 @@ def test_snapshot_payload_is_honest_when_distress_factors_are_truncated() -> Non
         score=30,
         tier="medium",
         version="v2",
-        profile_id="philly-distress-v2",
         factors=factors,
         sources=[],
         computed_at=_NOW,

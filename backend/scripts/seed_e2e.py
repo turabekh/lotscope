@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
-from lotscope.verdict.service import recompute_verdicts
+from lotscope.verdict.jobs import rebuild_screen
 
 MARKET_CODE = "phl"
 LOCAL_SRID = 2272
@@ -59,7 +59,7 @@ def _parcel_polygon(index: int) -> str:
 
 
 async def _clear(session: AsyncSession) -> None:
-    for table in ("parcel_verdict", "sale", "tax_status", "li_event", "sheriff_sale", "parcel"):
+    for table in ("parcel_screen", "sale", "tax_status", "li_event", "sheriff_sale", "parcel"):
         await session.execute(
             text(f"DELETE FROM {table} WHERE parcel_number = ANY(:numbers)"),
             {"numbers": PARCEL_NUMBERS},
@@ -195,9 +195,11 @@ async def _run() -> None:
             await _insert_parcels(session)
             await _insert_supporting_records(session)
             await session.commit()
-            computed = await recompute_verdicts(session, PARCEL_NUMBERS)
+            # The verdicts themselves are computed when a page reads them; what the
+            # fixtures need stored is the screening index that search ranks on.
+            indexed = await rebuild_screen(session, PARCEL_NUMBERS)
             await session.commit()
-        logger.info("e2e_seeded", parcels=len(PARCEL_NUMBERS), verdicts=computed)
+        logger.info("e2e_seeded", parcels=len(PARCEL_NUMBERS), screened=indexed)
     finally:
         await engine.dispose()
 

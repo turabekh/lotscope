@@ -74,7 +74,6 @@ const VERDICT: VerdictResult = {
   field_trust: {},
   recommendation: null,
   recommendation_reason: null,
-  decision_version: null,
   computed_at: '2026-07-04T00:00:00Z',
 } as VerdictResult
 

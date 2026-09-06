@@ -269,7 +269,7 @@ docker compose --profile app exec db \
 
 Set `SHERIFF_SALE_SOURCE=csv` (or remove the line) and `docker compose --profile app up -d api worker`. Rows
 already written to `sheriff_sale` remain; the job simply stops refreshing from the scrape. No migration, no
-verdict impact (VERDICT_VERSION unaffected — the calendar reads existing forced-sale data).
+verdict impact (none — the calendar reads existing forced-sale data).
 
 ### If the scrape breaks
 
@@ -330,19 +330,16 @@ Every other check in this repo asks whether the system agrees with itself. This 
 
 **Baseline:** 2026-08-16, 60 parcels, **100% agreement, 0 absent upstream**, taken immediately after a full refresh. Divergence is what matters, not the absolute number - a falling agreement rate means ingestion is drifting even while the freshness timestamps look fine.
 
-## Cross-field invariants
+## Cross-field invariants — retired 2026-09-06
 
-```
-make check-invariants
-```
+The nightly `check_verdict_invariants` scan and `make check-invariants` are gone with the
+stored verdict they read. They existed to catch contradictions in 588,000 stored rows —
+a strong candidate reporting a loss, a by-right parcel screened as an entitlement risk —
+which is a check that can only ever report a contradiction *after* it has been served.
 
-Assertions about relationships that must hold between fields, rather than about particular values. Tests assert what someone thought of; invariants assert what must never happen, which is the class of defect that reaches production. They also run nightly (`check_verdict_invariants`, 10:30 UTC) and log `invariant_breached` per failure.
-
-The suite exists because five hand-written checks found a real bug in under a minute: 425 Philadelphia parcels recommended `economics_unattractive` while reporting a 13% margin and positive profit.
-
-**`value_range_stays_interpretable` is proportional, not absolute** — it tolerates wide ranges up to a tenth of valued parcels and only reports once that share is exceeded. An invariant that is permanently red teaches people to ignore the whole suite.
-
-Two breaches are expected until the v10 recompute completes, because they describe v9 rows: `viable_margin_is_not_called_unattractive` and `value_range_stays_interpretable`. Both should fall to zero as the sweep lands, which makes them a usable progress signal.
+The claims themselves survive as property tests over the composition
+(`verdict/tests/test_screening_claims.py`), swept across the inputs they are quantified
+over. A breach now fails the build instead of a cron at 10:30 UTC.
 
 ## Worker job timeouts — the 2026-08-16 silent ingestion outage
 
@@ -357,7 +354,7 @@ Two breaches are expected until the v10 recompute completes, because they descri
 - Per-job timeouts via `arq.func(...)`: `INGEST_JOB_TIMEOUT` 12 h, `BULK_JOB_TIMEOUT` 36 h, and a `DEFAULT_JOB_TIMEOUT` of 30 min replacing ARQ's 300 s for everything else.
 - `run_loader` catches `CancelledError` explicitly, records the dataset as `failed` with a timeout note, then re-raises.
 - `ingest_market` isolates each dataset so one failure no longer aborts the remaining sixteen, and raises a summary naming every dataset that failed.
-- The weekly `recompute_verdicts` cron now passes `only_stale=True`. Raising its timeout would otherwise have promoted a job that harmlessly died at 5 min into a ~29 h all-market sweep every Sunday.
+- The weekly `recompute_verdicts` cron passed `only_stale=True`, so raising its timeout would not have promoted a job that harmlessly died at 5 min into a ~29 h all-market sweep every Sunday. (Both that cron and the nightly vacant sweep were deleted on 2026-09-06: a verdict is computed when it is read, and the only nightly job left is `rebuild_screen_index` at 07:00 UTC.)
 
 **The lesson worth carrying.** A framework default silently truncated a job the code had no idea was being truncated, and the one mechanism that would have reported it could not catch the exception type used to stop it. When a scheduled job's observability depends on catching an exception, verify which exception the scheduler actually raises.
 
@@ -481,7 +478,7 @@ A backup that has never been restored is a hypothesis. Once a month:
 | Measure | Live | Restored |
 |---|---|---|
 | phl parcels | 550,976 | identical |
-| `parcel_verdict` | 740,030 | identical |
+| `parcel_verdict` (dropped 2026-09-06) | 740,030 | identical |
 | `app_user` / `deal` / `deal_activity` / `saved_search` | 10 / 5 / 2 / 3 | identical |
 | Tables | 45 | 44 |
 
@@ -496,7 +493,7 @@ cd ~/lotscope
 docker compose run --rm migrate alembic downgrade -1
 ```
 
-Downgrades that drop a column lose the data in it. Where the column is derived — `parcel_verdict.field_trust`, the screening recommendation — a recompute regenerates it. Where it is user data — `underwriting_profile`, `parcel_correction` — **restore from backup instead of downgrading**.
+Downgrades that drop a column lose the data in it. Where the column is derived — anything on `parcel_screen` — the nightly rebuild regenerates it. Where it is user data — `underwriting_profile`, `parcel_correction` — **restore from backup instead of downgrading**.
 
 ## Bad-verdict recompute
 
@@ -508,7 +505,7 @@ docker compose exec -T worker python -m lotscope.verdict.jobs
 
 ## Verdict v9 rollout — overlay-aware zoning standards
 
-v9 changes how zoning standards resolve (ADR-0080) and requires a full `phl` recompute. **Order matters**, because `get_or_compute_current_verdict` recomputes lazily on version mismatch: between deploy and recompute, every parcel view of a v8 row pays a full `compute_verdict`.
+v9 changed how zoning standards resolve (ADR-0080) and required a full `phl` recompute. Historical: since 2026-09-06 there is no stored verdict and no version, so a change to the composition takes effect on the next read — the git SHA is part of the cache key, and a deploy invalidates every entry.
 
 ### Ordering
 

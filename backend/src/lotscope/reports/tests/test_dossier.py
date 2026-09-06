@@ -40,7 +40,6 @@ def test_minimal_dossier_is_valid_pdf() -> None:
 def test_full_dossier_renders_all_sections() -> None:
     verdict = VerdictResult(
         parcel_number="000000001",
-        verdict_version="v2",
         buildability_score=70,
         opportunity_score=68,
         summary="RSD-3: buildable by-right (1 unit); 2 risk flags; MAO $95,000 (underpriced).",
@@ -113,7 +112,6 @@ def test_full_dossier_renders_all_sections() -> None:
         score=60,
         tier="high",
         version="v2",
-        profile_id="philly-distress-v1",
         factors=[DistressFactor(code="sheriff_sale", label="Sheriff-sale exposure", weight=30)],
         sources=[],
         computed_at=_NOW,
@@ -207,7 +205,6 @@ def test_negative_gap_reads_as_a_negative_amount() -> None:
 def test_dossier_carries_page_furniture_and_sources() -> None:
     verdict = VerdictResult(
         parcel_number="000000001",
-        verdict_version="v8",
         buildability_score=50,
         opportunity_score=54,
         summary="RSA-3: variance likely.",
@@ -256,7 +253,6 @@ def test_a_zero_buildable_area_carries_its_reasoning() -> None:
 
     verdict = VerdictResult(
         parcel_number="000000001",
-        verdict_version="v8",
         buildability_score=20,
         opportunity_score=54,
         summary="RSA-3: variance likely.",
@@ -332,7 +328,6 @@ def _pdf_text(raw: bytes) -> str:
 def _verdict_for_units(**overrides: Any) -> VerdictResult:
     base: dict[str, Any] = {
         "parcel_number": "000000001",
-        "verdict_version": "v8",
         "buildability_score": 70.0,
         "opportunity_score": 68.0,
         "summary": "RSA-5",

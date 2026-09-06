@@ -241,7 +241,6 @@ export interface VerdictResult {
   field_trust: Record<string, FieldProvenance>
   recommendation: Recommendation | null
   recommendation_reason: string | null
-  decision_version: string | null
   computed_at: string
 }
 

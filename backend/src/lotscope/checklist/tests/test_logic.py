@@ -11,7 +11,6 @@ _NOW = datetime(2026, 6, 28, tzinfo=UTC)
 def _verdict(**overrides: Any) -> VerdictResult:
     base: dict[str, Any] = {
         "parcel_number": "1",
-        "verdict_version": "v2",
         "buildability_score": 80.0,
         "opportunity_score": 75.0,
         "summary": "",
