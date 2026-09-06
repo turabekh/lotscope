@@ -14,7 +14,7 @@ from lotscope.core.observability import API_SOURCE, capture, record_error_event
 from lotscope.ops.cron_schedule import CRON_SCHEDULE, CronSpec, missed_since, previous_fires
 from lotscope.ops.errors import build_error_digest, send_error_digest
 from lotscope.ops.models import ErrorEvent
-from lotscope.ops.service import stale_cron_jobs
+from lotscope.ops.service import mark_worker_start, stale_cron_jobs
 
 pytestmark = pytest.mark.integration
 
@@ -246,6 +246,7 @@ def test_a_weekly_job_looks_back_two_weeks_and_a_quarter_hourly_one_half_an_hour
 
 async def test_a_cron_that_missed_two_nights_is_reported_stale(db_session: AsyncSession) -> None:
     now = datetime.now(UTC).replace(hour=11, minute=30, second=0, microsecond=0)
+    await mark_worker_start(db_session, now - timedelta(days=10))
     await db_session.execute(
         text(
             "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at) VALUES "
@@ -266,6 +267,7 @@ async def test_a_cron_that_missed_two_nights_is_reported_stale(db_session: Async
 async def test_one_missed_night_is_not_an_alarm(db_session: AsyncSession) -> None:
     """A deploy over a job's window costs it one run. Two in a row is a stopped job."""
     now = datetime.now(UTC).replace(hour=11, minute=30, second=0, microsecond=0)
+    await mark_worker_start(db_session, now - timedelta(days=10))
     await db_session.execute(
         text(
             "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at) VALUES "
@@ -283,6 +285,7 @@ async def test_one_missed_night_is_not_an_alarm(db_session: AsyncSession) -> Non
 async def test_nothing_is_stale_before_we_were_recording(db_session: AsyncSession) -> None:
     """A fresh deployment must not report every job on the timetable as broken."""
     now = datetime.now(UTC).replace(hour=11, minute=30, second=0, microsecond=0)
+    await mark_worker_start(db_session, now - timedelta(minutes=5))
     await db_session.execute(
         text(
             "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at) VALUES "
@@ -295,11 +298,75 @@ async def test_nothing_is_stale_before_we_were_recording(db_session: AsyncSessio
     assert await stale_cron_jobs(db_session, now) == []
 
 
+async def test_a_cron_added_this_morning_is_not_stale_this_morning(
+    db_session: AsyncSession,
+) -> None:
+    """Production's own complaint. The deploy that added `send_error_digest_email` and
+    renamed the 07:00 sweep to `rebuild_screen_index` had readiness call both stale within
+    the minute, because two scheduled runs ago neither existed."""
+    now = datetime.now(UTC).replace(hour=12, minute=10, second=0, microsecond=0)
+    await mark_worker_start(db_session, now - timedelta(minutes=4))
+    # Months of history for the jobs that were always there, none for the two new ones.
+    await db_session.execute(
+        text(
+            "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at) VALUES "
+            "('cron:ingest_all', 'ingest_all', 'cron', 'success', :old, :old), "
+            "('cron:ingest_all', 'ingest_all', 'cron', 'success', :new, :new)"
+        ),
+        {"old": now - timedelta(days=40), "new": now - timedelta(hours=8)},
+    )
+    await db_session.flush()
+
+    stale = {job.name for job in await stale_cron_jobs(db_session, now)}
+
+    assert stale == set()
+
+
+async def test_a_job_that_never_runs_is_reported_once_the_worker_has_outlived_it(
+    db_session: AsyncSession,
+) -> None:
+    """The other half: newness excuses a job for a while, not for ever."""
+    now = datetime.now(UTC).replace(hour=12, minute=10, second=0, microsecond=0)
+    await mark_worker_start(db_session, now - timedelta(days=6))
+    await db_session.execute(
+        text(
+            "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at) VALUES "
+            "('cron:ingest_all', 'ingest_all', 'cron', 'success', :t, :t)"
+        ),
+        {"t": now - timedelta(hours=8)},
+    )
+    await db_session.flush()
+
+    stale = {job.name: job.reason for job in await stale_cron_jobs(db_session, now)}
+
+    assert "rebuild_screen_index" in stale
+    assert "the worker has been up since" in stale["rebuild_screen_index"]
+
+
+async def test_a_job_that_has_only_ever_failed_is_stale(db_session: AsyncSession) -> None:
+    now = datetime.now(UTC).replace(hour=12, minute=10, second=0, microsecond=0)
+    await mark_worker_start(db_session, now - timedelta(days=6))
+    await db_session.execute(
+        text(
+            "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at) VALUES "
+            "('cron:snapshot_stats', 'snapshot_stats', 'cron', 'failed', :a, :a), "
+            "('cron:snapshot_stats', 'snapshot_stats', 'cron', 'failed', :b, :b)"
+        ),
+        {"a": now - timedelta(days=3), "b": now - timedelta(days=1)},
+    )
+    await db_session.flush()
+
+    stale = {job.name: job.reason for job in await stale_cron_jobs(db_session, now)}
+
+    assert "never once succeeded" in stale["snapshot_stats"]
+
+
 async def test_readiness_says_which_job_stopped(db_session: AsyncSession) -> None:
     from lotscope.api.deps import get_redis, get_session
     from lotscope.api.health import router as health_router
 
     now = datetime.now(UTC)
+    await mark_worker_start(db_session, now - timedelta(days=10))
     await db_session.execute(
         text(
             "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at) VALUES "

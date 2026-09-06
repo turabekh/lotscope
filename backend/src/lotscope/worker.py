@@ -48,6 +48,7 @@ from lotscope.ops.alerts import send_ops_digest, send_ops_failure_alerts
 from lotscope.ops.cron_schedule import CRON_SCHEDULE, CronSpec
 from lotscope.ops.errors import send_error_digest
 from lotscope.ops.reconcile import reconcile_against_opa
+from lotscope.ops.service import mark_worker_start
 from lotscope.ops.stats import snapshot_market_stats
 from lotscope.packet.delivery import send_daily_packets, send_sale_change_alerts
 from lotscope.packet.models import SalePacket
@@ -71,10 +72,15 @@ async def startup(ctx: dict[str, Any]) -> None:
 
 
 async def _reap_orphans(session_factory: async_sessionmaker[AsyncSession]) -> None:
-    """Nothing this worker owns is running yet, so anything that says it is, is not."""
+    """Nothing this worker owns is running yet, so anything that says it is, is not.
+
+    The same moment is the only one at which "this job has never run" can be told apart
+    from "this job was deployed a minute ago", so the worker's start is recorded here too.
+    """
     try:
         async with session_factory() as session:
             reaped = await reap_orphaned_runs(session)
+            await mark_worker_start(session)
             await session.commit()
     except Exception as exc:
         _logger.warning("orphaned_runs_not_reaped", error=str(exc))

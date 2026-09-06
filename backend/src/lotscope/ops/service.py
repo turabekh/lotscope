@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import case, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lotscope.admin.models import JobRun
@@ -11,7 +12,7 @@ from lotscope.ingestion.models import DatasetFreshness
 from lotscope.ingestion.reconciliation import to_parcel_key
 from lotscope.ops.cadence import FreshnessInput, cadence_for, evaluate_freshness
 from lotscope.ops.cron_schedule import CRON_SCHEDULE, missed_since
-from lotscope.ops.models import MarketStats
+from lotscope.ops.models import MarketStats, OpsAlertState
 from lotscope.ops.schemas import (
     CoverageStats,
     DatasetHealth,
@@ -287,6 +288,25 @@ class StaleJob:
     reason: str
 
 
+WORKER_START_KEY = "worker_started_at"
+
+
+async def mark_worker_start(session: AsyncSession, now: datetime | None = None) -> None:
+    """Record when this worker came up, so a job that has never run can be judged.
+
+    Without it there is no way to tell a cron that was added an hour ago from one that
+    stopped a fortnight ago: both have no successful run and no history to argue from.
+    """
+    moment = now or datetime.now(UTC)
+    statement = insert(OpsAlertState).values(key=WORKER_START_KEY, last_attempt_at=moment)
+    await session.execute(
+        statement.on_conflict_do_update(
+            index_elements=["key"], set_={"last_attempt_at": statement.excluded.last_attempt_at}
+        )
+    )
+    await session.flush()
+
+
 async def stale_cron_jobs(session: AsyncSession, now: datetime | None = None) -> list[StaleJob]:
     """Crons that have not succeeded across their last two scheduled runs.
 
@@ -294,34 +314,65 @@ async def stale_cron_jobs(session: AsyncSession, now: datetime | None = None) ->
     night to a deploy is not a job that has stopped. Two consecutive misses is a job that
     is not coming back on its own.
 
-    A cron is judged only against history we actually have. Nothing is reported as stale
-    for a window that predates the oldest recorded cron run — after a fresh deployment
-    that would be every job on the timetable, which is an alarm about our own record
-    keeping rather than about the jobs.
+    A job is only judged over a window it existed for. Production made the case: the
+    deploy that added `send_error_digest_email` and renamed the 07:00 sweep to
+    `rebuild_screen_index` had readiness call both of them stale within the minute,
+    because two scheduled runs ago they did not exist. So a job with history is judged
+    from its own first appearance, and a job with none is judged only if the worker has
+    been up since before the window — which is the only evidence we hold that the job
+    was there to run at all.
     """
     moment = (now or datetime.now(UTC)).astimezone(UTC)
-    history_start = await session.scalar(
-        select(func.min(JobRun.started_at)).where(JobRun.kind == "cron")
+    worker_start = await session.scalar(
+        select(OpsAlertState.last_attempt_at).where(OpsAlertState.key == WORKER_START_KEY)
     )
     rows = (
         await session.execute(
-            select(JobRun.job_id, func.max(JobRun.started_at))
-            .where(JobRun.kind == "cron", JobRun.status == "success")
+            select(
+                JobRun.job_id,
+                func.min(JobRun.started_at),
+                func.max(JobRun.started_at).filter(JobRun.status == "success"),
+            )
+            .where(JobRun.kind == "cron")
             .group_by(JobRun.job_id)
         )
     ).all()
-    last_success: dict[str, datetime | None] = {str(job_id): at for job_id, at in rows}
+    history: dict[str, tuple[datetime | None, datetime | None]] = {
+        str(job_id): (first, last) for job_id, first, last in rows
+    }
 
     stale: list[StaleJob] = []
     for spec in CRON_SCHEDULE:
         cutoff = missed_since(spec, moment)
         if cutoff is None:
             continue
-        if history_start is None or cutoff < history_start.astimezone(UTC):
+        first_seen, succeeded_at = history.get(f"cron:{spec.name}", (None, None))
+
+        if first_seen is None:
+            # Never run at all. Only the worker's own uptime can say whether that is
+            # because it is broken or because it was deployed ten minutes ago.
+            if worker_start is None or cutoff < worker_start.astimezone(UTC):
+                continue
+            stale.append(
+                StaleJob(
+                    spec.name,
+                    "has never recorded a successful run, and the worker has been up "
+                    f"since {worker_start.astimezone(UTC).strftime('%Y-%m-%d %H:%M')} UTC",
+                )
+            )
             continue
-        succeeded_at = last_success.get(f"cron:{spec.name}")
+
+        if cutoff < first_seen.astimezone(UTC):
+            continue
         if succeeded_at is None:
-            stale.append(StaleJob(spec.name, "has never recorded a successful run"))
+            stale.append(
+                StaleJob(
+                    spec.name,
+                    "has run since "
+                    f"{first_seen.astimezone(UTC).strftime('%Y-%m-%d %H:%M')} UTC and has "
+                    "never once succeeded",
+                )
+            )
         elif succeeded_at.astimezone(UTC) < cutoff:
             stale.append(
                 StaleJob(
