@@ -10,7 +10,7 @@ const STREAM = [
     '"stored":{"open_violations":0},"diff":[{"field":"open_violations"}]},' +
     '"sources":[{"name":"violations (live)","url":"https://phl.carto.com/api/v2/sql?q=x",' +
     '"fetched_at":"2026-09-05T13:38:58Z","ingested_at":null,"computed_at":null},' +
-    '{"name":"atlas","url":"https://atlas.phila.gov/191357500","fetched_at":null,' +
+    '{"name":"atlas","url":"https://atlas.phila.gov/191357500#violations","fetched_at":null,' +
     '"ingested_at":null,"computed_at":null}],"unverified":["L&I records what was reported."],' +
     '"duration_ms":812}\n\n',
   'event: text_delta\ndata: {"text":"L&I shows 6 open "}\n\n',
@@ -115,4 +115,30 @@ test('the same flow works at 380px, by tap', async ({ page }) => {
 
   await page.locator('[data-test="evidence-close"]').click()
   await expect(drawer).toHaveCount(0)
+})
+
+test('evidence opens on the section the tool actually read', async ({ page }) => {
+  await mockAnalyst(page)
+  await registerAndSettle(page, 'analyst-anchor')
+  await page.goto('/')
+  await ask(page)
+
+  await page.locator('[data-test="tool-card-toggle"]').first().click()
+  await page.locator('[data-test="tool-source-internal"]').first().click()
+
+  const drawer = page.locator('[data-test="evidence-drawer"]')
+  await expect(drawer).toBeVisible()
+
+  // live_li read the violations, so its lot link is anchored there and the drawer lands
+  // on that section rather than at the top of the lot.
+  const section = drawer.locator('#violations')
+  await expect(section).toBeVisible()
+  await expect
+    .poll(async () =>
+      section.evaluate((node) => {
+        const box = node.getBoundingClientRect()
+        return box.top < window.innerHeight && box.bottom > 0
+      }),
+    )
+    .toBe(true)
 })

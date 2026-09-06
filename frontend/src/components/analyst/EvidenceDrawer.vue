@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
+import { computed, nextTick, watchEffect } from 'vue'
 
 import ParcelDossier from '@/components/ParcelDossier.vue'
+import type { LotSection } from '@/lib/sourceLinks'
 import { useParcelStore } from '@/stores/parcel'
 
-const props = defineProps<{ parcelNumber: string | null; bottomSheet: boolean }>()
+const props = defineProps<{
+  parcelNumber: string | null
+  section?: LotSection | null
+  bottomSheet: boolean
+}>()
 const emit = defineEmits<{ close: [] }>()
 
 const store = useParcelStore()
@@ -12,10 +17,23 @@ const open = computed(() => props.parcelNumber !== null)
 
 // The drawer shows the same Lot page the route does: one implementation, so evidence in a
 // conversation and evidence on its own page can never drift apart.
-function load(): void {
-  if (props.parcelNumber) void store.select(props.parcelNumber)
+async function load(): Promise<void> {
+  if (!props.parcelNumber) return
+  await store.select(props.parcelNumber)
+  if (!props.section) return
+  // Open on the section the Analyst's link named, so evidence for a violation opens on
+  // the violations rather than at the top of the lot.
+  await nextTick()
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const node = document.getElementById(props.section)
+    if (node) {
+      node.scrollIntoView({ block: 'start' })
+      return
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
 }
-watchEffect(load)
+watchEffect(() => void load())
 </script>
 
 <template>

@@ -96,7 +96,7 @@ async def get_verdict_tool(
             _computed("lotscope_verdict"),
             _source("opa_properties_public", urls.OPA_URL, fetched, "opa_properties_public"),
             _source("rtt_summary", urls.RTT_URL, fetched, "rtt_summary"),
-            Source(name="atlas", url=urls.atlas(row.parcel_number)),
+            Source(name="atlas", url=urls.atlas_section(row.parcel_number, "verdict")),
         ],
         unverified=unverified,
     )
@@ -404,7 +404,7 @@ async def get_deed_chain_tool(
         },
         sources=[
             _source("rtt_summary", urls.RTT_URL, fetched, "rtt_summary"),
-            Source(name="atlas", url=urls.atlas(row.parcel_number)),
+            Source(name="atlas", url=urls.atlas_section(row.parcel_number, "deeds")),
         ],
         unverified=unverified,
     )
@@ -466,6 +466,7 @@ async def get_violations_tool(
         sources=[
             _source("li_event", urls.LI_URL, fetched, "violations"),
             Source(name="li_property_history", url=urls.li_history(row.address)),
+            Source(name="atlas", url=urls.atlas_section(row.parcel_number, "violations")),
         ],
         unverified=[
             "L&I records what was reported and inspected; an unreported condition is invisible "

@@ -7,7 +7,7 @@ import ToolCard from '@/components/analyst/ToolCard.vue'
 import type { ToolCall, Turn } from '@/stores/analyst'
 
 const props = defineProps<{ turns: Turn[]; opening: string | null; streaming: boolean }>()
-const emit = defineEmits<{ openLot: [parcelNumber: string] }>()
+const emit = defineEmits<{ openLot: [parcelNumber: string, section: string | null] }>()
 
 /** Files the Analyst produced, read off the envelopes rather than guessed at. */
 function filesIn(turn: Turn): { label: string; detail: string | null; href: string | null }[] {
@@ -49,7 +49,7 @@ const hasTurns = computed(() => props.turns.length > 0)
           v-for="(call, position) in turn.tools"
           :key="`${call.name}-${position}`"
           :call="call as ToolCall"
-          @open-lot="(parcel) => emit('openLot', parcel)"
+          @open-lot="(parcel, section) => emit('openLot', parcel, section)"
         />
 
         <AnalystAnswer v-if="turn.answer" :text="turn.answer" />

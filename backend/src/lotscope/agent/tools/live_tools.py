@@ -356,7 +356,7 @@ async def live_opa_tool(
         sources=[
             _live_source("opa_properties_public", result.payload.get("url"), result.fetched_at),
             Source(name="parcel", url=urls.OPA_URL, ingested_at=ingested),
-            Source(name="atlas", url=urls.atlas(row.parcel_number)),
+            Source(name="atlas", url=urls.atlas_section(row.parcel_number, "header")),
         ],
         unverified=[
             "OPA's sale_date and sale_price are the assessment record's own last-sale fields, "
@@ -627,6 +627,7 @@ async def live_li_tool(
             _live_source("violations", result.payload.get("url"), result.fetched_at),
             Source(name="li_event", url=urls.LI_URL, ingested_at=ingested),
             Source(name="li_property_history", url=urls.li_history(row.address)),
+            Source(name="atlas", url=urls.atlas_section(row.parcel_number, "violations")),
         ],
         unverified=[
             "L&I records what was reported and inspected. An unreported condition is invisible "
@@ -792,6 +793,16 @@ async def live_sheriff_tool(
         sources=[
             _live_source("civilview", result.payload.get("url"), result.fetched_at),
             Source(name="sheriff_sale", url=urls.CIVILVIEW, ingested_at=ingested),
+            *(
+                [
+                    Source(
+                        name="atlas",
+                        url=urls.atlas_section(stored_row["parcel_number"], "sheriff"),
+                    )
+                ]
+                if stored_row is not None
+                else []
+            ),
         ],
         unverified=[
             "The opening bid on this page is a nominal minimum, not a price. Water and gas "

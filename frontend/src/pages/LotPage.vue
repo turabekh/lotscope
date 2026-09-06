@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import { computed, onMounted, watch } from 'vue'
+import { computed, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import MapView from '@/components/MapView.vue'
+import { isLotSection } from '@/lib/sourceLinks'
 import ParcelDossier from '@/components/ParcelDossier.vue'
 import { useParcelStore } from '@/stores/parcel'
 
@@ -14,9 +15,29 @@ const $q = useQuasar()
 
 const isMobile = computed(() => $q.screen.lt.md)
 
-function load(): void {
+async function load(): Promise<void> {
   const id = route.params.parcelNumber
-  if (typeof id === 'string' && id !== '') void store.select(id)
+  if (typeof id === 'string' && id !== '') await store.select(id)
+  await scrollToHash()
+}
+
+/**
+ * /lot/:parcelNumber#violations opens on the violations. The section has to exist before
+ * we can scroll to it, so this waits a tick after the parcel resolves rather than firing
+ * at mount and silently doing nothing.
+ */
+async function scrollToHash(): Promise<void> {
+  const anchor = route.hash.replace('#', '')
+  if (!anchor || !isLotSection(anchor)) return
+  await nextTick()
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const node = document.getElementById(anchor)
+    if (node) {
+      node.scrollIntoView({ block: 'start' })
+      return
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
 }
 
 function goBack(): void {
@@ -33,6 +54,7 @@ function onSelect(parcelNumber: string): void {
 }
 
 onMounted(load)
+watch(() => route.hash, scrollToHash)
 watch(() => route.params.parcelNumber, load)
 </script>
 

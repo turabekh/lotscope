@@ -121,7 +121,34 @@ describe('ToolCard', () => {
     expect(external.attributes('target')).toBe('_blank')
 
     await wrapper.find('[data-test="tool-source-internal"]').trigger('click')
-    expect(wrapper.emitted('openLot')?.[0]).toEqual(['phl:191357500'])
+    // The parcel and the section it should open on. This source carries no anchor.
+    expect(wrapper.emitted('openLot')?.[0]).toEqual(['phl:191357500', null])
+  })
+
+  it('carries the section an anchored source names, so the drawer lands on it', async () => {
+    const anchored = call({
+      envelope: {
+        data: {},
+        sources: [
+          {
+            name: 'atlas',
+            url: 'https://atlas.phila.gov/191357500#violations',
+            fetched_at: null,
+            ingested_at: null,
+            computed_at: null,
+          },
+        ],
+        unverified: [],
+      },
+    })
+    const wrapper = mount(ToolCard, {
+      props: { call: anchored },
+      global: { plugins: [[Quasar, {}]] },
+    })
+    await wrapper.find('[data-test="tool-card-toggle"]').trigger('click')
+    await wrapper.find('[data-test="tool-source-internal"]').trigger('click')
+
+    expect(wrapper.emitted('openLot')?.[0]).toEqual(['phl:191357500', 'violations'])
   })
 
   it('announces its expanded state rather than relying on the caret', () => {

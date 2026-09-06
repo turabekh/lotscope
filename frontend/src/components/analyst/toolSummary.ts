@@ -1,3 +1,4 @@
+import { sectionFromUrl, type LotSection } from '@/lib/sourceLinks'
 import type { ToolCall } from '@/stores/analyst'
 
 /**
@@ -75,4 +76,12 @@ export function internalParcel(url: string | null | undefined): string | null {
   if (!url) return null
   const match = /atlas\.phila\.gov\/(?:phl:)?([0-9]{6,12})/.exec(url)
   return match ? `phl:${match[1]}` : null
+}
+
+/**
+ * Where in the lot that source points. The Analyst anchors its lot links to the section
+ * holding the fact, so the drawer opens on the violations when the tool read violations.
+ */
+export function internalSection(url: string | null | undefined): LotSection | null {
+  return sectionFromUrl(url)
 }

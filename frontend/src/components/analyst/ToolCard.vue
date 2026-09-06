@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import { internalParcel, toolSummary } from '@/components/analyst/toolSummary'
+import { internalParcel, internalSection, toolSummary } from '@/components/analyst/toolSummary'
 import type { ToolCall } from '@/stores/analyst'
 
 const props = defineProps<{ call: ToolCall }>()
-const emit = defineEmits<{ openLot: [parcelNumber: string] }>()
+const emit = defineEmits<{ openLot: [parcelNumber: string, section: string | null] }>()
 
 const expanded = ref(false)
 const summary = computed(() => toolSummary(props.call))
@@ -74,7 +74,7 @@ function stamp(source: { fetched_at: string | null; ingested_at: string | null }
 
 function onSource(url: string | null): void {
   const parcel = internalParcel(url)
-  if (parcel) emit('openLot', parcel)
+  if (parcel) emit('openLot', parcel, internalSection(url))
 }
 </script>
 

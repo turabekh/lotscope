@@ -13,6 +13,39 @@ export type ShowMeTarget =
   | { kind: 'stored'; label: string; source: string; asOf: string | null }
 
 const ATLAS = 'https://atlas.phila.gov'
+
+/**
+ * The Lot page's sections, in the order they appear. Mirrors LOT_SECTIONS in the backend's
+ * agent/tools/urls.py — an Analyst source link carries one of these so opening evidence
+ * from a tool card lands on the section holding the fact rather than the top of the page.
+ * The two lists are meant to be changed together.
+ */
+export const LOT_SECTIONS = [
+  'header',
+  'map',
+  'verdict',
+  'sheriff',
+  'deeds',
+  'violations',
+  'delinquency',
+  'comps',
+  'zoning-overlays',
+  'neighbors',
+  'corrections',
+] as const
+
+export type LotSection = (typeof LOT_SECTIONS)[number]
+
+export function isLotSection(value: string): value is LotSection {
+  return (LOT_SECTIONS as readonly string[]).includes(value)
+}
+
+/** The section an Atlas-style source link points at, if it names one we know. */
+export function sectionFromUrl(url: string | null | undefined): LotSection | null {
+  if (!url) return null
+  const anchor = url.split('#')[1] ?? ''
+  return isLotSection(anchor) ? anchor : null
+}
 const LI_SEARCH = 'https://li.phila.gov/property-history/search?address='
 const CIVILVIEW = 'https://philadelphia.sheriffsale.com/'
 const CARTO = 'https://phl.carto.com/api/v2/sql?q='
@@ -21,8 +54,9 @@ export function localKey(parcelNumber: string): string {
   return parcelNumber.split(':').pop() ?? parcelNumber
 }
 
-export function atlasUrl(parcelNumber: string): string {
-  return `${ATLAS}/${encodeURIComponent(localKey(parcelNumber))}`
+export function atlasUrl(parcelNumber: string, section?: LotSection): string {
+  const base = `${ATLAS}/${encodeURIComponent(localKey(parcelNumber))}`
+  return section ? `${base}#${section}` : base
 }
 
 /**
