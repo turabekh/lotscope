@@ -214,3 +214,12 @@ Step 3.2: / is the conversation. Conversation rail with today's brief pinned, th
 The first real run found a gap: the opening named the next sale date and the shortcut said "screen the next sale", but no tool could resolve which sale that was, so the Analyst correctly refused. Added get_sale_calendar; the rerun called it, screened 114 listings / 32 vacant → 3 BID, and added all three, agent_run_id 20. Screenshot /tmp/analyst-real-run.png.
 Two defects I could only see by looking: the model writes Markdown and the thread showed it raw, and an expanded screen_sale buried the page in JSON. Both fixed — a parser into a render tree with no v-html, and nested records as tables that say what they left out.
 Gates: lint, typecheck 623 files + vue-tsc, unit 1166 + integration 639 (0 skipped), vitest 371, Playwright 39 serially.
+
+## 2026-09-06 — 3.2 shipped; Step 3.3 (feat/lot-page)
+Deployed 4b6fb83 — ingest guard clean, drift guard OK, /health ready.
+Step 3.3: every fact on a lot carries a "Show me". A public page links straight out (Carto row, L&I history, Atlas, CivilView); a Title 14 cite opens the provision text from the corpus; where no public URL can be built it names our source and its as-of, and says "no as-of recorded" when we do not know rather than implying the value is current. New GET /provisions/{id} backs the popover — the corpus is loaded on production (29,297 rows), contradicting an older note that said it was empty.
+One verdict section: VerdictHero and VerdictPanel were two cards each announcing themselves as the verdict, now one, carrying the envelope's cited_section as the dimensional citation.
+SnapshotPanel kept but collapsed to "In plain words" — the verdict states the finding and the Analyst answers follow-ups on the same screen, but nothing else shows data coverage.
+Ask the Analyst hands the parcel over as a query parameter and the Analyst opens the conversation itself. Diligence shown at $199 and plainly disabled rather than hidden.
+The sourceLinks module mirrors the agent's urls.py so a "Show me" and a source in an envelope point at the same place.
+Gates: lint, typecheck 624 files + vue-tsc, unit 1166 + integration 639 (0 skipped), vitest 382, Playwright 44 serially.
