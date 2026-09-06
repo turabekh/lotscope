@@ -26,7 +26,7 @@ from lotscope.risk.models import FloodZone, LiEvent, SheriffSaleEvent, TaxStatus
 from lotscope.skiptrace.models import SkipTraceResult
 from lotscope.streets.models import StreetCenterline
 from lotscope.valuation.models import Sale
-from lotscope.verdict.models import ParcelVerdict
+from lotscope.verdict.models import ParcelScreen
 from lotscope.watchlist.models import SavedParcel
 from lotscope.zba.models import ZbaAppeal
 from lotscope.zoning.models import Rco, ZoningDistrict, ZoningOverlay, ZoningStandard
@@ -62,7 +62,7 @@ __all__ = [
     "ParcelAssemblage",
     "ParcelCorrection",
     "ParcelDistress",
-    "ParcelVerdict",
+    "ParcelScreen",
     "PolicyDocument",
     "Purchase",
     "PushSubscription",

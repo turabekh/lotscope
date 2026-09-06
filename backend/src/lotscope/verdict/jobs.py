@@ -1,25 +1,46 @@
+"""The nightly rebuild of the screening index.
+
+Every row is recomputed from the same composition the Lot page reads, so the index and
+the answer can only differ by a night. It covers vacant land, which is the universe the
+product screens; anything else is answered by computing it on read.
+"""
+
 import asyncio
-import sys
 from collections.abc import Iterator, Sequence
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy.sql.elements import TextClause
 
 from lotscope.core.config import get_settings
 from lotscope.core.db import create_engine, create_session_factory
 from lotscope.core.logging import configure_logging, get_logger
-from lotscope.verdict.composition import VERDICT_VERSION
-from lotscope.verdict.decision import DECISION_VERSION
-from lotscope.verdict.service import recompute_verdicts
+from lotscope.verdict.service import compute_verdict
 
-_STALE_ONLY_PREDICATE = (
-    " AND NOT EXISTS (SELECT 1 FROM parcel_verdict v "
-    "WHERE v.parcel_number = parcel.parcel_number "
-    "AND v.verdict_version = CAST(:version AS text) "
-    "AND v.decision_version = CAST(:decision_version AS text))"
-)
 _DEFAULT_BATCH_SIZE = 500
+
+_NUMBERS_SQL = text(
+    "SELECT parcel_number FROM parcel "
+    "WHERE is_vacant IS TRUE AND geom_local IS NOT NULL "
+    "AND (CAST(:market AS text) IS NULL OR market_code = CAST(:market AS text)) "
+    "ORDER BY parcel_number"
+)
+
+_UPSERT_SQL = text(
+    "INSERT INTO parcel_screen (parcel_number, opportunity_score, deal_score, "
+    "max_allowable_offer, est_margin, risk_score, by_right_units, can_build_by_right, "
+    "is_underpriced, sources, computed_at) VALUES (:parcel_number, :opportunity_score, "
+    ":deal_score, :max_allowable_offer, :est_margin, :risk_score, :by_right_units, "
+    ":can_build_by_right, :is_underpriced, '[]'::jsonb, :computed_at) "
+    "ON CONFLICT (parcel_number) DO UPDATE SET "
+    "opportunity_score = excluded.opportunity_score, deal_score = excluded.deal_score, "
+    "max_allowable_offer = excluded.max_allowable_offer, est_margin = excluded.est_margin, "
+    "risk_score = excluded.risk_score, by_right_units = excluded.by_right_units, "
+    "can_build_by_right = excluded.can_build_by_right, "
+    "is_underpriced = excluded.is_underpriced, computed_at = excluded.computed_at, "
+    "updated_at = now()"
+)
+
+_logger = get_logger("verdict.jobs")
 
 
 def _chunks(items: Sequence[str], size: int) -> Iterator[list[str]]:
@@ -27,81 +48,67 @@ def _chunks(items: Sequence[str], size: int) -> Iterator[list[str]]:
         yield list(items[start : start + size])
 
 
-def _numbers_statement(*, vacant_only: bool, only_stale: bool) -> TextClause:
-    base = (
-        "SELECT parcel_number FROM parcel WHERE "
-        + ("is_vacant IS TRUE AND geom_local IS NOT NULL AND " if vacant_only else "")
-        + "(CAST(:market AS text) IS NULL OR market_code = CAST(:market AS text))"
-    )
-    if only_stale:
-        base += _STALE_ONLY_PREDICATE
-    return text(base + " ORDER BY parcel_number")
+async def rebuild_screen(session: AsyncSession, parcel_numbers: Sequence[str]) -> int:
+    written = 0
+    for parcel_number in parcel_numbers:
+        try:
+            async with session.begin_nested():
+                verdict = await compute_verdict(session, parcel_number)
+                if verdict is None:
+                    continue
+                await session.execute(
+                    _UPSERT_SQL,
+                    {
+                        "parcel_number": parcel_number,
+                        "opportunity_score": verdict.opportunity_score,
+                        "deal_score": verdict.deal_score,
+                        "max_allowable_offer": verdict.max_allowable_offer,
+                        "est_margin": verdict.est_margin,
+                        "risk_score": verdict.risk_score,
+                        "by_right_units": verdict.by_right_units,
+                        "can_build_by_right": verdict.can_build_by_right,
+                        "is_underpriced": verdict.is_underpriced,
+                        "computed_at": verdict.computed_at,
+                    },
+                )
+                written += 1
+        except Exception as error:
+            _logger.warning("screen_row_skipped", parcel_number=parcel_number, error=str(error))
+    return written
 
 
-async def _parcel_numbers(
-    session: AsyncSession, *, vacant_only: bool, market: str | None, only_stale: bool = False
-) -> list[str]:
-    statement = _numbers_statement(vacant_only=vacant_only, only_stale=only_stale)
-    params: dict[str, str | None] = {"market": market}
-    if only_stale:
-        params["version"] = VERDICT_VERSION
-        params["decision_version"] = DECISION_VERSION
-    result = await session.execute(statement, params)
-    return [row[0] for row in result]
-
-
-async def recompute_all_verdicts(
+async def rebuild_all_screens(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     batch_size: int = _DEFAULT_BATCH_SIZE,
-    vacant_only: bool = False,
     market: str | None = None,
-    only_stale: bool = False,
 ) -> int:
     async with session_factory() as session:
-        parcel_numbers = await _parcel_numbers(
-            session, vacant_only=vacant_only, market=market, only_stale=only_stale
-        )
+        parcel_numbers = [row[0] for row in await session.execute(_NUMBERS_SQL, {"market": market})]
 
-    logger = get_logger("verdict.jobs")
     total = 0
     for chunk in _chunks(parcel_numbers, batch_size):
         async with session_factory() as session:
-            total += await recompute_verdicts(session, chunk)
+            total += await rebuild_screen(session, chunk)
             await session.commit()
-        logger.info("verdict_progress", done=total, of=len(parcel_numbers))
+        _logger.info("screen_progress", done=total, of=len(parcel_numbers))
     return total
 
 
-async def _run(*, vacant_only: bool, market: str | None, only_stale: bool) -> None:
+async def _run(*, market: str | None) -> None:
     settings = get_settings()
     configure_logging(settings)
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
     try:
-        count = await recompute_all_verdicts(
-            session_factory, vacant_only=vacant_only, market=market, only_stale=only_stale
-        )
-        get_logger("verdict.jobs").info(
-            "recomputed_verdicts",
-            count=count,
-            vacant_only=vacant_only,
-            market=market,
-            only_stale=only_stale,
-        )
+        count = await rebuild_all_screens(session_factory, market=market)
+        _logger.info("rebuilt_screen_index", count=count, market=market)
     finally:
         await engine.dispose()
 
 
 def main() -> None:
-    args = sys.argv[1:]
-    asyncio.run(
-        _run(
-            vacant_only="vacant" in args,
-            market=None,
-            only_stale="stale" in args,
-        )
-    )
+    asyncio.run(_run(market=None))
 
 
 if __name__ == "__main__":

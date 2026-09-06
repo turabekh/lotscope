@@ -370,13 +370,6 @@ function escapeHtml(value: string): string {
   )
 }
 
-function compactMoney(value: unknown): string {
-  if (typeof value !== 'number') return '—'
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `$${Math.round(value / 1_000)}k`
-  return `$${value}`
-}
-
 function popupHtml(properties: Record<string, unknown>): string {
   const address = escapeHtml(String(properties.address ?? properties.parcel_number ?? 'Parcel'))
   const zoning = escapeHtml(String(properties.base_zoning_code ?? '—'))
@@ -394,21 +387,12 @@ function popupHtml(properties: Record<string, unknown>): string {
         : properties.can_build_by_right === false
           ? 'Base district: standards not met'
           : ''
-    const value =
-      typeof properties.value_low === 'number'
-        ? `${compactMoney(properties.value_low)}–${compactMoney(properties.value_high)}`
-        : ''
-    if (byRight || value) {
-      rows += `<div class="lp-extra">${[byRight, value].filter(Boolean).join(' · ')}</div>`
-    }
     if (byRight) {
-      rows += `<div class="lp-note">Dimensional screening only — not an approval.</div>`
+      rows += `<div class="lp-extra">${byRight}</div>`
     }
-  }
-  const maxHeight = properties.max_height_ft
-  if (typeof maxHeight === 'number' && maxHeight > 0) {
-    const floors = Math.max(1, Math.floor(maxHeight / 10.5))
-    rows += `<div class="lp-extra">Up to ${maxHeight} ft · ~${floors} floor${floors === 1 ? '' : 's'} under base district</div>`
+    // The tile carries last night's screen, which is what colours the map. The figures a
+    // buyer acts on are computed when the lot is opened, and say where they came from.
+    rows += `<div class="lp-note">From last night's screen — open the lot for the current read.</div>`
   }
   return (
     `<div class="lot-pop"><div class="lp-addr">${address}</div>` +

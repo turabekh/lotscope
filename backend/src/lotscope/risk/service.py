@@ -292,7 +292,7 @@ _SHERIFF_SELECT = (
     "round(pv.opportunity_score)::int AS opportunity_score "
     "FROM sheriff_sale ss "
     "JOIN parcel p ON p.parcel_number = ss.parcel_number "
-    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = ss.parcel_number"
+    "LEFT JOIN parcel_screen pv ON pv.parcel_number = ss.parcel_number"
 )
 
 

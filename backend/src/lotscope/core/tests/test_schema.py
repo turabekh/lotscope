@@ -11,7 +11,7 @@ EXPECTED_TABLES = {
     "sale",
     "tax_status",
     "li_event",
-    "parcel_verdict",
+    "parcel_screen",
 }
 
 EXPECTED_GIST_INDEXES = {

@@ -25,7 +25,7 @@ _MARKET_STATS_SQL = text(
     "  AND p.market_code = n.market_code "
     "  AND ST_Contains(n.geom_local, ST_Centroid(p.geom_local)) "
     "LEFT JOIN parcel_distress pd ON pd.parcel_number = p.parcel_number "
-    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
+    "LEFT JOIN parcel_screen pv ON pv.parcel_number = p.parcel_number "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
     "WHERE n.market_code = :market "
     "GROUP BY n.name "

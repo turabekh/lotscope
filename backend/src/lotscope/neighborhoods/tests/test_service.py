@@ -52,8 +52,8 @@ async def _vacant_parcel(
     if distress is not None:
         await session.execute(
             text(
-                "INSERT INTO parcel_distress (parcel_number, score, tier, version) "
-                "VALUES (:pn, :score, 'high', 'v2')"
+                "INSERT INTO parcel_distress (parcel_number, score, tier) "
+                "VALUES (:pn, :score, 'high')"
             ),
             {"pn": number, "score": distress},
         )

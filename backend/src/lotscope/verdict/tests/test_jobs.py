@@ -1,18 +1,17 @@
 import pytest
-from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from lotscope.verdict.composition import VERDICT_VERSION
-from lotscope.verdict.decision import DECISION_VERSION
-from lotscope.verdict.jobs import _parcel_numbers, recompute_all_verdicts
-from lotscope.verdict.models import ParcelVerdict
+from lotscope.verdict.jobs import rebuild_all_screens
 
 pytestmark = pytest.mark.integration
 
 _PARCELS = ["900000001", "900000002"]
 
 
-async def test_recompute_all_verdicts_persists_every_parcel(migrated_database: str) -> None:
+async def test_the_rebuild_covers_the_vacant_lots_and_leaves_the_rest(
+    migrated_database: str,
+) -> None:
     engine = create_async_engine(migrated_database)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     try:
@@ -20,67 +19,84 @@ async def test_recompute_all_verdicts_persists_every_parcel(migrated_database: s
             for parcel_number in _PARCELS:
                 await session.execute(
                     text(
-                        "INSERT INTO parcel (parcel_number, base_zoning_code) VALUES (:pn, 'RSA-5')"
+                        "INSERT INTO parcel (parcel_number, base_zoning_code, is_vacant, "
+                        "geom_local) VALUES (:pn, 'RSA-5', TRUE, "
+                        "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
                     ),
                     {"pn": parcel_number},
                 )
-            await session.commit()
-
-        processed = await recompute_all_verdicts(session_factory, batch_size=1)
-        assert processed >= len(_PARCELS)
-
-        async with session_factory() as session:
-            stored = await session.scalar(
-                select(func.count())
-                .select_from(ParcelVerdict)
-                .where(ParcelVerdict.parcel_number.in_(_PARCELS))
-            )
-            versions = await session.scalars(
-                select(ParcelVerdict.verdict_version).where(
-                    ParcelVerdict.parcel_number.in_(_PARCELS)
+            # A built parcel is not part of the screening universe, so the index skips it.
+            await session.execute(
+                text(
+                    "INSERT INTO parcel (parcel_number, base_zoning_code, is_vacant, geom_local) "
+                    "VALUES ('900000003', 'RSA-5', FALSE, "
+                    "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
                 )
             )
-            assert stored == len(_PARCELS)
-            assert set(versions) == {VERDICT_VERSION}
+            await session.commit()
+
+        written = await rebuild_all_screens(session_factory, batch_size=1)
+        assert written >= len(_PARCELS)
+
+        async with session_factory() as session:
+            indexed = await session.scalar(
+                text("SELECT count(*) FROM parcel_screen WHERE parcel_number = ANY(:pns)"),
+                {"pns": [*_PARCELS, "900000003"]},
+            )
+            stamped = await session.scalar(
+                text(
+                    "SELECT count(*) FROM parcel_screen WHERE parcel_number = ANY(:pns) "
+                    "AND computed_at IS NOT NULL"
+                ),
+                {"pns": _PARCELS},
+            )
+        assert indexed == len(_PARCELS)
+        assert stamped == len(_PARCELS)
     finally:
         async with session_factory() as session:
             await session.execute(
-                text("DELETE FROM parcel_verdict WHERE parcel_number = ANY(:pns)"),
-                {"pns": _PARCELS},
-            )
-            await session.execute(
                 text("DELETE FROM parcel WHERE parcel_number = ANY(:pns)"),
-                {"pns": _PARCELS},
+                {"pns": [*_PARCELS, "900000003"]},
             )
             await session.commit()
         await engine.dispose()
 
 
-async def test_only_stale_skips_parcels_already_at_the_current_version(
-    db_session: AsyncSession,
-) -> None:
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel (parcel_number, market_code) "
-            "VALUES ('stale-1','phl'), ('stale-decision','phl'), ('current-1','phl')"
-        )
-    )
-    await db_session.execute(
-        text(
-            "INSERT INTO parcel_verdict "
-            "(parcel_number, verdict_version, decision_version, computed_at) "
-            "VALUES ('stale-1','v0', :decision, now()), "
-            "('stale-decision','v10','d0', now()), "
-            "('current-1', :version, :decision, now())"
-        ),
-        {"version": VERDICT_VERSION, "decision": DECISION_VERSION},
-    )
-    await db_session.flush()
+async def test_the_rebuild_replaces_what_it_wrote_last_night(migrated_database: str) -> None:
+    engine = create_async_engine(migrated_database)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        async with session_factory() as session:
+            await session.execute(
+                text(
+                    "INSERT INTO parcel (parcel_number, base_zoning_code, is_vacant, geom_local) "
+                    "VALUES ('900000004', 'RSA-5', TRUE, "
+                    "ST_GeomFromText('POLYGON((0 0,0 10,10 10,10 0,0 0))', 2272))"
+                )
+            )
+            await session.execute(
+                text(
+                    "INSERT INTO parcel_screen (parcel_number, opportunity_score, computed_at) "
+                    "VALUES ('900000004', 1, now() - interval '2 days')"
+                )
+            )
+            await session.commit()
 
-    stale = await _parcel_numbers(db_session, vacant_only=False, market="phl", only_stale=True)
-    everything = await _parcel_numbers(db_session, vacant_only=False, market="phl")
+        await rebuild_all_screens(session_factory)
 
-    assert "stale-1" in stale
-    assert "stale-decision" in stale
-    assert "current-1" not in stale
-    assert {"stale-1", "current-1"} <= set(everything)
+        async with session_factory() as session:
+            row = (
+                await session.execute(
+                    text(
+                        "SELECT opportunity_score, computed_at FROM parcel_screen "
+                        "WHERE parcel_number = '900000004'"
+                    )
+                )
+            ).one()
+        assert row.opportunity_score != 1
+        assert row.computed_at is not None
+    finally:
+        async with session_factory() as session:
+            await session.execute(text("DELETE FROM parcel WHERE parcel_number = '900000004'"))
+            await session.commit()
+        await engine.dispose()

@@ -5,7 +5,7 @@ from lotscope.buybox.service import read_buy_box
 from lotscope.underwriting.matching import match_conditions
 from lotscope.underwriting.schemas import BuyBoxMatch, BuyBoxMatches
 
-_MATCH_FROM = "FROM parcel_verdict v JOIN parcel p USING (parcel_number)"
+_MATCH_FROM = "FROM parcel_screen v JOIN parcel p USING (parcel_number)"
 _MATCH_COUNT_SQL = f"SELECT count(*) {_MATCH_FROM}"
 _MATCH_ORDER_SQL = "ORDER BY v.opportunity_score DESC NULLS LAST, v.parcel_number LIMIT :limit"
 _MATCH_SELECT_SQL = (

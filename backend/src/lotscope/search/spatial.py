@@ -23,7 +23,7 @@ _SELECT = (
     "ST_Y(ST_PointOnSurface(p.geom_4326)) AS lat"
 )
 _JOINS = (
-    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
+    "LEFT JOIN parcel_screen pv ON pv.parcel_number = p.parcel_number "
     "LEFT JOIN parcel_distress pd ON pd.parcel_number = p.parcel_number "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number"
 )

@@ -27,7 +27,7 @@ _STATE_SELECT = (
     "pd.score AS distress_score"
 )
 _STATE_JOINS = (
-    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
+    "LEFT JOIN parcel_screen pv ON pv.parcel_number = p.parcel_number "
     "LEFT JOIN tax_status ts ON ts.parcel_number = p.parcel_number "
     "LEFT JOIN parcel_distress pd ON pd.parcel_number = p.parcel_number"
 )
@@ -47,7 +47,7 @@ _LIST_SQL = text(
 _MAIL_RECIPIENTS_SQL = text(
     "SELECT sp.parcel_number, p.address, p.owner, p.mailing_address "
     "FROM saved_parcel sp JOIN parcel p ON p.parcel_number = sp.parcel_number "
-    "LEFT JOIN parcel_verdict pv ON pv.parcel_number = p.parcel_number "
+    "LEFT JOIN parcel_screen pv ON pv.parcel_number = p.parcel_number "
     "WHERE sp.user_id = :user_id "
     "AND coalesce(p.is_city_owned, false) = false "
     "ORDER BY round(pv.opportunity_score)::int DESC NULLS LAST, sp.created_at DESC"

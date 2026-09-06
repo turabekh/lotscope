@@ -266,7 +266,7 @@ async def screen_parcels_tool(
                     "SELECT p.parcel_number, p.address, p.is_vacant, p.lot_area_sqft, "
                     "p.base_zoning_code, v.can_build_by_right, v.by_right_units, "
                     "v.max_allowable_offer, v.est_margin "
-                    "FROM parcel p LEFT JOIN parcel_verdict v USING (parcel_number) "
+                    "FROM parcel p LEFT JOIN parcel_screen v USING (parcel_number) "
                     "WHERE p.parcel_number = ANY(:parcels)"
                 ),
                 {"parcels": parcels[:MAX_SCREEN_PARCELS]},
@@ -933,7 +933,7 @@ async def export_csv_tool(
                 text(
                     "SELECT p.parcel_number, p.address, p.base_zoning_code, p.lot_area_sqft, "
                     "p.is_vacant, p.market_value, v.max_allowable_offer "
-                    "FROM parcel p LEFT JOIN parcel_verdict v USING (parcel_number) "
+                    "FROM parcel p LEFT JOIN parcel_screen v USING (parcel_number) "
                     "WHERE p.parcel_number = ANY(:parcels) ORDER BY p.parcel_number"
                 ),
                 {"parcels": payload.parcel_numbers[:MAX_SCREEN_PARCELS]},

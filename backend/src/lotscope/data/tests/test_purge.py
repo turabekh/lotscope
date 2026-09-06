@@ -74,7 +74,7 @@ def test_the_walk_starts_from_the_market_predicate() -> None:
 def test_explicit_tables_are_labelled_apart_from_foreign_key_reached_ones() -> None:
     targets = _by_key(build_deletion_graph(load_full_metadata()))
 
-    assert targets["parcel_verdict"].reason == FK_REACHED
+    assert targets["parcel_screen"].reason == FK_REACHED
     assert targets["parcel_overlay"].reason == EXPLICIT_LISTED
     assert targets["parcel_overlay"].note
 
@@ -107,21 +107,18 @@ async def test_counting_and_deleting_agree_on_the_same_predicate(
         )
     )
     await db_session.execute(
-        text(
-            "INSERT INTO parcel_verdict (parcel_number, verdict_version) VALUES "
-            "('zzz:1', 'v1'), ('000000801', 'v1')"
-        )
+        text("INSERT INTO parcel_screen (parcel_number) VALUES ('zzz:1'), ('000000801')")
     )
     await db_session.flush()
 
     targets = [
         t
         for t in build_deletion_graph(load_full_metadata())
-        if t.key in {"parcel", "parcel_verdict"}
+        if t.key in {"parcel", "parcel_screen"}
     ]
     before = {t.key: c for t, c in await count_targets(db_session, targets)}
     assert before["parcel"] == 2
-    assert before["parcel_verdict"] == 1
+    assert before["parcel_screen"] == 1
 
     deleted = {t.key: c for t, c in await delete_targets(db_session, targets)}
     await db_session.flush()
