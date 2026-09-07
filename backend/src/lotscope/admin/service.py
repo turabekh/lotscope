@@ -160,6 +160,10 @@ async def analyst_spend_today(
     )
 
 
+def _run_summary(run: JobRun | None) -> JobRunSummary | None:
+    return JobRunSummary.model_validate(run) if run is not None else None
+
+
 async def _latest_runs_by_job(session: AsyncSession) -> dict[str, JobRun]:
     rows = (
         await session.execute(
@@ -167,6 +171,19 @@ async def _latest_runs_by_job(session: AsyncSession) -> dict[str, JobRun]:
         )
     ).scalars()
     return {run.job_id: run for run in rows}
+
+
+def _newest(*runs: JobRun | None) -> JobRun | None:
+    """The run that started most recently, counting a queued one as newest.
+
+    A job is run two ways and recorded under two ids — by hand under `spec.id`, by the
+    timetable under `cron:<cron_name>` — and the console wants the last time it ran,
+    whichever did it.
+    """
+    found = [run for run in runs if run is not None]
+    if not found:
+        return None
+    return max(found, key=lambda run: (run.started_at or run.created_at, run.id))
 
 
 async def job_catalog(session: AsyncSession) -> list[JobCatalogEntry]:
@@ -183,8 +200,11 @@ async def job_catalog(session: AsyncSession) -> list[JobCatalogEntry]:
                 JobParamSpec(name=p.name, label=p.label, type=p.type, required=p.required)
                 for p in spec.params
             ],
-            latest_run=(
-                JobRunSummary.model_validate(latest[spec.id]) if spec.id in latest else None
+            latest_run=_run_summary(
+                _newest(
+                    latest.get(spec.id),
+                    latest.get(f"cron:{spec.cron_name}") if spec.cron_name else None,
+                )
             ),
         )
         for spec in CATALOG
@@ -208,13 +228,21 @@ async def enqueue_job(
     if spec is None:
         raise NotFoundError(f"Job {job_id!r} is not in the catalog.")
     stored = storable_params(spec, params or {})
+    # Both ids, because the nightly and the button run the same job over the same tables:
+    # starting a second `recompute_distress` on top of the 08:00 one is two passes over
+    # every parcel at once. The console already refuses it — the API has to agree.
+    ids = [spec.id] + ([f"cron:{spec.cron_name}"] if spec.cron_name else [])
     active = await session.scalar(
-        select(JobRun.id)
-        .where(JobRun.job_id == job_id, JobRun.status.in_(_ACTIVE_STATUSES))
+        select(JobRun.job_id)
+        .where(JobRun.job_id.in_(ids), JobRun.status.in_(_ACTIVE_STATUSES))
         .limit(1)
     )
     if active is not None:
-        raise ConflictError(f"Job {job_id!r} already has a run in progress.")
+        raise ConflictError(
+            f"Job {job_id!r} already has a run in progress."
+            if active == spec.id
+            else f"Job {job_id!r} is running now as the scheduled {spec.cron_name!r}."
+        )
     run = JobRun(
         job_id=spec.id,
         label=spec.label,
