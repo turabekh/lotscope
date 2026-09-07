@@ -456,3 +456,37 @@ async def test_a_job_the_timetable_is_running_cannot_be_started_by_hand(
             db_session, _FakeEnqueuer(), job_id="recompute:distress", triggered_by=user_id
         )
     assert "recompute_distress" in str(caught.value)
+
+
+@pytest.mark.integration
+async def test_deleting_the_account_keeps_the_record_of_what_it_ran(
+    db_session: AsyncSession,
+) -> None:
+    """An audit row must outlive the account that triggered it.
+
+    The FK was ON DELETE CASCADE, so deleting a throwaway admin took a successful
+    588,715-parcel recompute out of `job_run` with it: the work had happened and the only
+    row saying who asked for it was gone.
+    """
+    user_id = await _admin_user(db_session)
+    run = JobRun(
+        job_id="recompute:distress",
+        label="Recompute distress index",
+        kind="recompute",
+        status="success",
+        result_count=588_715,
+        triggered_by=user_id,
+    )
+    db_session.add(run)
+    await db_session.flush()
+    run_id = run.id
+
+    await db_session.execute(text("DELETE FROM app_user WHERE id = :id"), {"id": user_id})
+    await db_session.flush()
+    db_session.expunge_all()
+
+    kept = await db_session.get(JobRun, run_id)
+    assert kept is not None, "the run was deleted with the account that triggered it"
+    assert kept.triggered_by is None
+    assert kept.status == "success"
+    assert kept.result_count == 588_715

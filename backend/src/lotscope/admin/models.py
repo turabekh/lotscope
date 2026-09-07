@@ -27,6 +27,9 @@ class JobRun(Base, TimestampMixin):
     # between the two would read as a duration nobody spent.
     duration_ms: Mapped[int | None] = mapped_column(Integer)
     error: Mapped[str | None] = mapped_column(Text)
+    # SET NULL, not CASCADE: deleting an account must not delete the record of the jobs
+    # it ran. A cron already writes NULL here because nobody triggered it, and a run
+    # whose triggerer is gone makes the same claim.
     triggered_by: Mapped[int | None] = mapped_column(
-        ForeignKey("app_user.id", ondelete="CASCADE"), nullable=True
+        ForeignKey("app_user.id", ondelete="SET NULL"), nullable=True
     )

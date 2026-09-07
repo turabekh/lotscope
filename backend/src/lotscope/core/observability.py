@@ -115,6 +115,9 @@ async def record_error_event(
                 "last_seen_at": statement.excluded.last_seen_at,
                 "sample": statement.excluded.sample,
                 "context": statement.excluded.context,
+                # An upsert is an INSERT, so `onupdate` never fires: without this the
+                # tenth occurrence of a bug still says it was last written on the first.
+                "updated_at": moment,
             },
         )
     )

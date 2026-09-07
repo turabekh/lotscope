@@ -328,3 +328,36 @@ async def test_leads_never_show_or_rank_on_a_debt_the_owner_does_not_owe(
     ordered = [lead.parcel_number for lead in await find_leads(db_session, limit=50)]
     assert leads["000000901"].score == leads["000000902"].score
     assert ordered.index("000000901") < ordered.index("000000902")
+
+
+async def test_a_recompute_moves_updated_at(db_session: AsyncSession) -> None:
+    """The score's row must say when it was last written.
+
+    `onupdate` is an UPDATE-construct hook and this write is an upsert, which is an
+    INSERT — so the column kept the value from the row's first write and read as though
+    nothing had touched the score for days. Production's whole table said 2026-09-05
+    while every `computed_at` said 2026-09-07.
+    """
+    await _parcel(db_session, "phl:77700001", address="1 UPDATED WAY", mailing="1 UPDATED WAY")
+    owners = await tired_landlord_owner_keys(db_session)
+
+    await recompute_distress(db_session, ["phl:77700001"], owners)
+    await db_session.flush()
+    first = await db_session.execute(
+        text("SELECT updated_at, computed_at FROM parcel_distress WHERE parcel_number = :p"),
+        {"p": "phl:77700001"},
+    )
+    before_updated, before_computed = first.one()
+
+    await recompute_distress(db_session, ["phl:77700001"], owners)
+    await db_session.flush()
+    second = await db_session.execute(
+        text("SELECT updated_at, computed_at FROM parcel_distress WHERE parcel_number = :p"),
+        {"p": "phl:77700001"},
+    )
+    after_updated, after_computed = second.one()
+
+    assert after_computed > before_computed
+    assert after_updated > before_updated, "updated_at stood still across a recompute"
+    # The two describe the same write, so they must not drift apart.
+    assert after_updated == after_computed
