@@ -29,12 +29,17 @@ export default defineConfig({
       testMatch: /mobile\.spec\.ts$/,
     },
   ],
+  // A built bundle, not `pnpm dev`. The dev server transforms roughly 270 modules on
+  // every page load and does it in one Node process, so the workers queue behind each
+  // other rather than behind anything in the product: one browser reached the lot page
+  // in 2.4s, four in 9.1s, eight in 17.1s, against a 10s expect timeout. `vite build`
+  // costs about four seconds once and serves static files after that.
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: 'pnpm dev',
+        command: 'pnpm exec vite build && pnpm exec vite preview --port 5173 --strictPort',
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        timeout: 180_000,
       },
 })

@@ -25,7 +25,16 @@ test('the stage saves inline', async ({ page }) => {
   await withOneDeal(page, 'deals-stage')
 
   const stage = page.locator('[data-test="deals-stage"]').first()
+  // The dropdown saves on change and the page does not wait for it, so reloading on the
+  // next line races the PATCH and cancels it — rarely alone, reliably under load.
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PATCH' &&
+      /\/pipeline\//.test(response.url()) &&
+      response.ok(),
+  )
   await stage.selectOption('diligence')
+  await saved
 
   // Reload rather than trusting the optimistic update: the point is that it was saved.
   await page.reload()
