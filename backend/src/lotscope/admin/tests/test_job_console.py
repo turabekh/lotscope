@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 
@@ -23,6 +24,7 @@ from lotscope.api.deps import get_arq_pool, get_current_user, get_session
 from lotscope.core.config import Settings
 from lotscope.core.errors import ConflictError, NotFoundError
 from lotscope.ingestion.jobs import INGEST_JOBS
+from lotscope.ops.cron_schedule import SCHEDULED_NAMES
 from lotscope.worker import run_admin_job
 
 
@@ -326,3 +328,131 @@ async def test_admin_can_enqueue_and_list_runs(db_session: AsyncSession) -> None
     assert pool.calls == [("run_admin_job", (body["id"],))]
     assert runs.status_code == 200
     assert [r["id"] for r in runs.json()] == [body["id"]]
+
+
+def test_every_cron_name_names_a_job_on_the_timetable() -> None:
+    """The catalog's join to the worker, checked the way cron_schedule checks its own.
+
+    A spec pointing at a cron that does not exist reads as "never run" for ever, which is
+    the failure this field was added to end — so it must not be able to come back as a
+    typo.
+    """
+    named = {spec.cron_name for spec in CATALOG if spec.cron_name is not None}
+    assert named <= SCHEDULED_NAMES, sorted(named - SCHEDULED_NAMES)
+
+
+def test_every_scheduled_recompute_declares_its_cron() -> None:
+    """Every recompute the timetable runs has to say so, or /admin misreports it."""
+    for spec in CATALOG:
+        if spec.kind == RECOMPUTE_KIND:
+            assert spec.cron_name is not None, spec.id
+
+
+@pytest.mark.integration
+async def test_job_catalog_counts_a_run_the_timetable_did(db_session: AsyncSession) -> None:
+    """A job the nightly ran is not a job that has never run.
+
+    The console read `job_run.job_id == 'recompute:distress'`, and the worker records a
+    scheduled run as `cron:recompute_distress`. Production held 19 of the latter and the
+    screen said the job had never run.
+    """
+    db_session.add(
+        JobRun(
+            job_id="cron:recompute_distress",
+            label="recompute_distress",
+            kind="cron",
+            status="success",
+            result_count=588_715,
+            started_at=datetime(2026, 9, 6, 8, 0, tzinfo=UTC),
+            finished_at=datetime(2026, 9, 6, 8, 4, tzinfo=UTC),
+            triggered_by=None,
+        )
+    )
+    await db_session.flush()
+
+    catalog = await job_catalog(db_session)
+    distress = next(entry for entry in catalog if entry.id == "recompute:distress")
+    assert distress.latest_run is not None
+    assert distress.latest_run.result_count == 588_715
+    # Named as the scheduled run it was, so the screen can say which job produced it.
+    assert distress.latest_run.kind == "cron"
+    assert distress.latest_run.label == "recompute_distress"
+
+
+@pytest.mark.integration
+async def test_the_more_recent_of_the_two_ids_wins(db_session: AsyncSession) -> None:
+    user_id = await _admin_user(db_session)
+    db_session.add(
+        JobRun(
+            job_id="cron:recompute_distress",
+            label="recompute_distress",
+            kind="cron",
+            status="success",
+            started_at=datetime(2026, 9, 6, 8, 0, tzinfo=UTC),
+            finished_at=datetime(2026, 9, 6, 8, 4, tzinfo=UTC),
+        )
+    )
+    by_hand = JobRun(
+        job_id="recompute:distress",
+        label="Recompute distress index",
+        kind="recompute",
+        status="success",
+        started_at=datetime(2026, 9, 7, 0, 3, tzinfo=UTC),
+        finished_at=datetime(2026, 9, 7, 0, 8, tzinfo=UTC),
+        triggered_by=user_id,
+    )
+    db_session.add(by_hand)
+    await db_session.flush()
+
+    catalog = await job_catalog(db_session)
+    distress = next(entry for entry in catalog if entry.id == "recompute:distress")
+    assert distress.latest_run is not None
+    assert distress.latest_run.id == by_hand.id
+    assert distress.latest_run.triggered_by == user_id
+
+
+@pytest.mark.integration
+async def test_the_nightly_ingest_shows_on_every_dataset_it_ran(db_session: AsyncSession) -> None:
+    db_session.add(
+        JobRun(
+            job_id="cron:ingest_all",
+            label="ingest_all",
+            kind="cron",
+            status="success",
+            started_at=datetime(2026, 9, 6, 4, 0, tzinfo=UTC),
+            finished_at=datetime(2026, 9, 6, 5, 0, tzinfo=UTC),
+        )
+    )
+    await db_session.flush()
+
+    catalog = await job_catalog(db_session)
+    ingests = [entry for entry in catalog if entry.kind == INGEST_KIND]
+    assert ingests
+    for entry in ingests:
+        assert entry.latest_run is not None, entry.id
+        # The pass's status is not the dataset's, so it is labelled with the job that ran.
+        assert entry.latest_run.label == "ingest_all"
+
+
+@pytest.mark.integration
+async def test_a_job_the_timetable_is_running_cannot_be_started_by_hand(
+    db_session: AsyncSession,
+) -> None:
+    """Two passes over every parcel at once is not a thing a button should be able to do."""
+    user_id = await _admin_user(db_session)
+    db_session.add(
+        JobRun(
+            job_id="cron:recompute_distress",
+            label="recompute_distress",
+            kind="cron",
+            status="running",
+            started_at=datetime(2026, 9, 7, 8, 0, tzinfo=UTC),
+        )
+    )
+    await db_session.flush()
+
+    with pytest.raises(ConflictError) as caught:
+        await enqueue_job(
+            db_session, _FakeEnqueuer(), job_id="recompute:distress", triggered_by=user_id
+        )
+    assert "recompute_distress" in str(caught.value)

@@ -336,6 +336,11 @@ onBeforeUnmount(() => {
                     ? formatTime(job.latest_run.finished_at ?? job.latest_run.created_at)
                     : 'never run'
                 }}</span>
+                <!-- The nightly runs every ingest dataset in one pass, so that pass's
+                     status is not this dataset's. Name the job that actually ran. -->
+                <span v-if="job.latest_run?.kind === 'cron'" class="job-via"
+                  >via {{ job.latest_run.label }}</span
+                >
               </div>
             </div>
             <q-btn
@@ -572,10 +577,16 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: var(--lot-ink);
 }
+/* Without min-width the meta column refuses to shrink below its text, and a long cron
+   name ("via recompute_vacancy_confidence") pushes Run outside the card. */
+.job-meta {
+  min-width: 0;
+}
 .job-sub {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 2px 6px;
   margin-top: 2px;
 }
 .job-time {
@@ -611,6 +622,13 @@ onBeforeUnmount(() => {
 .spend-total {
   font-size: 1.15rem;
   font-weight: 600;
+}
+
+.job-via {
+  font-size: 11px;
+  color: var(--lot-muted);
+  font-style: italic;
+  overflow-wrap: anywhere;
 }
 
 .ceiling-input {

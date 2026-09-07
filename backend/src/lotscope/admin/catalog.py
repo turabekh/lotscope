@@ -27,11 +27,18 @@ class JobSpec:
     market: str | None = None
     dataset: str | None = None
     params: tuple[JobParam, ...] = field(default_factory=tuple)
+    # The cron in `ops.cron_schedule` that runs this job on the timetable, if one does.
+    # A hand-triggered run is recorded under `id` and a scheduled one under
+    # `cron:<cron_name>`, so a console that reads only `id` calls a job that ran last
+    # night "never run" — which is what /admin said about every job here for weeks.
+    # A test fails if this names a cron the timetable does not have.
+    cron_name: str | None = None
 
 
 _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
     JobSpec(
         id="rebuild:screen",
+        cron_name="rebuild_screen_index",
         label="Rebuild the screening index",
         kind=RECOMPUTE_KIND,
         description="Rebuild the nightly screening index over vacant land, which search ranks "
@@ -40,6 +47,7 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
     ),
     JobSpec(
         id="recompute:distress",
+        cron_name="recompute_distress",
         label="Recompute distress index",
         kind=RECOMPUTE_KIND,
         description="Recompute the motivated-seller distress index for every parcel, in one "
@@ -47,6 +55,7 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
     ),
     JobSpec(
         id="recompute:vacancy",
+        cron_name="recompute_vacancy_confidence",
         label="Recompute vacancy confidence",
         kind=RECOMPUTE_KIND,
         description="Recompute the vacancy-confidence cross-check for every vacant parcel, in "
@@ -54,6 +63,7 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
     ),
     JobSpec(
         id="recompute:assemblage",
+        cron_name="recompute_assemblage",
         label="Recompute assemblage Top Plays",
         kind=RECOMPUTE_KIND,
         description="Recompute assemblage Top Plays for every vacant parcel, in one market or in "
@@ -61,6 +71,7 @@ _RECOMPUTE_SPECS: tuple[JobSpec, ...] = (
     ),
     JobSpec(
         id="recompute:buyers",
+        cron_name="recompute_buyers",
         label="Recompute buyer intelligence",
         kind=RECOMPUTE_KIND,
         description="Recompute cash-buyer / disposition profiles from recorded arm's-length "
@@ -81,6 +92,7 @@ _MAINTENANCE_SPECS: tuple[JobSpec, ...] = (
     ),
     JobSpec(
         id="maintenance:snapshot_stats",
+        cron_name="snapshot_stats",
         label="Snapshot market stats",
         kind=MAINTENANCE_KIND,
         description="Recompute the per-market coverage snapshot (spine, geometry, verdict, "
@@ -103,6 +115,11 @@ def _build_catalog() -> list[JobSpec]:
             description=f"Ingest the {dataset} dataset for {market.upper()}.",
             market=market,
             dataset=dataset,
+            # The nightly runs every dataset in one pass, so this row's last scheduled
+            # run is that pass. Its status is the pass's, not this dataset's — the
+            # console labels a shared run with the cron that did it, and the
+            # dataset-freshness table on the same screen carries the per-source result.
+            cron_name="ingest_all",
         )
         for (market, dataset) in sorted(keys)
     ]
