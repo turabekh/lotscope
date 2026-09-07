@@ -25,15 +25,22 @@ psql_main() { docker compose exec -T "${DB_CONTAINER}" psql -U "${DB_USER}" -d "
 started="$(date -u +'%Y-%m-%d %H:%M:%S+00')"
 dump_file=""
 
+recorded=0
+
 record() {
   local status="$1" rows="$2" error="$3"
+  recorded=1
+  # On stdin, not in -c: psql expands :'var' only in what it lexes itself, and a -c string
+  # goes to the server verbatim — which is how this row spent a week being a syntax error.
   psql_main -v ON_ERROR_STOP=1 \
-    -v status="${status}" -v rows="${rows}" -v err="${error}" -v started="${started}" \
-    -c "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at,
-          duration_ms, result_count, error, created_at, updated_at)
-        VALUES ('${JOB_ID}', 'restore_check', 'backup', :'status', :'started', now(),
-          round(extract(epoch FROM (now() - :'started'::timestamptz)) * 1000),
-          nullif(:'rows','')::int, nullif(:'err',''), now(), now())" > /dev/null
+    -v job="${JOB_ID}" -v status="${status}" -v rows="${rows}" -v err="${error}" \
+    -v started="${started}" > /dev/null <<'SQL'
+INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at,
+    duration_ms, result_count, error, created_at, updated_at)
+VALUES (:'job', 'restore_check', 'backup', :'status', :'started', now(),
+    round(extract(epoch FROM (now() - :'started'::timestamptz)) * 1000),
+    nullif(:'rows','')::int, nullif(:'err',''), now(), now());
+SQL
 }
 
 cleanup() {
@@ -49,9 +56,24 @@ fail() {
   exit 1
 }
 
+# An abort that never reaches fail() leaves no row, and a weekly job that writes nothing
+# looks exactly like a weekly job that has not run yet. Record those too.
+on_err() {
+  local code=$? line="$1"
+  (( recorded == 0 )) || return 0
+  echo "verify-backup.sh aborted at line ${line} with status ${code}." >&2
+  record failed "" "aborted at line ${line} with status ${code}" || true
+}
+trap 'on_err $LINENO' ERR
+
 # A restore is a second copy of the database on the same disk. Refuse rather than fill it.
 db_bytes="$(psql_main -tAc "SELECT pg_database_size('${DB_NAME}')" | tr -d '[:space:]')"
-free_bytes=$(( $(df -P --output=avail / | tail -1) * 1024 ))
+# -P is POSIX output (one line per filesystem, never wrapped) and -k fixes the block size.
+# `--output=avail` is a GNU extension that df rejects when -P is also given, which is how
+# this check spent a week aborting before it could restore anything.
+free_kb="$(df -Pk / | awk 'NR == 2 { print $4 }')"
+[[ "${free_kb}" =~ ^[0-9]+$ ]] || fail "Could not read the free space on /: got '${free_kb}'."
+free_bytes=$(( free_kb * 1024 ))
 if (( free_bytes < db_bytes * 2 )); then
   fail "Not enough free disk to restore: $(( free_bytes / 1024**3 )) GB free, database is $(( db_bytes / 1024**3 )) GB."
 fi
