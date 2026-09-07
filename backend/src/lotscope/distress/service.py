@@ -339,6 +339,10 @@ async def recompute_distress(
             "sources": statement.excluded.sources,
             "debt_counts": statement.excluded.debt_counts,
             "computed_at": statement.excluded.computed_at,
+            # `onupdate` is an UPDATE-construct hook and an upsert is an INSERT, so
+            # without this the column keeps the value from the row's first write and
+            # reads as though the score has not been touched since.
+            "updated_at": now,
         },
     )
     await session.execute(statement)

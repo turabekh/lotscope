@@ -72,7 +72,9 @@ async def _upsert_state(
     if last_attempt_at is not None:
         values["last_attempt_at"] = last_attempt_at
     statement = insert(OpsAlertState).values(**values)
-    update_cols = {k: statement.excluded[k] for k in values if k != "key"}
+    update_cols: dict[str, Any] = {k: statement.excluded[k] for k in values if k != "key"}
+    # An upsert is an INSERT, so the mapper's `onupdate` never runs.
+    update_cols["updated_at"] = datetime.now(UTC)
     statement = statement.on_conflict_do_update(index_elements=["key"], set_=update_cols)
     await session.execute(statement)
 

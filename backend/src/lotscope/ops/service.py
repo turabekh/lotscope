@@ -301,7 +301,8 @@ async def mark_worker_start(session: AsyncSession, now: datetime | None = None) 
     statement = insert(OpsAlertState).values(key=WORKER_START_KEY, last_attempt_at=moment)
     await session.execute(
         statement.on_conflict_do_update(
-            index_elements=["key"], set_={"last_attempt_at": statement.excluded.last_attempt_at}
+            index_elements=["key"],
+            set_={"last_attempt_at": statement.excluded.last_attempt_at, "updated_at": moment},
         )
     )
     await session.flush()

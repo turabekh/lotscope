@@ -392,3 +392,36 @@ async def test_readiness_says_which_job_stopped(db_session: AsyncSession) -> Non
 
     assert any("recompute_distress" in line for line in body["stale_jobs"])
     assert body["status"] == "degraded"
+
+
+async def test_a_bug_seen_again_says_so_in_updated_at(db_session: AsyncSession) -> None:
+    """The dedup branch is an upsert, so `onupdate` never fires on the repeat.
+
+    Without setting it the thousandth occurrence still claims the row was last written
+    at the first, which is the one column a reader would trust to mean "still happening".
+    """
+    await record_error_event(
+        db_session,
+        ValueError("still broken"),
+        source=API_SOURCE,
+        where="GET /parcels/{parcel_number}",
+        context={},
+    )
+    await db_session.flush()
+    row = (await db_session.execute(select_error_events())).scalars().one()
+    first_updated, first_seen = row.updated_at, row.last_seen_at
+
+    await record_error_event(
+        db_session,
+        ValueError("still broken"),
+        source=API_SOURCE,
+        where="GET /parcels/{parcel_number}",
+        context={},
+    )
+    await db_session.flush()
+    db_session.expunge_all()
+    row = (await db_session.execute(select_error_events())).scalars().one()
+
+    assert row.occurrences == 2
+    assert row.last_seen_at > first_seen
+    assert row.updated_at > first_updated, "updated_at stood still while the bug recurred"
