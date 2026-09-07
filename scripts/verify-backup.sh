@@ -30,13 +30,17 @@ recorded=0
 record() {
   local status="$1" rows="$2" error="$3"
   recorded=1
+  # On stdin, not in -c: psql expands :'var' only in what it lexes itself, and a -c string
+  # goes to the server verbatim — which is how this row spent a week being a syntax error.
   psql_main -v ON_ERROR_STOP=1 \
-    -v status="${status}" -v rows="${rows}" -v err="${error}" -v started="${started}" \
-    -c "INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at,
-          duration_ms, result_count, error, created_at, updated_at)
-        VALUES ('${JOB_ID}', 'restore_check', 'backup', :'status', :'started', now(),
-          round(extract(epoch FROM (now() - :'started'::timestamptz)) * 1000),
-          nullif(:'rows','')::int, nullif(:'err',''), now(), now())" > /dev/null
+    -v job="${JOB_ID}" -v status="${status}" -v rows="${rows}" -v err="${error}" \
+    -v started="${started}" > /dev/null <<'SQL'
+INSERT INTO job_run (job_id, label, kind, status, started_at, finished_at,
+    duration_ms, result_count, error, created_at, updated_at)
+VALUES (:'job', 'restore_check', 'backup', :'status', :'started', now(),
+    round(extract(epoch FROM (now() - :'started'::timestamptz)) * 1000),
+    nullif(:'rows','')::int, nullif(:'err',''), now(), now());
+SQL
 }
 
 cleanup() {
